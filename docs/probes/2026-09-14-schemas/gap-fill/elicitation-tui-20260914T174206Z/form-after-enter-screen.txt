@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-elicit-dyevxdym/w
+
+
+❯ ELICIT-FORM ask me
+
+● Calling shepherd · 8s…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  MCP server “shepherd” requests your input
+
+  Which queue should the probe use?
+
+    ✔ queue: alpha
+
+  ❯ Accept    Decline
+
+  Esc to cancel · ↑/↓ to navigate

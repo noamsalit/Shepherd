@@ -1,0 +1,26 @@
+{
+    "pid": 4033805,
+    "sessionId": "2efd1f5f-1b93-481a-8469-0f589a48d7ae",
+    "cwd": "/tmp/shp-schemas-regint.KD6xG3/work",
+    "startedAt": 1789398970793,
+    "procStart": "543621664",
+    "version": "2.1.270",
+    "peerProtocol": 1,
+    "peerFeatures": [
+        "notify_idle",
+        "reply_across_default_dirs",
+        "artifact_yield"
+    ],
+    "kind": "interactive",
+    "entrypoint": "cli",
+    "pidDomain": "linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]",
+    "tmux": "probe:@0.%0",
+    "messagingSocketPath": "/run/user/0/cc-socks/4033805.sock",
+    "name": "shp regint probe",
+    "nameSource": "user",
+    "nameSince": 1789398970794,
+    "updatedAt": 1789398977680,
+    "status": "busy",
+    "statusUpdatedAt": 1789398977680,
+    "bridgeSessionId": "session_01RmL9HDvfCZ5Wrrfpr2mM4x"
+}

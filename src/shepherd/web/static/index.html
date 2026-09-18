@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shepherd — fleet</title>
+    <link rel="stylesheet" href="/static/vendor/xterm.css" />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <!-- Every node below is static markup. The scripts fill slots with
+         textContent; §13's escaping rule has no exception to make here. -->
+    <!-- §12's Needs-You rail. It lives in the shell, so it is on every page
+         and is never a page you navigate to. Empty, it is a 4 px green line;
+         before the first read it is grey, because "nothing needs you" is a
+         claim and nobody has established it yet (principle 5). -->
+    <div id="rail" class="rail rail-unknown" aria-live="polite"
+         aria-label="the fleet has not been read yet"></div>
+
+    <!-- §12's two pages, and the one control that moves between them. The rail
+         above is the shell and is on both; this is a nav entry, not a router —
+         there is one document and `app.js` reveals one view at a time. -->
+    <nav id="nav" class="nav" aria-label="pages">
+      <button id="nav-chat" class="nav-entry" type="button">Chat</button>
+      <button id="nav-fleet" class="nav-entry" type="button">Fleet</button>
+    </nav>
+
+    <!-- §12's page 1, the default landing. Static markup, filled with
+         textContent: the master's output contains tool results and is untrusted
+         in exactly the way §13 means, so there is no HTML sink on this page and
+         `test_the_chat_page_has_no_html_sink` is what keeps it that way.
+
+         Hidden in static markup and revealed by `mountChat()`, so a page whose
+         script never loaded shows the fleet — the M1 surface that needs no
+         orchestrator — rather than an empty frame claiming a conversation. -->
+    <section id="chat-view" class="chat-view" hidden>
+      <div class="chat-conversation">
+        <!-- The conversation. One line per `MasterEvent`, plus the approval
+             card inline at the blocked turn (§12). -->
+        <div id="chat-log" class="chat-log" aria-live="polite"></div>
+        <div class="chat-composer">
+          <input id="chat-input" class="chat-input" type="text"
+                 aria-label="say something to the orchestrator" />
+          <button id="chat-send" class="chat-send" type="button">send</button>
+        </div>
+        <!-- Principle 5 / §13: a refusal, a failure or a decision says so here,
+             with the correlation id and nothing else. -->
+        <p id="chat-status" class="chat-status"></p>
+      </div>
+
+      <aside class="chat-sidebar">
+        <h2>Pending approval</h2>
+        <span id="chat-approval-count" class="chat-approval-count">—</span>
+        <!-- Filled from `approval.created` as it arrives on the one stream.
+             §12 forbids polling and a card discovered on a timer is a turn left
+             blocked until the timer comes round. -->
+        <div id="chat-approvals" class="chat-approvals"></div>
+
+        <!-- D8's toggle, visible at all times (§12: "you should never have to
+             remember which level you are on"). The em dash is the level before
+             anybody has read one. -->
+        <div class="chat-autonomy">
+          <span class="chat-autonomy-label">autonomy</span>
+          <span id="chat-autonomy-level" class="chat-autonomy-value">—</span>
+          <button id="chat-autonomy-next" class="chat-autonomy-next" type="button">—</button>
+        </div>
+
+        <!-- D25's single exception, as a literal tail and nothing else: no
+             query surface, no filter, and no `args` — those are redacted for a
+             log, and a page is a wider audience than a log. -->
+        <h2>Audit</h2>
+        <div id="chat-audit" class="chat-audit"></div>
+      </aside>
+    </section>
+
+    <div id="fleet-view" class="fleet-view">
+    <header class="masthead">
+      <h1>Fleet</h1>
+      <div id="counts" class="counts" aria-label="sessions by bucket"></div>
+
+      <!-- Principle 5's headline metric, and DP10's residue beside it. The
+           three numbers mean three different things and none is folded into
+           another: *we could not map this stop*, *we never saw this stop*, and
+           *the turn ended cleanly and no heuristic could tell us whether it
+           finished*. The last is the largest cohort, and D34 names it as the
+           trigger for building the model lane that is deferred. -->
+      <div id="stop-summary" class="stop-summary" aria-label="stop classification">
+        <span class="stop-stat">
+          <span class="stop-summary-label">unknown</span>
+          <span id="unknown-rate" class="stop-value">—</span>
+        </span>
+        <span class="stop-stat">
+          <span class="stop-summary-label">unverified completions</span>
+          <span id="low-confidence" class="stop-value">—</span>
+        </span>
+        <span class="stop-stat">
+          <span class="stop-summary-label">never classified</span>
+          <span id="unclassified" class="stop-value">—</span>
+        </span>
+      </div>
+
+      <div class="stream">
+        <span class="stream-label">stream</span>
+        <span id="stream-status" class="stream-status">connecting</span>
+      </div>
+    </header>
+
+    <!-- F16: a fresh install with no database and no sessions sees this, not a
+         blank area and not an error. It names what discovery can see. -->
+    <section id="empty-state" class="empty-state" hidden>
+      <h2>no sessions discovered yet</h2>
+      <p>
+        Shepherd watches for Claude Code sessions. Nothing has been seen yet —
+        these are the live discovery sources and what they report:
+      </p>
+      <div id="empty-state-sources" class="empty-state-sources"></div>
+      <p class="empty-state-hint">
+        Start a session, or install the hooks, and this page updates itself.
+      </p>
+    </section>
+
+    <main id="fleet" class="fleet"></main>
+
+    <!-- §12's page 3. Static markup, filled by `session.js` with textContent —
+         the same rule the fleet page keeps, and the reason §13's escaping rule
+         has no exception to make here either. Hidden until a session is opened:
+         an empty terminal frame on the fleet page would be a pane nobody asked
+         for, and `renderSession` is what clears the attribute.
+
+         It is **opened by clicking a fleet row**: `app.js` listens on `#fleet`,
+         reads the row's `data-session-id`, reads that session through the API
+         and hands the projection to `renderSession`. Without that edge this
+         whole section, `session.js`, `terminal.js` and the vendored emulator
+         are unreachable code — which is what shipped, and what
+         `tests/web/test_session_wiring.py` now walks the module graph to
+         prevent. -->
+    <section id="session-view" class="session-view" hidden>
+      <div class="session-band">
+        <span id="session-chip" class="session-chip">—</span>
+        <h2 id="session-title" class="session-title">—</h2>
+        <!-- D29: click-to-edit, and the marker beside it. The marker is empty
+             and hidden unless the rename never reached the engine. -->
+        <button id="session-rename" class="session-rename" type="button"
+                aria-label="rename this session">✎</button>
+        <span id="session-local-only" class="session-local-only" hidden></span>
+        <!-- Principle 5: a rename that did not happen says so, with the
+             correlation id §13 allows and nothing else. -->
+        <span id="session-rename-status" class="session-rename-status"></span>
+        <span id="session-state" class="session-meta">—</span>
+        <span id="session-ownership" class="session-meta">—</span>
+        <span id="session-model" class="session-meta">—</span>
+      </div>
+
+      <!-- The stopped band (D21): why it stopped, and its next actions as
+           buttons. Both are server-side derivations; the page renders them. -->
+      <p id="session-why" class="session-why">—</p>
+      <div id="session-actions" class="session-actions"></div>
+
+      <!-- §9: an attached session has no pty of ours, so it gets the banner and
+           no terminal at all. -->
+      <p id="session-banner" class="session-banner" hidden></p>
+
+      <div id="session-terminal" class="session-terminal"></div>
+
+      <!-- Principle 5: the keystroke path is not built (T19-c), and the page
+           says so rather than swallowing what a human types. -->
+      <p id="session-input-note" class="session-input-note"></p>
+    </section>
+    </div>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>

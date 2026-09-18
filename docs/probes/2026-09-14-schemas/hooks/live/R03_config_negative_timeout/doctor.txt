@@ -1,0 +1,3 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-negative_timeout-bljsmgi7; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-negative_timeout-bljsmgi7/.claude/settings.json › hooks.UserPromptSubmit.0.hooks.0: Invalid command hook (timeout: Invalid input); entry ignored.

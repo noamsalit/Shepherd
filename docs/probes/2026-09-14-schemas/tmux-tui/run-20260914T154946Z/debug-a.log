@@ -1,0 +1,517 @@
+2026-09-14T15:49:46.502Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:49:46.539Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:49:46.545Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-A-4tvrx00n/.claude/settings.local.json
+2026-09-14T15:49:46.546Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:49:46.547Z [DEBUG] [init] configureGlobalMTLS starting
+2026-09-14T15:49:46.548Z [DEBUG] [init] configureGlobalMTLS complete
+2026-09-14T15:49:46.548Z [DEBUG] [init] configureGlobalAgents starting
+2026-09-14T15:49:46.548Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-09-14T15:49:46.548Z [DEBUG] CA certs: Loaded 121 bundled root certificates
+2026-09-14T15:49:46.552Z [DEBUG] CA certs: Loaded 121 system CA certificates
+2026-09-14T15:49:46.552Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T15:49:46.552Z [DEBUG] [init] configureGlobalAgents complete
+2026-09-14T15:49:46.554Z [DEBUG] Git remote URL: null
+2026-09-14T15:49:46.555Z [DEBUG] No git remote URL found
+2026-09-14T15:49:46.556Z [DEBUG] Error log sink initialized
+2026-09-14T15:49:46.566Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-09-14T15:49:46.568Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-09-14T15:49:46.569Z [DEBUG] [STARTUP] Running setup()...
+2026-09-14T15:49:46.579Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/root/.claude/skills, project=[]
+2026-09-14T15:49:46.593Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:49:46.595Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/agents: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/agents'
+2026-09-14T15:49:46.595Z [DEBUG] Failed to stat directory /root/.claude/agents: ENOENT: no such file or directory, stat '/root/.claude/agents'
+2026-09-14T15:49:46.596Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/commands: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/commands'
+2026-09-14T15:49:46.596Z [DEBUG] Failed to stat directory /root/.claude/commands: ENOENT: no such file or directory, stat '/root/.claude/commands'
+2026-09-14T15:49:46.598Z [DEBUG] Loaded 0 unique skills (0 unconditional, 0 conditional, managed: 0, user: 0, project: 0, additional: 0, legacy commands: 0)
+2026-09-14T15:49:46.599Z [DEBUG] [Claude in Chrome] Extension not found in any browser
+2026-09-14T15:49:46.607Z [INFO] [uds-messaging] Listening: /tmp/cc-socks/4041880.sock
+2026-09-14T15:49:46.607Z [INFO] [uds-messaging] Inject messages (auth line optional here): { echo '{"type":"auth","token":"[REDACTED]"$CLAUDE_CODE_MESSAGING_TOKEN"'"}'; echo '{"type":"user","message":{"role":"user","content":"hello"}}'; } | socat - UNIX-CONNECT:/tmp/cc-socks/4041880.sock
+2026-09-14T15:49:46.608Z [INFO] [uds-messaging] Connect when the data is ready (e.g. out=$(cmd); printf '%s\n' "$out" | nc -N -U "$CLAUDE_CODE_MESSAGING_SOCKET" — or the socat form above): a connection that sends no complete line within 30000 ms is closed
+2026-09-14T15:49:46.611Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:49:46.619Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-A-4tvrx00n/.claude/settings.local.json
+2026-09-14T15:49:46.620Z [DEBUG] Error log sink initialized
+2026-09-14T15:49:46.623Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:49:46.632Z [DEBUG] Cannot acquire lock for 2.1.270 - held by PID 3971404
+2026-09-14T15:49:46.633Z [ERROR] NON-FATAL: Lock acquisition failed for /root/.local/share/claude/versions/2.1.270 (expected in multi-process scenarios): Lock already held by another process
+2026-09-14T15:49:46.638Z [DEBUG] [STARTUP] setup() completed in 69ms
+2026-09-14T15:49:46.641Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-09-14T15:49:46.648Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:49:46.649Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:49:46.649Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:49:46.649Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:49:46.649Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:49:46.650Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:49:46.650Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:49:46.651Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:49:46.653Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:49:46.658Z [DEBUG] Artifact input schema built: capabilities=true comments=true db=true assets=true files=true types=false type_catalog=false read_page_data=false room=false verify=false delete=true copy_from=false preview=false open=false endpoints=false pin=true flag_source=disk gb_fresh=false assets_source=disk
+2026-09-14T15:49:46.669Z [DEBUG] [STARTUP] Commands and agents loaded in 28ms
+2026-09-14T15:49:46.674Z [DEBUG] nonBlockingStdout: active
+2026-09-14T15:49:46.675Z [DEBUG] [STARTUP] Running showSetupScreens()...
+2026-09-14T15:49:46.680Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-14T15:49:46.700Z [DEBUG] [keybindings] Watching for changes to /root/.claude/keybindings.json
+2026-09-14T15:49:46.707Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-14T15:49:46.708Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: no reply to CSI ? u; no reply to DECRQM 2026
+2026-09-14T15:49:46.708Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-14T15:50:12.462Z [DEBUG] clearPluginCache: invalidating loadAllPlugins cache (post-trust: re-discover project @skills-dir plugins)
+2026-09-14T15:50:12.488Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:12.488Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.23eb97f1ea3a
+2026-09-14T15:50:12.492Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:12.495Z [DEBUG] Temp file written successfully, size: 73162 bytes
+2026-09-14T15:50:12.495Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.23eb97f1ea3a to /root/.claude.json
+2026-09-14T15:50:12.496Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:50:12.496Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:12.499Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:50:12.500Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:50:12.500Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:50:12.503Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:50:12.517Z [DEBUG] Cleared mTLS configuration cache
+2026-09-14T15:50:12.518Z [DEBUG] Cleared proxy agent cache
+2026-09-14T15:50:12.518Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T15:50:12.518Z [DEBUG] Grove: Using fresh cached config
+2026-09-14T15:50:12.532Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-09-14T15:50:12.532Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-09-14T15:50:12.536Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-14T15:50:12.538Z [DEBUG] Git remote URL: null
+2026-09-14T15:50:12.538Z [DEBUG] No git remote URL found
+2026-09-14T15:50:12.538Z [DEBUG] Not in a GitHub repository, skipping path mapping update
+2026-09-14T15:50:12.554Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-14T15:50:12.555Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: CSI ? u not asked; no reply to DECRQM 2026
+2026-09-14T15:50:12.555Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-14T15:50:12.912Z [DEBUG] [STARTUP] showSetupScreens() completed in 26236ms
+2026-09-14T15:50:12.913Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-09-14T15:50:12.913Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-09-14T15:50:12.914Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-09-14T15:50:12.914Z [DEBUG] Starting background startup prefetches
+2026-09-14T15:50:12.916Z [DEBUG] [Bootstrap] Fetching
+2026-09-14T15:50:12.918Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-09-14T15:50:12.922Z [DEBUG] [STARTUP] MCP configs resolved in 10ms (awaited at +26354ms)
+2026-09-14T15:50:12.930Z [DEBUG] Total LSP servers loaded: 0
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all allow rules for destination 'userSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all deny rules for destination 'userSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all ask rules for destination 'userSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all allow rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all deny rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all ask rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all allow rules for destination 'localSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all deny rules for destination 'localSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all ask rules for destination 'localSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all allow rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all deny rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all ask rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all allow rules for destination 'policySettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all deny rules for destination 'policySettings' with 0 rule(s): []
+2026-09-14T15:50:12.937Z [DEBUG] Replacing all ask rules for destination 'policySettings' with 0 rule(s): []
+2026-09-14T15:50:12.944Z [DEBUG] Fast mode unavailable: Fast mode is currently unavailable
+2026-09-14T15:50:12.944Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-09-14T15:50:12.944Z [DEBUG] LSP manager initialized with 0 servers
+2026-09-14T15:50:12.945Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:50:12.946Z [DEBUG] LSP server manager initialized successfully
+2026-09-14T15:50:12.946Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-09-14T15:50:12.948Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:50:12.949Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_start
+2026-09-14T15:50:12.986Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=0a7e366d-e51b-4169-ad94-6b55757a5a80 source=quota_check
+2026-09-14T15:50:13.001Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:50:13.022Z [DEBUG] Git remote URL: null
+2026-09-14T15:50:13.022Z [DEBUG] No git remote URL found
+2026-09-14T15:50:13.022Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:50:13.025Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:50:13.025Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:13.025Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.7289e417cfd9
+2026-09-14T15:50:13.025Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:50:13.032Z [DEBUG] Ripgrep first use test: PASSED (mode=embedded, path=/root/.local/share/claude/versions/2.1.270)
+2026-09-14T15:50:13.033Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:13.036Z [DEBUG] Temp file written successfully, size: 73162 bytes
+2026-09-14T15:50:13.036Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.7289e417cfd9 to /root/.claude.json
+2026-09-14T15:50:13.036Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:13.039Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:13.039Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.613efeb59d29
+2026-09-14T15:50:13.040Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:13.042Z [DEBUG] Temp file written successfully, size: 73340 bytes
+2026-09-14T15:50:13.042Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.613efeb59d29 to /root/.claude.json
+2026-09-14T15:50:13.042Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:13.064Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-14T15:50:13.079Z [DEBUG] Fast mode unavailable: Fast mode is currently unavailable
+2026-09-14T15:50:13.097Z [DEBUG] [engine] send set_max_thinking_tokens max=null
+2026-09-14T15:50:13.097Z [DEBUG] [engine] send set_model model=claude-haiku-4-5-20251001
+2026-09-14T15:50:13.108Z [DEBUG] performStartupChecks called
+2026-09-14T15:50:13.108Z [DEBUG] Starting background plugin installations
+2026-09-14T15:50:13.124Z [DEBUG] [jobStateNameSync] watch skipped: Error: ENOENT: no such file or directory, watch '/root/.claude/jobs/71757dd1'
+2026-09-14T15:50:13.127Z [DEBUG] [REPL:mount] REPL mounted, disabled=false
+2026-09-14T15:50:13.127Z [DEBUG] Official marketplace auto-install skipped: already_installed
+2026-09-14T15:50:13.129Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-09-14T15:50:13.131Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-A-4tvrx00n/.claude/settings.local.json
+2026-09-14T15:50:13.131Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:50:13.144Z [DEBUG] [servedCatalog] off (flag)
+2026-09-14T15:50:13.152Z [DEBUG] performBackgroundPluginInstallations called
+2026-09-14T15:50:13.153Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:50:13.156Z [DEBUG] session.start: raised (surface terminal, interactive)
+2026-09-14T15:50:13.156Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:50:13.157Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:50:13.157Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:50:13.159Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=auto ctx.prePlanMode=undefined reason=model
+2026-09-14T15:50:13.160Z [DEBUG] Applying permission update: Setting mode to 'default'
+2026-09-14T15:50:13.166Z [DEBUG] [event-loop-stall] detector started (interval=200ms, threshold=500ms)
+2026-09-14T15:50:13.168Z [DEBUG] [claudeai-mcp] Fetching from https://api.anthropic.com/v1/mcp_servers?limit=1000
+2026-09-14T15:50:13.169Z [DEBUG] mcp runtime arm: v2 (source: growthbook)
+2026-09-14T15:50:13.176Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:50:13.176Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:50:13.181Z [DEBUG] Failed to stat directory /root/.claude/skills: ENOENT: no such file or directory, stat '/root/.claude/skills'
+2026-09-14T15:50:13.181Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/skills: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/skills'
+2026-09-14T15:50:13.275Z [DEBUG] Loaded plugins - Enabled: 0, Disabled: 1, Commands: 0, Agents: 0, Errors: 0
+2026-09-14T15:50:13.298Z [DEBUG] [FileIndex] getProjectFiles called, respectGitignore=true
+2026-09-14T15:50:13.298Z [DEBUG] [FileIndex] getFilesUsingGit called
+2026-09-14T15:50:13.298Z [DEBUG] [FileIndex] not a git repo, returning null
+2026-09-14T15:50:13.298Z [DEBUG] [FileIndex] git ls-files returned null, falling back to ripgrep
+2026-09-14T15:50:13.314Z [DEBUG] AutoUpdaterWrapper: Installation type: native
+2026-09-14T15:50:13.316Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:13.316Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.fd3e4cc82d3d
+2026-09-14T15:50:13.329Z [DEBUG] [Bootstrap] Fetch ok
+2026-09-14T15:50:13.329Z [DEBUG] [Bootstrap] Cache unchanged, skipping write
+2026-09-14T15:50:13.331Z [DEBUG] Org fast mode: disabled (extra_usage_disabled)
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /root/.claude/routines: ENOENT: no such file or directory, stat '/root/.claude/routines'
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/routines: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/routines'
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /root/.claude/workflows: ENOENT: no such file or directory, stat '/root/.claude/workflows'
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/workflows: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/workflows'
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /root/.claude/output-styles: ENOENT: no such file or directory, stat '/root/.claude/output-styles'
+2026-09-14T15:50:13.331Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/output-styles: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/output-styles'
+2026-09-14T15:50:13.332Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-tui-A-4tvrx00n/.claude/settings.json, /tmp/shp-tui-A-4tvrx00n/.claude/settings.local.json...
+2026-09-14T15:50:13.333Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:13.343Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-14T15:50:13.343Z [DEBUG] [FileIndex] ripgrep: 1 files in 45ms
+2026-09-14T15:50:13.344Z [DEBUG] [FileIndex] cache refresh completed in 46ms
+2026-09-14T15:50:13.344Z [DEBUG] Temp file written successfully, size: 73340 bytes
+2026-09-14T15:50:13.344Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.fd3e4cc82d3d to /root/.claude.json
+2026-09-14T15:50:13.346Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: CSI ? u not asked; no reply to DECRQM 2026
+2026-09-14T15:50:13.347Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-14T15:50:13.347Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:13.348Z [DEBUG] No CLAUDE.md/rules files found
+2026-09-14T15:50:13.383Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:13.384Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.41852e9e413b
+2026-09-14T15:50:13.384Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:13.392Z [DEBUG] Temp file written successfully, size: 73413 bytes
+2026-09-14T15:50:13.392Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.41852e9e413b to /root/.claude.json
+2026-09-14T15:50:13.392Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:13.476Z [DEBUG] [mcp-registry] Loaded 294 official MCP URLs (legacy)
+2026-09-14T15:50:13.541Z [DEBUG] Checking for native installer update to version 2.1.270
+2026-09-14T15:50:13.544Z [DEBUG] Found 2.1.270 at /root/.local/bin/claude, skipping install
+2026-09-14T15:50:13.603Z [DEBUG] Protecting locked version from cleanup: 2.1.269
+2026-09-14T15:50:13.611Z [DEBUG] [claudeai-mcp] Fetched 6 servers
+2026-09-14T15:50:13.643Z [DEBUG] MCP server "claude.ai Google Calendar": Initializing claude.ai proxy transport for server mcpsrv_0149NzDEfyLxzpdGKDeE8WMk
+2026-09-14T15:50:13.643Z [DEBUG] MCP server "claude.ai Google Calendar": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_0149NzDEfyLxzpdGKDeE8WMk
+2026-09-14T15:50:13.643Z [DEBUG] MCP server "claude.ai Google Calendar": claude.ai proxy transport created successfully
+2026-09-14T15:50:13.644Z [DEBUG] MCP server "claude.ai Google Calendar": Starting connection with timeout of 30000ms
+2026-09-14T15:50:13.644Z [DEBUG] MCP server "claude.ai Google Calendar": Stateless claudeai-proxy — resolving MCP initialize from cached projection
+2026-09-14T15:50:13.645Z [DEBUG] MCP server "claude.ai Gmail": Initializing claude.ai proxy transport for server mcpsrv_01CSQswk8vmpv8urknVdzPDL
+2026-09-14T15:50:13.645Z [DEBUG] MCP server "claude.ai Gmail": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_01CSQswk8vmpv8urknVdzPDL
+2026-09-14T15:50:13.645Z [DEBUG] MCP server "claude.ai Gmail": claude.ai proxy transport created successfully
+2026-09-14T15:50:13.645Z [DEBUG] MCP server "claude.ai Gmail": Starting connection with timeout of 30000ms
+2026-09-14T15:50:13.645Z [DEBUG] MCP server "claude.ai Gmail": Stateless claudeai-proxy — resolving MCP initialize from cached projection
+2026-09-14T15:50:13.652Z [DEBUG] MCP server "claude.ai Google Calendar": Successfully connected (transport: claudeai-proxy) in 9ms
+2026-09-14T15:50:13.652Z [DEBUG] MCP server "claude.ai Google Calendar": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"StatelessServer","version":"ESF"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-14T15:50:13.652Z [DEBUG] [MCP] Server "claude.ai Google Calendar" connected with subscribe=false
+2026-09-14T15:50:13.653Z [DEBUG] MCP server "claude.ai Gmail": Successfully connected (transport: claudeai-proxy) in 8ms
+2026-09-14T15:50:13.653Z [DEBUG] MCP server "claude.ai Gmail": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"StatelessServer","version":"ESF"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-14T15:50:13.653Z [DEBUG] [MCP] Server "claude.ai Gmail" connected with subscribe=false
+2026-09-14T15:50:14.199Z [DEBUG] MCP server "claude.ai Google Calendar": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:50:16.121Z [DEBUG] MCP server "claude.ai Gmail": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:50:16.522Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:50:16.523Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:50:16.523Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:50:16.525Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:50:16.526Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:50:16.528Z [DEBUG] Sending 18 skills via attachment (initial)
+2026-09-14T15:50:16.528Z [WARN] Skill listing over budget: 18 skills, 8824 chars > 8000 budget — descriptions will be truncated. Run /skills to disable some, or raise skillListingBudgetFraction in settings.
+2026-09-14T15:50:16.567Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:50:16.570Z [DEBUG] FileHistory: Added snapshot for 60cd22c3-7535-45b3-a988-57425f939830, tracking 0 files
+2026-09-14T15:50:16.576Z [DEBUG] act_dont_rederive_arm_active source=growthbook
+2026-09-14T15:50:16.579Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.07a; cc_entrypoint=cli; cch=00000;
+2026-09-14T15:50:16.580Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.581Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.597Z [DEBUG] [engine] yield system/init (first)
+2026-09-14T15:50:16.597Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:50:16.613Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:50:16.615Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prompt_id=43ccd20b-51ee-4656-913f-3b0c4479a046;
+2026-09-14T15:50:16.616Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.619Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.622Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.622Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:50:16.623Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:16.624Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:50:16.625Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=17d2f644-01a6-4d2f-aaa7-5aba45377548 source=generate_session_title
+2026-09-14T15:50:16.626Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=6d09cf53-ec3f-471b-bbff-70df8b7f38c5 source=repl_main_thread
+2026-09-14T15:50:17.247Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:50:17.247Z [DEBUG] [API:timing] first byte after 626ms
+2026-09-14T15:50:17.372Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:50:17.372Z [DEBUG] [API:timing] first byte after 749ms
+2026-09-14T15:50:17.928Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:50:17.930Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bbWX3u9KwvzEwRweDw;
+2026-09-14T15:50:17.931Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:17.931Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:17.939Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:50:17.940Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:50:17.941Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=8cabe808-aba5-43c5-bfb2-14d471d0e505 source=prompt_suggestion
+2026-09-14T15:50:17.952Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:50:17.960Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:50:17.965Z [DEBUG] [engine] turn 1 end (turns=1 usage in=908 out=67 cost=$0.0218 api=2061ms stop=end_turn resultLen=4)
+2026-09-14T15:50:17.975Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:50:17.975Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:50:17.998Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:17.998Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.e26c3fbd3688
+2026-09-14T15:50:17.998Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:18.000Z [DEBUG] Temp file written successfully, size: 73413 bytes
+2026-09-14T15:50:18.000Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.e26c3fbd3688 to /root/.claude.json
+2026-09-14T15:50:18.000Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:18.624Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:50:18.625Z [DEBUG] [API:timing] first byte after 686ms
+2026-09-14T15:50:21.433Z [DEBUG] Forked agent [prompt_suggestion] received message: type=assistant
+2026-09-14T15:50:21.474Z [DEBUG] Forked agent [prompt_suggestion] received message: type=assistant
+2026-09-14T15:50:21.492Z [DEBUG] Forked agent [prompt_suggestion] received message: type=progress
+2026-09-14T15:50:21.498Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:50:21.498Z [DEBUG] Forked agent [prompt_suggestion] received message: type=attachment
+2026-09-14T15:50:21.499Z [DEBUG] Forked agent [prompt_suggestion] received message: type=system
+2026-09-14T15:50:21.500Z [DEBUG] Forked agent [prompt_suggestion] finished: 5 messages, types=[assistant, assistant, progress, attachment, system], totalUsage: input=350 output=280 cacheRead=38380 cacheCreate=62
+2026-09-14T15:50:23.131Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:50:23.131Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.5fa4121151dd
+2026-09-14T15:50:23.132Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:50:23.134Z [DEBUG] Temp file written successfully, size: 73235 bytes
+2026-09-14T15:50:23.134Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.5fa4121151dd to /root/.claude.json
+2026-09-14T15:50:23.135Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:50:23.135Z [DEBUG] fullscreen boot canary: healthy
+2026-09-14T15:50:38.870Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-09-14T15:51:17.979Z [DEBUG] Notification:idle_prompt [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed with status 0
+2026-09-14T15:51:17.979Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:20.114Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:51:20.114Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:51:20.114Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:51:20.115Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:51:20.151Z [DEBUG] High write ratio: blit=0, write=1436 (100.0% writes), screen=45x160
+2026-09-14T15:51:20.153Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:20.154Z [DEBUG] FileHistory: Making snapshot for message 4ded61e2-7ee4-48b1-ac44-20ffb609c4e1
+2026-09-14T15:51:20.156Z [DEBUG] FileHistory: Added snapshot for 4ded61e2-7ee4-48b1-ac44-20ffb609c4e1, tracking 0 files
+2026-09-14T15:51:20.157Z [DEBUG] [engine] turn 2 start
+2026-09-14T15:51:20.162Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:20.164Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bbWX3u9KwvzEwRweDw; cc_prompt_id=b3fa1c2b-04f9-4a7e-9927-79bd34c8a4b1;
+2026-09-14T15:51:20.164Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:20.166Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:20.176Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:20.176Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:20.177Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=cbb0d1e8-6ec6-4ab6-a280-1af9d0ae0a23 source=repl_main_thread
+2026-09-14T15:51:20.862Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:20.862Z [DEBUG] [API:timing] first byte after 687ms
+2026-09-14T15:51:21.453Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:21.455Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bgCC7waXa8x72vUL6Y;
+2026-09-14T15:51:21.456Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:21.456Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:21.464Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:21.465Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:21.467Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=2978649b-abb3-4fe2-b05d-341404a17bc3 source=prompt_suggestion
+2026-09-14T15:51:21.479Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:21.483Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:21.487Z [DEBUG] [engine] turn 2 end (turns=1 usage in=1268 out=402 cost=$0.0317 api=6893ms stop=end_turn resultLen=5)
+2026-09-14T15:51:21.491Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:21.491Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:22.164Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:22.164Z [DEBUG] [API:timing] first byte after 700ms
+2026-09-14T15:51:23.627Z [DEBUG] Forked agent [prompt_suggestion] received message: type=user
+2026-09-14T15:51:23.628Z [DEBUG] Forked agent [prompt_suggestion] finished: 1 messages, types=[user], totalUsage: input=0 output=0 cacheRead=0 cacheCreate=0
+2026-09-14T15:51:23.655Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:51:23.655Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:51:23.655Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:51:23.655Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:51:23.684Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:23.686Z [DEBUG] FileHistory: Making snapshot for message 9b573323-d455-480b-922a-93e9dcbf7295
+2026-09-14T15:51:23.687Z [DEBUG] FileHistory: Added snapshot for 9b573323-d455-480b-922a-93e9dcbf7295, tracking 0 files
+2026-09-14T15:51:23.688Z [DEBUG] [engine] turn 3 start
+2026-09-14T15:51:23.694Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:23.695Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bgCC7waXa8x72vUL6Y; cc_prompt_id=23e44d08-6acd-4f45-b02c-a41d31833b17;
+2026-09-14T15:51:23.696Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:23.698Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:23.701Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:23.701Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:23.702Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=4d9adabd-ba0a-4912-a701-6a221c521464 source=repl_main_thread
+2026-09-14T15:51:24.297Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:24.297Z [DEBUG] [API:timing] first byte after 597ms
+2026-09-14T15:51:25.493Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:25.516Z [DEBUG] "Permission suggestions for Bash: [\n  {\n    \"type\": \"addDirectories\",\n    \"directories\": [\n      \"/tmp/shp-tui-A-4tvrx00n\"\n    ],\n    \"destination\": \"session\"\n  },\n  {\n    \"type\": \"setMode\",\n    \"mode\": \"acceptEdits\",\n    \"destination\": \"session\"\n  }\n]"
+2026-09-14T15:51:25.518Z [DEBUG] executePermissionRequestHooks called for tool: Bash
+2026-09-14T15:51:25.535Z [DEBUG] [auto-mode] canCycleToAuto=false: ctx.isAutoModeAvailable=false isAutoModeGateEnabled=false reason=model
+2026-09-14T15:51:25.548Z [DEBUG] High write ratio: blit=0, write=1682 (100.0% writes), screen=45x160
+2026-09-14T15:51:25.550Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:31.551Z [DEBUG] Notification:permission_prompt [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed with status 0
+2026-09-14T15:51:31.551Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:31.674Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_01AS5JhYFy8i2Ruphb8rKZh6 permissionDecisionMs=6178
+2026-09-14T15:51:31.681Z [DEBUG] Creating shell snapshot for bash (/bin/bash)
+2026-09-14T15:51:31.681Z [DEBUG] Looking for shell config file: /root/.bashrc
+2026-09-14T15:51:31.685Z [DEBUG] Snapshots directory: /root/.claude/shell-snapshots
+2026-09-14T15:51:31.722Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:31.726Z [DEBUG] High write ratio: blit=0, write=1715 (100.0% writes), screen=45x160
+2026-09-14T15:51:31.728Z [DEBUG] Spawn-env probe captured 21 keys
+2026-09-14T15:51:31.728Z [DEBUG] AutoUpdaterWrapper: Installation type: native
+2026-09-14T15:51:31.729Z [DEBUG] Creating snapshot at: /root/.claude/shell-snapshots/snapshot-bash-1789401091685-h0u6bi.sh
+2026-09-14T15:51:31.729Z [DEBUG] Execution timeout: 10000ms
+2026-09-14T15:51:31.733Z [DEBUG] [FileIndex] getProjectFiles called, respectGitignore=true
+2026-09-14T15:51:31.733Z [DEBUG] [FileIndex] getFilesUsingGit called
+2026-09-14T15:51:31.733Z [DEBUG] [FileIndex] not a git repo, returning null
+2026-09-14T15:51:31.733Z [DEBUG] [FileIndex] git ls-files returned null, falling back to ripgrep
+2026-09-14T15:51:31.752Z [DEBUG] auto-update check throttled (last check 78s ago)
+2026-09-14T15:51:31.758Z [DEBUG] [FileIndex] ripgrep: 1 files in 25ms
+2026-09-14T15:51:31.759Z [DEBUG] [FileIndex] skipped index rebuild — tracked paths unchanged
+2026-09-14T15:51:31.759Z [DEBUG] [FileIndex] cache refresh completed in 27ms
+2026-09-14T15:51:31.764Z [DEBUG] Shell snapshot created successfully (5751 bytes)
+2026-09-14T15:51:31.766Z [DEBUG] No session environment scripts found
+2026-09-14T15:51:31.766Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-09-14T15:51:31.779Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_01AS5JhYFy8i2Ruphb8rKZh6 outcome=ok durationMs=105
+2026-09-14T15:51:31.791Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:31.807Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:31.812Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:51:31.812Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:51:31.812Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:51:31.813Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:51:31.820Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:31.822Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bgTGj9ZmxYVzHRx1Ls; cc_prompt_id=23e44d08-6acd-4f45-b02c-a41d31833b17;
+2026-09-14T15:51:31.822Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:31.824Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:31.827Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:31.827Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:31.828Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=9980e2dd-2754-4b37-859f-cbd60a910d66 source=repl_main_thread
+2026-09-14T15:51:32.837Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:32.837Z [DEBUG] [API:timing] first byte after 1010ms
+2026-09-14T15:51:33.549Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:33.551Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bh44FrcPpqqgVh4JAf;
+2026-09-14T15:51:33.552Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:33.552Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:33.557Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:33.558Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:33.560Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=ab3caea1-f5c4-445b-a5bb-31b432ef3f51 source=prompt_suggestion
+2026-09-14T15:51:33.575Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:33.577Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:33.579Z [DEBUG] [engine] turn 3 end (turns=2 usage in=1286 out=610 cost=$0.0410 api=10380ms stop=end_turn resultLen=49)
+2026-09-14T15:51:33.584Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:33.585Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:34.304Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:34.304Z [DEBUG] [API:timing] first byte after 747ms
+2026-09-14T15:51:34.688Z [DEBUG] Forked agent [prompt_suggestion] received message: type=user
+2026-09-14T15:51:34.688Z [DEBUG] Forked agent [prompt_suggestion] finished: 1 messages, types=[user], totalUsage: input=0 output=0 cacheRead=0 cacheCreate=0
+2026-09-14T15:51:34.715Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:51:34.715Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:51:34.715Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:51:34.715Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:51:34.761Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:34.762Z [DEBUG] FileHistory: Making snapshot for message 5c135ecb-962f-468e-93ff-e2d7e90177ad
+2026-09-14T15:51:34.765Z [DEBUG] FileHistory: Added snapshot for 5c135ecb-962f-468e-93ff-e2d7e90177ad, tracking 0 files
+2026-09-14T15:51:34.768Z [DEBUG] [engine] turn 4 start
+2026-09-14T15:51:34.771Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:34.773Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bh44FrcPpqqgVh4JAf; cc_prompt_id=5c97d8c9-95d1-4808-90ae-756cfa656845;
+2026-09-14T15:51:34.773Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:34.775Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:34.777Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:34.778Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:34.779Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=fcd58998-0899-4e09-83e9-e4fce007a083 source=repl_main_thread
+2026-09-14T15:51:37.559Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:37.559Z [DEBUG] [API:timing] first byte after 2782ms
+2026-09-14T15:51:38.759Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:38.766Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=toolu_01154w3Umd6DroDFZsEiuVpq permissionDecisionMs=5
+2026-09-14T15:51:38.777Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-09-14T15:51:41.248Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:51:41.248Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.41c561bffd2a
+2026-09-14T15:51:41.249Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:51:41.251Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:41.257Z [DEBUG] Temp file written successfully, size: 73235 bytes
+2026-09-14T15:51:41.257Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.41c561bffd2a to /root/.claude.json
+2026-09-14T15:51:41.257Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:51:50.807Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=toolu_01154w3Umd6DroDFZsEiuVpq outcome=ok durationMs=12041
+2026-09-14T15:51:50.821Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:50.844Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:50.851Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-14T15:51:50.851Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-14T15:51:50.851Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:51:50.851Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:51:50.860Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:50.863Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bhGenj28aKWdHfqejV; cc_prompt_id=5c97d8c9-95d1-4808-90ae-756cfa656845;
+2026-09-14T15:51:50.863Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:50.865Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:50.868Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:50.869Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:50.871Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=e5695e01-3997-42c0-9012-d2b74ef61900 source=repl_main_thread
+2026-09-14T15:51:51.781Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:51.781Z [DEBUG] [API:timing] first byte after 913ms
+2026-09-14T15:51:53.797Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:51:53.800Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3biTUh34Ag3SjknDfYc;
+2026-09-14T15:51:53.801Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:53.801Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:53.810Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:51:53.812Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:51:53.816Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=70ed13e7-20d2-4760-b348-a8e627189601 source=prompt_suggestion
+2026-09-14T15:51:53.837Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:53.838Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:51:53.841Z [DEBUG] [engine] turn 4 end (turns=2 usage in=1304 out=953 cost=$0.0512 api=17298ms stop=end_turn resultLen=6)
+2026-09-14T15:51:53.845Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:53.845Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:51:54.454Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:51:54.454Z [DEBUG] [API:timing] first byte after 644ms
+2026-09-14T15:52:00.574Z [DEBUG] Forked agent [prompt_suggestion] received message: type=assistant
+2026-09-14T15:52:00.592Z [DEBUG] Forked agent [prompt_suggestion] received message: type=progress
+2026-09-14T15:52:00.596Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:52:00.597Z [DEBUG] Forked agent [prompt_suggestion] received message: type=attachment
+2026-09-14T15:52:00.597Z [DEBUG] Forked agent [prompt_suggestion] received message: type=system
+2026-09-14T15:52:00.598Z [DEBUG] Forked agent [prompt_suggestion] finished: 4 messages, types=[assistant, progress, attachment, system], totalUsage: input=350 output=538 cacheRead=39211 cacheCreate=195
+2026-09-14T15:52:40.904Z [DEBUG] High write ratio: blit=0, write=1003 (100.0% writes), screen=30x70
+2026-09-14T15:52:43.927Z [DEBUG] High write ratio: blit=0, write=2192 (100.0% writes), screen=45x160
+2026-09-14T15:52:46.990Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:52:46.990Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:52:47.008Z [DEBUG] High write ratio: blit=0, write=2289 (100.0% writes), screen=45x160
+2026-09-14T15:52:51.971Z [DEBUG] FileHistory: Making snapshot for message 464c65b8-5ef7-4991-8a16-08536ecd9fb0
+2026-09-14T15:52:51.973Z [DEBUG] FileHistory: Added snapshot for 464c65b8-5ef7-4991-8a16-08536ecd9fb0, tracking 0 files
+2026-09-14T15:52:51.975Z [DEBUG] [engine] turn 5 start
+2026-09-14T15:52:52.016Z [DEBUG] High write ratio: blit=0, write=2277 (100.0% writes), screen=45x160
+2026-09-14T15:52:52.019Z [DEBUG] PreCompact:manual [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PreCompact /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed with status 0
+2026-09-14T15:52:52.019Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:52:52.030Z [DEBUG] Dynamic tool loading: 0/67 deferred tools included
+2026-09-14T15:52:52.033Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.bd4; cc_entrypoint=cli; cch=00000; cc_prev_req=req_011Cf3bhGenj28aKWdHfqejV;
+2026-09-14T15:52:52.034Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:52:52.036Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:52:52.038Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-14T15:52:52.039Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T15:52:52.041Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=a9028b53-4b74-4f54-aa20-aa7a373b44b8 source=compact
+2026-09-14T15:52:52.092Z [DEBUG] High write ratio: blit=800, write=1944 (70.8% writes), screen=45x160
+2026-09-14T15:52:52.925Z [DEBUG] Stream started - received first chunk
+2026-09-14T15:52:52.925Z [DEBUG] [API:timing] first byte after 886ms
+2026-09-14T15:52:56.077Z [DEBUG] Forked agent [reactive-compact] received message: type=assistant
+2026-09-14T15:53:06.453Z [DEBUG] Forked agent [reactive-compact] received message: type=assistant
+2026-09-14T15:53:06.473Z [DEBUG] Forked agent [reactive-compact] received message: type=progress
+2026-09-14T15:53:06.488Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:53:06.488Z [DEBUG] Forked agent [reactive-compact] received message: type=attachment
+2026-09-14T15:53:06.490Z [DEBUG] Forked agent [reactive-compact] received message: type=system
+2026-09-14T15:53:06.491Z [DEBUG] Forked agent [reactive-compact] finished: 5 messages, types=[assistant, assistant, progress, attachment, system], totalUsage: input=1559 output=1261 cacheRead=38925 cacheCreate=163
+2026-09-14T15:53:06.495Z [INFO] compact: kept tail holds 1 thinking block(s); strip=off (decided by thinking_type; model=claude-haiku-4-5-20251001, thinking=enabled)
+2026-09-14T15:53:06.516Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:53:06.532Z [DEBUG] PostCompact:manual [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PostCompact /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed with status 0
+2026-09-14T15:53:06.533Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:53:06.549Z [DEBUG] [engine] turn 5 end (turns=0 usage in=3213 out=2752 cost=$0.0705 api=38518ms stop=null resultLen=0)
+2026-09-14T15:53:06.553Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:53:06.553Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-14T15:53:06.592Z [DEBUG] High write ratio: blit=6240, write=9094 (59.3% writes), screen=45x160
+2026-09-14T15:53:33.666Z [DEBUG] nonBlockingStdout: uninstalling (Error: EIO: i/o error, write)
+2026-09-14T15:53:33.670Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:53:33.672Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:53:33.676Z [DEBUG] High write ratio: blit=0, write=2602 (100.0% writes), screen=45x160
+2026-09-14T15:53:33.678Z [DEBUG] Cleaned up session snapshot: /root/.claude/shell-snapshots/snapshot-bash-1789401091685-h0u6bi.sh
+2026-09-14T15:53:33.687Z [DEBUG] SessionEnd:other [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed with status 0
+2026-09-14T15:53:33.687Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:53:33.951Z [WARN] [stderr] [?25h
+2026-09-14T15:53:33.956Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:53:33.956Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.692c66934542
+2026-09-14T15:53:33.956Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:53:33.958Z [DEBUG] Temp file written successfully, size: 74184 bytes
+2026-09-14T15:53:33.958Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.692c66934542 to /root/.claude.json
+2026-09-14T15:53:33.958Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:53:33.961Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T15:53:33.961Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4041880.419e220aad9b
+2026-09-14T15:53:33.961Z [DEBUG] Applied original permissions to temp file
+2026-09-14T15:53:33.966Z [DEBUG] Temp file written successfully, size: 75172 bytes
+2026-09-14T15:53:33.966Z [DEBUG] Renaming /root/.claude.json.tmp.4041880.419e220aad9b to /root/.claude.json
+2026-09-14T15:53:33.966Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T15:53:33.968Z [DEBUG] High write ratio: blit=0, write=2602 (100.0% writes), screen=45x160
+2026-09-14T15:53:33.969Z [ERROR] restoreTerminalModes write failed: Error: EIO: i/o error, write
+2026-09-14T15:53:33.974Z [DEBUG] [REPL:unmount] REPL unmounting

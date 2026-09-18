@@ -1,0 +1,830 @@
+### SystemMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1133]
+@dataclass
+class SystemMessage:
+    """System message with metadata."""
+
+    subtype: str
+    data: dict[str, Any]
+
+
+### AssistantMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1118]
+@dataclass
+class AssistantMessage:
+    """Assistant message with content blocks."""
+
+    content: list[ContentBlock]
+    model: str
+    parent_tool_use_id: str | None = None
+    error: AssistantMessageError | None = None
+    usage: dict[str, Any] | None = None
+    message_id: str | None = None
+    stop_reason: str | None = None
+    session_id: str | None = None
+    uuid: str | None = None
+
+
+### UserMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1103]
+@dataclass
+class UserMessage:
+    """User message."""
+
+    content: str | list[ContentBlock]
+    uuid: str | None = None
+    parent_tool_use_id: str | None = None
+    tool_use_result: dict[str, Any] | None = None
+    origin: MessageOrigin | None = None
+    """Provenance of this message — see :class:`MessageOrigin`. ``None`` when
+    the CLI did not attribute it. Populated on injected turns (task
+    notifications, channel/peer messages, ...) and on user messages the CLI
+    replays; tool-result messages never carry it."""
+
+
+### ResultMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1318]
+@dataclass
+class ResultMessage:
+    """Result message with cost and usage information."""
+
+    subtype: str
+    duration_ms: int
+    duration_api_ms: int
+    is_error: bool
+    num_turns: int
+    session_id: str
+    stop_reason: str | None = None
+    total_cost_usd: float | None = None
+    usage: dict[str, Any] | None = None
+    result: str | None = None
+    structured_output: Any = None
+    model_usage: dict[str, ModelUsage] | None = None
+    permission_denials: list[Any] | None = None
+    deferred_tool_use: DeferredToolUse | None = None
+    errors: list[str] | None = None
+    # HTTP status code (e.g. 429, 500, 529) of the failing API call when
+    # ``is_error`` is True and ``subtype`` is "success"; None otherwise.
+    # Emitted by the CLI since v2.1.110. Safe to log (no message content).
+    api_error_status: int | None = None
+    uuid: str | None = None
+    terminal_reason: str | None = None
+    """Why the query loop terminated (e.g. ``"completed"``, ``"max_turns"``,
+    ``"aborted_streaming"``). A value of ``"aborted_streaming"`` or
+    ``"aborted_tools"`` indicates the turn was cancelled (via
+    :meth:`ClaudeSDKClient.interrupt` or an ``interrupt`` control request).
+    ``None`` when the CLI did not report a terminal reason (older CLI
+    versions, or a result that bypassed the query loop such as a local
+    slash command). Mirrors the TypeScript SDK's
+    ``SDKResultMessage.terminal_reason``."""
+    origin: MessageOrigin | None = None
+    """Origin of the user message that triggered this turn — see
+    :class:`MessageOrigin`. Lets a streaming-input consumer distinguish the
+    result of its own prompt (``None``, or ``{"kind": "human"}`` if it stamped
+    that) from results of injected turns such as background-task
+    notifications (``{"kind": "task-notification"}``)."""
+
+
+### StreamEvent  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1359]
+@dataclass
+class StreamEvent:
+    """Stream event for partial message updates during streaming."""
+
+    uuid: str
+    session_id: str
+    event: dict[str, Any]  # The raw Anthropic API stream event
+    parent_tool_use_id: str | None = None
+
+
+### RateLimitEvent  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1402]
+@dataclass
+class RateLimitEvent:
+    """Rate limit event emitted when rate limit info changes.
+
+    The CLI emits this whenever the rate limit status transitions (e.g. from
+    ``allowed`` to ``allowed_warning``). Use this to warn users before they
+    hit a hard limit, or to gracefully back off when ``status == "rejected"``.
+    """
+
+    rate_limit_info: RateLimitInfo
+    uuid: str
+    session_id: str
+
+
+### TaskStartedMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1173]
+@dataclass
+class TaskStartedMessage(SystemMessage):
+    """System message emitted when a task starts.
+
+    Subclass of SystemMessage: existing ``isinstance(msg, SystemMessage)`` and
+    ``case SystemMessage()`` checks continue to match. The base ``subtype``
+    and ``data`` fields remain populated with the raw payload.
+    """
+
+    task_id: str
+    description: str
+    uuid: str
+    session_id: str
+    tool_use_id: str | None = None
+    task_type: str | None = None
+
+
+### TaskProgressMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1190]
+@dataclass
+class TaskProgressMessage(SystemMessage):
+    """System message emitted while a task is in progress.
+
+    Subclass of SystemMessage: existing ``isinstance(msg, SystemMessage)`` and
+    ``case SystemMessage()`` checks continue to match. The base ``subtype``
+    and ``data`` fields remain populated with the raw payload.
+    """
+
+    task_id: str
+    description: str
+    usage: TaskUsage
+    uuid: str
+    session_id: str
+    tool_use_id: str | None = None
+    last_tool_name: str | None = None
+
+
+### TaskNotificationMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1208]
+@dataclass
+class TaskNotificationMessage(SystemMessage):
+    """System message emitted when a task completes, fails, or is stopped.
+
+    Note: not every terminal task emits this message. Background tasks may
+    instead report completion only via a :class:`TaskUpdatedMessage` whose
+    ``patch.status`` is terminal (see ``TERMINAL_TASK_STATUSES``). Consumers
+    tracking active task IDs should clear them on a terminal status from
+    *either* message — see :class:`TaskUpdatedMessage`.
+
+    Subclass of SystemMessage: existing ``isinstance(msg, SystemMessage)`` and
+    ``case SystemMessage()`` checks continue to match. The base ``subtype``
+    and ``data`` fields remain populated with the raw payload.
+    """
+
+    task_id: str
+    status: TaskNotificationStatus
+    output_file: str
+    summary: str
+    uuid: str
+    session_id: str
+    tool_use_id: str | None = None
+    usage: TaskUsage | None = None
+
+
+### TextBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:934]
+@dataclass
+class TextBlock:
+    """Text content block."""
+
+    text: str
+
+
+### ThinkingBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:941]
+@dataclass
+class ThinkingBlock:
+    """Thinking content block."""
+
+    thinking: str
+    signature: str
+
+
+### ToolUseBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:949]
+@dataclass
+class ToolUseBlock:
+    """Tool use content block."""
+
+    id: str
+    name: str
+    input: dict[str, Any]
+
+
+### ToolResultBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:958]
+@dataclass
+class ToolResultBlock:
+    """Tool result content block."""
+
+    tool_use_id: str
+    content: str | list[dict[str, Any]] | None = None
+    is_error: bool | None = None
+
+
+### ServerToolUseBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:979]
+@dataclass
+class ServerToolUseBlock:
+    """Server-side tool use block (e.g. advisor, web_search, web_fetch).
+
+    These are tools the API executes server-side on the model's behalf, so they
+    appear in the message stream alongside regular `tool_use` blocks but the
+    caller never needs to return a result. `name` is a discriminator — branch
+    on it to know which server tool was invoked.
+    """
+
+    id: str
+    name: ServerToolName
+    input: dict[str, Any]
+
+
+### ServerToolResultBlock  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:994]
+@dataclass
+class ServerToolResultBlock:
+    """Result block returned for a server-side tool call.
+
+    Mirrors `ToolResultBlock`'s shape. `content` is the raw dict from the
+    API, opaque to this layer — callers that care about a specific server
+    tool's result schema can inspect `content["type"]`.
+    """
+
+    tool_use_id: str
+    content: dict[str, Any]
+
+
+### PermissionResult  [(alias)]
+claude_agent_sdk.types.PermissionResultAllow | claude_agent_sdk.types.PermissionResultDeny
+
+### McpSdkServerConfig  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:631]
+class McpSdkServerConfig(TypedDict):
+    """SDK (in-process) MCP server configuration.
+
+    Usually produced by ``create_sdk_mcp_server()``. ``instance`` may also be
+    any ``mcp.server.Server`` you have built yourself; the SDK serves it to
+    Claude Code over an in-memory MCP transport (one ``Server.run`` per
+    query, so its lifespan runs once), and the requests it handles (tools,
+    resources, prompts, ...) all reach it. Requests and notifications the
+    server sends to the client (sampling, elicitation, roots, logging,
+    progress) are not forwarded yet, and on mcp 1.x its tools are not
+    cancelled when Claude Code abandons a call: they run to completion.
+    """
+
+    type: Literal["sdk"]
+    name: str
+    instance: "McpServer"
+
+
+### McpStdioServerConfig  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:606]
+class McpStdioServerConfig(TypedDict):
+    """MCP stdio server configuration."""
+
+    type: NotRequired[Literal["stdio"]]  # Optional for backwards compatibility
+    command: str
+    args: NotRequired[list[str]]
+    env: NotRequired[dict[str, str]]
+
+
+### SystemPromptPreset  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:40]
+class SystemPromptPreset(TypedDict):
+    """System prompt preset configuration."""
+
+    type: Literal["preset"]
+    preset: Literal["claude_code"]
+    append: NotRequired[str]
+    exclude_dynamic_sections: NotRequired[bool]
+    """Strip per-user dynamic sections (working directory, auto-memory, git
+    status) from the system prompt so it stays static and cacheable across
+    users. The stripped content is re-injected into the first user message
+    so the model still has access to it.
+
+    Use this when many users share the same preset system prompt and you
+    want the prompt-caching prefix to hit cross-user.
+
+    Requires a Claude Code CLI version that supports this option; older
+    CLIs silently ignore it.
+    """
+
+
+### PermissionMode  [(alias)]
+typing.Literal['default', 'acceptEdits', 'plan', 'bypassPermissions', 'dontAsk', 'auto']
+
+### SettingSource  [(alias)]
+typing.Literal['user', 'project', 'local']
+
+### HookMatcher  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:588]
+@dataclass
+class HookMatcher:
+    """Hook matcher configuration."""
+
+    # See https://docs.anthropic.com/en/docs/claude-code/hooks#structure for the
+    # expected string value. For example, for PreToolUse, the matcher can be
+    # a tool name like "Bash" or a combination of tool names like
+    # "Write|MultiEdit|Edit".
+    matcher: str | None = None
+
+    # A list of Python functions with function signature HookCallback
+    hooks: list[HookCallback] = field(default_factory=list)
+
+    # Timeout in seconds for all hooks in this matcher (default: 60)
+    timeout: float | None = None
+
+
+### ToolPermissionContext  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:201]
+@dataclass
+class ToolPermissionContext:
+    """Context information for tool permission callbacks."""
+
+    signal: Any | None = None  # Future: abort signal support
+    suggestions: list[PermissionUpdate] = field(
+        default_factory=list
+    )  # Permission suggestions from CLI
+    tool_use_id: str | None = None
+    """Unique identifier for this specific tool call within the assistant message.
+    Multiple tool calls in the same assistant message will have different tool_use_ids.
+
+    Always a non-empty string when delivered to a ``can_use_tool`` callback (the
+    wire protocol guarantees it); the ``Optional`` is only for dataclass
+    field-ordering compatibility, so callers do not need to handle ``None``."""
+    agent_id: str | None = None
+    """If running within the context of a sub-agent, the sub-agent's ID."""
+    blocked_path: str | None = None
+    """The file path that triggered the permission request, if applicable.
+    For example, when a Bash command tries to access a path outside allowed directories."""
+    decision_reason: str | None = None
+    """Explains why this permission request was triggered.
+    When a PreToolUse hook returns ``permissionDecision: "ask"`` with a
+    ``permissionDecisionReason``, that reason is forwarded here."""
+    title: str | None = None
+    """Full permission prompt sentence (e.g. "Claude wants to read foo.txt").
+    Use this as the primary prompt text when present instead of reconstructing
+    from tool name + input."""
+    display_name: str | None = None
+    """Short noun phrase for the tool action (e.g. "Read file"), suitable for
+    button labels or compact UI."""
+    description: str | None = None
+    """Human-readable subtitle for the permission UI."""
+
+
+### PermissionUpdate  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:124]
+@dataclass
+class PermissionUpdate:
+    """Permission update configuration."""
+
+    type: Literal[
+        "addRules",
+        "replaceRules",
+        "removeRules",
+        "setMode",
+        "addDirectories",
+        "removeDirectories",
+    ]
+    rules: list[PermissionRuleValue] | None = None
+    behavior: PermissionBehavior | None = None
+    mode: PermissionMode | None = None
+    directories: list[str] | None = None
+    destination: PermissionUpdateDestination | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
+        result: dict[str, Any] = {
+            "type": self.type,
+        }
+
+        # Add destination for all variants
+        if self.destination is not None:
+            result["destination"] = self.destination
+
+        # Handle different type variants
+        if self.type in ["addRules", "replaceRules", "removeRules"]:
+            # Rules-based variants require rules and behavior
+            if self.rules is not None:
+                result["rules"] = [
+                    {
+                        "toolName": rule.tool_name,
+                        "ruleContent": rule.rule_content,
+                    }
+                    for rule in self.rules
+                ]
+            if self.behavior is not None:
+                result["behavior"] = self.behavior
+
+        elif self.type == "setMode":
+            # Mode variant requires mode
+            if self.mode is not None:
+                result["mode"] = self.mode
+
+        elif self.type in ["addDirectories", "removeDirectories"]:
+            # Directory variants require directories
+            if self.directories is not None:
+                result["directories"] = self.directories
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PermissionUpdate":
+        """Construct a PermissionUpdate from the control protocol dict format (inverse of to_dict)."""
+        rules = None
+        if data.get("rules") is not None:
+            rules = [
+                PermissionRuleValue(
+                    tool_name=r["toolName"],
+                    rule_content=r.get("ruleContent"),
+                )
+                for r in data["rules"]
+            ]
+        return cls(
+            type=data["type"],
+            rules=rules,
+            behavior=data.get("behavior"),
+            mode=data.get("mode"),
+            directories=data.get("directories"),
+            destination=data.get("destination"),
+        )
+
+
+### AgentDefinition  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:86]
+@dataclass
+class AgentDefinition:
+    """Agent definition configuration."""
+
+    description: str
+    prompt: str
+    # Deprecated: passing "Skill" here is deprecated; use `skills` instead.
+    tools: list[str] | None = None
+    disallowedTools: list[str] | None = None  # noqa: N815
+    # Model alias ("sonnet", "opus", "haiku", "inherit") or a full model ID.
+    model: str | None = None
+    skills: list[str] | None = None
+    memory: Literal["user", "project", "local"] | None = None
+    # Each entry is a server name (str) or an inline {name: config} dict.
+    mcpServers: list[str | dict[str, Any]] | None = None  # noqa: N815
+    initialPrompt: str | None = None  # noqa: N815
+    maxTurns: int | None = None  # noqa: N815
+    background: bool | None = None
+    effort: EffortLevel | int | None = None
+    permissionMode: PermissionMode | None = None  # noqa: N815
+
+
+### SandboxSettings  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:887]
+class SandboxSettings(TypedDict, total=False):
+    """Sandbox settings configuration.
+
+    This controls how Claude Code sandboxes bash commands for filesystem
+    and network isolation.
+
+    **Important:** Filesystem and network restrictions are configured via permission
+    rules, not via these sandbox settings:
+    - Filesystem read restrictions: Use Read deny rules
+    - Filesystem write restrictions: Use Edit allow/deny rules
+    - Network restrictions: Use WebFetch allow/deny rules
+
+    Attributes:
+        enabled: Enable bash sandboxing (macOS/Linux only). Default: False
+        autoAllowBashIfSandboxed: Auto-approve bash commands when sandboxed. Default: True
+        excludedCommands: Commands that should run outside the sandbox (e.g., ["git", "docker"])
+        allowUnsandboxedCommands: Allow commands to bypass sandbox via dangerouslyDisableSandbox.
+            When False, all commands must run sandboxed (or be in excludedCommands). Default: True
+        network: Network configuration for sandbox.
+        ignoreViolations: Violations to ignore.
+        enableWeakerNestedSandbox: Enable weaker sandbox for unprivileged Docker environments
+            (Linux only). Reduces security. Default: False
+
+    Example:
+        ```python
+        sandbox_settings: SandboxSettings = {
+            "enabled": True,
+            "autoAllowBashIfSandboxed": True,
+            "excludedCommands": ["docker"],
+            "network": {
+                "allowUnixSockets": ["/var/run/docker.sock"],
+                "allowLocalBinding": True
+            }
+        }
+        ```
+    """
+
+    enabled: bool
+    autoAllowBashIfSandboxed: bool
+    excludedCommands: list[str]
+    allowUnsandboxedCommands: bool
+    network: SandboxNetworkConfig
+    ignoreViolations: SandboxIgnoreViolations
+    enableWeakerNestedSandbox: bool
+
+
+### ThinkingConfig  [(alias)]
+claude_agent_sdk.types.ThinkingConfigAdaptive | claude_agent_sdk.types.ThinkingConfigEnabled | claude_agent_sdk.types.ThinkingConfigDisabled
+
+### RateLimitInfo  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1376]
+@dataclass
+class RateLimitInfo:
+    """Rate limit status emitted by the CLI when rate limit state changes.
+
+    Attributes:
+        status: Current rate limit status. ``allowed_warning`` means approaching
+            the limit; ``rejected`` means the limit has been hit.
+        resets_at: Unix timestamp when the rate limit window resets.
+        rate_limit_type: Which rate limit window applies.
+        utilization: Fraction of the rate limit consumed (0.0 - 1.0).
+        overage_status: Status of overage/pay-as-you-go usage if applicable.
+        overage_resets_at: Unix timestamp when overage window resets.
+        overage_disabled_reason: Why overage is unavailable if status is rejected.
+        raw: Full raw dict from the CLI, including any fields not modeled above.
+    """
+
+    status: RateLimitStatus
+    resets_at: int | None = None
+    rate_limit_type: RateLimitType | None = None
+    utilization: float | None = None
+    overage_status: RateLimitStatus | None = None
+    overage_resets_at: int | None = None
+    overage_disabled_reason: str | None = None
+    raw: dict[str, Any] = field(default_factory=dict)
+
+
+### McpServerConfig  [(alias)]
+claude_agent_sdk.types.McpStdioServerConfig | claude_agent_sdk.types.McpSSEServerConfig | claude_agent_sdk.types.McpHttpServerConfig | claude_agent_sdk.types.McpSdkServerConfig
+
+### CanUseTool  [(alias)]
+collections.abc.Callable[[str, dict[str, typing.Any], claude_agent_sdk.types.ToolPermissionContext], collections.abc.Awaitable[claude_agent_sdk.types.PermissionResultAllow | claude_agent_sdk.types.PermissionResultDeny]]
+
+### ContextUsageResponse  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:773]
+class ContextUsageResponse(TypedDict):
+    """Response from `ClaudeSDKClient.get_context_usage()`.
+
+    Provides a breakdown of current context window usage by category,
+    matching the data shown by the `/context` command in the CLI.
+    """
+
+    categories: list[ContextUsageCategory]
+    """Token usage broken down by category (system prompt, tools, messages, etc.)."""
+
+    totalTokens: int
+    """Total tokens currently in the context window."""
+
+    maxTokens: int
+    """Effective maximum tokens (may be reduced by autocompact buffer)."""
+
+    rawMaxTokens: int
+    """Raw model context window size."""
+
+    percentage: float
+    """Percentage of context window used (0-100)."""
+
+    model: str
+    """Model name the context usage is calculated for."""
+
+    isAutoCompactEnabled: bool
+    """Whether autocompact is enabled for this session."""
+
+    memoryFiles: list[dict[str, Any]]
+    """CLAUDE.md and memory files loaded, with path, type, and token counts."""
+
+    mcpTools: list[dict[str, Any]]
+    """MCP tools with name, serverName, tokens, and isLoaded status."""
+
+    agents: list[dict[str, Any]]
+    """Agent definitions with agentType, source, and token counts."""
+
+    gridRows: list[list[dict[str, Any]]]
+    """Visual grid representation used by the CLI context display."""
+
+    autoCompactThreshold: NotRequired[int]
+    """Token threshold at which autocompact triggers."""
+
+    deferredBuiltinTools: NotRequired[list[dict[str, Any]]]
+    """Built-in tools deferred from the initial tool list."""
+
+    systemTools: NotRequired[list[dict[str, Any]]]
+    """System (built-in) tools with name and token counts."""
+
+    systemPromptSections: NotRequired[list[dict[str, Any]]]
+    """System prompt sections with name and token counts."""
+
+    slashCommands: NotRequired[dict[str, Any]]
+    """Slash command usage summary."""
+
+    skills: NotRequired[dict[str, Any]]
+    """Skill usage summary with frontmatter breakdown."""
+
+    messageBreakdown: NotRequired[dict[str, Any]]
+    """Detailed breakdown of message tokens by type (tool calls, results, etc.)."""
+
+    apiUsage: NotRequired[dict[str, Any] | None]
+    """Cumulative API usage for the session."""
+
+
+### PermissionResultAllow  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:237]
+@dataclass
+class PermissionResultAllow:
+    """Allow permission result."""
+
+    behavior: Literal["allow"] = "allow"
+    updated_input: dict[str, Any] | None = None
+    updated_permissions: list[PermissionUpdate] | None = None
+
+
+### PermissionResultDeny  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:246]
+@dataclass
+class PermissionResultDeny:
+    """Deny permission result."""
+
+    behavior: Literal["deny"] = "deny"
+    message: str = ""
+    interrupt: bool = False
+
+
+### McpSSEServerConfig  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:615]
+class McpSSEServerConfig(TypedDict):
+    """MCP SSE server configuration."""
+
+    type: Literal["sse"]
+    url: str
+    headers: NotRequired[dict[str, str]]
+
+
+### McpHttpServerConfig  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:623]
+class McpHttpServerConfig(TypedDict):
+    """MCP HTTP server configuration."""
+
+    type: Literal["http"]
+    url: str
+    headers: NotRequired[dict[str, str]]
+
+
+### ToolsPreset  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:79]
+class ToolsPreset(TypedDict):
+    """Tools preset configuration."""
+
+    type: Literal["preset"]
+    preset: Literal["claude_code"]
+
+
+### SystemPromptFile  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:60]
+class SystemPromptFile(TypedDict):
+    """System prompt file configuration."""
+
+    type: Literal["file"]
+    path: str
+
+
+### HookEventMessage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1443]
+@dataclass
+class HookEventMessage(SystemMessage):
+    """Hook event emitted by the CLI when ``include_hook_events`` is enabled.
+
+    When ``ClaudeAgentOptions.include_hook_events`` is ``True``, the CLI emits
+    hook lifecycle events (PreToolUse, PostToolUse, Stop, etc.) into the
+    message stream. Each event is identified by ``hook_event_name`` and the
+    full raw payload is available in ``data``.
+
+    These arrive on the wire as ``{"type": "system", "subtype":
+    "hook_started" | "hook_response", "hook_event": "PreToolUse", ...}``.
+
+    Subclass of SystemMessage: existing ``isinstance(msg, SystemMessage)`` and
+    ``case SystemMessage()`` checks continue to match. The base ``subtype``
+    and ``data`` fields remain populated with the raw payload.
+
+    Attributes:
+        subtype: Lifecycle phase — ``"hook_started"`` when a hook begins
+            executing, ``"hook_response"`` when it completes (the latter
+            carries ``output``, ``exit_code``, and ``outcome`` keys in
+            ``data``).
+        hook_event_name: Name of the hook event (e.g. ``"PreToolUse"``,
+            ``"PostToolUse"``, ``"Stop"``).
+        data: Full raw event dict from the CLI, including any
+            event-specific fields not modeled here.
+        session_id: Session ID the event belongs to, if present.
+        uuid: Unique ID of the event, if present.
+    """
+
+    hook_event_name: str = ""
+    session_id: str | None = None
+    uuid: str | None = None
+
+
+### ModelUsage  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1293]
+class ModelUsage(TypedDict):
+    """Per-model token usage and cost breakdown.
+
+    Keys match the TypeScript SDK's ``ModelUsage`` shape (camelCase), since
+    the value is passed through verbatim from the CLI's ``modelUsage`` field.
+    """
+
+    inputTokens: int
+    outputTokens: int
+    cacheReadInputTokens: int
+    cacheCreationInputTokens: int
+    webSearchRequests: int
+    costUSD: float
+    contextWindow: int
+    maxOutputTokens: int
+    canonicalModel: NotRequired[str]
+    """Canonical model id used for the pricing lookup (e.g.
+    ``'claude-opus-4-7'``). May differ from the raw model string this entry
+    is keyed by (provider-specific ids, aliases)."""
+    provider: NotRequired[str]
+    """API provider that served this model (``'firstParty'``, ``'bedrock'``,
+    ``'vertex'``, ``'foundry'``, ``'anthropicAws'``, ``'anthropicGoogleCloud'``,
+    ``'mantle'``, ``'gateway'``)."""
+
+
+### DeferredToolUse  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1279]
+@dataclass
+class DeferredToolUse:
+    """Tool use that was deferred by a PreToolUse hook returning ``"defer"``.
+
+    When a PreToolUse hook returns ``permissionDecision: "defer"``, the run
+    stops and the result message carries the deferred tool call here so the
+    caller can inspect it and decide whether to resume.
+    """
+
+    id: str
+    name: str
+    input: dict[str, Any]
+
+
+### ToolAnnotations  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/__init__.py:187]
+class ToolAnnotations(_McpToolAnnotations, extra="allow"):
+    """Hints about a tool's behavior, plus ``maxResultSizeChars``.
+
+    A ``mcp.types.ToolAnnotations`` that takes every hint in either spelling
+    on every supported mcp version: ``ToolAnnotations(readOnlyHint=True)``
+    and ``ToolAnnotations(read_only_hint=True)`` are the same thing, and both
+    type-check. (mcp's own class differs between majors here: 1.x only knows
+    the camelCase names and 2.x prefers snake_case.) Attribute access follows
+    the installed mcp: ``.readOnlyHint`` on 1.x, ``.read_only_hint`` on 2.x.
+
+    ``maxResultSizeChars`` (``max_result_size_chars``) is not an MCP hint but
+    a Claude Code one: the size, in characters, up to which Claude Code keeps
+    this tool's result inline instead of persisting it to a file and showing
+    a preview. It travels to the CLI in the tool's ``_meta``.
+
+    Either this class or a plain ``mcp.types.ToolAnnotations`` is accepted
+    wherever the SDK takes annotations.
+    """
+
+    maxResultSizeChars: int | None = None  # noqa: N815 - the wire spelling
+
+    if TYPE_CHECKING:
+
+        def __init__(  # both spellings, deliberately
+            self,
+            *,
+            title: str | None = None,
+            readOnlyHint: bool | None = None,  # noqa: N803
+            read_only_hint: bool | None = None,
+            destructiveHint: bool | None = None,  # noqa: N803
+            destructive_hint: bool | None = None,
+            idempotentHint: bool | None = None,  # noqa: N803
+            idempotent_hint: bool | None = None,
+            openWorldHint: bool | None = None,  # noqa: N803
+            open_world_hint: bool | None = None,
+            maxResultSizeChars: int | None = None,  # noqa: N803
+            max_result_size_chars: int | None = None,
+            **extra: Any,
+        ) -> None: ...
+
+    else:
+
+        def __init__(self, **data: Any) -> None:
+            # Fold the snake_case spellings into the wire names, which every
+            # mcp version accepts (as field names on 1.x, as aliases on 2.x).
+            # Given both, the wire name wins.
+            for snake, wire in _HINT_WIRE_NAMES.items():
+                if snake in data:
+                    value = data.pop(snake)
+                    data.setdefault(wire, value)
+            super().__init__(**data)
+
+
+### ForkSessionResult  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/_internal/session_mutations.py:232]
+@dataclass
+class ForkSessionResult:
+    """Result of a fork operation."""
+
+    session_id: str
+    """UUID of the new forked session."""
+
+
+### SDKSessionInfo  [/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/types.py:1712]
+@dataclass
+class SDKSessionInfo:
+    """Session metadata returned by ``list_sessions()``.
+
+    Contains only data extractable from stat + head/tail reads — no full
+    JSONL parsing required.
+
+    Attributes:
+        session_id: Unique session identifier (UUID).
+        summary: Display title for the session — custom title, auto-generated
+            summary, or first prompt.
+        last_modified: Last modified time in milliseconds since epoch.
+        file_size: Session file size in bytes. Only populated for local
+            JSONL storage; may be ``None`` for remote storage backends.
+        custom_title: Session title — user-set custom title or AI-generated title.
+        first_prompt: First meaningful user prompt in the session.
+        git_branch: Git branch at the end of the session.
+        cwd: Working directory for the session.
+        tag: User-set session tag.
+        created_at: Creation time in milliseconds since epoch, extracted
+            from the first entry's ISO timestamp field. More reliable
+            than stat().birthtime which is unsupported on some filesystems.
+    """
+
+    session_id: str
+    summary: str
+    last_modified: int
+    file_size: int | None = None
+    custom_title: str | None = None
+    first_prompt: str | None = None
+    git_branch: str | None = None
+    cwd: str | None = None
+    tag: str | None = None
+    created_at: int | None = None
+

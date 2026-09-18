@@ -1,0 +1,42 @@
+[
+ [
+  "2026-09-14T15:58:39.918Z",
+  "Notification",
+  "idle_prompt"
+ ],
+ [
+  "2026-09-14T15:58:42.964Z",
+  "UserPromptSubmit",
+  "Use the Bash tool to run exactly this command: touch dialog-probe.txt"
+ ],
+ [
+  "2026-09-14T15:58:46.058Z",
+  "PreToolUse",
+  "Bash"
+ ],
+ [
+  "2026-09-14T15:58:46.113Z",
+  "PermissionRequest",
+  "Bash"
+ ],
+ [
+  "2026-09-14T15:58:48.537Z",
+  "PostToolUse",
+  "Bash"
+ ],
+ [
+  "2026-09-14T15:58:48.550Z",
+  "PostToolBatch",
+  null
+ ],
+ [
+  "2026-09-14T15:58:51.174Z",
+  "MessageDisplay",
+  null
+ ],
+ [
+  "2026-09-14T15:58:51.179Z",
+  "Stop",
+  null
+ ]
+]

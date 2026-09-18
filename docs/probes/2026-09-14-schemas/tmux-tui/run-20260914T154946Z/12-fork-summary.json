@@ -1,0 +1,57 @@
+{
+ "original_session_id": "71757dd1-5375-4801-b467-7898a0bc1194",
+ "fork_session_id": "c3f63742-5ff5-44ea-8f6e-a26d027b51d0",
+ "original_transcript": "/root/.claude/projects/-tmp-shp-tui-A-4tvrx00n/71757dd1-5375-4801-b467-7898a0bc1194.jsonl",
+ "fork_transcript": "/root/.claude/projects/-tmp-shp-tui-A-4tvrx00n/c3f63742-5ff5-44ea-8f6e-a26d027b51d0.jsonl",
+ "before": {
+  "sha": "481298ac7988e6a063d6c5b22b2ac2f6452286a0e94dcfe9c9c5ec7c46650872",
+  "lines": 85,
+  "files": [
+   "71757dd1-5375-4801-b467-7898a0bc1194",
+   "71757dd1-5375-4801-b467-7898a0bc1194.jsonl",
+   "memory"
+  ]
+ },
+ "fork_started_no_prompt": {
+  "fork_transcript_exists_before_prompt": false,
+  "files": [
+   "71757dd1-5375-4801-b467-7898a0bc1194",
+   "71757dd1-5375-4801-b467-7898a0bc1194.jsonl",
+   "memory"
+  ]
+ },
+ "after_fork_turn": {
+  "sha": "481298ac7988e6a063d6c5b22b2ac2f6452286a0e94dcfe9c9c5ec7c46650872",
+  "lines": 85,
+  "files": [
+   "71757dd1-5375-4801-b467-7898a0bc1194",
+   "71757dd1-5375-4801-b467-7898a0bc1194.jsonl",
+   "c3f63742-5ff5-44ea-8f6e-a26d027b51d0.jsonl",
+   "memory"
+  ]
+ },
+ "original_unchanged": true,
+ "fork_transcript_stats": {
+  "lines": 50,
+  "sessionId_values": [
+   "None",
+   "c3f63742-5ff5-44ea-8f6e-a26d027b51d0"
+  ],
+  "keys_mentioning_fork": [],
+  "types": [
+   "agent-name",
+   "ai-title",
+   "assistant",
+   "atis-latch",
+   "attachment",
+   "custom-title",
+   "file-history-snapshot",
+   "last-prompt",
+   "mode",
+   "permission-mode",
+   "system",
+   "user"
+  ]
+ },
+ "hook_events_for_original_session_during_fork": []
+}

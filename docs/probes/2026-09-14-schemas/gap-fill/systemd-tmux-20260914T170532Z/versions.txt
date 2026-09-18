@@ -1,0 +1,4 @@
+claude --version: 2.1.270 (Claude Code)
+tmux -V: tmux 3.4
+systemd: systemd 255 (255.4-1ubuntu8.17)
+Linux 6.8.0-117-generic

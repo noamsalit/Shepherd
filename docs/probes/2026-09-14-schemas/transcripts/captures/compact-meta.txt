@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:08:48Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p /compact --resume 0141fab3-8bf8-4b69-be1f-89552ccfce5d --model claude-haiku-4-5-20251001 --output-format stream-json --verbose
+exit: 0

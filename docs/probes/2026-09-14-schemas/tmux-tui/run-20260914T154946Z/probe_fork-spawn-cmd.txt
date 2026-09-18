@@ -1,0 +1,2 @@
+tmux -L shepherd-probe new-session -d -s probe_fork -x 160 -y 45 -c /tmp/shp-tui-A-4tvrx00n 'claude --model claude-haiku-4-5-20251001 --debug-file /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/debug-fork.log --resume 71757dd1-5375-4801-b467-7898a0bc1194 --fork-session'
+rc=0

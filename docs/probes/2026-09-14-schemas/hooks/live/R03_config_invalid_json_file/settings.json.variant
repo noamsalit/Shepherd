@@ -1,0 +1,1 @@
+{"hooks": {"UserPromptSubmit": [{"matcher": "*", "hooks": [{"type": "command", "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptSubmit__from_settings_json /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_invalid_json_file/events.jsonl"}]}]}, TRAILING GARBAGE

@@ -1,0 +1,82 @@
+diff --git a/docs/specs/orchestrator-platform.md b/docs/specs/orchestrator-platform.md
+index 8c290c0..f30685e 100644
+--- a/docs/specs/orchestrator-platform.md
++++ b/docs/specs/orchestrator-platform.md
+@@ -25,7 +25,9 @@ You have everything you need. Do this, in order:
+ 2. Note §2 — the product name (`shepherd`) and repo location are settled. Prose
+    written earlier still says `shepherd` in places; same product.
+ 3. Run the **tmux ↔ Claude Code TUI spike** from §18 before committing to M3.
+-   It is the one assumption that could force a redesign.
++   It is the one assumption that could force a redesign. **Read the isolation
++   rule in §18 before you run it** — on 2026-09-12 this spike destroyed three
++   live sessions, including the one running it.
+ 4. Then invoke the `writing-plans` skill against this spec, scoped to **M1
+    only** (§16). Do not plan all six milestones at once — each milestone gets its
+    own plan → implementation cycle.
+@@ -979,13 +981,13 @@ first-class metric on the fleet page — it *is* the tuning backlog (principle 5
+ 
+ ### LocalRunner: tmux (D14)
+ 
+-Each `owned` session is a tmux session named `shepherd:<session_id>`.
++Each `owned` session is a tmux session named `shepherd_<session_id>`, on a **dedicated socket** (`tmux -L shepherd`).
+ 
+ | Problem | How tmux solves it |
+ |---|---|
+ | Survive `sessiond` restart/upgrade | the tmux server is its own process |
+ | Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact** plus scrollback. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
+-| Real "jump to terminal" | `tmux attach -t shepherd:<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
++| Real "jump to terminal" | `tmux -L shepherd attach -t shepherd_<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
+ | Alt-screen + resize + reflow | already handled; Claude Code's TUI uses the alternate screen |
+ 
+ Fallback `PtyRunner` behind the same interface if tmux is unavailable —
+@@ -2158,7 +2160,7 @@ Named so they do not leak into v1:
+ 
+ | Risk | Probe |
+ |---|---|
+-| tmux ↔ Claude Code TUI (alt-screen, resize, reflow) | **Spike before M3 starts** — it is M3's load-bearing assumption |
++| tmux ↔ Claude Code TUI (alt-screen, resize, reflow) | **Spike before M3 starts** — it is M3's load-bearing assumption. **Run it on a throwaway socket: `tmux -L shepherd-spike …`, and tear down with `tmux -L shepherd-spike kill-server` — never a bare `kill-server`.** See the incident note below |
+ | Session forking for `ask()` | Verify the flag/SDK path in M3; the `can_fork=False` mailbox fallback is already designed |
+ | Hook write volume — `PostToolUse` × 20 concurrent sessions | Measure in M1; batch writes + WAL tuning if it bites |
+ | Notion rate limits (~3 req/s) | Design reconcile for it in M6; backoff + cursor already present |
+@@ -2167,6 +2169,32 @@ Named so they do not leak into v1:
+ | **Title write-back** (D29) — can a rename be pushed into Claude Code without writing into a file it owns? | Probe in M3 alongside the tmux spike. Until it passes, `can_set_title = False` and renames stay local |
+ | Whether the shipped SQLite has `FULL OUTER JOIN` (3.39+) | One line in M1; the matrix falls back to two `LEFT JOIN`s and a `UNION` |
+ 
++### Incident 2026-09-12 — the tmux spike killed three live sessions
++
++The first run of the tmux spike opened with `tmux kill-server` as a
++"clean slate" step. `kill-server` is **global**: it terminates the tmux server
++and every session on it. Three Remote Control sessions were running on that
++server, including the session issuing the command, which died two seconds later
++with exit 137. The spike never reported a result.
++
++Two rules follow, and both are load-bearing for M3:
++
++1. **A spike never shares a socket with live work.** Use `tmux -L <throwaway>`
++   for the whole spike and tear down that socket by name. A bare
++   `tmux kill-server` is banned in this repo — there is no context in which the
++   right blast radius is "every tmux session on the machine".
++2. **`-L` is necessary but not sufficient.** A command run *inside* a tmux
++   session inherits `$TMUX` and resolves to that session's own socket, so a bare
++   `kill-server` from within an isolated socket still kills that socket. Always
++   pass `-L` explicitly on every tmux invocation, including teardown.
++
++A related defect surfaced in the same command: the session was named
++`shepherd:spike1`. tmux reserves `:` as the `session:window` separator, so it
++silently rewrote the name to `shepherd_spike1` — and `-t shepherd:spike1` in the
++following lines resolved to **session `shepherd`, window `spike1`**, targeting
++the user's live session rather than the spike's. `D14`'s naming is
++`shepherd_<session_id>` for this reason; never a colon.
++
+ ---
+ 
+ ## 19. Glossary
+@@ -2236,7 +2264,7 @@ edited `ox-ai-agent` too. That is the multi-repo case D22 exists for.
+   "title": "OXDEV-81711 custom reports", "title_source": "engine",
+   "cwd": "/Users/noamsalit/Git/reporting-service-wt/OXDEV-81711",
+   "worktree_path": "/Users/noamsalit/Git/reporting-service-wt/OXDEV-81711",
+-  "runner_handle": "shepherd:ses_7f3k", "model": "claude-opus-5", "effort": "xhigh",
++  "runner_handle": "shepherd_ses_7f3k", "model": "claude-opus-5", "effort": "xhigh",
+   "started_at": "2026-09-11T10:22:41Z",
+ 
+   "state": "running", "last_event_at": "2026-09-11T10:41:07Z",

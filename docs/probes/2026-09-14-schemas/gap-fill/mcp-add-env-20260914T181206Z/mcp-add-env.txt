@@ -1,0 +1,30 @@
+$ claude mcp add -s user -e SHP_X=1 shepherd -- /bin/true
+error: missing required argument 'commandOrUrl'
+[rc=1]
+$ claude mcp add -s user shepherd -e SHP_X=1 -- /bin/true
+Added stdio MCP server shepherd with command: /bin/true  to user config
+File modified: /tmp/shp-gap-mcpenv-41dZO8/cfg/.claude.json
+[rc=0]
+$ claude mcp get shepherd
+shepherd:
+  Scope: User config (available in all your projects)
+  Status: ✘ Failed to connect
+  Issue: -32000: MCP error -32000: Connection closed
+  Type: stdio
+  Command: /bin/true
+  Args:
+  Environment:
+    SHP_X=1
+
+To remove this server, run: claude mcp remove shepherd -s user
+[rc=0]
+{
+ "shepherd": {
+  "type": "stdio",
+  "command": "/bin/true",
+  "args": [],
+  "env": {
+   "SHP_X": "1"
+  }
+ }
+}

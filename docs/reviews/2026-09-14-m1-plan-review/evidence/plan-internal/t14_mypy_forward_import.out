@@ -1,0 +1,3 @@
+src/shepherd/controld/main.py:6: error: Cannot find implementation or library stub for module named "shepherd.controld.http"  [import-not-found]
+src/shepherd/controld/main.py:6: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+Found 1 error in 1 file (checked 3 source files)

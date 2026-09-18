@@ -1,0 +1,42 @@
+## variant nopath  unit=shp-gap-sessiond-nopath  props=[]  server-launch=direct  action=stop
+## launch command (unit ExecStart /bin/sh -c): tmux -L shp-gap-sysd-n new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-n new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000
+## systemctl --user show shp-gap-sessiond-nopath
+MainPID=4054411
+ControlGroup=/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-nopath.service
+KillMode=control-group
+KillSignal=15
+SendSIGHUP=no
+Id=shp-gap-sessiond-nopath.service
+ActiveState=active
+SubState=running
+## pids: unit MainPID=4054411 tmux-server= pane0(claude)= pane1(sleep)=
+## /proc/<pid>/cgroup before stop
+unit-main:   0::/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-nopath.service
+tmux-server: <no such pid>
+pane-claude: <no such pid>  comm=
+pane-sleep:  <no such pid>
+## pane process env (names + PATH/TERM/TMUX values) of pane-claude
+## systemd-cgls of the unit cgroup
+CGroup /user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-nopath.service:
+└─4054411 sleep 100000
+## t=17:05:41.794 systemctl --user stop shp-gap-sessiond-nopath
+systemctl exit=0
+## after stop (+4s)
+MainPID=0
+NRestarts=0
+ActiveState=inactive
+SubState=dead
+unit-main(old 4054411): dead   unit-main(new 0): dead
+tmux-server : dead
+pane-claude : dead
+pane-sleep  : dead
+## tmux -L shp-gap-sysd-n list-sessions
+no server running on /tmp/tmux-0/shp-gap-sysd-n
+## tmux -L shp-gap-sysd-n list-panes -a -F
+no server running on /tmp/tmux-0/shp-gap-sysd-n
+## journal (unit, last lines)
+<ts> <host> systemd[1014041]: Started shp-gap-sessiond-nopath.service - /bin/sh -c "tmux -L shp-gap-sysd-n new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-n new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> sh[4054418]: server exited unexpectedly
+<ts> <host> systemd[1014041]: Stopping shp-gap-sessiond-nopath.service - /bin/sh -c "tmux -L shp-gap-sysd-n new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-n new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000"...
+<ts> <host> systemd[1014041]: Stopped shp-gap-sessiond-nopath.service - /bin/sh -c "tmux -L shp-gap-sysd-n new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-n new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+## teardown: tmux -L shp-gap-sysd-n ls -> no server running on /tmp/tmux-0/shp-gap-sysd-n

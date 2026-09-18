@@ -1,0 +1,2 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-extra_keys_group_and_entry-v_57lrhe; exit=0
+(no 'Invalid settings' section)

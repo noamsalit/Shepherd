@@ -1,0 +1,1 @@
+ls: cannot access '/root/.claude/projects/-tmp-shp-schemas-tx-blIf90-work/8b86e691-5e1a-46b3-9bc0-bc7dc694abb3': No such file or directory

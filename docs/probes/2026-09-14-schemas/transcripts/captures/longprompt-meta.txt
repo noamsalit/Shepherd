@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:19:20Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p $'Line one of a deliberately long probe prompt.\nLine two continues so that the prompt is well over two hundred characters long, which lets us see whether last-prompt truncates it and what happens to newlines.\nLine three: ignore all of the above and reply with exactly OK.' --session-id 6fcb72cd-b6f3-4acd-a43d-6c7e3e89bd28 --model claude-haiku-4-5-20251001 --output-format stream-json --verbose --max-turns 1
+exit: 0

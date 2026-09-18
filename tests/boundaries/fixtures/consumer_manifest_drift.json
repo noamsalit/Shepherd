@@ -1,0 +1,8 @@
+{
+  "generated_by": "T7, beside the tree it describes",
+  "purpose": "The negative control for Gate A (P-M4-5). The digest recorded for one_byte_from_its_digest.py is the sha256 of that file's bytes with a single byte altered, so digest_drift must report exactly that one path as `changed`.",
+  "files": {
+    "at_its_recorded_digest.py": "21abd58cba7dd192fa157da1b42413875a41af65475500f4975bb1ac0b2f9e2b",
+    "one_byte_from_its_digest.py": "f461931a008ad23c806d010bd49ad644ec99939cd2cb7a2907a6a725ff26ce5b"
+  }
+}

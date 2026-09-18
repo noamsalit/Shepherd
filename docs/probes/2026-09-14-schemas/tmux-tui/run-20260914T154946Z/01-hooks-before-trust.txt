@@ -1,0 +1,1 @@
+after >=15s on the trust dialog: hooks-a lines=0 (project settings), hooks-b lines=0 (--settings)

@@ -1,0 +1,283 @@
+{
+  "workflow_uuid": "wf-20260917T011019Z-fc9b95d3",
+  "workflow_id": "wf-20260917T011019Z-fc9b95d3",
+  "workflow_type": "PLAN",
+  "state_root": ".cc10x",
+  "user_request": "Plan Shepherd M2 (signals engine) per \u00a716. M2 only.",
+  "plan_file": "docs/plans/2026-09-17-m2-signals-engine-plan.md",
+  "design_file": "docs/specs/orchestrator-platform.md",
+  "research_files": [],
+  "approved_decisions": [
+    "ROUTER DECISION (2026-09-17): T18-2 (subscribe PostToolBatch) is DEFERRED past M2. Subscribing changes the hook block the installer writes, and verifying it needs a real install against a real session - which the user's standing 'never touch my ~/.claude/settings.json' constraint forbids. The two refusal counters stay correct and idle, and `doctor` must SAY they are idle rather than implying coverage (principle 5). Revisit when the user runs the installer themselves.",
+    "ROUTER DECISION: T18-3 (the 150-line controld cap) is IN SCOPE and is already being closed by the in-flight M1 remediation via compose_tool_surface() in toolsurface/. The M2 builder must re-check rather than assume."
+  ],
+  "plan_mode": "execution_plan",
+  "build_scope": null,
+  "worktree": null,
+  "execution_mode": "subagent_dispatch",
+  "inline_fallback_reason": null,
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": null,
+    "non_goals": [],
+    "constraints": [],
+    "acceptance_criteria": [],
+    "open_decisions": []
+  },
+  "normalized_phases": [
+    "plan-create",
+    "plan-review-gap-1",
+    "build"
+  ],
+  "phase_cursor": "build",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": null,
+    "planning_review_pass1": null,
+    "planner_replan": null,
+    "planning_review_pass2": null,
+    "memory_finalize": null
+  },
+  "phase_status": {
+    "plan-create": "complete",
+    "plan-review-gap-1": "complete",
+    "build": "pending"
+  },
+  "deferred_findings": [],
+  "results": {
+    "git_preflight": null,
+    "baseline": null,
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "planner": {
+      "status": "PLAN_CREATED",
+      "revision": 2,
+      "tasks": 19,
+      "confidence": 65,
+      "tracks": 5,
+      "self_caught": "revision 1 was written against a stale snapshot (M1's T18 landed mid-write) and asserted controld.py absent + had a task creating a fleet_tree that already existed. Revision 2 re-grounds and adds step 0b so the builder re-checks rather than trusts.",
+      "findings": [
+        "SessionEnd.reason='other' is 47 of 50 corpus captures and \u00a78 has NO row for it - mapping it to anything mislabels the majority, so it needed a third outcome (DEFERS) beside mapped and unmapped",
+        "measured: all 26 Stop captures resolve to message.stop_reason=end_turn and all 23 StopFailure to stop_sequence - so the map's precedence must be error -> reason -> tail, not the reverse",
+        "found a SECOND real corpus (gap-fill/*/hooks.jsonl, 37 sessions) carrying the only captures of SessionEnd.reason resume and logout and of death mid-compaction - three stop reasons have no fixture without it"
+      ]
+    },
+    "planning_reviewer": {
+      "status": "FINDINGS",
+      "blocking": [
+        "B1 C12's bound cannot fire: both Stop and SessionEnd map to one SignalKind and prior is read pre-fold, so the BENIGN capture classifies as CONTEXT_EXHAUSTED and two required tests contradict each other",
+        "B2 handle_stop is fully tested and never runs in the daemon - no task may give HookLane the StopLog (same hole as DP6, one level up)",
+        "B3 only 1 of 50 corpus sessions has a checked-in transcript, so 25 of 26 Stop captures classify UNKNOWN in the hermetic lane and the <20% ceiling fails on day one",
+        "B4 ADR-M2-5 applied against D34's literal sentence but filed as a gap; and ~96% of clean stops would render a green finished chip that nothing counts, removing D34's own trigger for building the deferred lane"
+      ],
+      "advisory": 7,
+      "replan_needed": false,
+      "verified_independently": [
+        "the 13-value o_ enum, overloaded at 0 assignments, 529->server_error, plain 400->unknown",
+        "Stop has no stop_reason in 26 captures or the zod schema",
+        "SessionEnd.reason 47 other / 2 clear / 1 prompt_input_exit",
+        "the SECOND corpus exists and says what the plan claims - and supersedes older \u00a7SessionEnd rows still calling resume/logout 'binary only'",
+        "the residue argument is CORRECT (no \u00a78 heuristic can produce completed, so \u00a78's own replay example requires a clean stop to start as completed)"
+      ]
+    },
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    },
+    "planner_r3": {
+      "status": "AMENDED",
+      "revision": 3,
+      "lines": 3310,
+      "applied": 11,
+      "disputed": 0,
+      "b1_fix": "TWO independent guards: the end_reason discriminator (\u00a78's own word 'death') AND a separate SignalKind.TURN_STOPPED - ADR-6's one-kind-per-column-effect rule USED rather than worked around, making 'cleared by a turn ending' expressible in signals/ with no engine word",
+      "b4_fix": "promoted to DP10 in four-part form quoting D34 verbatim, AND completed_low_confidence added to StopCounts + fleet_summary + rendered beside the unknown rate - that cohort IS the residue D34 means",
+      "t18_2_deferral": "doctor reports the refusal counters as 'idle - PostToolBatch is not subscribed (M1 blocker T18-2)' rather than 0, with test_doctor_reports_the_refusal_counters_as_idle_not_zero and test_post_tool_batch_is_still_not_subscribed so a later build cannot subscribe without meeting the decision. Planner's reasoning: 'a zero that cannot move is a claim of coverage.'",
+      "tree_moved_thrice": "controld.py 150 -> 154-and-red -> 148-and-green within one session (the M1 remediation landing); stopped asserting the number and re-framed T18-3 around the constraint"
+    },
+    "builder_AB": {
+      "status": "PASS",
+      "tasks": "T1,T2,T3,T4,T6",
+      "suite": "599 passed (from 454)",
+      "mypy": "clean, 68 files",
+      "best_calls": [
+        "made build_stop_evidence's 3 new args REQUIRED keyword-only rather than defaulted - defaulting would silently disable 4 mechanical rows plus context_exhausted and quota_paused, i.e. a tested seam that never runs (r3 BLOCKING 2's exact defect). mypy --strict now refuses any call site that has not decided.",
+        "caught that the plan's PRAGMA foreign_keys=off is a documented NO-OP inside a transaction (the runner has already issued BEGIN); used defer_foreign_keys and recorded why",
+        "both captured stop_sequence entries are <synthetic>; no capture of a real one, so the OTHER narrowing is exercised by a composed fixture that SAYS so",
+        "took the reword option on the docstring-exemption clash rather than widening the exemption - core/ is L1 and \u00a75.0 wants engine vocabulary in its adapter"
+      ]
+    },
+    "builder_trackE": {
+      "status": "PARTIAL",
+      "task": "T18",
+      "delivered": [
+        "controld.py 148 -> 136 lines by deleting _await_bind (a path.exists() poll loop, the root's only real logic) and replacing it with a threading.Event the binder sets - the root now waits on the binder instead of guessing from the filesystem",
+        "compose_tool_surface now owns BOTH ADR-7 module-globals and has its own tests (it had none)",
+        "doctor reports the two refusal counters as 'idle' + reason instead of 0"
+      ],
+      "proved_the_router_wrong": "the exact doctor string the router specified is UNBUILDABLE: appending it to cli/commands.py fails test_no_engine_vocabulary_in_signals ('shepherd.cli: ... names the hook event PostToolBatch'). It proved this by planting the literal and watching the build fail, then reverted, rather than asserting it. The name now lives in the test, the ledger and a docstring - where it is legal.",
+      "blocked_honestly": [
+        "T18-3a the stop path's construction needs RotatingJsonlLog/StopLog/handle_stop/register_replay_tool, which do not exist yet and sit on other builders' surfaces",
+        "T18-2a naming the event in doctor needs a hook_subscription_status tool - recorded as a blocker NAMING THE TOOL, not an import"
+      ],
+      "refused_to_overreach": "declined to move HookLane's construction into compose.py even though it would have cost the root zero lines, because it would pre-empt T11/T5's design while another builder owns them"
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": null,
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "converged"
+  },
+  "planning_review_runs": 1,
+  "planning_review_findings": [],
+  "planning_review_status": "revised_after_review",
+  "plan_revision": 3,
+  "last_reviewed_revision": 0,
+  "memory_notes": [],
+  "pending_gate": null,
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-17T01:10:19Z",
+      "phase": "plan-create"
+    },
+    {
+      "event": "plan_created",
+      "ts": "2026-09-17T01:10:19Z",
+      "phase": "plan-create",
+      "detail": "r2, 19 tasks, 5 tracks, confidence 65"
+    },
+    {
+      "event": "single_review_pass_decision",
+      "ts": "2026-09-17T01:10:19Z",
+      "phase": "plan-review-gap-1",
+      "detail": "M2 gets ONE fresh pass, not M1's two-plus-amendment: the architecture it builds on is settled and proven, so the M1 budget would be disproportionate. Recorded as a deliberate scope choice, not an oversight."
+    },
+    {
+      "event": "plan_converged_r3",
+      "ts": "2026-09-17T01:33:16Z",
+      "phase": "plan-review-gap-1",
+      "detail": "4 blocking + 7 advisory applied, 0 disputed; 10 DP, 7 ADR, 19 tasks, 31 risk rows"
+    },
+    {
+      "event": "m2_trackAB_and_E",
+      "ts": "2026-09-17T02:40:58Z",
+      "phase": "build",
+      "detail": "T1-T4,T6 green (599 tests); T18 partial by dependency with both halves recorded"
+    }
+  ],
+  "remediation_history": [],
+  "created_at": "2026-09-17T01:10:19Z",
+  "updated_at": "2026-09-17T02:40:58Z"
+}

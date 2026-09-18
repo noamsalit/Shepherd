@@ -1,0 +1,2 @@
+ARGV-BRIEF $(echo EXPANDED) `echo BACKTICK` ; echo SEMI && 'single' "double" \back $HOME *
+second line	TAB ✓ end

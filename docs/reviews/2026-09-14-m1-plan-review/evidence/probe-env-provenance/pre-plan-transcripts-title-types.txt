@@ -1,0 +1,14 @@
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/ba74b626-16b4-4a2a-a565-a7f96f11a6fa.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/151394bf-ccfb-4745-819d-b8ff89b88c49.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/443471cf-d1b4-4318-9100-fa80c6b90f34.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-af4464db7d6d4d91d.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-adc2f512a48160e2e.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad.jsonl custom-title=0 agent-name=0 bridge-session=26 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/f28a95df-3b7a-402b-ad01-8dc5e14b40ba.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/84b57ff4-9e31-49fa-866b-edb90b9a23ca.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/e26bbb6e-8877-4a46-9358-569af7f934b8.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a2109d4ef26637fdc.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a94617281e7f7bc3e.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a226a799f49cd73ed.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0
+./-root-Finopsera-poc/bc392997-a163-489a-a3fb-0aeada404b1f.jsonl custom-title=263 agent-name=263 bridge-session=264 pr-link=0
+./-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/151394bf-ccfb-4745-819d-b8ff89b88c49/subagents/agent-ae70fa8a4623d8913.jsonl custom-title=0 agent-name=0 bridge-session=0 pr-link=0

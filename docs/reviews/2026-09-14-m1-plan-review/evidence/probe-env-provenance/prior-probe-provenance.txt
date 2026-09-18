@@ -1,0 +1,12 @@
+backup registration events 24 other top keys [] group shapes {(('hooks', 'matcher'), '*', ('command', 'timeout', 'type')): 22, (('hooks', 'watchPaths'), None, ('command', 'timeout', 'type')): 2}
+   events: ['CwdChanged', 'Elicitation', 'ElicitationResult', 'FileChanged', 'MessageDisplay', 'Notification', 'PermissionDenied', 'PermissionRequest', 'PostCompact', 'PostModelSwitch', 'PostToolUse', 'PostToolUseFailure', 'PreCompact', 'PreModelSwitch', 'PreToolUse', 'SessionEnd', 'SessionStart', 'Stop', 'StopFailure', 'SubagentStart', 'SubagentStop', 'TaskCompleted', 'TaskCreated', 'UserPromptSubmit']
+scratch settings events 24 other top keys ['permissions'] group shapes {(('hooks', 'matcher'), '*', ('command', 'timeout', 'type')): 22, (('hooks', 'watchPaths'), None, ('command', 'timeout', 'type')): 2}
+   events: ['CwdChanged', 'Elicitation', 'ElicitationResult', 'FileChanged', 'MessageDisplay', 'Notification', 'PermissionDenied', 'PermissionRequest', 'PostCompact', 'PostModelSwitch', 'PostToolUse', 'PostToolUseFailure', 'PreCompact', 'PreModelSwitch', 'PreToolUse', 'SessionEnd', 'SessionStart', 'Stop', 'StopFailure', 'SubagentStart', 'SubagentStop', 'TaskCompleted', 'TaskCreated', 'UserPromptSubmit']
+
+151394bf-ccfb-4745-819d-b8ff89b88c49.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']
+151394bf-ccfb-4745-819d-b8ff89b88c49/subagents/agent-ae70fa8a4623d8913.jsonl versions {'2.1.269'} False ['assistant', 'attachment', 'user']
+443471cf-d1b4-4318-9100-fa80c6b90f34.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']
+84b57ff4-9e31-49fa-866b-edb90b9a23ca.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']
+ba74b626-16b4-4a2a-a565-a7f96f11a6fa.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']
+e26bbb6e-8877-4a46-9358-569af7f934b8.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']
+f28a95df-3b7a-402b-ad01-8dc5e14b40ba.jsonl versions {'2.1.269'} False ['ai-title', 'assistant', 'atis-latch', 'attachment', 'last-prompt', 'queue-operation', 'system', 'user']

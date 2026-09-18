@@ -1,0 +1,2 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-no_matcher_key-kwlon8s6; exit=0
+(no 'Invalid settings' section)

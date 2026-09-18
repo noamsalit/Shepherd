@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-int-gzmuah9x/w
+
+
+❯ INT-ESC-TOOL
+
+  Ran 1 shell command
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ Reply with only the word AFTER
+
+● OK-AFTER-TOOL
+
+✻ Sautéed for 0s · done 5:23 PM
+
+❯ INT-CC-TOOL
+
+● Sleeping 30 seconds · 2s
+  ⎿  $ sleep 30
+
+
+
+
+
+
+
+
+
+
+
+
+✢ Gesticulating… (2s · ↓ 20 tokens)
+  ⎿  Tip: Use Plan Mode to prepare for a complex request before making changes. Press shift+tab twice to enable.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

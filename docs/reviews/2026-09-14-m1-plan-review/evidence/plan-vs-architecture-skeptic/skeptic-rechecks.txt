@@ -1,0 +1,20 @@
+# F11-V: /proc read outside the platform seam (grep of plan, 2026-09-14)
+138:| DV-19 | none | hookd reads `/proc/<ppid>/stat` up to 6 levels and sends `[pid, comm, starttime]` triples. Any failure is swallowed and the list is empty; on macOS it is always empty. | This is the only process-liveness signal available for attached sessions (DV-09). |
+311:Dependency classes: Claude Code is **Wrapped** (`EngineAdapter`). SQLite is **Infra wrapped by `store/`** (D26). systemd, launchd, Keychain and `/proc` are **Wrapped** (platform seam).
+404:- if `M.engine_proc is None`, set `M.engine_proc` to the first ancestor whose `comm ∈ process_names`
+736:5. Ancestry: start at `os.getppid()`. Up to 6 levels, read `/proc/<pid>/stat`: comm is the text between the first `(` and the last `)`; after `)`, field 2 is ppid and field 20 is starttime. Stop at pid ≤ 1. Any error → stop.
+1335:  - **`LinuxProcessProbe.is_alive`** reads `/proc/<pid>/stat` and compares field 22 (starttime). `DarwinProcessProbe` uses `os.kill(pid, 0)` and ignores starttime.
+
+# F9 refutation: sessiond-down is shown on fleet footer and /api/health
+765:| GET | `/api/health` | `health_view` | `{controld:{schema_version, boot_id, runtime_dir}, sessiond:{connected, gated\|null, counters\|null}}` |
+1827:    - footer: sessiond connected, gated, and each non-zero `unknown`/counter (principle 5);
+
+# spec principle 5 actual text
+160:5. **Unknown is a first-class value**, counted and displayed. An `unknown` rate
+
+# architecture page: sessiond = pty supervisor + hook ingest; 'Layers are an import rule; processes are a restart rule'
+462: Layers are an import rule; processes are a restart rule. The split exists for one reason: if the
+485: pty supervisor · hook ingest 
+
+# cli imports daemon runners and engine directly (T17 Consumes)
+1871:- **Consumes:** `resolve_profile`, `current_platform`, `load_config`, `Platform`, `ServiceSpec`, `run_controld`, `run_sessiond`, `ClaudeCodeEngine`, `HookTarget`, `HookInstallReport`, `EXIT_CONFI

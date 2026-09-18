@@ -1,0 +1,40 @@
+Resume this session with:
+claude --resume "probe-append-title"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pane is dead (status 0, Mon Sep 14 17:56:32 2026)

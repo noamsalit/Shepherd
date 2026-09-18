@@ -1,0 +1,2 @@
+slug dir: -tmp-shp-transcript-probe-7nMlKJ-my-proj-dir-v1-2-test  cwd: /tmp/shp-transcript-probe.7nMlKJ/my.proj_dir v1.2 test
+rule output: -tmp-shp-transcript-probe-7nMlKJ-my-proj-dir-v1-2-test

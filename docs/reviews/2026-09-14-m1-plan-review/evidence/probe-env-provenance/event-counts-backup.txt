@@ -1,0 +1,11 @@
+/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run1.jsonl sha256 437cd44212dca5b0 events 23 sessions 1 cwds {'/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo'}
+    {'SessionStart': 1, 'UserPromptSubmit': 1, 'MessageDisplay': 3, 'PreToolUse': 7, 'PostToolUse': 7, 'SubagentStart': 1, 'SubagentStop': 1, 'Stop': 1, 'SessionEnd': 1}
+/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run2.jsonl sha256 3b37c504e009b647 events 38 sessions 1 cwds {'/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo'}
+    {'SessionStart': 1, 'UserPromptSubmit': 1, 'MessageDisplay': 2, 'PreToolUse': 13, 'PostToolUse': 13, 'TaskCreated': 3, 'TaskCompleted': 3, 'Stop': 1, 'SessionEnd': 1}
+/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run3.jsonl sha256 8431e46f40777892 events 9 sessions 1 cwds {'/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo'}
+    {'SessionStart': 1, 'UserPromptSubmit': 1, 'PreToolUse': 2, 'PostToolUse': 2, 'MessageDisplay': 1, 'Stop': 1, 'SessionEnd': 1}
+/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run4.jsonl sha256 3cdd48466b40f3c9 events 12 sessions 1 cwds {'/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo'}
+    {'SessionStart': 1, 'UserPromptSubmit': 2, 'PreToolUse': 2, 'PostToolUse': 2, 'MessageDisplay': 2, 'Stop': 2, 'SessionEnd': 1}
+/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run5-permission.jsonl sha256 e2c8cdf8c29979e4 events 7 sessions 1 cwds {'/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo'}
+    {'SessionStart': 1, 'UserPromptSubmit': 1, 'PreToolUse': 1, 'PermissionRequest': 1, 'MessageDisplay': 1, 'Stop': 1, 'SessionEnd': 1}
+TOTAL 89 {'SessionStart': 5, 'UserPromptSubmit': 6, 'MessageDisplay': 9, 'PreToolUse': 25, 'PostToolUse': 24, 'SubagentStart': 1, 'SubagentStop': 1, 'Stop': 6, 'SessionEnd': 5, 'TaskCreated': 3, 'TaskCompleted': 3, 'PermissionRequest': 1} types 12

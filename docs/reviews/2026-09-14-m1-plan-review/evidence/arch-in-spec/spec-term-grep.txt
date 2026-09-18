@@ -1,0 +1,177 @@
+=== layer
+106:| D3 | **Layered stop verdicts**: heuristics always, LLM on suspicion or on demand. **All raw signals persisted append-only** with a `replay` command. | "Did it actually finish?" is not mechanically knowable. Storing
+110:| D7 | **Fresh session per work item** + a `build_brief()` seam + per-attempt outcome logging. **Memory layer deferred**, to be derived from those logs. | CCC's per-queue `LEARNINGS.md` is prompt-convention with no d
+128:| D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript Claude Code already writes to disk** plus the stop event's own metadat
+260:No build server, no bundler beyond `tsc`. The frontend is the layer that changes
+436:   `Repo`. This is §13's "never return a raw DB row" rule, applied one layer
+676:### Logs — the other half of the data layer (D25)
+1038:addressing layer; the mailbox is the transport.
+1285:So MCP is **an output format, not an input type**. Four layers, and only the last
+1333:Adding a vendor is a new exporter beside the others. Nothing above layer ④ moves.
+2100:- **Memory layer** — deferred by D7; derived later from past sessions per work
+=== \bL[1-5]\b
+1347:   that can reach it. This is the specific erosion the three L5 siblings invite.
+=== import
+22:1. Read §1–§4. §3 (Decision log) is the most important section in the document —
+122:| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, si
+130:| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a sign
+137:| D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row, or open a transaction. **Promote to a `Store` Protocol only when two 
+204:│         no direct import ──────────┘         │
+223:process but may import nothing from Signals, Queues, Runner, or storage — it
+224:calls the same tool-surface client a tier-2 session calls over MCP. An import
+414:imports a database driver, and the engine is expected to change when the
+446:one contract suite both must pass earns its keep. Until then the import rule is
+1351:are **imported into the registry** as `ToolDef`s with `blast_class=external` and
+1393:package that imports only `toolsurface.client` and the Agent SDK. It may not
+1394:import `store`, `signals`, `queues`, or `runner`. `test_master_isolation.py`
+1395:walks the module's imports and fails the build on a violation — the same test
+1441:   field on the `ToolDef`**, not a lookup table that can miss: importing a
+2019:**Why every seam gets one.** Two reasons, and the second is the important one:
+2036:collects `Test`-prefixed classes on import and warns on any that has an
+2038:2b. **Isolation tests.** `test_master_isolation.py` asserts the D19 import
+2039:   boundary (the `master/` package imports nothing but `toolsurface.client` and
+2086:| **M4** | Orchestrator | **The tool registry first (§11.0, D32)** — `ToolDef`, `invoke()`, and the two MCP exporters — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation t
+2104:- **Extracting the master into its own `masterd` process** — the D19 import
+2215:| **connector** | a third-party MCP server whose tools are imported into the registry as `external` and reachable by the master only; catalogue-selected, credential-by-reference (D20, D32) |
+=== toolsurface
+1393:package that imports only `toolsurface.client` and the Agent SDK. It may not
+2039:   boundary (the `master/` package imports nothing but `toolsurface.client` and
+=== store/
+130:| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a sign
+137:| D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row, or open a transaction. **Promote to a `Store` Protocol only when two 
+413:decision, not an architectural one: all SQL lives in `store/`, nothing else
+422:### 7.0 What `store/` may expose (D33)
+435:   `store/` converts at its own boundary and hands back `Session`, `WorkItem`,
+696:Forward-only numbered SQL files in `store/migrations/`, applied in one
+=== logs/
+681:  logs/stops/2026-09-11.jsonl     evidence + the conclusion drawn from it    90 d
+682:  logs/audit/2026-09-11.jsonl     every action authorize() allowed or denied 90 d
+683:  logs/replay/2026-09-11.log      what changed when a rule was fixed         90 d
+684:  logs/daemon/controld.log        ordinary operational logging               14 d
+974:writes the before/after diff to `logs/replay/`. The diff is the review artifact;
+2355:### `logs/stops/2026-09-11.jsonl` — one record, ~2 KB
+2383:### `logs/audit/2026-09-11.jsonl` — one record
+=== core/
+=== signals/
+138:| D34 | **The LLM verdict lane is deferred past M2.** Mechanical stop reasons ship as specified; `end_turn` resolves on heuristics alone, `decided_by='heuristic'`, and the residue is `unknown`. **No seam is written f
+866:> call has exactly **one named call site**, `signals/verdict.py::classify_end_turn()`,
+2122:  `signals/verdict.py`. No seam until it is built.
+=== runner/
+=== providers/
+=== engines/
+=== orchestration/
+=== web/
+1268:| `web/` | a human clicking |
+1329:to_http_routes(tools)         # web/
+1344:3. **Principle 1 becomes structural.** Generate `web/`'s routes and `cli/`'s
+=== cli/
+1269:| `cli/` | a human typing |
+1330:to_cli_commands(tools)        # cli/
+1344:3. **Principle 1 becomes structural.** Generate `web/`'s routes and `cli/`'s
+=== master/
+1392:**Module boundary (D19).** Everything in this section lives in a `master/`
+2039:   boundary (the `master/` package imports nothing but `toolsurface.client` and
+=== testkit/
+1992:`testkit/` and ship with the package, not only with the tests.
+2218:| **`Scripted*`** | a real implementation of a seam that answers from a fixture instead of the outside world (`ScriptedMaster`, `ScriptedRunner`, …). A concrete peer of the real implementation, never a parent clas
+=== hookd
+744:CCC installs two hook scripts. We install **one** — `hookd.py` — registered for
+2083:| **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns (D24), **four of the six tables** (`workspace`, `repo`, `session
+=== 250
+746:with a **250 ms timeout**, and **always exits 0**:
+=== 0600
+1890:- **Both Unix sockets at mode 0600**, plus a per-boot shared token in the frame
+=== test_import_boundary
+=== test_master_isolation
+1394:import `store`, `signals`, `queues`, or `runner`. `test_master_isolation.py`
+2038:2b. **Isolation tests.** `test_master_isolation.py` asserts the D19 import
+=== edit-time\|edit time
+=== runtime swap\|two implementations
+=== MasterCapabilities
+298:    def capabilities(self) -> MasterCapabilities: ...
+365:class MasterCapabilities:                                          # D30, D32
+2113:  `MasterCapabilities` (§6): **its own persisted message history**, keyed by the
+=== Scripted
+1988:#### `Scripted*` — what they are and why every seam gets one
+1990:**Every seam ships a `Scripted*` implementation**: `ScriptedRunner`,
+1991:`ScriptedWorkItemProvider`, `ScriptedEngine`, `ScriptedMaster`. They live in
+1995:a fixture instead of from the outside world. `ScriptedMaster` satisfies
+2000:master = ScriptedMaster([
+2014:the typing is structural, so `ScriptedMaster` is a concrete *peer* of
+2028:   `Scripted*` is a second caller of the contract from day one, and it is what
+2031:   `mount_tools(mcp_servers)` until D32 is exactly the mistake a `ScriptedMaster`
+2037:`__init__`). `Scripted*` says what it does: it replays a script.
+2086:| **M4** | Orchestrator | **The tool registry first (§11.0, D32)** — `ToolDef`, `invoke()`, and the two MCP exporters — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation t
+2218:| **`Scripted*`** | a real implementation of a seam that answers from a fixture instead of the outside world (`ScriptedMaster`, `ScriptedRunner`, …). A concrete peer of the real implementation, never a parent clas
+=== downward\|point down\|never the reverse\|upward
+=== consumer boundary\|storage boundary
+=== invariant
+122:| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, si
+=== just this once
+=== private read path
+122:| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, si
+146:   event stream. No consumer gets a private read path into engine state.
+1345:   subcommands from the same registry and "no consumer gets a private read path"
+=== module boundary
+137:| D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row, or open a transaction. **Promote to a `Store` Protocol only when two 
+425:"no contract" — a module boundary leaks exactly as easily as a bad Protocol if
+1392:**Module boundary (D19).** Everything in this section lives in a `master/`
+=== Protocol
+130:| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a sign
+137:| D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row, or open a transaction. **Promote to a `Store` Protocol only when two 
+272:class Runner(Protocol):
+282:class EngineAdapter(Protocol):
+293:class MasterRuntime(Protocol):                                     # D30, revised by D32
+301:class ModelProvider(Protocol):
+306:class Credentials(Protocol):
+314:class WorkItemProvider(Protocol):
+424:D26 refused a `Store` Protocol. That decision stands, but "no interface" is not
+425:"no contract" — a module boundary leaks exactly as easily as a bad Protocol if
+443:**The named trigger for promoting this to a `Store` Protocol: the day two
+449:already *is* the Protocol, minus the `class` line.
+1361:vendor, per-token billing — satisfies the same Protocol and is selected by
+1994:**What one is.** A real implementation of the seam's `Protocol` that answers from
+2013:stub that returns `None`, and **not a base class** — the seams are `Protocol`s and
+=== masterd
+122:| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, si
+226:comment. That is also what lets the master move into its own `masterd` process
+2104:- **Extracting the master into its own `masterd` process** — the D19 import
+=== exit 0\|exits 0
+158:   exceptions, and always exit 0. A dead daemon degrades visibility, never
+746:with a **250 ms timeout**, and **always exits 0**:
+=== timeout
+746:with a **250 ms timeout**, and **always exits 0**:
+752:        send_uds(payload, timeout=0.25)
+789:| `starting` | set at spawn; holds until the first signal of any kind arrives, or `SPAWN_TIMEOUT_S` (60) elapses → then `stopped` / `crashed` |
+1046:ask(session_id, question, timeout_ms) -> { text, method, from_fork_of, duration_ms }
+1061:mailbox-and-wait with the timeout. The response's `method` field reports
+1504:ask_session(id, question, timeout_ms=120000) → fork (§9)
+1584:    decision = await_decision(approval, timeout_s=600)
+1594:shows a card and the turn resumes on the click. A timeout denies with a message
+=== UDS\|Unix socket\|socket
+122:| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, si
+213:                │  Runner interface / UDS
+216:│  owns every tmux session + hook ingest UDS   │
+231:reason. Splitting up front costs one Unix socket and buys a control plane you can
+713:   version over the UDS. Two processes racing one migration is the bug you
+745:every event we need. It reads the JSON on stdin, writes it to `sessiond`'s UDS
+752:        send_uds(payload, timeout=0.25)
+984:Each `owned` session is a tmux session named `shepherd_<session_id>`, on a **dedicated socket** (`tmux -L shepherd`).
+1890:- **Both Unix sockets at mode 0600**, plus a per-boot shared token in the frame
+2105:  boundary makes this a packaging change (one plist, one socket) whenever
+2131:  a chat surface rather than an app. **Slack Socket Mode is the mechanism**: an
+2132:  outbound WebSocket, so a loopback-only daemon can receive interactive button
+2163:| tmux ↔ Claude Code TUI (alt-screen, resize, reflow) | **Spike before M3 starts** — it is M3's load-bearing assumption. **Run it on a throwaway socket: `tmux -L shepherd-spike …`, and tear down with `tmux -L 
+2182:1. **A spike never shares a socket with live work.** Use `tmux -L <throwaway>`
+2183:   for the whole spike and tear down that socket by name. A bare
+2187:   session inherits `$TMUX` and resolves to that session's own socket, so a bare
+2188:   `kill-server` from within an isolated socket still kills that socket. Always
+=== migrat
+607:| `raw` | TEXT **JSON** | no | untouched provider payload — a field you want in six months costs no migration |
+694:### Migrations
+696:Forward-only numbered SQL files in `store/migrations/`, applied in one
+700:CREATE TABLE schema_migration (
+707:1. **Checksum mismatch on an applied migration → refuse to start.** History was
+712:3. **`sessiond` never migrates.** It waits for `controld` to report the expected
+713:   version over the UDS. Two processes racing one migration is the bug you
+2083:| **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns (D24), **four of the six tables** (`workspace`, `repo`, `session

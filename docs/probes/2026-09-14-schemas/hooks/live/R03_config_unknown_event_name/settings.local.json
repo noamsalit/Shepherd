@@ -1,0 +1,59 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "SessionStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "StopFailure": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ]
+ }
+}

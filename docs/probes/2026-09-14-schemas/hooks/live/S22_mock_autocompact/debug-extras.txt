@@ -1,0 +1,10 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-mock-autocompact-5hdsmfvb/.debug-S22_mock_autocompact.log
+2026-09-14T15:42:17.971Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:42:17.971Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:42:17.971Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:42:17.971Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:42:18.068Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:42:18.268Z [DEBUG] [engine] turn 1 end (turns=2 usage in=195050 out=40 cost=$0.1953 api=56ms stop=end_turn resultLen=63)
+2026-09-14T15:42:18.310Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:42:18.322Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:42:18.354Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S22_mock_autocompact/events.jsonl] completed with status 0

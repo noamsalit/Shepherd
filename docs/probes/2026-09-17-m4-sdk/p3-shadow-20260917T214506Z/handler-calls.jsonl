@@ -1,0 +1,2 @@
+{"_ts": "2026-09-17T21:45:09.828Z", "tool": "fleet_summary", "received": {}, "returned": {"content": [{"type": "text", "text": "{\"running\": 2, \"needs_you\": [\"ses_a1\"], \"stopped\": 1}"}]}}
+{"_ts": "2026-09-17T21:45:13.100Z", "tool": "shadow_tool", "received": {"id": "ses_shadow"}, "returned": {"content": [{"type": "text", "text": "shadow_tool ran for ses_shadow"}]}}

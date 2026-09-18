@@ -1,0 +1,36 @@
+124:| D21 | **Every stopped session carries `next_actions[]` — at most three, for *every* stop reason**, not just `end_turn`. Heuristic table always; LLM refines when a key exists. | "It stopped" is
+128:| D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript Claude Code already writes to disk** plus the stop
+529:| `repos_touched` | TEXT **JSON** | no | `[]`; repo ids accumulated from `FileChanged`. What makes a multi-repo workspace legible (D22) |
+530:| `pr_url` | TEXT | **yes** | **free — the transcript emits `pr-link` entries.** The `[↗]` on a blocked row |
+536:| `stop_reason` | TEXT enum | **yes** | values in §8 |
+732:| `Notification` / `PermissionRequest` | `state = needs_you` + `needs_you_reason` |
+735:| `FileChanged` | appends to `repos_touched` |
+766:| needs-you | `Notification`, `PermissionRequest`, `PermissionDenied`, `Elicitation`, `ElicitationResult` |
+772:| changes | `FileChanged` |
+786:| `needs_you` | last signal is `Notification` with `notification_type` ∈ {`permission_prompt`, `idle_prompt`, `agent_needs_input`, `elicitation_dialog`, `elicitation_url_dialog`}, or an unresolv
+794:`notification_type` distinguishes `permission_prompt` from `idle_prompt`. Those
+798:### `stop_reason` — mechanical, confidence 1.0
+800:`StopFailure` carries an `error_type` whose allowed values map almost
+803:| `stop_reason` | rule | `outcome_class` |
+805:| `rate_limited` | `StopFailure.error_type` ∈ {`rate_limit`, `overloaded`} | `paused` |
+806:| `quota_paused` | `Notification` ∈ {`quota_auto_resume_fired`, `quota_auto_resume_stale`, `quota_auto_resume_disabled`} | `paused` |
+811:| `truncated` | `= max_output_tokens`, or `Stop.stop_reason = max_tokens` | `unfinished` |
+812:| `stalled_pending_tool` | `Stop.stop_reason = tool_use` — stopped holding an unexecuted tool call | `error` |
+816:| `user_exited` | `SessionEnd.end_reason = prompt_input_exit` | `unfinished` |
+817:| `cleared` | `SessionEnd.end_reason = clear` | `unfinished` |
+818:| `logged_out` | `SessionEnd.end_reason = logout` | `error` |
+819:| `resumed_elsewhere` | `SessionEnd.end_reason = resume` | `unfinished` |
+820:| `unknown` | `StopFailure.error_type = unknown`, or nothing matched | `error` |
+825:### The completeness split — only when `Stop.stop_reason = end_turn`
+829:| `stop_reason` | meaning | `outcome_class` |
+874:**It runs only when `Stop.stop_reason = end_turn`.** Every mechanical reason in
+911:This is not an LLM feature: the mechanical `stop_reason` already determines the
+927:**The default table — one row per `stop_reason`, always applied:**
+929:| `stop_reason` | default action items |
+1051:`SessionStart` hook's `start_reason` enum includes `fork`.)
+1636:on each row — never "session needs attention". Plus a macOS notification and an
+2168:| **Hook payload fields** — `TaskCreated`/`TaskCompleted`, `FileChanged`, `SubagentStart`/`Stop`, `Notification.notification_type`, `StopFailure.error_type`. The §7 live-group columns all rest
+2274:  "stop_reason": null, "outcome": null, "why": null,
+2310:  "stop_reason": "incomplete", "outcome": "unfinished",
+2365:    "stop_event": { "hook": "Stop", "stop_reason": "end_turn" },
+2371:  "output": { "stop_reason": "incomplete", "outcome": "unfinished",

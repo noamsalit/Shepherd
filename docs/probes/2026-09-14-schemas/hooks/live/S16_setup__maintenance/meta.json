@@ -1,0 +1,32 @@
+{
+ "scenario": "S16_setup__maintenance",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Reply OK.",
+  "--model",
+  "claude-nonexistent-model-shp",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-setup-5053kbfl/.debug-S16_setup__maintenance.log",
+  "--maintenance"
+ ],
+ "cwd": "/tmp/shp-hooks-setup-5053kbfl",
+ "exit_code": 1,
+ "timed_out": false,
+ "started": "2026-09-14T15:23:27Z",
+ "duration_s": 2.65,
+ "session_id_from_stdout": "8579b64c-02b2-4e71-83ab-272017f810a3",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

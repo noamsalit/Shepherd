@@ -1,0 +1,50 @@
+2026-09-14T15:37:43.848Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-tui-1tlg88mq/.claude/settings.local.json
+2026-09-14T15:37:43.903Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:37:43.914Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-tui-1tlg88mq/.claude/settings.local.json
+2026-09-14T15:37:43.934Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:37:43.934Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:37:50.863Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:37:50.867Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:37:50.867Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:37:50.870Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:37:51.270Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-09-14T15:37:51.272Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_start
+2026-09-14T15:37:51.357Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:37:51.451Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-tui-1tlg88mq/.claude/settings.local.json
+2026-09-14T15:37:51.661Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-tui-1tlg88mq/.claude/settings.json, /tmp/shp-hooks-tui-1tlg88mq/.claude/settings.local.json...
+2026-09-14T15:37:52.348Z [DEBUG] [bridge:repl] Hook initialized, session=cse_01YRHAy1mmf93AMQFjLnNggi
+2026-09-14T15:37:52.575Z [DEBUG] MCP server "claude.ai Google Calendar": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:37:52.635Z [DEBUG] MCP server "claude.ai Gmail": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:38:00.118Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:38:00.122Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:38:00.164Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:05.705Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:05.720Z [DEBUG] "Permission suggestions for Write: [\n  {\n    \"type\": \"setMode\",\n    \"mode\": \"acceptEdits\",\n    \"destination\": \"session\"\n  },\n  {\n    \"type\": \"addDirectories\",\n    \"directories\": [\n      \"/tmp/shp-hooks-tui-victim-sw6miufg\"\n    ],\n    \"destination\": \"session\"\n  }\n]"
+2026-09-14T15:38:05.727Z [DEBUG] executePermissionRequestHooks called for tool: Write
+2026-09-14T15:38:05.793Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:11.802Z [DEBUG] Notification:permission_prompt [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:38:11.802Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:38.019Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:38:38.020Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:38:38.056Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:39.256Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:39.261Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:38:46.765Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:39:39.278Z [DEBUG] Notification:idle_prompt [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:39:39.278Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:39:45.564Z [DEBUG] Applying permission update: Adding 1 directory with destination 'session': ["/tmp/shp-hooks-tui-extra-ye47wasb"]
+2026-09-14T15:39:45.600Z [DEBUG] Failed to stat directory /tmp/shp-hooks-tui-extra-ye47wasb/.claude/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-tui-extra-ye47wasb/.claude/commands'
+2026-09-14T15:39:45.617Z [DEBUG] Failed to stat directory /tmp/shp-hooks-tui-extra-ye47wasb/.claude/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-tui-extra-ye47wasb/.claude/agents'
+2026-09-14T15:39:45.667Z [DEBUG] DirectoryAdded:slash_command [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh DirectoryAdded /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:39:45.667Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:39:49.784Z [DEBUG] SessionEnd:clear [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:39:49.784Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:39:49.784Z [DEBUG] Cleared all session hooks for session 1dda4143-3fdf-40ef-b167-252c1abd1e15
+2026-09-14T15:39:49.870Z [DEBUG] Failed to stat directory /tmp/shp-hooks-tui-extra-ye47wasb/.claude/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-tui-extra-ye47wasb/.claude/agents'
+2026-09-14T15:39:49.880Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:39:50.134Z [DEBUG] MCP server "claude.ai Google Calendar": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:39:50.134Z [DEBUG] MCP server "claude.ai Gmail": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-14T15:39:50.161Z [DEBUG] Failed to stat directory /tmp/shp-hooks-tui-extra-ye47wasb/.claude/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-tui-extra-ye47wasb/.claude/commands'
+2026-09-14T15:39:54.956Z [DEBUG] [bridge:repl] Hook cleanup: starting teardown for session=cse_01YRHAy1mmf93AMQFjLnNggi reason=host_exit
+2026-09-14T15:39:55.756Z [DEBUG] SessionEnd:prompt_input_exit [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:39:55.756Z [DEBUG] Hook output does not start with {, treating as plain text

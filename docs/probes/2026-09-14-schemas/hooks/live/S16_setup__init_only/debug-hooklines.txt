@@ -1,0 +1,26 @@
+2026-09-14T15:23:24.850Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:23:24.887Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:24.894Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-setup-vlo57jke/.claude/settings.local.json
+2026-09-14T15:23:24.895Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:23:24.961Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:23:24.977Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:24.984Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-setup-vlo57jke/.claude/settings.local.json
+2026-09-14T15:23:25.014Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:23:25.017Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:23:25.017Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:23:25.017Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:23:25.018Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:23:25.018Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:23:25.018Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:23:25.019Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:23:25.020Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:23:25.022Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:23:25.022Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:23:25.050Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:23:25.053Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:23:25.069Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:23:25.073Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:23:25.078Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:25.099Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:25.126Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S16_setup__init_only/events.jsonl] completed with status 0
+2026-09-14T15:23:25.126Z [DEBUG] Hook output does not start with {, treating as plain text

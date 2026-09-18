@@ -1,0 +1,114 @@
+xterm.js — vendored, never fetched at runtime (D51, K8)
+=======================================================
+
+T19-a, executed 2026-09-17. **Branch taken: vendored.** The honest degrade
+(T19-a step 3) ships beside it anyway, because a vendored file can still be
+absent from an installed wheel, and `terminal.js` must say so rather than paint
+a blank pane.
+
+package   @xterm/xterm
+version   6.0.0
+license   MIT (see ./LICENSE, vendored verbatim beside the code)
+source    https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/
+fetched   2026-09-17 by `curl` on this host
+
+sha256 b336ec65a086c056d4804b3d4c2347da5663d3f23c3f25be866467bd8857ad59 xterm.js
+sha256 854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6 xterm.css
+sha256 b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd LICENSE
+
+Upstream paths, and the one rename
+----------------------------------
+
+  ./xterm.js   <- /lib/xterm.mjs   (344 970 bytes, byte-identical)
+  ./xterm.css  <- /css/xterm.css   (7 112 bytes, byte-identical)
+  ./LICENSE    <- /LICENSE         (1 261 bytes, byte-identical)
+
+`lib/xterm.mjs` is the **ES module** build — its last statement is
+`export{Dl as Terminal}` — and `lib/xterm.js` in the same package is the UMD
+bundle, which T19-a step 2 rules out: there is no loader and no bundler on this
+host (D51), so a UMD file would need the thing the stack forbids.
+
+It is vendored under the `.js` name the plan's Files/Surfaces gives it, and that
+is not cosmetic: `web/server.py`'s `_CONTENT_TYPES` serves `.html`, `.js` and
+`.css` and 404s every other suffix, so a file shipped as `.mjs` would be a file
+the page cannot load. The bytes are unaltered; only the name differs, and both
+the upstream name and the digest are recorded above so the claim is checkable.
+
+The integrity check, and what it is worth
+-----------------------------------------
+
+The digests above were verified against jsdelivr's **metadata** API
+(`https://data.jsdelivr.com/v1/packages/npm/@xterm/xterm@6.0.0?structure=flat`,
+which publishes base64 sha256 per file) — a different endpoint from the CDN that
+served the bytes:
+
+  xterm.mjs  szbsZaCGwFbUgEs9TCNH2lZj0/I8PyW+hmRnvYhXrVk=   (= b336ec65…)
+  xterm.css  hUp8D7cOixoIPBZ5ergnKZ+xh0T1rTTyJ7SDN+Myk8Y=   (= 854a7c0f…)
+  LICENSE    tWn2KdAPJiaoEA3yoXmCEFNWIeQhZN/UJqb+Wqx7DM0=   (= b569f629…)
+
+That is two endpoints of one CDN agreeing, not a signature from the xterm.js
+authors: it detects a corrupted transfer, not a compromised registry. Recorded
+as what it is. `tests/web/test_session_page.py::
+test_the_vendor_manifest_pins_every_byte_it_ships` recomputes all three from the
+bytes in this directory on every run, so the file cannot drift from its record.
+
+What is deliberately NOT vendored
+---------------------------------
+
+`lib/xterm.mjs.map` (1 690 930 bytes). `tests/web/test_frontend_no_build_step.py`
+forbids `.map` under `web/` by suffix — it is a build artifact, and D51's whole
+point is that this tree has no build step. `xterm.js`'s trailing
+`//# sourceMappingURL=xterm.mjs.map` comment therefore resolves to a 404 in
+devtools and to nothing at all at runtime. The alternative was stripping the
+comment, which would have broken the byte-identity this file records; a dangling
+sourcemap is the cheaper honesty.
+
+What this vendoring does NOT prove — G-M3-6
+-------------------------------------------
+
+That xterm.js **renders** anything. There is no browser, no node and no npm on
+this host, so "xterm.js draws the snapshot and the stream identically" is
+**unverified** and stays recorded as G-M3-6 (acceptance clause 11).
+
+**Not "every" byte, and one claim this file used to make is not on this path at
+all.** An earlier revision listed the browser->pane keystroke — `send-keys -H`
+byte-exactness — among the things asserted here. There is **no** such path in
+this tree — `POST_ROUTES` carries no `terminal_write`, `web/server.py` never
+reads the upgraded socket, `terminal.js` ships `disableStdin: true` and renders
+the reason, and
+`tests/web/test_session_page.py::test_the_keystroke_path_is_absent_and_says_so`
+asserts the absence. That is blocker **T19-c**, and it is a missing capability
+said out loud rather than a shortfall hidden.
+
+Where `send-keys -H` byte-exactness *is* proved, which is a different seam
+------------------------------------------------------------------------
+
+  tests/runner/test_local.py:217,353                 the `Runner` seam
+  tests/contracts/test_runner_contract.py:227,239    the contract
+  tests/orchestration/test_write_policy.py:556       the write path
+
+Claims on the browser path, and the test that proves each
+---------------------------------------------------------
+
+**This list is closed and machine-checked.** One claim per `->` line: the claim,
+then the single test that decides it. Adding a sentence of praise elsewhere in
+this file does not add a claim — it fails the gate.
+
+  the WS frame payload is the capture byte-for-byte
+    -> tests/web/test_ws.py::test_the_first_frame_is_the_snapshot_byte_for_byte
+  the stream is torn down with the last client
+    -> tests/web/test_ws.py::test_the_stream_is_torn_down_with_the_last_client
+  every shipped module is reachable from the page
+    -> tests/web/test_session_wiring.py::test_every_shipped_module_is_reachable_from_the_page
+  the vendored bytes match the digests recorded above
+    -> tests/web/test_session_page.py::test_the_vendor_manifest_pins_every_byte_it_ships
+
+**Why the list is shaped this way, and not as prose.** The first gate written for
+this paragraph banned one sentence, verbatim. The router re-added the same
+retracted claim in a paraphrase and the gate stayed **green** — a spelling, not a
+property, which is the defect this repo keeps finding in the very checks written
+to close it. The property is now structural, in three parts: the two words naming
+the retracted claim may appear only in the two sections above, which say where
+that proof really lives and that it is not on this path; every node id on this
+page must resolve to a test that exists; and the claim set is compared whole, so
+a claim cannot be added or dropped quietly.

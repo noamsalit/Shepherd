@@ -1,0 +1,24 @@
+T13: uses `ScriptedEngine` (from ['T12']) but it is not in its Consumes line
+T13: uses `ScriptedProcessProbe` (from ['T02']) but it is not in its Consumes line
+T13: uses `make_short_base_dir` (from ['T02']) but it is not in its Consumes line
+T14: references `HttpDeps` produced by ['T15'], not in deps closure ['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T08', 'T09', 'T10', 'T11', 'T12', 'T13']
+T14: references `make_server` produced by ['T15'], not in deps closure ['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T08', 'T09', 'T10', 'T11', 'T12', 'T13']
+T16: uses `state_label` (from ['T04']) but it is not in its Consumes line
+T19: uses `CONSUMED_EVENTS` (from ['T09']) but it is not in its Consumes line
+T19: uses `ControldClient` (from ['T17']) but it is not in its Consumes line
+T19: uses `Credentials` (from ['T01']) but it is not in its Consumes line
+T19: uses `EngineAdapter` (from ['T12']) but it is not in its Consumes line
+T19: uses `HOOK_MARKER_KEY_ENABLED` (from ['T11']) but it is not in its Consumes line
+T19: uses `HookEnvelope` (from ['T09']) but it is not in its Consumes line
+T19: uses `KNOWN_EVENTS` (from ['T09']) but it is not in its Consumes line
+T19: uses `LIVENESS_NOTIFY_INTERVAL_S` (from ['T13']) but it is not in its Consumes line
+T19: uses `PROBE_ACCEPTED_EVENTS` (from ['T11']) but it is not in its Consumes line
+T19: uses `Platform` (from ['T03']) but it is not in its Consumes line
+T19: uses `ScriptedEngine` (from ['T12']) but it is not in its Consumes line
+T19: uses `Session` (from ['T04']) but it is not in its Consumes line
+T19: uses `build_envelope` (from ['T08']) but it is not in its Consumes line
+T19: uses `current_platform` (from ['T03']) but it is not in its Consumes line
+T19: uses `isolated_env` (from ['T02']) but it is not in its Consumes line
+T19: uses `real_state_fingerprint` (from ['T02']) but it is not in its Consumes line
+T19: uses `run_controld` (from ['T14']) but it is not in its Consumes line
+T19: uses `running_stack` (from ['T18']) but it is not in its Consumes line

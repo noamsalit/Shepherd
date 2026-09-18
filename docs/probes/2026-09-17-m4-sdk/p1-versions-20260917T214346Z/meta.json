@@ -1,0 +1,198 @@
+{
+  "probe": "p1",
+  "run": "p1-versions-20260917T214346Z",
+  "model_requested": "claude-haiku-4-5",
+  "sdk_version": "0.2.153",
+  "bundled_cli_version": "2.1.273",
+  "scrubbed_env_names": [
+    "AI_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_BRIDGE_SESSION_ID",
+    "CLAUDE_CODE_CHILD_SESSION",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_EXECPATH",
+    "CLAUDE_CODE_MESSAGING_SOCKET",
+    "CLAUDE_CODE_MESSAGING_TOKEN",
+    "CLAUDE_CODE_SESSION_ATTENDED",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_EFFORT",
+    "CLAUDE_PID"
+  ],
+  "tmpdir": "/tmp/shp-m4-r1v5r740",
+  "argv": [
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary,mcp__shepherd__spawn_session,mcp__shepherd__fail_tool,mcp__shepherd__raise_tool",
+      "--max-turns",
+      "14",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-m4-r1v5r740/flag-settings-locked.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ],
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary,mcp__shepherd__spawn_session,mcp__shepherd__fail_tool,mcp__shepherd__raise_tool",
+      "--max-turns",
+      "14",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-m4-r1v5r740/flag-settings-deny.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ],
+    [
+      "/root/.local/bin/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary,mcp__shepherd__spawn_session,mcp__shepherd__fail_tool,mcp__shepherd__raise_tool",
+      "--max-turns",
+      "14",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-m4-r1v5r740/flag-settings-locked-syscli.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ]
+  ],
+  "settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+  "started_at": "2026-09-17T21:43:47.343Z",
+  "cli_path": "/root/.local/bin/claude",
+  "cli_versions_spawned": [
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "2.1.273 (Claude Code)"
+    ],
+    [
+      "/root/.local/bin/claude",
+      "2.1.274 (Claude Code)"
+    ]
+  ],
+  "turns": [
+    {
+      "label": "locked",
+      "wall_s": 12.47,
+      "session_id": "f9a84381-89d6-482a-b8b2-0579bd370f80",
+      "subtype": "success",
+      "terminal_reason": "completed"
+    },
+    {
+      "label": "deny",
+      "wall_s": 3.78,
+      "session_id": "2d3dbdf0-4a83-4af9-9207-6b1d1813207c",
+      "subtype": "success",
+      "terminal_reason": "completed"
+    },
+    {
+      "label": "locked-syscli",
+      "wall_s": 10.63,
+      "session_id": "1530dcf9-66fc-4e37-bbdd-ee45d501c63b",
+      "subtype": "success",
+      "terminal_reason": "completed"
+    }
+  ],
+  "isolation_lock": {
+    "locked": {
+      "system/init.tools": [
+        "mcp__shepherd__fail_tool",
+        "mcp__shepherd__fleet_summary",
+        "mcp__shepherd__raise_tool",
+        "mcp__shepherd__shadow_tool",
+        "mcp__shepherd__spawn_session"
+      ],
+      "equals_probe_tools_exactly": true,
+      "unexpected_tools": [],
+      "system/init.mcp_servers": [
+        {
+          "name": "shepherd",
+          "status": "connected"
+        }
+      ],
+      "only_shepherd_server": true
+    },
+    "locked-syscli": {
+      "system/init.tools": [
+        "mcp__shepherd__fail_tool",
+        "mcp__shepherd__fleet_summary",
+        "mcp__shepherd__raise_tool",
+        "mcp__shepherd__shadow_tool",
+        "mcp__shepherd__spawn_session"
+      ],
+      "equals_probe_tools_exactly": true,
+      "unexpected_tools": [],
+      "system/init.mcp_servers": [
+        {
+          "name": "shepherd",
+          "status": "connected",
+          "source": "sdk"
+        }
+      ],
+      "only_shepherd_server": true
+    }
+  },
+  "status": "ok",
+  "warnings": [
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary, mcp__shepherd__spawn_session, mcp__shepherd__fail_tool, mcp__shepherd__raise_tool. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here.",
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary, mcp__shepherd__spawn_session, mcp__shepherd__fail_tool, mcp__shepherd__raise_tool. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here.",
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary, mcp__shepherd__spawn_session, mcp__shepherd__fail_tool, mcp__shepherd__raise_tool. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here."
+  ],
+  "finished_at": "2026-09-17T21:44:23.433Z",
+  "settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+  "user_settings_unchanged": true,
+  "claude_pids_before_count": 2,
+  "claude_pids_after_count": 2,
+  "claude_pids_new_after": [],
+  "engine_owned_residue": [
+    "/root/.claude/projects/-tmp-shp-m4-r1v5r740-work-p1"
+  ]
+}

@@ -1,0 +1,318 @@
+# spec line quotes, taken 2026-09-14T09:54:22Z from working tree
+----- docs/specs/orchestrator-platform.md:9,16
+     9	## 0. How to read this document
+    10	
+    11	This spec is **self-contained**. A session picking it up needs nothing from the
+    12	conversation that produced it. Every decision is recorded with its reasoning in
+    13	§3 (Decision log), so you can tell an intentional choice from an accidental one.
+    14	
+    15	Read §1–§4 before touching anything. §5–§12 are the design proper. §13–§18 are
+    16	execution.
+----- docs/specs/orchestrator-platform.md:36,39
+    36	task breakdown. That is `writing-plans`' job, deliberately.
+    37	
+    38	Prior art: this design was distilled by reading
+    39	[`claude-command-center`](https://github.com/amirfish1/claude-command-center)
+----- docs/specs/orchestrator-platform.md:150,159
+   150	   they arrive and then discarded (D24); the evidence behind a *stop* is written
+   151	   to the stop log (D25). Every derived column is reconstructible — from the
+   152	   engine's own transcript plus that log — and `shepherd recompute` does exactly
+   153	   that. What the UI shows is an answer we stored, never an answer only we can
+   154	   remember.
+   155	3. **Every pluggable thing has exactly one interface** and exactly one test
+   156	   suite that every implementation must pass.
+   157	4. **Nothing we install may harm Claude Code.** Hooks time out, swallow all
+   158	   exceptions, and always exit 0. A dead daemon degrades visibility, never
+   159	   agents.
+----- docs/specs/orchestrator-platform.md:190,200
+   190	```
+   191	┌──────────────────────────────────────────────┐
+   192	│  UI (browser)                                │
+   193	│  Chat page  ·  Fleet page  ·  Session view   │
+   194	└───────────────┬──────────────────────────────┘
+   195	                │  HTTP + SSE  (never in-process calls)
+   196	┌───────────────▼──────────────────────────────┐
+   197	│  controld — control plane (restartable)      │
+   198	│                                              │
+   199	│  ┌────────────┐ ┌──────────┐ ╔════════════╗  │
+   200	│  │ Signals    │ │ Queues   │ ║Orchestrator║  │
+----- docs/specs/orchestrator-platform.md:218,232
+   218	                │
+   219	     claude(tmux)   claude(tmux)   claude(tmux)
+   220	```
+   221	
+   222	**The double border around Orchestrator is D19.** It runs in `controld`'s
+   223	process but may import nothing from Signals, Queues, Runner, or storage — it
+   224	calls the same tool-surface client a tier-2 session calls over MCP. An import
+   225	test asserts the boundary; violating it is a failing build, not a review
+   226	comment. That is also what lets the master move into its own `masterd` process
+   227	later (§17) without touching a line of its logic.
+   228	
+   229	**Why two processes:** if the control plane owns the ptys, restarting or
+   230	upgrading it kills your agents. CCC split this after the fact for exactly this
+   231	reason. Splitting up front costs one Unix socket and buys a control plane you can
+   232	restart, upgrade, and crash freely.
+----- docs/specs/orchestrator-platform.md:266,270
+   266	## 6. The six seams
+   267	
+   268	Everything pluggable goes through exactly one interface. No module has a second
+   269	path to the same capability.
+   270	
+----- docs/specs/orchestrator-platform.md:420,450
+   420	or constrained; JSON for what only gets read back whole.**
+   421	
+   422	### 7.0 What `store/` may expose (D33)
+   423	
+   424	D26 refused a `Store` Protocol. That decision stands, but "no interface" is not
+   425	"no contract" — a module boundary leaks exactly as easily as a bad Protocol if
+   426	callers reach through it. Three rules, and each one is what makes the Mongo port
+   427	in D2's remote path a rewrite of *one package* instead of a rewrite of its
+   428	callers:
+   429	
+   430	1. **Expose verbs, not queries.** `claim_work_item(item_id, session_id, ttl_s)
+   431	   -> bool`, never `query(sql, params)`. A verb can be implemented by another
+   432	   engine; a SQL string cannot.
+   433	2. **Return dataclasses, never driver rows.** The moment a caller touches
+   434	   `row["status_class"]` or a `sqlite3.Row`, the engine has escaped the package.
+   435	   `store/` converts at its own boundary and hands back `Session`, `WorkItem`,
+   436	   `Repo`. This is §13's "never return a raw DB row" rule, applied one layer
+   437	   earlier.
+   438	3. **Transactions stay inside.** No caller writes `with store.transaction():`.
+   439	   The atomic thing *is* one function — `claim_work_item()` is a conditional
+   440	   `UPDATE` in SQLite and a `findOneAndUpdate` in Mongo, and the caller cannot
+   441	   tell which.
+   442	
+   443	**The named trigger for promoting this to a `Store` Protocol: the day two
+   444	engines must ship from one codebase** — a desktop `.pkg` on SQLite and a server
+   445	deployment on something else. At that point drift between them is a real risk and
+   446	one contract suite both must pass earns its keep. Until then the import rule is
+   447	cheaper and less misleading. Following the three rules above makes that promotion
+   448	mechanical rather than a redesign: a list of typed verbs with dataclass returns
+   449	already *is* the Protocol, minus the `class` line.
+   450	
+----- docs/specs/orchestrator-platform.md:694,715
+   694	### Migrations
+   695	
+   696	Forward-only numbered SQL files in `store/migrations/`, applied in one
+   697	transaction at `controld` startup.
+   698	
+   699	```sql
+   700	CREATE TABLE schema_migration (
+   701	  version INTEGER PRIMARY KEY, name TEXT NOT NULL,
+   702	  checksum TEXT NOT NULL, applied_at TEXT NOT NULL);
+   703	```
+   704	
+   705	Three rules, each guarding a failure that is hard to debug later:
+   706	
+   707	1. **Checksum mismatch on an applied migration → refuse to start.** History was
+   708	   edited; guessing is worse than stopping.
+   709	2. **Database version newer than the binary → refuse to start.** launchd will
+   710	   happily run yesterday's binary after a failed upgrade, and old code reading a
+   711	   new schema corrupts quietly.
+   712	3. **`sessiond` never migrates.** It waits for `controld` to report the expected
+   713	   version over the UDS. Two processes racing one migration is the bug you
+   714	   cannot debug at 2am.
+   715	
+----- docs/specs/orchestrator-platform.md:742,757
+   742	### Hook installation: one dispatcher, all events
+   743	
+   744	CCC installs two hook scripts. We install **one** — `hookd.py` — registered for
+   745	every event we need. It reads the JSON on stdin, writes it to `sessiond`'s UDS
+   746	with a **250 ms timeout**, and **always exits 0**:
+   747	
+   748	```python
+   749	def main() -> None:
+   750	    try:
+   751	        payload = sys.stdin.read()
+   752	        send_uds(payload, timeout=0.25)
+   753	    except BaseException:
+   754	        pass
+   755	    sys.exit(0)
+   756	```
+   757	
+----- docs/specs/orchestrator-platform.md:996,1004
+   996	### Terminal fidelity in the browser
+   997	
+   998	```
+   999	browser ──WS──► sessiond
+  1000	  on connect:  snapshot(2000 lines) ──► xterm.js write
+  1001	  then:        live byte stream ─────► xterm.js write
+  1002	  keystrokes:  ──► write policy ──► pty
+  1003	```
+  1004	
+----- docs/specs/orchestrator-platform.md:1016,1022
+  1016	| `stopped` | write immediately | n/a |
+  1017	| `needs_you` | write immediately (it is *asking* you) | n/a |
+  1018	| `running` | **queue to mailbox**, deliver at next `Stop` | allowed, requires confirmation |
+  1019	
+  1020	You typing in the terminal pane is a **direct write and bypasses the queue** —
+  1021	it is your keyboard, you own the consequences. Programmatic writes
+  1022	(orchestrator, worker, sibling session) always go through the policy. The
+----- docs/specs/orchestrator-platform.md:1257,1262
+  1257	## 11. Orchestrator, tool surface, and the authorize gate
+  1258	
+  1259	### 11.0 The tool registry (D32)
+  1260	
+  1261	Five consumers need the same ~25 capabilities, and every one of them must pass
+  1262	through `authorize()` and land in the audit log:
+----- docs/specs/orchestrator-platform.md:1285,1290
+  1285	So MCP is **an output format, not an input type**. Four layers, and only the last
+  1286	knows a vendor exists.
+  1287	
+  1288	**① The capability** — plain, typed, vendor-free:
+  1289	
+  1290	```python
+----- docs/specs/orchestrator-platform.md:1341,1349
+  1341	2. **Blast class cannot be missed.** It is a required field on `ToolDef`, so a
+  1342	   tool without one does not typecheck — stronger than §11's `lookup()` with an
+  1343	   `external` default, which still relies on someone registering the tool.
+  1344	3. **Principle 1 becomes structural.** Generate `web/`'s routes and `cli/`'s
+  1345	   subcommands from the same registry and "no consumer gets a private read path"
+  1346	   stops being a discipline: a capability absent from the registry has no surface
+  1347	   that can reach it. This is the specific erosion the three L5 siblings invite.
+  1348	
+  1349	**Connectors fit without a special case.** A connector (D20) genuinely *is* a
+----- docs/specs/orchestrator-platform.md:1392,1396
+  1392	**Module boundary (D19).** Everything in this section lives in a `master/`
+  1393	package that imports only `toolsurface.client` and the Agent SDK. It may not
+  1394	import `store`, `signals`, `queues`, or `runner`. `test_master_isolation.py`
+  1395	walks the module's imports and fails the build on a violation — the same test
+  1396	that asserts `setting_sources=[]` really isolates it (§18).
+----- docs/specs/orchestrator-platform.md:1180,1185
+  1180	  "on_requeued":  { "comment": false, "set_status": null }
+  1181	}
+  1182	```
+  1183	
+  1184	Every write-back is an `external` action → passes `authorize()` → level 2 asks,
+  1185	level 3 auto-approves and logs (D8).
+----- docs/specs/orchestrator-platform.md:1202,1225
+  1202	### The worker loop (D7, D15)
+  1203	
+  1204	**The worker has no intelligence and never touches code.** It selects, claims,
+  1205	spawns, and then routes the resulting verdict — that last step is its whole
+  1206	value, because it is what turns "a session stopped" into "the work moved"
+  1207	without you in the loop.
+  1208	
+  1209	```python
+  1210	def tick(queue: Queue) -> None:
+  1211	    if not queue.enabled or active_claims(queue) >= queue.max_parallel:
+  1212	        return
+  1213	    item = next_candidate(queue)          # status_class == 'open', no live claim
+  1214	    if item is None:
+  1215	        return
+  1216	    claim = acquire(item)                 # atomic INSERT; loses harmlessly on conflict
+  1217	    if claim is None:
+  1218	        return
+  1219	    writeback(queue, "on_claim", item)
+  1220	    worktree = make_worktree(workspace, item)     # <repo>-wt/<KEY>/ on feat/<KEY>
+  1221	    brief = build_brief(item, workspace, prior_attempts(item), memory_sections=[])
+  1222	    ref = f"{item.provider}:{item.external_id}"        # e.g. "jira:OXDEV-1234"
+  1223	    session = spawn_session(project, brief, cwd=worktree,
+  1224	                            work_item_ref=ref, origin="queue_worker")
+  1225	    claim.session_id = session.id
+----- docs/specs/orchestrator-platform.md:1571,1600
+  1571	### `authorize()` — one chokepoint
+  1572	
+  1573	```python
+  1574	def authorize(tool: ToolDef, args: dict, ctx: CallerContext) -> Decision:
+  1575	    cls = tool.blast_class                 # a field on the registry entry, D32 —
+  1576	                                           # not a lookup that can miss
+  1577	    if cls in ("local_read", "local_write"):
+  1578	        log_action(tool.name, args, cls, decision="allow", approved_by="policy")
+  1579	        return Allow()
+  1580	    if ctx.autonomy_level == 3:
+  1581	        log_action(tool.name, args, cls, decision="allow", approved_by="policy")
+  1582	        return Allow()
+  1583	    approval = create_approval(tool.name, args, summary=describe(tool, args))
+  1584	    decision = await_decision(approval, timeout_s=600)
+  1585	    if decision is APPROVED:
+  1586	        log_action(tool.name, args, cls, decision="allow", approved_by="user")
+  1587	        return Allow()
+  1588	    if decision is REJECTED:
+  1589	        return Deny("you declined this")
+  1590	    return Deny("approval timed out — proceed without it or ask me directly")
+  1591	```
+  1592	
+  1593	The callback **blocks the agent's turn** while an approval is pending, so the UI
+  1594	shows a card and the turn resumes on the click. A timeout denies with a message
+  1595	the agent can act on, not a dead turn.
+  1596	
+  1597	The same function serves the master, tier-2 sessions via MCP, queue write-backs,
+  1598	and UI-initiated actions. **There is no second path** — that is the entire point.
+  1599	Per-action policy overrides ("always allow work-item comments, never allow push")
+  1600	are a rule table on top of this same function, deferred to later.
+----- docs/specs/orchestrator-platform.md:1880,1891
+  1880	below are strict.
+  1881	
+  1882	### Network
+  1883	
+  1884	- **`127.0.0.1` only, with no config knob to bind wider in v1.** The terminal
+  1885	  write endpoint types into a live shell as the user; exposing it on a LAN with
+  1886	  no auth is not a tradeoff worth offering. Remote access arrives with the auth
+  1887	  seam, not before.
+  1888	- **Origin-checked mutations.** Every POST validates `Origin`/`Host` against the
+  1889	  bound address, blocking a random page in the browser from driving the fleet.
+  1890	- **Both Unix sockets at mode 0600**, plus a per-boot shared token in the frame
+  1891	  header.
+----- docs/specs/orchestrator-platform.md:1972,1992
+  1972	## 14. Testing
+  1973	
+  1974	Four lanes. The first two carry the value.
+  1975	
+  1976	1. **Classifier over golden fixtures.** A directory of **real stop-log records
+  1977	   plus their transcript tails** — a rate limit, a crash mid-`Edit`, a
+  1978	   permission prompt answered, a derailed completion, a `blocked_external`, a
+  1979	   `stalled_pending_tool`. Pure function in, verdict out. **No mocking of Claude
+  1980	   Code — the fixtures *are* Claude Code.** Adding a missed case is: capture signals, drop in a fixture,
+  1981	   fix the rule, run `replay`.
+  1982	2. **Contract suites, one per seam.** `WorkItemProvider`, `Runner`,
+  1983	   `EngineAdapter` and `MasterRuntime` each get **one** test suite that every
+  1984	   implementation must pass. A new provider is done when it passes the existing
+  1985	   suite. This is the mechanism that stops the abstractions rotting into
+  1986	   CCC's 400KB-per-engine shape.
+  1987	
+  1988	#### `Scripted*` — what they are and why every seam gets one
+  1989	
+  1990	**Every seam ships a `Scripted*` implementation**: `ScriptedRunner`,
+  1991	`ScriptedWorkItemProvider`, `ScriptedEngine`, `ScriptedMaster`. They live in
+  1992	`testkit/` and ship with the package, not only with the tests.
+----- docs/specs/orchestrator-platform.md:2036,2041
+  2036	collects `Test`-prefixed classes on import and warns on any that has an
+  2037	`__init__`). `Scripted*` says what it does: it replays a script.
+  2038	2b. **Isolation tests.** `test_master_isolation.py` asserts the D19 import
+  2039	   boundary (the `master/` package imports nothing but `toolsurface.client` and
+  2040	   the SDK) and that `setting_sources=[]` keeps the global `CLAUDE.md` and cc10x
+  2041	   routing out of the master (§18).
+----- docs/specs/orchestrator-platform.md:2053,2066
+  2053	## 15. Packaging
+  2054	
+  2055	Signed + notarized `.pkg`:
+  2056	
+  2057	```
+  2058	/usr/local/libexec/shepherd/                              daemons + venv
+  2059	/usr/local/bin/shepherd                                   CLI
+  2060	~/Library/LaunchAgents/ai.shepherd.controld.plist          KeepAlive
+  2061	~/Library/LaunchAgents/ai.shepherd.sessiond.plist          KeepAlive
+  2062	~/Library/Application Support/shepherd/                    db, pty logs, fixtures, config
+  2063	```
+  2064	
+  2065	State lives under `Application Support`, **not** `~/.claude` — we are a consumer
+  2066	of Claude Code, not part of it.
+----- docs/specs/orchestrator-platform.md:2076,2086
+  2076	## 16. Milestones
+  2077	
+  2078	Seven shippable slices. Each is useful on its own; none requires the next to earn
+  2079	its keep.
+  2080	
+  2081	| # | Slice | Working at the end | Est. |
+  2082	|---|---|---|---|
+  2083	| **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns (D24), **four of the six tables** (`workspace`, `repo`, `session`, `app_state` — `work_item` and `queue` arrive with M5) + migrations, workspace/repo discovery and binding (D22), workspace→session→subagent tree, fleet page, SSE. **Read-only, `attached` sessions only.** Ordering uses the three live `state` values (`needs_you` → `running` → `stopped` → idle) — the full 7-bucket palette lands in M2. | 4–6 d |
+  2084	| **M2** | Signals engine | Classifier over transcript tail + stop metadata (D24), the `session` stop columns, **`next_actions[]` and the default table (D21)**, 7-bucket palette and its ordering, expandable stopped rows with action buttons, Needs-You rail, `replay`, `unknown` rate. **Mechanical reasons + heuristics only — the LLM verdict lane is deferred (D34)**, stubbed behind `classify_end_turn()`. | 5–6 d |
+  2085	| **M3** | Owned sessions | tmux runner, spawn, xterm.js terminal, write policy, mailbox, `ask()` via fork, rename + the `can_set_title` probe (D29). | 5–7 d |
+  2086	| **M4** | Orchestrator | **The tool registry first (§11.0, D32)** — `ToolDef`, `invoke()`, and the two MCP exporters — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
+----- docs/specs/orchestrator-platform.md:2104,2108
+  2104	- **Extracting the master into its own `masterd` process** — the D19 import
+  2105	  boundary makes this a packaging change (one plist, one socket) whenever
+  2106	  "restart `controld` without ending the orchestrator conversation" starts to
+  2107	  hurt. Not worth a third daemon for a single user on day one.
+  2108	- **`ApiLoopMaster`** — the second `MasterRuntime` implementation (D30). Built

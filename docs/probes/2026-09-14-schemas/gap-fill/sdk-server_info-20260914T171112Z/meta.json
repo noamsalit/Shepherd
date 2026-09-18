@@ -1,0 +1,51 @@
+{
+  "scenario": "server_info",
+  "sdk_version": "0.2.152",
+  "model": "claude-haiku-4-5-20251001",
+  "scrubbed_env_names": [
+    "AI_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_BRIDGE_SESSION_ID",
+    "CLAUDE_CODE_CHILD_SESSION",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_EXECPATH",
+    "CLAUDE_CODE_MESSAGING_SOCKET",
+    "CLAUDE_CODE_MESSAGING_TOKEN",
+    "CLAUDE_CODE_SESSION_ATTENDED",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_EFFORT",
+    "CLAUDE_PID"
+  ],
+  "cwd": "/tmp/shp-gap-sdk-server_info-2wqskna_",
+  "started_at": "2026-09-14T17:11:13.449+00:00",
+  "argv": [
+    [
+      "/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow instructions literally and briefly.",
+      "--tools",
+      "",
+      "--max-turns",
+      "4",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5-20251001",
+      "--settings",
+      "/tmp/shp-gap-sdk-server_info-2wqskna_/flag-settings.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ]
+  ],
+  "cli_path": "/tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+  "claude_version": "2.1.259 (Claude Code)",
+  "status": "ok",
+  "finished_at": "2026-09-14T17:11:14.909+00:00"
+}

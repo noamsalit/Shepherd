@@ -15,20 +15,30 @@ conversation that produced it. Every decision is recorded with its reasoning in
 Read §1–§4 before touching anything. §5–§12 are the design proper. §13–§18 are
 execution.
 
+Every external data shape this spec relies on (hook payloads, transcript entries,
+tmux output, Agent SDK and MCP messages, Linux and git interfaces) is documented
+with a real captured example in [`data-schemas.md`](data-schemas.md), next to this
+file (D41). Check a shape there before building on it. The same probes produced
+[`implementation-constraints.md`](implementation-constraints.md) — 24 facts that
+change *how* a task is built rather than what the design is. Both are required
+reading before planning.
+
 ### Picking this up in a fresh session
 
 You have everything you need. Do this, in order:
 
 1. Read §1–§4. §3 (Decision log) is the most important section in the document —
-   34 decisions with their reasoning. If implementation pressure pushes against
+   54 decisions with their reasoning. If implementation pressure pushes against
    one, say so and re-decide out loud; do not quietly reverse it.
-2. Note §2 — the product name (`shepherd`) and repo location are settled. Prose
-   written earlier still says `shepherd` in places; same product.
-3. Run the **tmux ↔ Claude Code TUI spike** from §18 before committing to M3.
-   It is the one assumption that could force a redesign.
-4. Then invoke the `writing-plans` skill against this spec, scoped to **M1
-   only** (§16). Do not plan all six milestones at once — each milestone gets its
-   own plan → implementation cycle.
+2. Note §2 — the product name (`shepherd`) and repo location are settled.
+3. Read `data-schemas.md` for any external shape you touch, and
+   `implementation-constraints.md` in full. **The tmux ↔ TUI spike from §18 has
+   been run** (2026-09-14) and its results are in both files; do not re-run it
+   without the isolation rule in §18 — on 2026-09-12 this spike destroyed three
+   live sessions, including the one running it.
+4. Then plan **M1 only** (§16). Do not plan all seven slices at once — each
+   milestone gets its own plan → implementation cycle. M1–M4 may be executed
+   back-to-back, but they are still four plans.
 
 What is *not* in this document: any code, any file layout beyond §15, and any
 task breakdown. That is `writing-plans`' job, deliberately.
@@ -80,7 +90,7 @@ who finds a stale `shepherd` knows it is a leftover, not a second name.
 
 | Item | Resolved to | Notes |
 |---|---|---|
-| Product / CLI name | `shepherd` | CLI binary `shepherd`, bundle id `ai.shepherd`, state dir `~/.shepherd/` |
+| Product / CLI name | `shepherd` | CLI binary `shepherd`, systemd user units `shepherd-controld.service` / `shepherd-sessiond.service`, XDG paths (§15, D39) |
 | Daemon names | `controld`, `sessiond` | unchanged — generic on purpose, they are not user-facing |
 | Repo location | `/root/Shepherd/` | this spec lives at `docs/specs/` within it; `git init` done, baseline commit on `main` |
 
@@ -100,10 +110,10 @@ re-decide.
 | # | Decision | Reasoning |
 |---|---|---|
 | D1 | **Hybrid execution ownership**: own the pty for sessions the platform spawns (`owned`); attach read-mostly to externally-launched ones (`attached`). | Terminal fidelity and safe steering require owning the pty. Losing sight of hand-launched terminal sessions is unacceptable. Hybrid gets both, at the cost of two session classes with different capabilities. |
-| D2 | **Local single-user, macOS `.pkg`**, but every host-dependent concern behind a seam from day 1. | Today it runs on one Mac. Remote/multi-user is a real future requirement, so `Runner`, `Credentials`, and `owner_id` exist now and get drivers later. |
+| D2 | **Local single-user, on Linux (D39)**, but every host-dependent concern behind a seam from day 1. | Today it runs on one machine. Remote/multi-user is a real future requirement, so `Runner`, `Credentials`, and `owner_id` exist now and get drivers later. |
 | D3 | **Layered stop verdicts**: heuristics always, LLM on suspicion or on demand. **All raw signals persisted append-only** with a `replay` command. | "Did it actually finish?" is not mechanically knowable. Storing raw signals means a missed case is fixed by editing a rule and replaying history, not by waiting for it to recur. |
 | D4 | **Work-item mirroring = mirror + reconcile + local claim + explicit write-back.** | Provider-as-source-of-truth cannot work offline and burns rate limits. Local-as-source-of-truth drifts. Mirror with a sync cursor gets both; a *local* claim avoids racing the provider's assignee field. |
-| D5 | **REST APIs for Jira/Notion, not `acli`/`glab`.** | CLIs are macOS-local, interactively authed, and their output is not a stable contract. All three break on the remote/multi-user path. |
+| D5 | **REST APIs for Jira/Notion, not `acli`/`glab`.** | CLIs are machine-local, interactively authed, and their output is not a stable contract. All three break on the remote/multi-user path. |
 | D6 | **Reconcile is a cursor poll, not webhooks.** | A loopback-only daemon cannot receive webhooks. Webhooks become an optional ingest on the server path. |
 | D7 | **Fresh session per work item** + a `build_brief()` seam + per-attempt outcome logging. **Memory layer deferred**, to be derived from those logs. | CCC's per-queue `LEARNINGS.md` is prompt-convention with no dedupe, no size cap, no scoping, no evidence a line ever helped, and a write race across parallel workers. Better to accumulate real outcome data and derive memory from it than to hand-append a file from day one. |
 | D8 | **Autonomy toggle, level 2 default, level 3 opt-in.** One `authorize()` chokepoint; audit log always on at both levels. | Level 2 = act freely on the fleet, confirm anything leaving the machine. Level 3 = auto-approve and log. Level 3 is "auto-approved", never "unlogged". |
@@ -117,15 +127,14 @@ re-decide.
 | D16 | **Seven-bucket outcome palette**, red reserved for errors. | See §4. |
 | D17 | **Session `finished` ≠ work `done`.** Session outcome and work-item progress are two chips from two sources, never merged. | A session can finish flawlessly while the work is a week from prod. Merging them makes the dashboard lie. |
 | D18 | **`blocked_external` is a first-class stop reason** with a self-declaration tool. | "Waiting on a merge/review/CI" would otherwise land as `completed` or `incomplete`, and a worker would pointlessly retry it. |
-| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, signals, queues, or runners. Enforced by a lint rule and an import test, not convention. | The master is a consumer of the event stream like the UI and the workers (principle 1); if it grows a private read path, the "one direction, one store" invariant is gone. Keeping it in-process avoids a third launchd agent and a third socket for a single-user v1. **The boundary is what makes extracting a `masterd` later a packaging change rather than a rewrite** — the seam is drawn now, the process split is deferred (§17). |
+| D19 | **Master is a separate module with a hard import boundary**, running in `controld`'s process but reaching the rest of the system *only* through the tool-surface client — never a direct import of storage, signals, queues, or runners. Enforced by a lint rule and an import test, not convention. | The master is a consumer of the event stream like the UI and the workers (principle 1); if it grows a private read path, the "one direction, one store" invariant is gone. Keeping it in-process avoids a third systemd service and a third socket for a single-user v1. **The boundary is what makes extracting a `masterd` later a packaging change rather than a rewrite** — the seam is drawn now, the process split is deferred (§17). |
 | D20 | **Connectors are third-party MCP servers mounted into the master only**, chosen from a UI list of supported platforms (Claude-Desktop-style). Tier-2 sessions never receive a platform credential; when one needs a connector it brokers through `ask_orchestrator()`. | One auth surface, one audit trail, one `authorize()` gate. Attaching connectors to N spawned sessions would multiply the credential blast radius and put third-party tools inside processes we do not gate. A session that genuinely owns a tool already has its own `CLAUDE.md` MCP config, which the platform does not touch. |
 | D21 | **Every stopped session carries `next_actions[]` — at most three, for *every* stop reason**, not just `end_turn`. Heuristic table always; LLM refines when a key exists. | "It stopped" is not actionable; "it stopped and here is the one thing to do" is. A crash, a rate limit, and a derailed completion each have an obvious next move, and the mechanical stop reasons (§8) already tell us which. Deriving the list from `stop_reason` makes it free for the ~80% of stops that never reach the LLM lane. |
-
 | D22 | **A project is a workspace of 1..N repos.** `repo` is a first-class entity; a session binds to a repo by **longest-prefix match of `cwd` against registered repo paths**, then repo → workspace. The master can add and remove repos; `add_repo` is `local_destructive`. | One work item routinely spans four repos here (OXDEV-71937 touched ox-ai-agent, factor, reporting-service, frontend). A one-repo project cannot represent that, and correlating N sessions by a shared reference loses the single view of what the work touched. Prefix-matching on repo paths rather than a workspace root lets a repo live anywhere on disk and resolves nested repos to the innermost. `add_repo` is destructive because §13 validates every spawn against the registered allowlist — adding a repo *widens that allowlist*. **Revises D15**: worktrees become per (work item, repo), created lazily on first write to a repo, not one per work item. |
 | D23 | **Hierarchy is mirrored, not modelled.** `kind_raw` (provider's word, verbatim) + `kind_class` (`container` \| `work` \| `unknown`) + `parent_external_id`. **Dispatchable = `kind_class == 'work'`.** Decomposition creates real child items through the provider; when `supports_children` is false it degrades to linked siblings. | Exactly the `status` / `status_class` pattern already in the spec, so it adds no new concept. Making dispatch depend on a mapped enum means an epic is unclaimable *mechanically* — no code anywhere contains the word "epic", which is Jira's vocabulary and not Notion's. Real child items (rather than a local task table) keep one source of truth and stay visible to the team; `HierarchyUnsupported` makes the Notion case an explicit degrade rather than a silent one. |
-| D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript Claude Code already writes to disk** plus the stop event's own metadata: mechanical reasons resolve with certainty and cost nothing; a cheap model runs **only** when `stop_reason = end_turn`. | The firehose was 200 MB–1.2 GB/day to serve three jobs, two of which only need the last 90 seconds. Liveness, registration, and the counters are all "update a field when the event arrives" — the event has no value once folded in. The evidence for the third job already exists on disk in `~/.claude/projects/*.jsonl`, so storing it again was duplication. Mechanical reasons (`rate_limit`, `crashed`, `auth_failed`, exit codes) are never in the text and never need a model; `end_turn` is the one genuinely ambiguous case. **Revises D3** — raw signals are no longer persisted; `replay` now runs over the stop-evidence log (D25), which is kilobytes per session rather than gigabytes per day. **Revises D7** — `worker_run` is dropped: attempt history is `SELECT … FROM session WHERE work_item_id = ?`, and the future memory layer derives from that plus the stop log. |
+| D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript Claude Code already writes to disk** plus the stop event's own metadata: mechanical reasons resolve with certainty and cost nothing; a cheap model runs **only** when `stop_reason = end_turn`. | The firehose was 200 MB–1.2 GB/day to serve three jobs, two of which only need the last 90 seconds. Liveness, registration, and the counters are all "update a field when the event arrives" — the event has no value once folded in. The evidence for the third job already exists on disk in `~/.claude/projects/<slug>/<session_id>.jsonl`, so storing it again was duplication. Mechanical reasons (`rate_limit`, `crashed`, `auth_failed`, exit codes) are never in the text and never need a model; `end_turn` is the one genuinely ambiguous case. **Revises D3** — raw signals are no longer persisted; `replay` now runs over the stop-evidence log (D25), which is kilobytes per session rather than gigabytes per day. **Revises D7** — `worker_run` is dropped: attempt history is `SELECT … FROM session WHERE work_item_id = ?`, and the future memory layer derives from that plus the stop log. |
 | D25 | **Evidence, audit, and replay diffs go to rotating JSONL logs, never the database.** Daily files, gzip on rotation, size cap as a second trigger, 90-day retention (14 for daemon logs). **Nothing the UI renders may read a log** — the audit view is the single exception, because it is a literal tail. | These are append-only, human-read, and offline-analysed: `grep` and `jq` territory, not queries. Keeping them out of the database is what lets the database stay six small tables. The rule about UI reads is the guardrail — the moment a page wants "every derailed session last month", that fact belongs in a column instead. A reader must skip malformed trailing lines, since a daemon killed mid-write leaves one. |
-| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a signed `.pkg` with no server to babysit, which rules out Postgres and MongoDB on packaging grounds — not on data-model grounds. MongoDB in particular is a good fit for the *shape* of this data and a bad fit for shipping a desktop app (a third daemon, ~100 MB bundled, WiredTiger claiming half the RAM of the machine running the fleet). When the remote/multi-user path in D2 arrives, that decision genuinely reopens, and it must not be a rewrite. No `Store` Protocol — a storage interface written against one implementation is the D9 mistake, and SQL leaks through it anyway. The boundary is an import rule, enforced by the same test as D19. |
+| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a single-user local install with no server to babysit (D39), which rules out Postgres and MongoDB on packaging grounds — not on data-model grounds. MongoDB in particular is a good fit for the *shape* of this data and a bad fit for shipping a desktop app (a third daemon, ~100 MB bundled, WiredTiger claiming half the RAM of the machine running the fleet). When the remote/multi-user path in D2 arrives, that decision genuinely reopens, and it must not be a rewrite. No `Store` Protocol — a storage interface written against one implementation is the D9 mistake, and SQL leaks through it anyway. The boundary is an import rule, enforced by the same test as D19. |
 | D27 | **The fleet page gets a third view: a cross-tab of work-item status × session outcome**, with a `(no work item)` column and a `(no session)` row. | The two chips of D17 are the two axes of one grid. The `finished × in_review|in_qa` cell is the "stuck between my desk and prod" question the spec already wanted a filter for; the `(no session)` row is the backlog in the same view; the `(no work item)` column is where hand-launched sessions live, which is most of a real day. Lands with M5, not M2 — the columns are work-item status, which does not exist before the mirror. |
 | D31 | **Wake queue.** A session that stops is routed by whoever owns it: queue-spawned → the worker loop (unchanged); **master-spawned → a wake set the master drains**. At level 2 it drains at the start of your next turn as a summary; at level 3 it wakes the master immediately. Capped at **2 master-initiated attempts per lineage**, and narrow by construction — only `unfinished` and `error` outcomes on master-owned sessions wake anything. | The worker loop runs forever, so it notices a stop at 3am; the master only runs while you are typing, so it does not. That inverts the two halves: the component holding the context to decide is asleep, and the component that is awake has no context. Nothing is *lost* — the conclusion and its action items are already written — so this is latency, not data loss, which is why level 2 stays a summary rather than silent autonomy. The retry cap mirrors the worker's `attempt < 2`; without it "stops → retry → stops → retry" runs until morning. `needs_you` deliberately does **not** wake the master: that is the human's rail, and handing it to an agent would hide the one thing you asked to be shown. |
 | D30 | **`MasterRuntime` is the sixth seam**, with `AgentSDKMaster` (subscription, Anthropic) in v1 and `ApiLoopMaster` (`api_key` + `base_url`, any vendor) defined but unbuilt. **LangChain/LangGraph rejected.** | Seat and API are two transports, not two settings: a claude.ai seat is reachable only through the Claude Code harness, never over an API. A framework that speaks only to APIs therefore *removes* the zero-marginal-cost path for the chattiest component in the system, rather than adding choice. Between a plain tool-call loop and LangGraph the loop wins on merit — the master is forbidden from dispatching subagents (D10), so its graph is one node; LangGraph's branching-state machinery earns nothing here and costs a dependency tree in a stack whose stated ethos is stdlib HTTP and no frontend framework. Tool restriction is **not** a tiebreaker: both implementations consume the same MCP tool surface (§11), so the allowlist is ours either way. |
@@ -134,6 +143,28 @@ re-decide.
 | D32 | **The tool surface is a registry, and MCP is an output format — never an input type.** Every capability is declared once as a `ToolDef` (name, JSON Schema, blast class, handler, audiences); one `invoke()` runs it; thin **exporters** translate the registry into whatever a consumer needs — SDK MCP, stdio MCP, OpenAI functions, HTTP routes, CLI subcommands. **Revises D30**: `mount_tools(mcp_servers)` becomes `configure(tools, system_prompt)`. | MCP appears in this system for two unrelated reasons and only one of them is a choice. At the **tier-2 boundary it is forced and correct** — Claude Code is a program we do not control and MCP is the contract it speaks. At the **master it is incidental** — that is our own Python behind our own model, and MCP is there only because the Agent SDK happens to accept tools that way. Putting the incidental case in the `MasterRuntime` signature made every future runtime accept a format only one of them uses: the D9 mistake, committed inside the decision that cites D9. A registry also kills three hand-maintained lists — `SESSION_TOOLS`, the `BLAST_CLASS` lookup, and the UI's own route table — and turns principle 1 from a discipline into a property: a capability absent from the registry has no surface that can reach it. |
 | D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row, or open a transaction. **Promote to a `Store` Protocol only when two engines must ship from one codebase** — that is the named trigger, and until it fires the import rule stands. | D26 refused a storage interface and was right for one shipping engine, but "no interface" is not the same as "no discipline": an abstraction leaks through a module boundary exactly as easily as through a Protocol if callers touch rows or drive transactions. These three rules are what make the Mongo port in D2's remote path a rewrite of one package rather than a rewrite of its callers — the claim becomes `findOneAndUpdate`, the matrix cross-tab becomes an aggregation pipeline, and nothing above `store/` notices. They also make the eventual promotion mechanical: a list of typed verbs with dataclass returns *is* a Protocol, minus the `class` line. |
 | D34 | **The LLM verdict lane is deferred past M2.** Mechanical stop reasons ship as specified; `end_turn` resolves on heuristics alone, `decided_by='heuristic'`, and the residue is `unknown`. **No seam is written for it** — one named call site in `signals/` instead. | Every mechanical reason in §8 is certain and free, and they cover the majority of stops; the model is needed for exactly one question — *it ended cleanly, but did it finish?* §8 already made that lane optional by construction for the no-API-key case, so deferring it is a configuration the design anticipated rather than a cut. Writing a `Classifier` seam now would be D9's mistake with **zero** implementations behind it instead of one; a single call site is the cheaper placeholder and costs nothing to promote later. `unknown` being visible and counted is principle 5 working as intended — it is the tuning backlog that tells you when the lane is worth building. |
+| D35 | **The logical architecture is five layers with downward-only imports, and all three consumers (`master/`, `web/`, `cli/`) reach the system only through L4.** Two boundaries are enforced by import tests: the consumer boundary and the storage boundary (§5.0). | D19 fenced off the master alone, and D26 fenced off the database alone. Neither said anything about `web/` or `cli/`, which are the consumers most likely to want "one quick query" below the tool surface. That is the private-read-path failure that sank the prior art at 349 endpoints. The three L5 modules are equals; a rule that binds only one of them invites the other two to become the back door. D32 made L4 a registry, so the rule now has a concrete thing to point at: a capability absent from the registry has no surface that can reach it. Downward-only imports are what keep the process split (§5) a packaging choice rather than a tangle. |
+| D36 | **Runtime swaps get a Protocol; edit-time swaps get a module boundary.** An engine that has two implementations alive at once (chosen by config or per call) is a seam with a `Scripted*` double and a contract suite. An engine with only one implementation alive, where changing it means shipping a new build, is an import rule plus an interface of domain verbs, promoted to a Protocol only when its named trigger fires (§5.0). | The requirement is that every engine under every component is easy to replace: the master's vendor, the database, the runner, the tracker. Answering that with "wrap everything in an interface" is D9's mistake at scale: interfaces written against one implementation encode that implementation, and SQL leaks through a `Store` Protocol anyway. Answering it with "no interfaces" makes the runtime swaps (a second model vendor, a second tracker in the same fleet) a rewrite. The rule explains, in one line, why the spec has six seams and why `store/` is not one of them, so the next engine can be classified instead of re-argued. |
+| D37 | **`controld` folds hook events and is the only database writer. `sessiond` relays.** `hookd` still writes to `sessiond`, which is always up. `sessiond` forwards to `controld` and keeps a bounded in-memory buffer while `controld` is down; overflow is counted and healed by `shepherd recompute`. | The fold and the stop-reason engine are the most-tuned code in the system (the differentiator, §8), and `sessiond` is the one process that cannot restart without killing agents. Putting the code that changes most inside the process that must change least inverts the reason the split exists. One writer also removes a startup-ordering problem: `sessiond` never needs an open, migrated database. The cost is that events arriving during a `controld` restart wait in a buffer, and that costs nothing visible, since the UI is served by `controld` and is down for the same window. Fold output is derived data (D24), so a lost event is recoverable from the transcript rather than a hole. |
+| D38.1 | **Amendment to D38 (2026-09-16): D38's premise "nothing in M1–M3 writes" is false, and the fix is one more registered tool, not an exemption.** `shepherd install-hooks` / `uninstall-hooks` / `inspect-hooks` are real writes — they merge a marked block into a settings file Claude Code owns. They are registered as `ToolDef`s from M1 with `blast_class=local_destructive` and `audiences={HUMAN}`, and `cli/` reaches them through `invoke()` like every read. In M1–M3 `invoke()` still runs them with no gate and no audit log; M4 adds `authorize()` behind the same call, and **D38's acceptance test is unchanged and gets stronger: no file in `web/` or `cli/` changes at M4**, including the installer commands. | Found by implementation pressure in M1 planning, and recorded rather than absorbed. `cli/` importing `engines/claude_code.install_hooks` directly fails the D35 consumer-boundary test outright, and the three ways out are not equal: exempting `cli/` from the boundary destroys the invariant §5.0 calls the one most likely to erode; moving the installer into `daemons/` collides with the rule that nothing imports a composition root; registering it keeps both boundaries intact and costs one `ToolDef`. D38's own argument decides it — the reason M1 ships the *final* interface rather than a direct-read shortcut is that a shortcut "gets labelled stable and stays", and a write path smuggled around L4 in M1 is exactly that shortcut wearing different clothes. The blast class is `local_destructive` from the start, so M4 gates it by changing one policy table rather than by finding it. **This also resolves the last open decision gap in the M1 plan (T17).** |
+| D38 | **M1 ships a minimal `toolsurface/` with its final interface; M4 completes it behind that interface.** `ToolDef` and `invoke()` exist from M1, and every `web/` and `cli/` read is a registered read-only tool. M1–M3 run with no permission gate and no audit log (nothing in them writes). M4 adds `authorize()`, the audit log and the exporters without changing any caller. | D35 says consumers reach the system only through L4, and §16 put L4 in M4, three milestones after the first consumer ships. A direct-read shortcut in M1 would have to be removed from every route in M4, and in practice it gets labelled stable and stays. A placeholder with the *final* shape costs the same code written in a different order. The check is mechanical: if M4 changes a file in `web/` or `cli/`, the placeholder had the wrong shape. |
+| D39 | **Target platform is Linux. Revises D2.** Two systemd user services, XDG paths, no root, lingering required. macOS becomes a later driver behind the existing seams. | The machine this runs on is Linux, and the fleet is driven from a phone over Remote Control, not from a desktop. A signed `.pkg`, launchd and Keychain would be a platform nobody runs. The seams in D2 were written so this is a driver choice, not a redesign: `Runner` (tmux) and `EngineAdapter` are unchanged, `Credentials` gets a Linux driver, and packaging becomes unit files. Lingering is called out because it is the one Linux default that silently breaks principle 4. |
+| D40 | **Your own keystrokes in the browser terminal are not gated and not audited; the connection is.** | `authorize()` exists to gate what an agent or a program does on your behalf. A human typing into a terminal is not acting on anyone's behalf, and a permission prompt per keystroke would make the terminal unusable. This is the same asymmetry as the write policy (§9): programmatic writes go through the policy, your keyboard does not. Auditing the connection keeps the question "who was driving this session at 3am?" answerable without logging every key. |
+| D41 | **External data shapes are documented from live probes in `data-schemas.md`; the spec cites that document, and a shape stated without a probe and a real example is a gap.** | The 2026-09-14 probes against Claude Code 2.1.270 found shapes in this spec that had been written from docs or memory and were wrong: `StopFailure.error_type` is `error`, `SessionEnd.end_reason` is `reason`, `start_reason` is `source`, and the `Stop` payload has no `stop_reason`. A shape copied from a capture can be re-probed when the engine upgrades; a shape typed from memory cannot. Calling an unprobed shape a gap stops a guess from being built on as a fact. |
+| D42 | **The master's tool restriction is `tools=[]` + `strict_mcp_config=True`, and `authorize()` runs inside `invoke()` — not in the SDK's permission callback.** `can_use_tool` stays mounted as a second belt for anything unexpected. | The spec's configuration did not do what it said. `allowed_tools` only *auto-approves*; it removes nothing. With the spec's block the master's `system/init.tools` had **75** entries — 32 built-ins, 38 claude.ai connector tools and 5 ours — and the master ran `Bash echo hi` with no permission callback at all. `tools=[]` leaves 43; `tools=[]` plus `strict_mcp_config=True` leaves exactly our 5. The callback is also the wrong chokepoint: its real signature is `(tool_name: str, input: dict, ctx)`, it receives MCP-prefixed names, and it is never invoked for a tool the allowlist already approved — so a gate built on it is skipped precisely when a tool is permitted. Putting `authorize()` inside `invoke()` (D32) makes the gate a property of the registry rather than of one vendor's SDK, which is also what the second runtime in D30 needs. Evidence: `data-schemas.md` §Agent SDK. |
+| D43 | **Runner I/O is keystrokes, not file descriptors and not signals.** `write()` sends byte-exact keys (`tmux send-keys -H`), `interrupt()` sends `Escape`, and `terminate()` is the only path that ends a session. `Runner.signal()` is removed. | Two probed facts break the original interface. Writing to the pane's tty device produces screen output and **zero bytes of program input**, so `write()` had no working implementation. And `SIGINT` to the `claude` pid does not interrupt a turn — it *ends Claude Code*, emitting `SessionEnd{reason:"other"}` with pane exit status 0. An interrupt that kills the session is not an interrupt; the spec's "explicit interrupt, requires confirmation" row would have destroyed the very session the user was trying to steer. Naming the two operations separately in the seam means the difference cannot be lost in an implementation. Evidence: `data-schemas.md` §tmux/TUI. |
+| D44 | **A `needs_you` caused by an open permission dialog refuses programmatic writes.** It is answered only by an explicit `approve`/`deny` action, which is a registered tool and therefore goes through `authorize()`. | The write policy's "needs_you → write immediately" row is the one place the spec says must not be wrong, and it was. With a permission dialog open, text sent to the pane is **discarded**, and the Enter that follows selects the default "1. Yes" — so a queued message silently approves a tool the human never saw, and never reaches the model. The fix is not better text delivery; it is recognising that a dialog is a different kind of `needs_you` than a question in the transcript. Evidence: `data-schemas.md` §tmux/TUI. |
+| D45 | **Mailbox delivery triggers on `Stop` *or* on a prompt-ready pane, and the input line is cleared before every delivery.** | Delivery keyed only on `Stop` silently stalls: an interrupted turn emits **no `Stop`** and no `PostToolUseFailure`, for `Esc` or `C-c`, during a tool or during streaming. A queued message would then wait for an event that never comes. After `Esc` during streaming Claude Code also restores the interrupted prompt into the input box, so the next programmatic write is **concatenated onto it** and delivers a corrupted instruction. Owned sessions have a pty, so prompt-readiness is observable; attached sessions keep `Stop` as their only trigger and that limit is recorded rather than hidden. Evidence: `data-schemas.md` §tmux/TUI. |
+| D46 | **The stop-reason engine keys on `StopFailure.error`, `SessionEnd.reason` and the transcript tail. `Stop.stop_reason` does not exist and no rule may reference it.** Unmapped values land in `unknown` and are counted. | Four rules in §8 keyed on a field that is absent from all 26 `Stop` captures and from the CLI's own schema. The values live elsewhere: a `max_tokens` turn arrives as `StopFailure{error:"max_output_tokens"}` with no `Stop` at all, and `SessionEnd.reason` is `other` for every `-p` exit, `tmux kill-session` and `SIGTERM` — the most common value, and the one §8 had no row for. The enum also carries `verification_required` and `cloud_credential_error`, which nothing mapped. This is M2's core table, so it is better re-based now than rebuilt after the classifier ships. Principle 5 does the rest: an unmapped value is visible and counted, not guessed. Evidence: `data-schemas.md` §Hooks. |
+| D47 | **Registration accepts the first event of *any* kind from an unknown `session_id`**, not `SessionStart` alone. `claude agents --json` is a supplementary discovery source. | Discovery assumed every session announces itself. A session already running when hooks are installed never fires `SessionStart` again: its next turn emits `UserPromptSubmit`, `MessageDisplay`, `Stop`, `ConfigChange` and `SessionEnd`. Since installing hooks is the *first* thing a new user does, the sessions they already have open — the exact fleet they installed this to see — would stay invisible until each one was restarted. Registering on any first event costs one branch in ingest. Evidence: `data-schemas.md` §Hooks. |
+| D48 | **A session binds to a repo through `git rev-parse --path-format=absolute --git-common-dir`, not by longest-prefix match of its cwd.** | D22's worker worktrees live at `<repo>-wt/<KEY>/`, which is a **sibling** of the repo, not a child, and `--show-toplevel` from inside one returns the worktree path. No prefix matches, so `repo_id` is null for exactly the sessions the queue creates — and Appendix A shows those same sessions bound to a repo, so the spec contradicted itself. `--git-common-dir` resolves a linked worktree to its main repository in one call. Evidence: `data-schemas.md` §Linux/process/git. |
+| D49 | **The tmux server runs outside `sessiond`'s lifetime, and its socket name is configuration** (default `shepherd-runner`, never `shepherd`). | D14's premise was that tmux survives a `sessiond` restart because the server is its own process. It is not, if `sessiond` started it: the server stays in the unit's cgroup, and the default `KillMode=control-group` kills the server **and every pane** on `systemctl --user restart`. That turns the one guarantee the two-process split exists to provide — restart the control plane, keep the agents — into its opposite. `sessiond` must start the server in its own scope (`systemd-run --user --scope`) or the unit must set `KillMode=process`. Separately, a socket literally named `shepherd` already exists on this host and carries the user's live sessions, so a fixed name would have targeted them. Evidence: `data-schemas.md` §Linux/process/git, §tmux/TUI. |
+| D50 | **`repo.vcs_remote` is normalised and stripped of URL userinfo before storage.** | `git remote get-url` returns embedded credentials verbatim, including `https://oauth2:<token>@host/…`. Stored raw, that token would land in the database, the fleet UI and the orchestrator's context — past every control in §13, because redaction only looks for secret-shaped *keys* and a URL is not one. Normalisation is needed anyway: the same repo appears in scp-like, `ssh://` and https spellings, with and without `.git`, and `get-url` expands `insteadOf`. Evidence: `data-schemas.md` §Linux/process/git. |
+| D51 | **The browser terminal uses a hand-rolled stdlib WebSocket (RFC 6455), and the frontend ships as plain ES modules with no build step.** | The stack line promised stdlib plus one runtime dependency, then specified a WebSocket. The host's Python has **no** WebSocket library and no pip, and there is no node, npm or `tsc` — so "vanilla TypeScript" needed a toolchain that does not exist, and the terminal needed a dependency the stack forbids. A stdlib handshake and frame round-trip was verified to work, so the honest choice is to own ~200 lines of framing rather than pretend the dependency is free or that a build step is absent. Evidence: `data-schemas.md` §Linux/process/git. |
+| D52 | **`ModelProvider.models()` returns only what the engine exposes: id, display name and effort support. Context window and cost live in a curated table in `core/`, marked as curated.** | The seam claimed the engine would hand over context window, cost and release date. The real `initialize` payload has `value`, `resolvedModel`, `displayName`, `description`, `supportsEffort`, `supportedEffortLevels` and the fast/auto/adaptive flags — and none of the three. An interface that returns fields no implementation can fill forces every driver to invent them, which is how a UI ends up displaying a confident wrong price. Curated data that says it is curated is honest and still useful. Evidence: `data-schemas.md` §Agent SDK. |
+| D53 | **Every `ToolDef.input_schema` is validated at registration, and exporter argument-handling parity is a contract test.** | `create_sdk_mcp_server` passes a schema through unchanged only when it has a string `type` **and** a `properties` key; any other dict it treats as a `{param: python_type}` map with every key required — so a plain, valid `{"type": "object"}` schema is silently mangled into a different tool. D32's whole claim is that one declaration feeds every exporter, which holds only if each exporter is checked against the same declaration. Validating at registration turns a malformed schema into a startup failure instead of a tool that misbehaves in one binding and works in another. Evidence: `data-schemas.md` §Agent SDK. |
+| D55 | **The product targets Linux *and* macOS from one build. Revises D39.** Host-dependent behaviour moves behind a seventh seam, `HostPlatform`, with `LinuxHost` (the verified driver) and `MacHost` (written, and marked unverified until it runs on a Mac). The seam owns exactly seven things: state/config/runtime **directory resolution**, the control **socket directory and its path-length budget**, **service supervision** (systemd user units vs launchd agents), **process liveness and exit observation** (`/proc` + pidfd vs `ps` + kqueue), **login persistence** (`loginctl enable-linger` vs a `RunAtLoad` agent), **the hook-side dispatch command** (the shell one-liner a non-Python hook client uses to reach the control socket), and **detached launch** (wrapping an argv so the process it starts escapes the caller's supervision cgroup). Nothing else may branch on the platform. **Six, raised from five on 2026-09-16:** the dispatch command's `nc` flag set is not portable — `-q0` exists on OpenBSD netcat and not on macOS's — and omitting it costs **250 ms on every hook invocation while still delivering the payload** (`docs/probes/2026-09-16-hookd-latency.md` Result 1b: 3.2 ms with the flag, 253.6 ms without). That is a platform branch, so by this decision's own rule it belongs here. **Seven, raised from six on 2026-09-17 (M3 plan DP5):** a tmux server first started *inside* a systemd user unit stays in that unit's cgroup, and the default `KillMode=control-group` then kills the server **and every owned pane** on `stop` *and* on `restart` — which would make D14's whole reason for choosing tmux false. Verified both ways in `docs/probes/2026-09-14-schemas/gap-fill/systemd-tmux-20260914T170532Z/`: under the default (`q1-cgstop.txt`) the capture reads `tmux-server 4054473: dead`, `pane-claude 4054474: dead`, `no server running`; started through `systemd-run --user --scope` (`q1-scopestop.txt`) the same stop leaves `tmux-server 4054726: alive(tmux: server)`, `pane-claude 4054727: alive(claude)` and both sessions still listed. Which wrapper is correct is a *host* question — systemd user manager, launchd, or a container with no systemd at all — i.e. exactly the three-way `SupervisionKind` this decision already declares, so it is the seam's kind of question. It is a **member** rather than a widening of `supervision()` for the same reason the sixth was: the count clause is an anti-growth clause, and absorbing a new concern into an existing member would keep its letter, defeat its purpose, and hide the change from every diff. It was raised as a **member** rather than folded into the socket member because "exactly five" is an anti-growth clause about *count*: absorbing a new concern into an existing member would keep the clause's letter, defeat its purpose, and hide the change from every diff. | D39 chose Linux alone on the evidence that "the machine this runs on is Linux, and the fleet is driven from a phone" (2026-09-16: the owner needs the daemons themselves to start on a Mac, so that premise no longer holds; recorded rather than reversed silently, per §0). Under D36's swap rule this is a **runtime** swap, not an edit-time one — the same build must start on either host and pick its driver by detection — so it earns a `Protocol`, a `ScriptedHost` double and a contract suite rather than the import rule `store/` gets. Drawing it at **M1** rather than at packaging time is the whole point: three call sites now, against every module that would otherwise grow its own platform branch. Two probed facts make it a real seam and not a path alias: macOS has no `/run/user/<uid>` for the 0600 sockets §13 requires, and its `sun_path` budget is 103 bytes against Linux's 107 (data-schemas.md §Unix domain socket) — a socket path that binds here can fail there. `SO_PEERCRED` is Linux-only for the same reason (`LOCAL_PEERCRED`/`getpeereid` on macOS). **The macOS driver ships unverified and says so**, exactly as `can_set_title` does (D29): principle 5, not a claim we cannot back. Packaging for either host is still M6; what M1 owes is the seam and the Linux driver behind it. **Three deployment shapes, not two** (2026-09-16): a macOS package installed locally, a Linux host under the systemd user manager, and a **Linux container on a remote server**. The container is why *supervision* is a seam member rather than a packaging detail — inside one there is no systemd user manager, no `loginctl`, and often no D-Bus, so the third driver is simply "run in the foreground and let the container runtime restart us", and `sessiond` outliving `controld` becomes the container's problem (one process per container, or one container with a supervisor). **This does not reopen §13's network posture.** The server case is served by binding loopback *inside* the container and reaching it through an SSH tunnel or a port-forward, which keeps "127.0.0.1 only, no knob to bind wider" literally true. Exposing the UI on an interface is a different decision — it needs the auth seam §13 defers and the multi-user path of D2 — and must be taken explicitly, never as a side effect of shipping a Dockerfile. |
+| D54 | **`authorize()` has a withdrawal path.** A pending approval can be cancelled, and a cancelled approval is denied and audited as `withdrawn`, never left pending. | Approval blocks the turn — verified at 75 s and again at 630 s — and `interrupt()` while one is pending makes the CLI send `control_cancel_request`, which raises `CancelledError` in the callback and leaves the tool result marked as an error. The spec had no state for this, so an approval card could outlive the request it belonged to and a later click would authorise an action nobody was still waiting for. One chokepoint (D8) means one place to record the outcome, including the outcome "nobody is listening any more". Evidence: `data-schemas.md` §Agent SDK. |
 
 ---
 
@@ -182,6 +213,153 @@ not as demanding.
 ---
 
 ## 5. Architecture
+
+### 5.0 Logical architecture — what may import what (D35, D36)
+
+§5's process topology below says **where code runs**. This section says **what
+may import what**. They are different rules: layers are an import rule,
+processes are a restart rule. This is the reference every plan's module layout
+and import tests are checked against.
+
+#### The five layers
+
+Dependencies point **down only**. A layer may import any layer below it, never
+one above it.
+
+```
+L5  CONSUME   master/          web/               cli/
+              orchestrator     HTTP + SSE         status · replay
+              AgentSDKMaster   no polling         recompute · uninstall
+    ════════════════════ consumer boundary ═══════════════════════════════
+L4  GATE      toolsurface/
+              registry of ToolDefs · invoke() · authorize() · audit log
+              exporters → SDK MCP · stdio MCP · HTTP routes · CLI commands
+    ──────────────────────────────────────────────────────────────────────
+L3  DRIVE     orchestration/
+              queues · workers · reconcile · claims · mailbox · channels · wake set
+    ──────────────────────────────────────────────────────────────────────
+L2  OBSERVE   signals/         runner/          providers/          engines/
+              ingest → fold    seam: Runner     seams: WorkItem-    seam: EngineAdapter
+              → classify       tmux · pty       Provider, Creds     claude_code · hookd
+              verdict +        owned vs         jira · notion       transcript · hooks
+              next_actions[]   attached         secret store
+    ════════════════════ storage boundary ════════════════════════════════
+L1  PERSIST   store/           logs/            core/
+              all SQL          stops · audit    types · enums · ids
+              the only DB      replay           the 7-bucket palette
+              importer (D26)   rotating JSONL (D25)
+```
+
+The two double lines are the boundaries a **test** fails on. Everything else in
+the diagram is convention a reviewer checks.
+
+| Layer | Modules | Owns |
+|---|---|---|
+| **L5 Consume** | `master/`, `web/`, `cli/` | Everything a human or the orchestrator agent uses. Three **equal** consumers, and none of them is special. |
+| **L4 Gate** | `toolsurface/` | The only place an action is authorized. The master, a tier-2 session over MCP, a queue write-back and a UI click all arrive at the same `authorize()` (D8, D32). |
+| **L3 Drive** | `orchestration/` | Anything that acts on its own timer: queues, workers, reconcile, the wake set (D31). |
+| **L2 Observe** | `signals/`, `runner/`, `providers/`, `engines/` | Everything that reads or drives the outside world: engines, ptys, trackers, credentials. Four of the six seams live here. |
+| **L1 Persist** | `store/`, `logs/`, `core/` | State, logs, and the shared vocabulary every layer above uses. |
+
+**Engine-specific vocabulary stays inside its adapter.** Claude Code's hook
+names, payload fields and transcript entry types belong in `engines/claude_code/`.
+`signals/` consumes what `EngineAdapter` produces, not what Claude Code emits.
+If swapping the engine would edit `signals/`, the boundary has leaked.
+
+#### The two enforced boundaries
+
+1. **Consumer boundary.** L5 reaches the system **only through L4**. `master/`,
+   `web/` and `cli/` import `toolsurface` and nothing below it. D19 states this
+   for `master/`; D35 extends it to all three consumers, because they are
+   equals. Enforced by an import test.
+2. **Storage boundary.** Nothing outside `store/` imports a database driver
+   (D26). `store/` exposes domain verbs that return dataclasses, and keeps
+   transactions inside (D33). Enforced by an import test.
+
+#### The four invariants
+
+Each one is enforced by a build, not by a reviewer.
+
+| Invariant | Rule | Enforced by |
+|---|---|---|
+| `store/` owns all SQL | Nothing outside `store/` imports a DB driver, so SQLite stays a packaging choice that the multi-user path can reopen without a rewrite (D26, D33). | storage-boundary import test |
+| `master/` is a consumer | The orchestrator runs inside `controld` but imports only the `toolsurface` client. That is what makes extracting a `masterd` later a packaging change (D19). | consumer-boundary import test |
+| One chokepoint | One `authorize()` and one audit log. Level 2 asks before anything leaves the machine; level 3 auto-approves, and **never unlogged** (D8). | single writer to the audit log |
+| One contract suite per seam | Every seam ships one suite that all its implementations pass, **its `Scripted*` double included** (§14.2). A new provider is done when it passes the suite that already exists. | contract suites |
+
+#### Why L4 exists: one read path, not one per consumer
+
+The design is drawn against a failure it watched happen. A prior tool grew 349
+endpoints, each with its own read logic, until its architecture document no
+longer described the system.
+
+```
+the failure mode                         the layer map
+every consumer keeps a private           everyone consumes one surface
+read path
+
+ ui  chat  worker  cli  hooks             ui  chat  worker  cli  hooks
+  │    │     │      │     │                └────┴─────┼──────┴─────┘
+  ▼    ▼     ▼      ▼     ▼                           ▼
+ ─────────── store/ ───────────           toolsurface/ · authorize() · audit
+                                                      │
+ 5 read paths · 5 places to fix a bug                store/
+                                          1 read path · 1 audit entry per action
+```
+
+The difference is one bar. On the right, every action is also auditable and
+gateable for free, because there is nowhere else for it to go.
+
+#### The swap rule: which engines get a Protocol (D36)
+
+Every component must be written so the engine under it is easy to replace: the
+master's model vendor, the database, the runner, the tracker. That does **not**
+mean every engine gets an interface. The rule:
+
+| If the swap happens at... | Then | Examples |
+|---|---|---|
+| **Runtime.** Two implementations are alive at once, chosen by config or per call. | A `Protocol` seam, a `Scripted*` double, and a contract suite. | `Runner`, `EngineAdapter`, `MasterRuntime`, `ModelProvider`, `Credentials`, `WorkItemProvider` (§6) |
+| **Edit time.** Only one implementation is ever alive; changing it means shipping a new build. | A **module boundary** is enough: an import rule plus an interface of domain verbs. | `store/` (D26, D33): SQLite today, a document DB for the remote path, never both at once |
+
+An edit-time boundary is promoted to a Protocol only when its named trigger
+fires. For `store/`, the trigger is two engines shipping from one codebase
+(D33). Writing a Protocol before a second implementation exists is D9's mistake.
+
+#### How the layers fold into processes
+
+| Process | Hosts | Lifecycle |
+|---|---|---|
+| **`controld`** | L1–L5. Runs migrations, serves the UI, drives the queues, hosts the master. | Restart, upgrade and crash freely. |
+| **`sessiond`** | The pty supervisor (`runner/`) and the hook-ingest endpoint (`engines/` → `hookd`). **Never migrates the schema.** | Long-lived; outlives `controld`. |
+
+They are joined by a Unix socket with mode `0600`. The hook dispatcher writes
+to that socket with a 250 ms timeout and **always exits 0**, so nothing the
+platform installs can block Claude Code. Principle 4: a dead daemon degrades
+visibility, never agents.
+
+Real shapes and examples: data-schemas.md §Hook runtime contract (process, stdin, env, exit codes, stdout, timeout, sync, ancestry).
+
+#### The one thing to watch
+
+`master/`, `web/` and `cli/` sitting as equals at L5 is the invariant most
+likely to erode under implementation pressure. The first time the fleet page
+wants a query that is not in the tool surface, the honest move is to add it
+there, **not** to let `web/` reach down one layer "just this once". That is
+the exact edge the one-read-path diagram above is about.
+
+#### Settled: who processes events, and how M1 honours L4 early (D37, D38)
+
+- **`controld` processes hook events and is the only process that writes the
+  database (D37).** `sessiond` receives events from `hookd` and relays them to
+  `controld`, holding them in a bounded in-memory buffer while `controld` is
+  down. The buffer is not an event store (D24). It is drained on reconnect,
+  and anything that overflows is counted (principle 5) and rebuilt by
+  `shepherd recompute` from transcripts.
+- **M1 ships a minimal `toolsurface/` with its final shape (D38).** `web/` and
+  `cli/` call `invoke()` from M1 onward. In M1–M3, `invoke()` looks up a
+  read-only `ToolDef` and runs it, with no permission gate and no audit log.
+  M4 adds `authorize()`, the audit log and the MCP exporters **behind**
+  `invoke()`. **Acceptance test for M4: no file in `web/` or `cli/` changes.**
 
 ### Process topology
 
@@ -250,10 +428,10 @@ process exit ──────────┘                  │      (event 
 
 ### Stack
 
-- **Backend:** Python 3.12, stdlib HTTP + SSE, SQLite (WAL), `claude-agent-sdk`
-- **Frontend:** vanilla TypeScript, no framework; `xterm.js` the only runtime dep
+- **Backend:** Python 3.12, stdlib HTTP + SSE + a hand-rolled RFC 6455 WebSocket for the terminal (D51), SQLite (WAL), `claude-agent-sdk`
+- **Frontend:** plain ES modules, no framework and **no build step** (D51); `xterm.js` the only runtime dep
 - **Runner:** tmux
-- **Packaging:** signed + notarized macOS `.pkg`, two launchd user agents
+- **Platform:** Linux (D39). Two systemd **user** services, no root required (§15)
 
 No build server, no bundler beyond `tsc`. The frontend is the layer that changes
 most and the one you debug at 2am when a signal renders wrong; keep it
@@ -271,9 +449,10 @@ class Runner(Protocol):
     def start(self, spec: SessionSpec) -> RunnerHandle: ...
     def attach(self, handle: RunnerHandle) -> ByteStream: ...        # live output
     def snapshot(self, handle: RunnerHandle, lines: int) -> bytes: ...  # screen+scrollback
-    def write(self, handle: RunnerHandle, data: bytes) -> None: ...
+    def write(self, handle: RunnerHandle, data: bytes) -> None: ...  # key bytes, D43
     def resize(self, handle: RunnerHandle, cols: int, rows: int) -> None: ...
-    def signal(self, handle: RunnerHandle, sig: Signal) -> None: ...
+    def interrupt(self, handle: RunnerHandle) -> None: ...            # D43 — not a signal
+    def terminate(self, handle: RunnerHandle) -> None: ...            # D43 — ends the session
     def probe(self, handle: RunnerHandle) -> ProcState: ...          # alive?, exit_code
 
 
@@ -297,7 +476,7 @@ class MasterRuntime(Protocol):                                     # D30, revise
 
 
 class ModelProvider(Protocol):
-    def models(self) -> list[ModelInfo]: ...          # id, context, cost, release
+    def models(self) -> list[ModelInfo]: ...          # id, display_name, effort support (D52)
     def effort_ladder(self) -> list[str]: ...         # [] when the engine has none
 
 
@@ -394,7 +573,7 @@ Notion: patch the property).
 | spawn headless | `claude -p` | `codex exec` | `agy` print mode |
 | steer / resume | yes, both | yes, both | AGY CLI or LSP RPC |
 | transcript | JSONL `~/.claude/projects/` | JSONL, partial parity | JSONL `~/.gemini/antigravity/brain/` |
-| hooks | **rich** (32 events) | **none** | none |
+| hooks | **rich** (33 events in 2.1.270) | **none** | none |
 | fork | yes | unknown | unknown |
 | effort ladder | `low·medium·high·xhigh·max` | `low·medium·high·xhigh` | none |
 
@@ -439,7 +618,7 @@ callers:
    tell which.
 
 **The named trigger for promoting this to a `Store` Protocol: the day two
-engines must ship from one codebase** — a desktop `.pkg` on SQLite and a server
+engines must ship from one codebase** — a local install on SQLite and a server
 deployment on something else. At that point drift between them is a real risk and
 one contract suite both must pass earns its keep. Until then the import rule is
 cheaper and less misleading. Following the three rules above makes that promotion
@@ -477,7 +656,7 @@ Naming these matters more than the tables, because each was in an earlier draft:
 | `workspace_id` | TEXT FK | no | |
 | `name` | TEXT | no | defaults to directory basename |
 | `root_path` | TEXT | no | absolute, canonicalized, **UNIQUE**. The longest-prefix key that binds `cwd` → repo (D22) |
-| `vcs_remote` | TEXT | **yes** | null for non-git |
+| `vcs_remote` | TEXT | **yes** | null for non-git, and for a git repo with no `origin` remote (`git remote get-url origin` exits 2) |
 | `active` | BOOLEAN | no | soft delete — past sessions still reference it |
 | `added_at` | TEXT | no | |
 
@@ -489,6 +668,8 @@ SQL prefix-matching on paths is a trap and there is no index for it.
 Three groups of fields with completely different write behaviour. Keeping them
 visually separate is load-bearing — the middle group is what replaces the event
 store.
+
+Real shapes and examples: data-schemas.md §Common input fields (every hook's stdin JSON), §Transcript entry: `assistant`, §`last-prompt` entry, §Other metadata entries (`mode`, `permission-mode`, `atis-latch`, `bridge-session`, `cost-state`, `file-history-*`, `frame-link`, `artifact-*`, `pr-link`), §`git remote get-url` forms (`repo.vcs_remote`), §`git rev-parse` outputs for cwd → repo binding.
 
 **Written once at spawn, never changes:**
 
@@ -504,13 +685,13 @@ store.
 | `parent_session_id` | TEXT FK | **yes** | who spawned it |
 | `origin` | TEXT enum | no | `orchestrator` \| `queue_worker` \| `user_ui` \| `external` \| `ask_fork` |
 | `ownership` | TEXT enum | no | `owned` \| `attached`. (Was `class` — a reserved word almost everywhere) |
-| `ephemeral` | BOOLEAN | no | `TRUE` for `ask()` forks; hidden from the fleet by default |
+| `ephemeral` | BOOLEAN | no | `TRUE` for `ask()` forks **and for a hooked `claude -p` run the discovery sweep reconciles** (DP2 option 2, M3); hidden from the fleet by default |
 | `depth` | INTEGER | no | recursion cap |
 | `retry_of` | TEXT FK→session | **yes** | set when this session is a retry of another (D31) |
 | `attempt` | INTEGER | no | `1` for an original; `+1` along the `retry_of` chain. The master's cap reads this |
-| `brief` | TEXT | **yes** | what it was asked to do. For `attached` sessions, the transcript's `lastPrompt` |
+| `brief` | TEXT | **yes** | what it was asked to do. For `attached` sessions, the transcript's `lastPrompt` (from `last-prompt` entries: the most recent prompt, not the first; cut to 200 chars + `…`, newlines flattened) |
 | `cwd` · `worktree_path` · `runner_handle` | TEXT | worktree/handle yes | |
-| `engine` · `provider` · `model` · `effort` · `credential_ref` · `runner` | TEXT | mostly yes | null = engine default. `effort` is a top-level transcript field; `model` is at `message.model` |
+| `engine` · `provider` · `model` · `effort` · `credential_ref` · `runner` | TEXT | mostly yes | null = engine default. `effort` is a top-level transcript field on assistant entries, absent for models without effort (haiku); `model` is at `message.model`, which is `<synthetic>` on client-generated entries |
 | `started_at` | TEXT | no | |
 
 **Title is its own small subsystem** — see `title` / `title_source` in §7.1.
@@ -525,7 +706,7 @@ store.
 | `tasks_done` / `tasks_total` | INTEGER | no | the `2/5` chip, counted as `Task*` events arrive |
 | `active_subagents` | INTEGER | no | the `3 subagents` count |
 | `repos_touched` | TEXT **JSON** | no | `[]`; repo ids accumulated from `FileChanged`. What makes a multi-repo workspace legible (D22) |
-| `pr_url` | TEXT | **yes** | **free — the transcript emits `pr-link` entries.** The `[↗]` on a blocked row |
+| `pr_url` | TEXT | **yes** | from the transcript's `pr-link` entries (`prUrl`), which Claude Code writes only when it links the session to a PR; none were observed in the 2026-09-14 probes, so it may stay null. The `[↗]` on a blocked row |
 
 **Written at stop, overwritten when a rule improves:**
 
@@ -557,8 +738,11 @@ you rename a session, the engine's own title never overwrites it again.
 
 - **`brief`** — first 60 chars of the brief. Always available, including before
   the process emits anything.
-- **`engine`** — Claude Code writes `ai-title` entries into its transcript, so a
-  generated title arrives for free, including for `attached` sessions.
+- **`engine`** — Claude Code writes `ai-title` entries (`aiTitle`) into the
+  transcript of an unnamed session, so a generated title arrives for free,
+  including for `attached` sessions. A session started with `--name` gets
+  `custom-title` + `agent-name` entries (`customTitle`, `agentName`) instead, and
+  no `ai-title`; `/rename` also writes `custom-title` + `agent-name`.
 - **`user`** — you renamed it in the UI.
 
 **Pushing a rename back into the harness** is an engine capability, not a given:
@@ -568,14 +752,19 @@ can_set_title: bool          # added to EngineCapabilities (§6)
 def set_title(self, handle: RunnerHandle, title: str) -> None: ...
 ```
 
-For Claude Code the candidate mechanism is appending an `ai-title` entry to the
-session transcript, and **that is not yet verified** — writing into a file the
+For Claude Code the candidate mechanism was appending an `ai-title` entry to the
+session transcript. That is the wrong entry type: a user-given name is a
+`custom-title` entry, and Claude Code writes it itself when `/rename <title>` is
+typed into its pty or it is spawned with `--name`. **Neither is yet accepted as
+the write-back** — writing into a file the
 engine owns runs straight at design principle 4 ("nothing we install may harm
 Claude Code"). Until the probe in §18 says otherwise, `can_set_title` is
 `False` for every engine, the rename is stored locally, and **the UI says so**:
 a small `local only` marker beside a renamed session rather than a silent
 half-success. If the probe passes, `title_synced_at` records the write-back and
 the marker disappears.
+
+Real shapes and examples: data-schemas.md §Title and name entries: `ai-title`, `custom-title`, `agent-name` (title sources), §Session title: /rename and --name (custom-title, agent-name, session_title, pane_title).
 
 This is why `title` is one field with a `title_source` rather than two columns:
 the display rule stays a single precedence check no matter which of the three
@@ -674,7 +863,7 @@ matrix falls back to two `LEFT JOIN`s and a `UNION`. Verify in M1.
 ### Logs — the other half of the data layer (D25)
 
 ```
-~/Library/Application Support/shepherd/
+~/.local/share/shepherd/          ($XDG_DATA_HOME/shepherd)
   shepherd.db
   logs/stops/2026-09-11.jsonl     evidence + the conclusion drawn from it    90 d
   logs/audit/2026-09-11.jsonl     every action authorize() allowed or denied 90 d
@@ -704,7 +893,7 @@ Three rules, each guarding a failure that is hard to debug later:
 
 1. **Checksum mismatch on an applied migration → refuse to start.** History was
    edited; guessing is worse than stopping.
-2. **Database version newer than the binary → refuse to start.** launchd will
+2. **Database version newer than the binary → refuse to start.** systemd will
    happily run yesterday's binary after a failed upgrade, and old code reading a
    new schema corrupts quietly.
 3. **`sessiond` never migrates.** It waits for `controld` to report the expected
@@ -716,7 +905,10 @@ Three rules, each guarding a failure that is hard to debug later:
 ## 8. Signals and the stop-reason engine
 
 This is the differentiator. Everything here rests on Claude Code's hook system,
-whose contract was verified against the official docs on 2026-09-08.
+whose contract was verified against the official docs on 2026-09-08 and probed
+live against Claude Code 2.1.270 on 2026-09-14.
+
+Real shapes and examples: data-schemas.md §Hook event names (the enum), §Common input fields (every hook's stdin JSON), §Enumerations (SessionStart.source, SessionEnd.reason, StopFailure.error, Notification.notification_type), and one section per event (§SessionStart … §TeammateIdle).
 
 **Nothing in this section is stored as an event (D24).** Each arriving event
 updates a column on `session` and is then discarded. Only at *stop* is evidence
@@ -726,11 +918,11 @@ written down, and it goes to the stop log (D25), not a table.
 |---|---|
 | any event | `last_event_at` — the liveness clock |
 | `SessionStart` | registers an `attached` session: `engine_session_id`, `cwd` → `repo_id` by longest prefix (D22) |
-| `UserPromptSubmit` | `brief`, when we did not write one ourselves |
+| `UserPromptSubmit` | `brief`, when we did not write one ourselves. It also fires for system-injected `<task-notification>` prompts, and no payload field tells the two apart |
 | `Notification` / `PermissionRequest` | `state = needs_you` + `needs_you_reason` |
 | `TaskCreated` / `TaskCompleted` | `tasks_total` / `tasks_done` |
-| `SubagentStart` / `SubagentStop` | `active_subagents` |
-| `FileChanged` | appends to `repos_touched` |
+| `SubagentStart` / `SubagentStop` | `active_subagents`. Internal subagents (compaction, post-turn helpers) emit `SubagentStop` with `agent_type: ""` and no `SubagentStart` |
+| `FileChanged` | appends to `repos_touched`. It fires only for watch paths a hook declares (`watchPaths`) or the matcher names, never for files the agent edits |
 | `Stop` / `StopFailure` / `SessionEnd` | triggers classification (below) |
 
 The expanded subagent list, and anything else you drill into, is read from the
@@ -753,15 +945,19 @@ def main() -> None:
     sys.exit(0)
 ```
 
-A hook that can block or fail Claude Code is unacceptable; this one can do
-neither (principle 4).
+A hook that can block or fail Claude Code is unacceptable (principle 4). Claude
+Code runs hooks synchronously and waits for them (default timeout 600 s), so
+this one bounds its own run with the 250 ms socket timeout and never fails the
+session.
+
+Real shapes and examples: data-schemas.md §Hooks config schema (`hooks` in settings.json), §Hook runtime contract (process, stdin, env, exit codes, stdout, timeout, sync, ancestry), §Hook process ancestry and environment (which claude owns this hook?).
 
 **Events subscribed:**
 
 | Purpose | Events |
 |---|---|
 | liveness | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `MessageDisplay` |
-| needs-you | `Notification`, `PermissionRequest`, `PermissionDenied`, `Elicitation`, `ElicitationResult` |
+| needs-you | `Notification`, `PermissionRequest`, `PermissionDenied` (fires only for auto-mode classifier denials), `Elicitation`, `ElicitationResult` |
 | stop | `Stop`, `StopFailure`, `SessionEnd` |
 | subagents | `SubagentStart`, `SubagentStop` |
 | progress | `TaskCreated`, `TaskCompleted` |
@@ -771,11 +967,16 @@ neither (principle 4).
 
 `SessionStart` is what binds an `external` session to a repo and its workspace — it carries
 `session_id` and `cwd`, so a hand-launched session registers itself on its first
-turn with no filesystem polling.
+turn with no filesystem polling. A session that was already running when the
+hooks were installed never emits `SessionStart`; its first event is some other
+one. Real shapes and examples: data-schemas.md §Hooks written into a running session (attached-session registration), §Live-session registry `~/.claude/sessions/<pid>.json`, §`claude agents --json`.
 
-**Common fields on every hook event:** `session_id`, `prompt_id`,
-`transcript_path`, `cwd`, `permission_mode`, `effort.level`, `hook_event_name`,
-and — **when inside a subagent** — `agent_id` and `agent_type`.
+**Common fields on every hook event:** `session_id`, `transcript_path`, `cwd`,
+`hook_event_name`. **On some events only:** `prompt_id` (absent before the first
+prompt, e.g. on most `SessionStart`), `permission_mode` (tool and turn events
+only), `effort.level` (only when the model supports effort; never with haiku),
+`scratchpad_dir` (interactive sessions), and — **when inside a subagent** —
+`agent_id` and `agent_type`. No payload field is a timestamp.
 
 ### `state` — three live values, hard signals only
 
@@ -791,36 +992,50 @@ not finished — it is blocked on you, and it sorts to the top.
 
 `notification_type` distinguishes `permission_prompt` from `idle_prompt`. Those
 are different asks and the UI must say which: *"needs permission: Bash(git
-push)"* vs *"idle — waiting for your next instruction."*
+push)"* vs *"idle — waiting for your next instruction."* Both are emitted only
+by interactive sessions, never by `-p`: `idle_prompt` arrives 60 s after a
+`Stop`, and `permission_prompt` arrives 6 s after a `PermissionRequest` that is
+still unanswered. `PermissionRequest` carries no `tool_use_id`, and no event
+follows a rejection. Real shapes and examples: data-schemas.md §Notification, §PermissionRequest, §Notification payload (TUI: idle_prompt, permission_prompt), §PermissionRequest payload (TUI, waiting for a human).
 
 ### `stop_reason` — mechanical, confidence 1.0
 
-`StopFailure` carries an `error_type` whose allowed values map almost
-one-to-one onto the reasons you want:
+`StopFailure` carries an `error` whose allowed values map almost
+one-to-one onto the reasons you want. `message.stop_reason` below is the field
+on the session's last `assistant` transcript entry; the `Stop` hook payload has
+no `stop_reason` field:
 
 | `stop_reason` | rule | `outcome_class` |
 |---|---|---|
-| `rate_limited` | `StopFailure.error_type` ∈ {`rate_limit`, `overloaded`} | `paused` |
+| `rate_limited` | `StopFailure.error` ∈ {`rate_limit`, `overloaded`} | `paused` |
 | `quota_paused` | `Notification` ∈ {`quota_auto_resume_fired`, `quota_auto_resume_stale`, `quota_auto_resume_disabled`} | `paused` |
 | `auth_failed` | ∈ {`authentication_failed`, `oauth_org_not_allowed`} | `error` |
 | `account_blocked` | ∈ {`account_on_hold`, `billing_error`} | `error` |
 | `bad_request` | ∈ {`invalid_request`, `model_not_found`} | `error` |
 | `server_error` | `= server_error` | `error` |
-| `truncated` | `= max_output_tokens`, or `Stop.stop_reason = max_tokens` | `unfinished` |
-| `stalled_pending_tool` | `Stop.stop_reason = tool_use` — stopped holding an unexecuted tool call | `error` |
+| `truncated` | `= max_output_tokens`, or `message.stop_reason = max_tokens` | `unfinished` |
+| `stalled_pending_tool` | `message.stop_reason = tool_use` at `Stop` — stopped holding an unexecuted tool call | `error` |
 | `crashed` | process exit ≠ 0 with no preceding `Stop`/`StopFailure` | `error` |
 | `killed` | we sent the signal (recorded in `action_log`) | `unfinished` |
 | `context_exhausted` | `PreCompact{auto}` with no `PostCompact` before death | `unfinished` |
-| `user_exited` | `SessionEnd.end_reason = prompt_input_exit` | `unfinished` |
-| `cleared` | `SessionEnd.end_reason = clear` | `unfinished` |
-| `logged_out` | `SessionEnd.end_reason = logout` | `error` |
-| `resumed_elsewhere` | `SessionEnd.end_reason = resume` | `unfinished` |
-| `unknown` | `StopFailure.error_type = unknown`, or nothing matched | `error` |
+| `user_exited` | `SessionEnd.reason = prompt_input_exit` | `unfinished` |
+| `cleared` | `SessionEnd.reason = clear` | `unfinished` |
+| `logged_out` | `SessionEnd.reason = logout` | `error` |
+| `resumed_elsewhere` | `SessionEnd.reason = resume` | `unfinished` |
+| `unknown` | `StopFailure.error = unknown`, or nothing matched | `error` |
+
+What the values mean in 2.1.270: `overloaded` is in the enum but never
+assigned, and a (mocked) HTTP 529 arrives as `server_error`. A (mocked) generic
+HTTP 400 arrives as `unknown`; only a prompt-too-long 400 is `invalid_request`. The enum also has
+`verification_required` and `cloud_credential_error`, which no row above maps.
+`SessionEnd.reason` also has `other`, which every `-p` exit, `tmux kill-session`
+and SIGTERM produce, and which no row above maps. Real shapes and examples:
+data-schemas.md §StopFailure, §SessionEnd, §Stop, §Enumerations (SessionStart.source, SessionEnd.reason, StopFailure.error, Notification.notification_type), §`SessionEnd.reason` = `resume` and `logout`, §Auto compaction: `PreCompact{trigger:auto}` / `PostCompact`, and death mid-compaction, §Observed process exit for a process Shepherd did not spawn (pidfd), §Transcript entry: `assistant`.
 
 `quota_paused` shows the resume time rather than an error — it is not a failure
 and it recovers itself.
 
-### The completeness split — only when `Stop.stop_reason = end_turn`
+### The completeness split — only when `message.stop_reason = end_turn`
 
 The one thing no mechanical rule can settle.
 
@@ -867,9 +1082,11 @@ The one thing no mechanical rule can settle.
 > on the fleet page is what tells you when it is worth doing.
 
 **The model verdict** — `claude-haiku-4-5` over the **transcript tail** (last
-~20 entries, which the engine already wrote to disk) plus the task ledger.
+~20 `user`/`assistant` entries, which the engine already wrote to disk; almost
+half of transcript lines are metadata, attachment or system entries) plus the
+task ledger.
 
-**It runs only when `Stop.stop_reason = end_turn`.** Every mechanical reason in
+**It runs only when `message.stop_reason = end_turn`.** Every mechanical reason in
 the table above resolves with certainty and costs nothing — a rate limit, a
 crash, an auth failure, and an exit code are not in the text and must never be
 guessed at. That short-circuit is what keeps the common case free.
@@ -979,17 +1196,19 @@ first-class metric on the fleet page — it *is* the tuning backlog (principle 5
 
 ### LocalRunner: tmux (D14)
 
-Each `owned` session is a tmux session named `shepherd:<session_id>`.
+Each `owned` session is a tmux session named `shepherd_<session_id>`, on a **dedicated socket** (`tmux -L shepherd`).
 
 | Problem | How tmux solves it |
 |---|---|
 | Survive `sessiond` restart/upgrade | the tmux server is its own process |
-| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact** plus scrollback. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
-| Real "jump to terminal" | `tmux attach -t shepherd:<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
+| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact**. Claude Code's TUI runs on the alternate screen, so tmux keeps no scrollback for it (`history_size` 0) and `-S -2000` returns only the visible rows. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
+| Real "jump to terminal" | `tmux -L shepherd attach -t shepherd_<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
 | Alt-screen + resize + reflow | already handled; Claude Code's TUI uses the alternate screen |
 
 Fallback `PtyRunner` behind the same interface if tmux is unavailable —
 degraded (no late-attach resync), and the UI says so.
+
+Real shapes and examples: data-schemas.md §tmux capture-pane output (-p, -e, -S -2000) for the Claude Code TUI, §tmux pipe-pane live byte stream, §tmux resize-window reflow, §tmux list-sessions -F pane state (remain-on-exit on), §tmux session-name rewriting and `-t` target resolution, §tmux server cgroup under a systemd user unit (`sessiond` stand-in), §Workspace-trust dialog (TUI, tmux capture-pane), §Fallback `PtyRunner`: the Claude Code TUI under Python `pty.fork`.
 
 ### Terminal fidelity in the browser
 
@@ -1007,18 +1226,26 @@ transcript. Status line, spinners, box-drawing, colours, cc10x output: identical
 with a banner: *"read-only — this session wasn't started here. Open it in the
 platform to get a terminal."*
 
+Real shapes and examples: data-schemas.md §Raw key bytes delivered to a pane through tmux, §Key semantics in the Claude Code TUI (history, bracketed paste, Ctrl-C, Esc), §Second tmux client attaching to a session that `Runner.resize` sized, §Browser terminal transport: WebSocket on the "stdlib HTTP + SSE" stack.
+
 ### Write policy — the part that must not be wrong
 
 | session state | programmatic send | explicit interrupt |
 |---|---|---|
 | `stopped` | write immediately | n/a |
-| `needs_you` | write immediately (it is *asking* you) | n/a |
+| `needs_you` (question in the transcript) | write immediately (it is *asking* you) | n/a |
+| `needs_you` (**permission dialog open**) | **refused** — the dialog eats the text and the Enter approves the tool (D44) | answer explicitly via `approve`/`deny` |
 | `running` | **queue to mailbox**, deliver at next `Stop` | allowed, requires confirmation |
 
 You typing in the terminal pane is a **direct write and bypasses the queue** —
-it is your keyboard, you own the consequences. Programmatic writes
+it is your keyboard, you own the consequences. It also bypasses `authorize()`
+and the audit log (D40): keystrokes are not tool calls. Opening and closing the
+terminal connection is audited, so the log still shows who was at the keyboard
+and when. Programmatic writes
 (orchestrator, worker, sibling session) always go through the policy. The
 asymmetry is deliberate.
+
+Real shapes and examples: data-schemas.md §tmux send-keys delivery hazards (programmatic write path), §UserPromptSubmit from tmux send-keys, §Interrupting a running TUI turn: Esc, C-c, SIGINT.
 
 ### Mailbox — the one delivery path (D12)
 
@@ -1027,6 +1254,8 @@ Pending messages for that session are **coalesced into one write** — five queu
 notes become one message with five bullets, not five interrupting turns. A
 dormant target with a pending message is resumed on demand.
 `idempotency_key` means a retrying caller never double-delivers.
+
+Real shapes and examples: data-schemas.md §Stop, §Transcript entries written by TUI input: queue-operation, queued_command, compact_boundary.
 
 ### Channels — fan-out, not a second mechanism
 
@@ -1046,7 +1275,7 @@ ask(session_id, question, timeout_ms) -> { text, method, from_fork_of, duration_
 
 **Implementation: fork the target's session**, put the question to the fork,
 return its answer, discard the fork. (Claude Code supports forking — the
-`SessionStart` hook's `start_reason` enum includes `fork`.)
+`SessionStart` hook's `source` enum includes `fork`.)
 
 Why not "message the target and wait": the target is never interrupted, its
 context is never polluted by the question, and latency is one turn instead of
@@ -1054,6 +1283,23 @@ however long its current turn takes. Cost: one forked context's tokens.
 
 Forks are `ephemeral = TRUE`, `origin = 'ask_fork'`, and hidden from the fleet
 view by default — otherwise every `ask` litters the board.
+
+**`ephemeral` is wider than forks, from M3 onward.**
+`signals/discovery_loop.py::reconcile_sdk_cli` also marks a hooked `claude -p`
+run `ephemeral`, and `Store.fleet()` excludes it — so a one-shot `-p` run that
+emits hooks does not appear on the board either. That is **DP2 option 2**, taken
+at M3; the reasoning is in `docs/plans/2026-09-17-m3-BLOCKERS.md` under
+**BLOCKER-T24-2**, which also records that M2's live clause *"the fleet page's
+tree carries the row's bucket"* is false **by design** for these rows rather than
+broken, and re-points that test at the store row.
+
+Recording it here is a **correction to the spec's scope, not a new decision**: the
+decision was made and applied at M3, and until this line it was written down only
+in a milestone-scoped blocker ledger and a test comment, where the next
+milestone's reader would not find it. `ask()` remains the *reason* the column
+exists; it is no longer the only writer of it.
+
+Real shapes and examples: data-schemas.md §Fork (`--resume <id> --fork-session`) — the basis of `ask()`, §ask() via fork: claude --resume <id> --fork-session in a second tmux session, §SessionStart payload (TUI: startup, compact, fork, named spawn).
 
 **Fallback:** when `EngineCapabilities.can_fork` is `False`, `ask` degrades to
 mailbox-and-wait with the timeout. The response's `method` field reports
@@ -1330,6 +1576,8 @@ to_cli_commands(tools)        # cli/
 
 Adding a vendor is a new exporter beside the others. Nothing above layer ④ moves.
 
+Real shapes and examples: data-schemas.md §In-process MCP tool declaration (`@tool` + `create_sdk_mcp_server`) and the wire shape it produces, §In-process MCP `tools/call`: what the handler receives, returns, and how errors look, §Tier-2 stdio MCP: `tools/call` requests, results, errors, and what the model sees.
+
 **Three things this buys beyond vendor-swapping**, each of which removes a list
 someone would otherwise have to keep in sync by hand:
 
@@ -1369,7 +1617,7 @@ system_prompt)` is what the orchestrator hands it (D32).
 ClaudeAgentOptions(
     model="claude-opus-5",
     system_prompt=ORCHESTRATOR_PROMPT,
-    setting_sources=[],                          # no CLAUDE.md, no cc10x, no skills
+    setting_sources=[],                          # no project CLAUDE.md; bundled skills still load; cc10x unverified
     disallowed_tools=["Agent", "Task"],          # cannot dispatch subagents
     allowed_tools=[f"mcp__shepherd__{t}" for t in ORCHESTRATOR_TOOLS]
                  + connector_tool_allowlist(),          # D20, resolved at mount
@@ -1395,6 +1643,8 @@ that asserts `setting_sources=[]` really isolates it (§18).
 
 The master's session id is persisted, so `resume` gives one continuous
 orchestrator conversation across restarts, reboots, and upgrades.
+
+Real shapes and examples: data-schemas.md §`ClaudeAgentOptions` (as installed), §`system/init` message (`SystemMessage(subtype="init")`), §`can_use_tool` permission callback (control request, callback input, allow and deny), §Built-in tools reachable from the spec-configured master, §`setting_sources` isolation: what actually reaches the master, §`resume` and `fork_session`: session identity and transcript location, §`interrupt()`: request, receipt, and what the turn looks like afterwards, §`ResultMessage` (end of turn), §Agent SDK package and its bundled CLI.
 
 **Auth caveat, recorded deliberately.** The Agent SDK runs the Claude Code
 harness locally and picks up local Claude Code credentials — the user's
@@ -1555,6 +1805,8 @@ other projects, and **cannot mount or reach a connector directly** — D20. `req
 Needs-You card with its recommended options and ends its turn — the answer
 arrives as its next message.
 
+Real shapes and examples: data-schemas.md §Tier-2 stdio MCP: server process launch and environment, §Tier-2 stdio MCP: `initialize` and `tools/list` (JSON-RPC as Claude Code speaks it), §Tier-2 MCP server at user scope: `claude mcp add -s user`, pickup, permission rules, §MCP tools in shell-hook payloads (tier-2 session), §MCP elicitation in the TUI: `Notification.notification_type`.
+
 **Recursion caps, enforced inside `spawn_session` for both bindings:**
 
 ```
@@ -1631,7 +1883,7 @@ Three surfaces, one settings page, and one rail that is always present.
 
 Fixed to the top of every page — **not a page you navigate to.** Empty state
 collapses to a 4px green line. Non-empty: amber bar, count, and *the actual ask*
-on each row — never "session needs attention". Plus a macOS notification and an
+on each row — never "session needs attention". Plus a browser notification and an
 optional sound on transition into `needs_you`.
 
 ### Page 1 — Chat (default landing)
@@ -1890,11 +2142,14 @@ below are strict.
 
 ### Credentials
 
-- Stored via the macOS Keychain (`security`, service `ai.shepherd`).
+- Stored through the `Credentials` seam. Linux driver: the Secret Service (`secret-tool`, attribute `service=shepherd`) when a keyring is running; otherwise a mode-`0600` file under `$XDG_CONFIG_HOME/shepherd/`. Which one this host has is recorded in `data-schemas.md`.
 - The DB, the audit log, the agent's context, and the UI see only
   `credential_ref`. `Credentials.resolve()` is the sole reader.
+- `repo.vcs_remote` is normalised and stripped of URL userinfo **before it is stored** (D50).
 - Redaction pass on `action_log.args` and on `work_item.raw` for known
   secret-shaped keys.
+
+Real shapes and examples: data-schemas.md §Credential store availability (Secret Service vs 0600 file), §`git remote get-url` forms (`repo.vcs_remote`), §Unix domain socket at mode 0600 + `SO_PEERCRED`.
 
 ### Connectors (D20)
 
@@ -1958,6 +2213,8 @@ fleet/session endpoints return named fields only.
   allowlist before any spawn; no path traversal into an unregistered directory.
 - Worktree paths derived from a slugified work-item key, never from raw provider
   text.
+
+Real shapes and examples: data-schemas.md §Brief passed as argv through `tmux new-session` (`EngineAdapter.spawn_argv`), §`git worktree list --porcelain` and a linked worktree's `.git` file, §`/proc/<pid>/{cmdline,exe,cwd,environ,cgroup}` of a claude process.
 
 ### Errors
 
@@ -2050,17 +2307,25 @@ collects `Test`-prefixed classes on import and warns on any that has an
 
 ## 15. Packaging
 
-Signed + notarized `.pkg`:
+Linux, single user, no root (D39). `shepherd install` creates a venv and writes
+two systemd **user** units:
 
 ```
-/usr/local/libexec/shepherd/                              daemons + venv
-/usr/local/bin/shepherd                                   CLI
-~/Library/LaunchAgents/ai.shepherd.controld.plist          KeepAlive
-~/Library/LaunchAgents/ai.shepherd.sessiond.plist          KeepAlive
-~/Library/Application Support/shepherd/                    db, pty logs, fixtures, config
+~/.local/share/shepherd/venv/                         daemons + venv
+~/.local/bin/shepherd                                 CLI
+~/.config/systemd/user/shepherd-controld.service      Restart=always
+~/.config/systemd/user/shepherd-sessiond.service      Restart=always
+~/.local/share/shepherd/                              db, pty logs, fixtures ($XDG_DATA_HOME)
+~/.config/shepherd/                                   config ($XDG_CONFIG_HOME)
+$XDG_RUNTIME_DIR/shepherd/                            sockets, mode 0700
 ```
 
-State lives under `Application Support`, **not** `~/.claude` — we are a consumer
+**`sessiond` must outlive a logout.** User services stop when the user's last
+session ends unless lingering is enabled, so `shepherd install` checks
+`loginctl show-user` and asks to run `loginctl enable-linger` if it is off.
+Without it, logging out kills every owned session, which breaks principle 4.
+
+State lives under the XDG directories, **not** `~/.claude` — we are a consumer
 of Claude Code, not part of it.
 
 Hook installation merges a **marked, idempotent block** into
@@ -2068,6 +2333,8 @@ Hook installation merges a **marked, idempotent block** into
 `"_shepherd_managed": true`, so `shepherd uninstall` removes exactly our entries and
 leaves the user's own hooks untouched. CCC merges hooks with no ownership marker,
 which makes clean removal impossible.
+
+Real shapes and examples: data-schemas.md §systemd user manager, transient unit `Restart=always`, and journal lines, §`loginctl show-user` (Linger), §XDG base directories (this shell vs systemd user manager), §systemd user-manager environment: PATH, `claude` resolution and auth inside a unit; env handed to panes, §Runtime toolchain (Python, SQLite, venv/pip, Node/TypeScript), §Hooks config schema (`hooks` in settings.json), §User-scope hooks with `_shepherd_managed`, and the same command in two scopes.
 
 ---
 
@@ -2078,13 +2345,13 @@ its keep.
 
 | # | Slice | Working at the end | Est. |
 |---|---|---|---|
-| **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns (D24), **four of the six tables** (`workspace`, `repo`, `session`, `app_state` — `work_item` and `queue` arrive with M5) + migrations, workspace/repo discovery and binding (D22), workspace→session→subagent tree, fleet page, SSE. **Read-only, `attached` sessions only.** Ordering uses the three live `state` values (`needs_you` → `running` → `stopped` → idle) — the full 7-bucket palette lands in M2. | 4–6 d |
+| **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns in `controld` (D24, D37), a **minimal `toolsurface/`: `ToolDef` + `invoke()` with read-only tools, no gate yet (D38)**, **four of the six tables** (`workspace`, `repo`, `session`, `app_state` — `work_item` and `queue` arrive with M5) + migrations, workspace/repo discovery and binding (D22), workspace→session→subagent tree, fleet page, SSE. **Read-only, `attached` sessions only.** Ordering uses the three live `state` values (`needs_you` → `running` → `stopped` → idle) — the full 7-bucket palette lands in M2. | 4–6 d |
 | **M2** | Signals engine | Classifier over transcript tail + stop metadata (D24), the `session` stop columns, **`next_actions[]` and the default table (D21)**, 7-bucket palette and its ordering, expandable stopped rows with action buttons, Needs-You rail, `replay`, `unknown` rate. **Mechanical reasons + heuristics only — the LLM verdict lane is deferred (D34)**, stubbed behind `classify_end_turn()`. | 5–6 d |
 | **M3** | Owned sessions | tmux runner, spawn, xterm.js terminal, write policy, mailbox, `ask()` via fork, rename + the `can_set_title` probe (D29). | 5–7 d |
-| **M4** | Orchestrator | **The tool registry first (§11.0, D32)** — `ToolDef`, `invoke()`, and the two MCP exporters — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
-| **M4.5** | Connectors | `connector` table + catalogue, settings page, OAuth/token capture into Keychain, mount/unmount at turn boundaries, health polling, `ask_orchestrator()` brokering, per-tool blast overrides. | 3–4 d |
+| **M4** | Orchestrator | **Complete the tool registry first (§11.0, D32, D38)** — `authorize()`, the audit log and the two MCP exporters behind the `invoke()` that M1 shipped; **no file in `web/` or `cli/` may change** — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
+| **M4.5** | Connectors | `connector` table + catalogue, settings page, OAuth/token capture into the credential store, mount/unmount at turn boundaries, health polling, `ask_orchestrator()` brokering, per-tool blast overrides. | 3–4 d |
 | **M5** | Queues | Jira provider, reconcile, the `work_item` table + claims, hierarchy and leaf-only dispatch (D23), workers, lazy per-repo worktrees (D22), verdict routing, two-chip rows, **the matrix view (D27)**. | 7–9 d |
-| **M6** | Notion + channels + ship | Notion provider (proves the seam), broadcast channels, `.pkg`, notarization, uninstall. | 4–6 d |
+| **M6** | Notion + channels + ship | Notion provider (proves the seam), broadcast channels, `shepherd install` packaging, uninstall. | 4–6 d |
 
 **~33–44 focused dev days.** M1+M2 alone — roughly two weeks — already exceeds
 what CCC provides on visibility and stop-reason detection.
@@ -2156,16 +2423,87 @@ Named so they do not leak into v1:
 
 ## 18. Open risks, each with an early probe
 
+Real shapes and examples: data-schemas.md §Probe catalogue (how to re-run every probe) and §Not verified (what no probe reached yet).
+
 | Risk | Probe |
 |---|---|
-| tmux ↔ Claude Code TUI (alt-screen, resize, reflow) | **Spike before M3 starts** — it is M3's load-bearing assumption |
+| tmux ↔ Claude Code TUI (alt-screen, resize, reflow) | **Spike before M3 starts** — it is M3's load-bearing assumption. **Run it on a throwaway socket: `tmux -L shepherd-spike …`, and tear down with `tmux -L shepherd-spike kill-server` — never a bare `kill-server`.** See the incident note below. Real shapes and examples: data-schemas.md §Surface: interactive Claude Code (TUI) under tmux |
 | Session forking for `ask()` | Verify the flag/SDK path in M3; the `can_fork=False` mailbox fallback is already designed |
 | Hook write volume — `PostToolUse` × 20 concurrent sessions | Measure in M1; batch writes + WAL tuning if it bites |
 | Notion rate limits (~3 req/s) | Design reconcile for it in M6; backoff + cursor already present |
 | `setting_sources=[]` truly isolating the master from the global `CLAUDE.md`/cc10x | Verify in M4 and **assert it in a test** — do not trust it |
-| **Hook payload fields** — `TaskCreated`/`TaskCompleted`, `FileChanged`, `SubagentStart`/`Stop`, `Notification.notification_type`, `StopFailure.error_type`. The §7 live-group columns all rest on these, and they are **documented, not observed** | **M1, first task.** Install a logging hook, run one real session, diff the arriving events against the field list. Anything missing degrades a column to null and the UI hides that chip |
+| **Hook payload fields** — `TaskCreated`/`TaskCompleted`, `FileChanged`, `SubagentStart`/`Stop`, `Notification.notification_type`, `StopFailure.error`. The §7 live-group columns all rest on these. They were **observed live on 2026-09-14** against Claude Code 2.1.270, with the name and meaning differences now reflected in §8 (data-schemas.md) | **M1, first task.** Install a logging hook, run one real session, diff the arriving events against the field list. Anything missing degrades a column to null and the UI hides that chip |
 | **Title write-back** (D29) — can a rename be pushed into Claude Code without writing into a file it owns? | Probe in M3 alongside the tmux spike. Until it passes, `can_set_title = False` and renames stay local |
 | Whether the shipped SQLite has `FULL OUTER JOIN` (3.39+) | One line in M1; the matrix falls back to two `LEFT JOIN`s and a `UNION` |
+
+### Incident 2026-09-12 — the tmux spike killed three live sessions
+
+The first run of the tmux spike opened with `tmux kill-server` as a
+"clean slate" step. `kill-server` is **global**: it terminates the tmux server
+and every session on it. Three Remote Control sessions were running on that
+server, including the session issuing the command, which died two seconds later
+with exit 137. The spike never reported a result.
+
+Two rules follow, and both are load-bearing for M3:
+
+1. **A spike never shares a socket with live work.** Use `tmux -L <throwaway>`
+   for the whole spike and tear down that socket by name. A bare
+   `tmux kill-server` is banned in this repo — there is no context in which the
+   right blast radius is "every tmux session on the machine".
+2. **`-L` is necessary but not sufficient.** A command run *inside* a tmux
+   session inherits `$TMUX` and resolves to that session's own socket, so a bare
+   `kill-server` from within an isolated socket still kills that socket. Always
+   pass `-L` explicitly on every tmux invocation, including teardown.
+
+A related defect surfaced in the same command: the session was named
+`shepherd:spike1`. tmux reserves `:` as the `session:window` separator, so it
+silently rewrote the name to `shepherd_spike1` (it rewrites `.` to `_` as well) — and `-t shepherd:spike1` in the
+following lines resolved to **session `shepherd`, window `spike1`**, targeting
+the user's live session rather than the spike's. `D14`'s naming is
+`shepherd_<session_id>` for this reason; never a colon.
+
+### Incident 2026-09-17 — a mutation planted in a shadow tree rebooted the host
+
+M3's verification remediation planted `os.kill(1, signal.SIGINT)` into
+`interrupt()` in a **shadow copy** of `runner/local.py`
+(`scratchpad/m3-remfix/shadow/…`) to prove that P-M3-7's lint catches a signal
+reaching a session. The lint does catch it — **statically**. But the suite
+imports and executes the module it scans, `interrupt()` ran before the lint test
+was collected, and `SIGINT` to pid 1 is `Ctrl+Alt+Del`: systemd rebooted the
+machine. Sixty-six days of uptime and three live Remote Control sessions were
+lost, and the remediation never reported a result.
+
+**The reasoning error is the reusable part, and it is 2026-09-12's own shape one
+layer out.** The containment rule in force was *"never plant in a path whose
+default target is a real user file"* — a rule about **where bytes are written**.
+A shadow tree isolates files and nothing else. A planted mutation is **code that
+runs**, and every effect that leaves the process — a signal, a subprocess, a
+socket, a reboot — passes straight through a directory boundary. *Isolation of
+the name is not isolation of the effect*, which is exactly why `-L` on the
+session was not enough in 2026-09-12.
+
+A second, quieter error compounded it: the protocol said "plant", so a plant was
+reached for without first asking **what the check being proved actually reads**.
+A static scanner never needs the line to execute.
+
+Three rules follow, and they bind every milestone from here:
+
+1. **A planted violation is an inert fixture that nothing imports.** It lives in
+   `tests/boundaries/fixtures/`, is read as text or parsed as an AST, and is
+   never on an import path the suite executes. The red is produced by
+   **neutering the fixture** and watching the shipped assertion fail — a
+   mutation of the planted violation, not of live source, re-runnable without
+   executing anything.
+2. **A shadow tree is not a sandbox.** Before planting into anything that will
+   run, ask what escapes the process; if anything does, freeze it as a fixture.
+3. **Never plant a signal, a `kill`, a teardown verb, or any reboot-capable call
+   into executable code in any tree** — repo, shadow or scratch. Those are
+   proved by fixture and by predicate, never by execution.
+
+A runtime net now backs the rules rather than replacing them: `tests/conftest.py`
+makes `os.kill`/`os.killpg` refuse pids `0`, `1` and `-1`, and
+`tests/test_signal_guard.py` proves that net bites using signal `0`, which
+delivers nothing — a guard against a reboot must not be able to cause one.
 
 ---
 
@@ -2187,6 +2525,10 @@ Named so they do not leak into v1:
 | **connector** | a third-party MCP server whose tools are imported into the registry as `external` and reachable by the master only; catalogue-selected, credential-by-reference (D20, D32) |
 | **the registry** | the one place a capability is declared — a `ToolDef` per tool, carrying its schema, blast class, handler and audiences (D32) |
 | **exporter** | a ~30-line translator from the registry into one consumer's shape: SDK MCP, stdio MCP, OpenAI functions, HTTP routes, CLI subcommands. Adding a vendor is adding one of these |
+| **layer map** | the five-layer logical architecture in §5.0: what may import what. Distinct from the process topology, which says where code runs |
+| **consumer boundary** | the enforced rule that `master/`, `web/` and `cli/` reach the system only through `toolsurface/` (D19, D35) |
+| **storage boundary** | the enforced rule that nothing outside `store/` imports a database driver (D26, D33) |
+| **swap rule** | runtime swap → `Protocol` seam; edit-time swap → module boundary (D36) |
 | **`Scripted*`** | a real implementation of a seam that answers from a fixture instead of the outside world (`ScriptedMaster`, `ScriptedRunner`, …). A concrete peer of the real implementation, never a parent class — nothing inherits from it. Lives in `testkit/`, ships with the package (§14.2) |
 | **action item** | one entry of `verdict.next_actions[]` — an imperative line plus a `kind` the UI renders as a button (D21) |
 | **finished** | *the session* did its assigned task and we verified it |
@@ -2236,7 +2578,7 @@ edited `ox-ai-agent` too. That is the multi-repo case D22 exists for.
   "title": "OXDEV-81711 custom reports", "title_source": "engine",
   "cwd": "/Users/noamsalit/Git/reporting-service-wt/OXDEV-81711",
   "worktree_path": "/Users/noamsalit/Git/reporting-service-wt/OXDEV-81711",
-  "runner_handle": "shepherd:ses_7f3k", "model": "claude-opus-5", "effort": "xhigh",
+  "runner_handle": "shepherd_ses_7f3k", "model": "claude-opus-5", "effort": "xhigh",
   "started_at": "2026-09-11T10:22:41Z",
 
   "state": "running", "last_event_at": "2026-09-11T10:41:07Z",
@@ -2334,7 +2676,7 @@ when a rule improves, and what `[why?]` expands.
   "classifier_version": "h-7+m-3",
   "input": {
     "brief": "Add the custom-reports resolver and its specs.",
-    "stop_event": { "hook": "Stop", "stop_reason": "end_turn" },
+    "stop_event": { "hook": "Stop" }, "message_stop_reason": "end_turn",
     "last_assistant_message": "Resolver added and schema.gql updated. I'll run the specs now.",
     "open_tasks": ["run resolver.spec.ts", "lint"],
     "tool_counts": { "Bash": 31, "Edit": 9, "Write": 2 },

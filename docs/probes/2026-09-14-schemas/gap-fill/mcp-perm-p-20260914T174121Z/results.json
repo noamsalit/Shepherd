@@ -1,0 +1,156 @@
+{
+ "flag_allowedTools_without_separator_swallows_prompt": {
+  "argv_tail": [
+   "--allowedTools",
+   "mcp__shepherd__ping"
+  ],
+  "project_settings_permissions": null,
+  "rc": 1,
+  "result": null,
+  "permission_denials": [],
+  "stub_tools_call_count": 0,
+  "stderr": "Error: Input must be provided either through stdin or as a prompt argument when using --print"
+ },
+ "flag_allowedTools[mcp__shepherd]": {
+  "argv_tail": [
+   "--allowedTools",
+   "mcp__shepherd",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "settings_file[mcp__shepherd]": {
+  "argv_tail": [
+   "--settings",
+   "/tmp/shp-gap-perm-jotncm_2/settings-mcp__shepherd.json",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "project_settings_untrusted_dir[mcp__shepherd]": {
+  "argv_tail": [
+   "--"
+  ],
+  "project_settings_permissions": {
+   "allow": [
+    "mcp__shepherd"
+   ]
+  },
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [
+   "mcp__shepherd__ping"
+  ],
+  "stub_tools_call_count": 0,
+  "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/tmp/shp-gap-perm-proj-zcl84l32\"].hasTrustDialogAccepted: true in /tmp/shp-gap-perm-jotncm_2/cfg/.claude.json."
+ },
+ "flag_allowedTools[mcp__shepherd__*]": {
+  "argv_tail": [
+   "--allowedTools",
+   "mcp__shepherd__*",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "settings_file[mcp__shepherd__*]": {
+  "argv_tail": [
+   "--settings",
+   "/tmp/shp-gap-perm-jotncm_2/settings-mcp__shepherd__STAR.json",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "project_settings_untrusted_dir[mcp__shepherd__*]": {
+  "argv_tail": [
+   "--"
+  ],
+  "project_settings_permissions": {
+   "allow": [
+    "mcp__shepherd__*"
+   ]
+  },
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [
+   "mcp__shepherd__ping"
+  ],
+  "stub_tools_call_count": 0,
+  "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/tmp/shp-gap-perm-proj-uibwb34l\"].hasTrustDialogAccepted: true in /tmp/shp-gap-perm-jotncm_2/cfg/.claude.json."
+ },
+ "flag_allowedTools[mcp__shepherd__ping]": {
+  "argv_tail": [
+   "--allowedTools",
+   "mcp__shepherd__ping",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "settings_file[mcp__shepherd__ping]": {
+  "argv_tail": [
+   "--settings",
+   "/tmp/shp-gap-perm-jotncm_2/settings-mcp__shepherd__ping.json",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [],
+  "stub_tools_call_count": 1,
+  "stderr": ""
+ },
+ "project_settings_untrusted_dir[mcp__shepherd__ping]": {
+  "argv_tail": [
+   "--"
+  ],
+  "project_settings_permissions": {
+   "allow": [
+    "mcp__shepherd__ping"
+   ]
+  },
+  "rc": 0,
+  "result": "OK-AFTER-TOOL",
+  "permission_denials": [
+   "mcp__shepherd__ping"
+  ],
+  "stub_tools_call_count": 0,
+  "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/tmp/shp-gap-perm-proj-aps9xixh\"].hasTrustDialogAccepted: true in /tmp/shp-gap-perm-jotncm_2/cfg/.claude.json."
+ },
+ "permission_mode_bypass_control": {
+  "argv_tail": [
+   "--permission-mode",
+   "bypassPermissions",
+   "--"
+  ],
+  "project_settings_permissions": null,
+  "rc": 1,
+  "result": null,
+  "permission_denials": [],
+  "stub_tools_call_count": 0,
+  "stderr": "--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons"
+ }
+}

@@ -1,0 +1,22 @@
+# skeptic re-readings 2026-09-14 (claude 2.1.270 binary)
+hook_event_name:R("StopFailure"),error:o_(),error_details:o().optional(),last_assistant_message:o().optional()
+hook_event_name:R("Notification"),message:o(),title:o().optional(),notification_type:o()
+hook_event_name:R("SessionStart"),source:V(["startup","resume","clear","compact","fork"]),agent_type:o().optional(),model:o().optional(),session_title:o().optional(),seconds_since_last_response:v().optional().describe("resume/fork: s
+hook_event_name:R("SubagentStart"),agent_id:o(),agent_type:o()
+hook_event_name:R("SessionEnd"),reason:oce()
+hook_event_name:R("FileChanged"),file_path:o(),event:V(["change","add","unlink"])
+StopFailure error enum (o_):
+,o_=f(()=>V(["authentication_failed","oauth_org_not_allowed","account_on_hold","verification_required","billing_error","rate_limit","overloaded","invalid_request","model_not_found","server_error","unknown","max_output_tokens","cloud_credential_error"])
+
+probe settings FileChanged group:
+24 events registered; FileChanged has watchPaths: True
+probe raw counts:
+    7 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl
+   23 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run1.jsonl
+   38 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run2.jsonl
+    9 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run3.jsonl
+   77 total
+removed report header:
+registered for all 24 spec'd events, five real headless sessions, 89 events captured.
+lastPrompt re-scan (29 most recent transcripts): 470 entries, max len 201, 186 over 195 chars
+spec grep for edit-time/runtime-swap rule: no hits

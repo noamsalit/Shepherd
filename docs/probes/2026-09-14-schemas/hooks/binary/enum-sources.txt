@@ -1,0 +1,7 @@
+# claude 2.1.270 (Claude Code): raw bytes from the binary
+o_=f(()=>V(["authentication_failed","oauth_org_not_allowed","account_on_hold","verification_required","billing_error","rate_limit","overloaded","invalid_request","model_not_found","server_error","unknown","max_output_tokens","cloud_credential_error"]))
+rce=["clear","resume","logout","prompt_input_exit","other"]
+R("SessionStart"),source:V(["startup","resume","clear","compact","fork"])
+VAr=["permission_prompt","idle_prompt","auth_success","elicitation_dialog","agent_needs_input","agent_completed","elicitation_url_dialog","worker_permission_prompt","push_notification","computer_use_enter","computer_use_exit","quota_auto_resume_fired","quota_auto_resume_stale","quota_auto_resume_disabled"]
+var Im=["PreToolUse","PostToolUse","PostToolUseFailure","PostToolBatch","Notification","UserPromptSubmit","UserPromptExpansion","SessionStart","SessionEnd","Stop","StopFailure","SubagentStart","SubagentStop","PreCompact","PostCompact","PreModelSwitch","PostModelSwitch","PermissionRequest","PermissionDenied","Setup","TeammateIdle","TaskCreated","TaskCompleted","Elicitation","ElicitationResult","ConfigChange","WorktreeCreate","WorktreeRemove","InstructionsLoaded","CwdChanged","FileChanged","DirectoryAdded","MessageDisplay"]
+R("Notification"),message:o(),title:o().optional(),notification_type:o()

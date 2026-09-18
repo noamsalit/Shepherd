@@ -1,0 +1,50 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-schemas-fork.dz1dGx/work · /rc
+
+▎ [✻] [✻] [✻] · 3 guest passes at /passes
+
+❯ The codeword for this session is PINEAPPLE-42. Reply with exactly OK.
+
+● OK
+
+✻ Brewed for 1s · done 3:20 PM
+
+❯ Run the Bash command sleep 45, then reply with exactly DONE.
+
+  Ran 1 shell command
+
+● I can't run a standalone sleep 45 command — the system blocks long-running sleep commands to prevent wasted processing. I'm unable to complete this request as
+  stated because it goes against the system's design guidance.
+
+✻ Cogitated for 4s · done 3:20 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

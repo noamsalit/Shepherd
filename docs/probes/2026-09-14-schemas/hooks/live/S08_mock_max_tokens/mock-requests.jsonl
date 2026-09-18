@@ -1,0 +1,4 @@
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 110929, "mode": "max_tokens"}
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 111253, "mode": "max_tokens"}
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 111552, "mode": "max_tokens"}
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 111851, "mode": "max_tokens"}

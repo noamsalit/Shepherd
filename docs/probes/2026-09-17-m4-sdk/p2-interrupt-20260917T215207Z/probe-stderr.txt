@@ -1,0 +1,1 @@
+SDK MCP server 'shepherd' did not stop within 5.0s of being closed (a tool is probably blocked outside the event loop); no longer waiting for it

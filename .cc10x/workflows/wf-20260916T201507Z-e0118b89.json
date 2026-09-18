@@ -1,0 +1,521 @@
+{
+  "workflow_uuid": "wf-20260916T201507Z-e0118b89",
+  "workflow_id": "wf-20260916T201507Z-e0118b89",
+  "workflow_type": "PLAN",
+  "state_root": ".cc10x",
+  "user_request": "Plan Shepherd M1 (foundation + visibility) per docs/specs/orchestrator-platform.md \u00a716. Binding inputs: the spec (\u00a73 = 55 decisions incl. new D55, \u00a75.0 layer map, \u00a77 data model, \u00a78 signals, \u00a716 M1 scope), docs/specs/data-schemas.md (no data shape may be asserted without a real captured example), docs/specs/implementation-constraints.md (C1-C24, all of it), CLAUDE.md (tmux safety). docs/plans/ is STALE - ignore. M1 only; do not plan M2-M4.",
+  "plan_file": "docs/plans/2026-09-16-m1-foundation-visibility-plan.md",
+  "design_file": "docs/specs/orchestrator-platform.md",
+  "research_files": [],
+  "approved_decisions": [
+    "D55 (2026-09-16, revises D39): Linux + macOS from one build; three deployment shapes (macOS package, Linux systemd-user host, Linux container); HostPlatform is a seventh seam drawn at M1.",
+    "Real ~/.claude/settings.json is off limits; hook installer tested against isolated CLAUDE_CONFIG_DIR only.",
+    "Live claude runs allowed in /tmp throwaways on a private tmux socket; fixtures (429 captured events) carry the deterministic tests.",
+    "Toolchain: /root/Shepherd/.venv with claude-agent-sdk 0.2.153, pytest 9.1.1, mypy 2.3.1.",
+    "QA-parallel experiment OFF; docs/methodology/* and docs/plans/2026-09-13-* ignored as stale.",
+    "D55 amended 2026-09-16 by the decision log's owner: HostPlatform owns SIX members; the sixth is the hook-side dispatch command. Reasoning in the spec row + plan Decision pressure 2.",
+    "D38.1 (2026-09-16, router/decision-log owner): install-hooks/uninstall-hooks/inspect-hooks are registered ToolDefs with blast_class=local_destructive, audiences={HUMAN}, reached by cli/ through invoke(). Resolves the T17 decision gap. D38's M4 acceptance test is unchanged and strengthened."
+  ],
+  "plan_mode": "execution_plan",
+  "build_scope": null,
+  "worktree": null,
+  "execution_mode": "subagent_dispatch",
+  "inline_fallback_reason": null,
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": "Ship Shepherd M1: foundation + visibility, read-only, attached sessions only",
+    "non_goals": [
+      "M2 signals engine",
+      "M3 owned sessions/tmux",
+      "M4 orchestrator",
+      "work_item and queue tables"
+    ],
+    "constraints": [
+      "Never touch the real ~/.claude/settings.json",
+      "Never use the user's shepherd tmux socket",
+      "No data shape asserted without a real captured example",
+      "55 decisions are law; re-decide out loud",
+      "mypy --strict, no Any",
+      "hooks always exit 0"
+    ],
+    "acceptance_criteria": [
+      "fleet page shows real sessions",
+      "import boundary tests fail the build on violation",
+      "golden corpus replay is deterministic",
+      "hookd cannot harm Claude Code"
+    ],
+    "open_decisions": []
+  },
+  "normalized_phases": [
+    "plan-create",
+    "plan-review-gap-1",
+    "re-plan",
+    "plan-review-gap-2",
+    "memory-finalize"
+  ],
+  "phase_cursor": "build",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": "wf-20260916T201507Z-e0118b89::planner_create",
+    "planning_review_pass1": "wf-20260916T201507Z-e0118b89::planning_review_pass1",
+    "planner_replan": "wf-20260916T201507Z-e0118b89::planner_replan",
+    "planning_review_pass2": "wf-20260916T201507Z-e0118b89::planning_review_pass2",
+    "memory_finalize": "wf-20260916T201507Z-e0118b89::memory_finalize"
+  },
+  "phase_status": {
+    "plan-create": "complete",
+    "plan-review-gap-1": "complete",
+    "re-plan": "complete",
+    "plan-review-gap-2": "complete",
+    "memory-finalize": "pending",
+    "plan-review-amendment": "complete"
+  },
+  "deferred_findings": [],
+  "results": {
+    "git_preflight": null,
+    "baseline": null,
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "planner": {
+      "status": "PLAN_CREATED",
+      "plan_file": "docs/plans/2026-09-16-m1-foundation-visibility-plan.md",
+      "phases": 19,
+      "risks": 21,
+      "confidence": 50,
+      "gate_passed": true,
+      "open_decisions": [],
+      "blocking": false,
+      "recommended_defaults_unapproved": 8,
+      "critical_inferred_assumption": "A9 needs_you clearing rule",
+      "decisions": [
+        "hookd = sh + nc -U, not Python (measured 31.7ms -> 3.4ms)",
+        "D47 elevated: registry is primary discovery/liveness source, hooks enrich",
+        "D55 member (2) widened to own the hook-side client command (still five members)",
+        "ADR-1..6: module layout, store paths from composition root, Audience+HUMAN, invoke()+subscribe(), HostPlatform 5 methods, fold as data table"
+      ]
+    },
+    "planning_reviewer": {
+      "status": "FINDINGS",
+      "blocking": 12,
+      "advisory": 4,
+      "replan_needed": true,
+      "sound_areas": [
+        "decision-pressure discipline (no silent reversal found)",
+        "golden-corpus lane",
+        "edge-case catalogue",
+        "purity map",
+        "blocker protocol",
+        "\u00a716 coverage complete",
+        "Task 7b justified, not scope creep"
+      ],
+      "overturn_now": [
+        "RD1 -> take the sixth HostPlatform member instead of widening member (2)",
+        "RD8 -> recency, not source-precedence"
+      ]
+    },
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    },
+    "planner_replan": {
+      "status": "PLAN_CREATED",
+      "revision": 3,
+      "confidence": 65,
+      "phases": 20,
+      "findings_applied": 16,
+      "disagreements": 0,
+      "gate": "SPEC_GATE_PASS iteration 1",
+      "new": [
+        "Task 10b: sessiond->controld hop specified",
+        "ADR-7: controld threading model",
+        "DP2 re-decided: sixth HostPlatform member",
+        "DP6: idle never maps to stopped",
+        "DP7: pid/proc_start columns"
+      ],
+      "spec_edit_outstanding": "applied by router: D55 row now says six members"
+    },
+    "planning_reviewer_pass2": {
+      "status": "FINDINGS",
+      "blocking": 2,
+      "advisory": 7,
+      "blocking_detail": [
+        "B1 acceptance clause 12 vs T12/T18: RD9's -p filter is a REGISTRY-path predicate but clause 12 states it as a milestone-wide invariant; the 429-event corpus is dominated by -p runs and C8 says entrypoint is not even on hook payloads. Builder cannot satisfy both.",
+        "B2 T11 fold table vs T2 engine-vocabulary scan: 4 SignalKinds are overloaded by rows with different column effects, so kind alone cannot select a rule; the only discriminator is raw_kind, which puts engine literals in signals/ and fails T2 on the plan's own code. Also engine FIELD names (tool_input.file_path, to_model, agent_id) in signals/ are unaddressed."
+      ],
+      "sound_confirmed": [
+        "all six HostPlatform members + contract suite match D55/ADR-5/Result 1b",
+        "DP6 five-row state table faithful to spec:982-990",
+        "DP7 widening of \u00a77 real and correctly flagged",
+        "every registry/sidecar shape claim verifies against data-schemas + probes",
+        "drift_check.py runnable; G13 repair correct",
+        "ADR-7 threading, T10/T10b teardown, \u00a77 rule-3 handshake, first-run empty state all buildable",
+        "task counts honest: T7b forced addition w/ named pressure, T10b decomposition, nothing in \u00a716 dropped"
+      ]
+    },
+    "planner_amendment": {
+      "status": "AMENDED",
+      "revision": 4,
+      "blocking_fixed": 2,
+      "advisory_fixed": 7,
+      "stale_sweep": 6,
+      "reconciliation_rerun": true,
+      "b1_evidence": "entrypoint appears 0 times in all 429 captured payloads; 53 of 54 scenarios are claude -p runs; \u00a719 defines attached as 'launched outside the platform' and D1 draws the line at pty ownership, so a hand-launched -p IS attached. No new decision pressure needed - r3 simply overstated a polled-source rendering predicate as a global invariant.",
+      "b2_fix": "SignalKind gains TOOL_FAILED, TOOL_BATCH_FINISHED, STOP_FAILED, NOTICE_UNMAPPED; FoldRule.kind: SignalKind types the table; fold() becomes a dict lookup and the applies predicate disappears. Normaliser composes the needs_you ask string, collapsing the NEEDS_INPUT overload. Signal.fields carries a closed SIGNAL_FIELD_KEYS set; test_signals_reads_only_neutral_field_keys is \u00a75.0's first FIELD-level enforcement; test_signals_never_compares_raw_kind closes the escape hatch.",
+      "self_flagged": "revision 4 read by no adversarial pass; 2 of 9 findings were contradictions introduced by revision 3's own fixes"
+    },
+    "planning_reviewer_amendment": {
+      "status": "FINDINGS",
+      "blocking": 5,
+      "advisory": 2,
+      "landed": "8 of 9 prior findings landed cleanly; BLOCKING 1's scope reasoning independently verified against spec:2456 (\u00a719 attached), :112 (D1), :2332 (\u00a716) and C8 - no decision pressure was needed; 53/54 -p claim verified the hard way",
+      "residuals": [
+        "fold table still has 2 same-kind/different-effect pairs (SESSION_REGISTERED, TURN_PROGRESS)",
+        "INPUT_RESOLVED unproducible once applies was deleted",
+        "new_cwd is both a banned engine field name and an approved neutral key",
+        "T18 Consumes still imports REGISTRY_SCAN_INTERVAL_S, which T7b's own test forbids",
+        "RegistryEntry.status Literal cannot carry an unknown status under mypy --strict"
+      ]
+    },
+    "planner_amendment_r5": {
+      "status": "AMENDED",
+      "revision": 5,
+      "blocking_fixed": 5,
+      "advisory_fixed": 2,
+      "disagreements": 0,
+      "key_fix": "fold table split into Table A (normaliser: engine event -> kind + neutral fields; the ONLY place engine vocabulary appears) and Table B (exactly one row per SignalKind, no engine vocabulary at all). Splitting exposed that 3 rules were never per-kind rules - receiver stamping, register-on-unknown-session_id, and the needs_you clear - now stated as cross-cutting. Root cause: registration was modelled as a SignalKind when it is a store operation keyed on absence.",
+      "self_corrected": "found and fixed its own false checkmark in the r4 self-review, naming the failure in place rather than quietly re-ticking; also found T14 carried the same REGISTRY_SCAN_INTERVAL_S violation as T18",
+      "new_gap_raised_not_resolved": "cli/ -> engines/ install_hooks import fails test_consumer_boundary; written into T17 as a decision gap in four-part form with none chosen"
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": null,
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "converged"
+  },
+  "planning_review_runs": 2,
+  "planning_review_findings": [
+    {
+      "id": "F1",
+      "sev": "BLOCKING",
+      "bucket": "repo_mismatch",
+      "where": "Task 8 'The command' (l.1353-1357)",
+      "claim": "Dispatcher command omits -q0; probe measured it WITH -q0. Without it nc never closes the write side on EOF, so every hook blocks until timeout 0.25 kills it: 3.4ms becomes ~250ms, worse than the 31.7ms Python it replaces. Plan contradicts itself (l.1010 has the right command)."
+    },
+    {
+      "id": "F2",
+      "sev": "BLOCKING",
+      "bucket": "repo_mismatch",
+      "where": "Task 7b mapping table (l.1275)",
+      "claim": "status:'idle' -> state=stopped contradicts spec:985 (stopped = Stop/StopFailure/SessionEnd/process exit) and data-schemas:2670 (status stays idle across the 60s idle_prompt, where \u00a78 puts it in needs_you). On the no-hooks machine every live idle session renders stopped."
+    },
+    {
+      "id": "F3",
+      "sev": "BLOCKING",
+      "bucket": "repo_mismatch",
+      "where": "Task 7b / G9 / A13",
+      "claim": "-p invisibility is settled by docs/probes/2026-09-16-registry-and-version-drift.md: -p DOES register, and kind stays 'interactive' - entrypoint is the discriminator. Plan says the opposite in 4 places and reads kind/entrypoint but maps neither."
+    },
+    {
+      "id": "F4",
+      "sev": "BLOCKING",
+      "bucket": "repo_mismatch",
+      "where": "Task 2 PLATFORM_TOKENS + engine-vocab scan",
+      "claim": "Both text-based scans fail on the plan's own prescribed identifiers (sun_path_budget outside host/; hook event names inside signals/rules.py evidence strings), forcing a day-one exemption - which ADR-1 itself calls how boundaries die."
+    },
+    {
+      "id": "F5",
+      "sev": "BLOCKING",
+      "bucket": "repo_mismatch",
+      "where": "ADR-4",
+      "claim": "signals/ (L2) publishing into toolsurface/ (L4) is an upward import, violating spec:225-227. No test covers the general downward-only rule; the consumer test only checks web/cli/master."
+    },
+    {
+      "id": "F6",
+      "sev": "BLOCKING",
+      "bucket": "missing_surface",
+      "where": "Task 7b Produces / Task 5",
+      "claim": "Hookless path can never END a session: liveness needs pid+procStart, which the plan reads but does not store and \u00a77 has no column for. After the sidecar is deleted on exit the row freezes forever; acceptance criterion 2 unreachable."
+    },
+    {
+      "id": "F7",
+      "sev": "BLOCKING",
+      "bucket": "missing_surface",
+      "where": "Task 10 / Task 18",
+      "claim": "The sessiond->controld hop has no server side: no listening socket, no framing, no version handshake (spec:898-900 requires sessiond wait for controld's schema version). Half of M1's process topology is unspecified."
+    },
+    {
+      "id": "F8",
+      "sev": "BLOCKING",
+      "bucket": "missing_surface",
+      "where": "ADR-2 / Task 6 / Task 14",
+      "claim": "controld runs ThreadingHTTPServer + fold + a 2s registry scan against one Store with no threading model, no check_same_thread rule, no lock. The concurrency test exercises the PURE fold, which cannot touch this."
+    },
+    {
+      "id": "F9",
+      "sev": "BLOCKING",
+      "bucket": "execution_order",
+      "where": "Self-review l.2156-2160 / Task 1 Produces",
+      "claim": "The recorded FoldDelta fix was never applied. Dangling types with no definition site: FoldDelta, SessionSnapshot, StreamEvent, MalformedPayload, HookInspection, DiscoveredRepo, RelayStats. Completeness Gate asserts the opposite."
+    },
+    {
+      "id": "F10",
+      "sev": "BLOCKING",
+      "bucket": "hidden_assumption",
+      "where": "Task 18 isolation rule 1",
+      "claim": "Live lane sets CLAUDE_CONFIG_DIR to a throwaway dir, which has no credentials ('Not logged in', rc=1). The entire live lane fails at the first claude invocation. Workaround: real config dir, isolate via cwd + --settings."
+    },
+    {
+      "id": "F11",
+      "sev": "BLOCKING",
+      "bucket": "hidden_assumption",
+      "where": "Codebase Reality Check / Evidence gaps",
+      "claim": "All 127 shapes are pinned to 2.1.270; host runs 2.1.273. Plan never records it. Drift check closed the cheap half (33 names + 4 enums unchanged) but per-event field shapes remain 2.1.270-only, and the drift script lives in /tmp not the repo."
+    },
+    {
+      "id": "F12",
+      "sev": "BLOCKING",
+      "bucket": "hidden_assumption",
+      "where": "RD8 / Task 7b precedence",
+      "claim": "'Hook wins per field' has no recency term, so once a hook sets state the registry can never correct it - including after the hook path goes silent (SessionEnd not guaranteed; StopFailure lost at -p shutdown). Also suppresses a real captured A9 resolution signal (sidecar waiting->idle/busy, data-schemas:2322). Correct rule is recency, not source."
+    },
+    {
+      "id": "F13",
+      "sev": "ADVISORY",
+      "bucket": "hidden_assumption",
+      "where": "G10 / A8",
+      "claim": "waiting/waitingFor IS verified live in a separate section (data-schemas:2635-2664, '06-sidecar-permission.json'). Plan under-claims it as user-data-only and cites the weaker section."
+    },
+    {
+      "id": "F14",
+      "sev": "ADVISORY",
+      "bucket": "under_scoped",
+      "where": "Task 5 indexes / E3",
+      "claim": "P8/P14 (one row per session_id) has no DB constraint, and the plan says both 'never key off engine_session_id' and 'it is the join key'. One partial unique index makes it true by construction."
+    },
+    {
+      "id": "F15",
+      "sev": "ADVISORY",
+      "bucket": "missing_surface",
+      "where": "Task 10 / Task 18",
+      "claim": "No daemon teardown: nothing unlinks the socket on exit, no signal handling, no store close, though Task 18 restarts controld."
+    },
+    {
+      "id": "F16",
+      "sev": "ADVISORY",
+      "bucket": "missing_surface",
+      "where": "Task 5 / 16 / 17",
+      "claim": "First-run/empty-state absent: nothing creates the data dir, no empty-fleet render test, no doctor line for 'never run', and register_session omits five \u00a77 NOT NULL columns."
+    }
+  ],
+  "planning_review_status": "revised_after_review_r5_unread_by_adversary",
+  "plan_revision": 5,
+  "last_reviewed_revision": 3,
+  "memory_notes": [
+    "M1 would ship an empty fleet page under the no-hooks constraint; the live-session registry is the hookless path (verified live, 3 real sessions).",
+    "Sidecar file mtime is NOT liveness: one sidecar had a 3-day-old mtime while its pid was alive and idle. updatedAt advances only on status change. NOT in data-schemas.md - newly observed 2026-09-16.",
+    "procStart == /proc/<pid>/stat field 22 re-confirmed on this host; pid-reuse guard is proven, not inferred.",
+    "hookd is a shell one-liner on measured evidence (31.7ms Python vs 3.4ms sh+nc); the Python shape lost StopFailure 2/2 at -p shutdown.",
+    "Three decision pressures named and re-decided out loud rather than applied silently (hookd.py sketch, D55 member count, D47 ranking).",
+    "Engine drifted 2.1.270 -> 2.1.273; 33 event names + 4 enums verified unchanged (docs/probes/drift_check.py)."
+  ],
+  "pending_gate": null,
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-16T20:15:07Z",
+      "phase": "plan"
+    },
+    {
+      "event": "task_primitive_unavailable",
+      "ts": "2026-09-16T20:15:07Z",
+      "phase": "plan",
+      "detail": "Harness exposes no TaskCreate/TaskList/TaskGet. Agent dispatch IS available, so default subagent dispatch is kept; the task graph is tracked in this artifact's task_ids/phase_status instead of the task system. No gate skipped."
+    },
+    {
+      "event": "brainstorming_substituted",
+      "ts": "2026-09-16T20:15:07Z",
+      "phase": "plan",
+      "detail": "PLAN preparation step 2 mandates cc10x:exploration before planner. The design artifact already exists and is approved: docs/specs/orchestrator-platform.md is itself the output of a design dialogue, carrying 55 decisions with reasoning, plus data-schemas.md and implementation-constraints.md. Re-running an interactive brainstorm would re-litigate settled decisions and cannot ask the user anything (user is asleep, AUTO_PROCEED=true). Recorded as design_file and passed to planner under ## Design File."
+    },
+    {
+      "event": "plan_created",
+      "ts": "2026-09-16T20:41:19Z",
+      "phase": "plan-create",
+      "detail": "19 tasks, 2236 lines, confidence 50 (computed: 90 base -25 for 8 unapproved RDs -15 for critical inferred A9), 0 open decisions"
+    },
+    {
+      "event": "plan_review_findings",
+      "ts": "2026-09-16T20:51:48Z",
+      "phase": "plan-review-gap-1",
+      "detail": "12 blocking, 4 advisory; replan required"
+    },
+    {
+      "event": "plan_revised",
+      "ts": "2026-09-16T21:17:29Z",
+      "phase": "re-plan",
+      "detail": "revision 3; 16/16 findings applied, 0 disputed; confidence 50 -> 65"
+    },
+    {
+      "event": "spec_amended",
+      "ts": "2026-09-16T21:17:29Z",
+      "phase": "re-plan",
+      "detail": "D55 row: 'exactly five things' -> six, adding the hook-side dispatch command, with the 250ms evidence. Applied by the router (D55's author), not by the planner - a planner amending the decision log on its own authority would be the failure the rule exists to prevent."
+    },
+    {
+      "event": "plan_review_pass2",
+      "ts": "2026-09-16T21:26:06Z",
+      "phase": "plan-review-gap-2",
+      "detail": "2 blocking, 7 advisory; fresh-review cap (2) now spent"
+    },
+    {
+      "event": "amendment_lane_entered",
+      "ts": "2026-09-16T21:26:06Z",
+      "phase": "plan-review-amendment",
+      "detail": "Fresh-review cap spent, and the router's escalate-to-human path is unavailable (user asleep, explicit instruction to keep working and mark blockers). Both blockers are narrow and mechanical - a scope-rule clarification and an enum split - not architectural. Taking the uncapped, diff-scoped amendment lane, which exists for an amendment made after the cap is spent. Amendment verification follows and does NOT close the review loop."
+    },
+    {
+      "event": "plan_amended",
+      "ts": "2026-09-16T21:35:35Z",
+      "phase": "plan-review-amendment",
+      "detail": "revision 4; 2 blocking + 7 advisory applied, 6 stale refs swept, counts re-derived"
+    },
+    {
+      "event": "amendment_verified",
+      "ts": "2026-09-16T21:44:54Z",
+      "phase": "plan-review-amendment",
+      "detail": "5 blocking, 2 advisory - all mechanical residuals of the r4 restructuring, each with a stated one-line fix"
+    },
+    {
+      "event": "remediation_cycle_cap_decision",
+      "ts": "2026-09-16T21:44:54Z",
+      "phase": "plan-review-amendment",
+      "detail": "Third remediation cycle on the plan. cc10x puts a human checkpoint here; the user is asleep with an explicit standing instruction to keep working and mark blockers rather than stop. Findings are converging (12 blocking -> 2 -> 5 all one-line) and confined to one task's table plus propagation misses, so this is convergence not thrash. DECISION: one final amendment (r5), then BUILD proceeds regardless; any residual becomes a blocker entry under the plan's own protocol. No further review rounds on the plan."
+    },
+    {
+      "event": "plan_amended_r5",
+      "ts": "2026-09-16T21:51:12Z",
+      "phase": "plan-review-amendment",
+      "detail": "5 blocking + 2 advisory applied, 0 disputed; one NEW decision gap raised and deliberately left unresolved by the planner"
+    },
+    {
+      "event": "decision_recorded",
+      "ts": "2026-09-16T21:51:12Z",
+      "phase": "plan-review-amendment",
+      "detail": "D38.1 written into the spec decision log by the router. D38's premise 'nothing in M1-M3 writes' was false - the hook installer is a write. Registered as a ToolDef rather than exempting cli/ from the D35 consumer boundary. T17 unblocked."
+    }
+  ],
+  "remediation_history": [],
+  "created_at": "2026-09-16T20:15:07Z",
+  "updated_at": "2026-09-16T21:51:12Z"
+}

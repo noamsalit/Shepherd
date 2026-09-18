@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:09:10Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p Reply\ with\ exactly\ OK. --effort low --session-id 667257d2-9430-4714-a8b1-fb07a95ae0bf --model claude-haiku-4-5-20251001 --output-format stream-json --verbose --max-turns 1
+exit: 0

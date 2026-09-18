@@ -1,0 +1,3 @@
+env -i ... tmux -L shepherd-m3-inner new-session -d -s shepherd_p3 -x 160 -y 45 -c /tmp/shp-m3-p3-muxgzppk/work claude --model claude-haiku-4-5 --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p3-concurrent-20260917T111005Z/settings.json --debug-file /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p3-concurrent-20260917T111005Z/debug.log
+rc=0
+stderr=

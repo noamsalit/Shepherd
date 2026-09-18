@@ -1,0 +1,161 @@
+{
+ "hooks": {
+  "SessionStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "PreToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py PreToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py PostToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "SubagentStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py SubagentStart /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "SubagentStop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py SubagentStop /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py Stop /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "StopFailure": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "PreCompact": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py PreCompact /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "PostCompact": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py PostCompact /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "Notification": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py Notification /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "TaskCreated": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py TaskCreated /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ],
+  "TaskCompleted": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/hook_capture.py TaskCompleted /root/Shepherd/docs/probes/2026-09-14-schemas/transcripts/captures/hooks-lifecycle.jsonl"
+     }
+    ]
+   }
+  ]
+ },
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ }
+}

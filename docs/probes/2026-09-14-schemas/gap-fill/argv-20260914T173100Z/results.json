@@ -1,0 +1,123 @@
+{
+ "a_argv_words": {
+  "tmux_argv_words": 4,
+  "pane_pid": 4059290,
+  "pane_comm": "claude",
+  "pane_cmdline": [
+   "claude",
+   "--model",
+   "claude-haiku-4-5-20251001",
+   "ARGV-BRIEF $(echo EXPANDED) `echo BACKTICK` ; echo SEMI && 'single' \"double\" \\back $HOME *\nsecond line\tTAB \u2713 end"
+  ],
+  "trust_dialog_shown": true,
+  "hooks_before_trust": [],
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "prompt_len": 112,
+  "prompt_equals_brief": true,
+  "prompt_head": "ARGV-BRIEF $(echo EXPANDED) `echo BACKTICK` ; echo SEMI && 'single' \"double\" \\back $HOME *\nsecond line\tTAB \u2713 end",
+  "pane_dead": "dead=0 status="
+ },
+ "b_single_string_naive": {
+  "tmux_argv_words": 1,
+  "pane_pid": 4059356,
+  "pane_comm": "claude",
+  "pane_cmdline": [
+   "claude",
+   "--model",
+   "claude-haiku-4-5-20251001",
+   "ARGV-BRIEF EXPANDED BACKTICK ; echo SEMI && 'single' double \\back /root *\nsecond line\tTAB \u2713 end"
+  ],
+  "trust_dialog_shown": true,
+  "hooks_before_trust": [],
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "prompt_len": 95,
+  "prompt_equals_brief": false,
+  "prompt_head": "ARGV-BRIEF EXPANDED BACKTICK ; echo SEMI && 'single' double \\back /root *\nsecond line\tTAB \u2713 end",
+  "pane_dead": "dead=0 status="
+ },
+ "c_single_string_shlex": {
+  "tmux_argv_words": 1,
+  "pane_pid": 4059421,
+  "pane_comm": "claude",
+  "pane_cmdline": [
+   "claude",
+   "--model",
+   "claude-haiku-4-5-20251001",
+   "ARGV-BRIEF $(echo EXPANDED) `echo BACKTICK` ; echo SEMI && 'single' \"double\" \\back $HOME *\nsecond line\tTAB \u2713 end"
+  ],
+  "trust_dialog_shown": true,
+  "hooks_before_trust": [],
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "prompt_len": 112,
+  "prompt_equals_brief": true,
+  "prompt_head": "ARGV-BRIEF $(echo EXPANDED) `echo BACKTICK` ; echo SEMI && 'single' \"double\" \\back $HOME *\nsecond line\tTAB \u2713 end",
+  "pane_dead": "dead=0 status="
+ },
+ "d_dash_brief_no_separator": {
+  "tmux_argv_words": 4,
+  "pane_pid": 4059485,
+  "pane_proc_error": "FileNotFoundError(2, 'No such file or directory')",
+  "trust_dialog_shown": false,
+  "hooks_before_trust": [],
+  "events": [],
+  "pane_dead": "dead=1 status=1"
+ },
+ "e_dash_brief_with_separator": {
+  "tmux_argv_words": 5,
+  "pane_pid": 4059508,
+  "pane_comm": "claude",
+  "pane_cmdline": [
+   "claude",
+   "--model",
+   "claude-haiku-4-5-20251001",
+   "--",
+   "-starts with a dash DASH-BRIEF"
+  ],
+  "trust_dialog_shown": true,
+  "hooks_before_trust": [],
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "prompt_len": 30,
+  "prompt_equals_brief": null,
+  "prompt_head": "-starts with a dash DASH-BRIEF",
+  "pane_dead": "dead=0 status="
+ },
+ "f_brief_20KiB": {
+  "tmux_argv_words": 4,
+  "pane_pid": 0,
+  "pane_proc_error": "FileNotFoundError(2, 'No such file or directory')",
+  "trust_dialog_shown": false,
+  "hooks_before_trust": [],
+  "events": [],
+  "pane_dead": ""
+ },
+ "g_brief_140KiB": {
+  "tmux_argv_words": 4,
+  "longest_arg_bytes": 143367,
+  "spawn_error": "OSError errno=7: Argument list too long (execve of env/tmux)"
+ },
+ "h_brief_100KiB": {
+  "tmux_argv_words": 4,
+  "pane_pid": 0,
+  "pane_proc_error": "FileNotFoundError(2, 'No such file or directory')",
+  "trust_dialog_shown": false,
+  "hooks_before_trust": [],
+  "events": [],
+  "pane_dead": ""
+ }
+}

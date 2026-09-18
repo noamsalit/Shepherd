@@ -1,0 +1,65 @@
+2026-09-14T15:17:47.867Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:17:47.869Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/settings.json
+2026-09-14T15:17:47.870Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:47.919Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/.claude/settings.local.json
+2026-09-14T15:17:47.920Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:17:47.936Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json'
+2026-09-14T15:17:47.937Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.c5ea93e3f038
+2026-09-14T15:17:47.939Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.c5ea93e3f038 to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.940Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.941Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.57861c20cda9
+2026-09-14T15:17:47.943Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.57861c20cda9 to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.943Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.945Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.f71d1a7a6800
+2026-09-14T15:17:47.946Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.f71d1a7a6800 to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.947Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.948Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.d6ef3a49aaaf
+2026-09-14T15:17:47.949Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.d6ef3a49aaaf to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.949Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.951Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.0e3cc6511e05
+2026-09-14T15:17:47.952Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.0e3cc6511e05 to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.953Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.953Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.39649634c21b
+2026-09-14T15:17:47.955Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.39649634c21b to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.955Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.956Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.e0cbbadf287a
+2026-09-14T15:17:47.958Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.e0cbbadf287a to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:47.958Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:47.979Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/skills, project=[]
+2026-09-14T15:17:47.982Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-09-14T15:17:47.982Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/agents'
+2026-09-14T15:17:47.983Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/commands'
+2026-09-14T15:17:47.984Z [DEBUG] Skipping load-failure error for disabled plugin cc10x@cc10x
+2026-09-14T15:17:47.985Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-09-14T15:17:47.985Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:17:47.985Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:17:47.985Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:17:47.985Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:17:47.986Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:17:47.992Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:47.992Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/settings.json
+2026-09-14T15:17:47.997Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/.claude/settings.local.json
+2026-09-14T15:17:48.000Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)
+2026-09-14T15:17:48.000Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:17:48.000Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:17:48.017Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:17:48.030Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-09-14T15:17:48.040Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:48.055Z [DEBUG] Plugin autoupdate: command-source refresh disabled by tengu_plugin_command_source_refresh (still excluding command-sourced plugins from the regular pass)
+2026-09-14T15:17:48.059Z [DEBUG] "rg error (signal=undefined, code=2, stderr: rg: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/plugins/cache: IO error for operation on /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/plugins/cache: No such file or directory (os error 2)\n), 0 results"
+2026-09-14T15:17:48.063Z [DEBUG] Watching for changes in setting files /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/settings.json, /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/.claude/settings.json, /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/.claude/settings.local.json...
+2026-09-14T15:17:48.064Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.2b5003f17582
+2026-09-14T15:17:48.074Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:48.075Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:17:48.094Z [DEBUG] Renaming /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json.tmp.4034708.2b5003f17582 to /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json
+2026-09-14T15:17:48.097Z [DEBUG] File /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/.claude.json written atomically
+2026-09-14T15:17:48.098Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/output-styles: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-prompt_too_long-e5we4qw3/cfg/output-styles'
+2026-09-14T15:17:48.098Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:17:48.110Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:17:48.111Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:17:48.124Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:48.193Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:48.209Z [DEBUG] StopFailure:invalid_request [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_prompt_too_long/events.jsonl] completed with status 0
+2026-09-14T15:17:48.209Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:48.215Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_prompt_too_long/events.jsonl] completed with status 0
+2026-09-14T15:17:48.215Z [DEBUG] Hook output does not start with {, treating as plain text

@@ -1,0 +1,1 @@
+/dev/pts/4 160x45 flags=attached,focused,UTF-8 session=shepherd_p3

@@ -1,0 +1,56 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "remoteControlAtStartup": false,
+ "hooks": {
+  "SessionStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-dup-hooks.jsonl",
+      "timeout": 10
+     },
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-projonly-hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-dup-hooks.jsonl",
+      "timeout": 10
+     },
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-projonly-hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Stop /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-dup-hooks.jsonl",
+      "timeout": 10
+     },
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Stop /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/user-projonly-hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ]
+ }
+}

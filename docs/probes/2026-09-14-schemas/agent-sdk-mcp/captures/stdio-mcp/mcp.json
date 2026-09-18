@@ -1,0 +1,1 @@
+{"mcpServers": {"probe": {"type": "stdio", "command": "python3", "args": ["/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/mcp_logger_server.py", "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/mcp-wire.jsonl"], "env": {"PROBE_MARKER": "1"}}}}

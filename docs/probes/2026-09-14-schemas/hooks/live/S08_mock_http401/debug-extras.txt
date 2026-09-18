@@ -1,0 +1,12 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-mock-http401-7lnm_avp/.debug-S08_mock_http401.log
+2026-09-14T15:17:25.061Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:25.061Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:17:25.061Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:17:25.061Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:17:25.186Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:17:25.228Z [ERROR] API error (attempt 1/1): 401 401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_mock"}
+2026-09-14T15:17:25.242Z [DEBUG] [engine] turn 1 end (turns=1 usage in=0 out=0 cost=$0.0000 api=0ms stop=stop_sequence resultLen=0)
+2026-09-14T15:17:25.247Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:17:25.248Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:17:25.257Z [DEBUG] StopFailure:authentication_failed [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http401/events.jsonl] completed with status 0
+2026-09-14T15:17:25.264Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http401/events.jsonl] completed with status 0

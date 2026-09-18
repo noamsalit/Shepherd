@@ -1,0 +1,2 @@
+claude --model claude-haiku-4-5-20251001 --output-format json --resume 55b21a24-e35c-4121-b504-1c3d12a75d3e --fork-session -p Reply with only the word FORKED
+rc=0

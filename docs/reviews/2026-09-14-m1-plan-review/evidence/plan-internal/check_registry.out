@@ -1,0 +1,18 @@
+== Names produced by more than one task
+  main: ['T08', 'T17']
+== Consumed names not produced by any task
+== Consumed names whose producer is NOT in the consumer's transitive Dependencies
+== Registry top-level names missing from the same task's Produces
+  T01: ['__init__', 'available', 'forget', 'resolve', 'resolve_ref', 'store']
+  T02: ['__init__', 'install', 'is_alive', 'render', 'status', 'uninstall']
+  T03: ['__init__']
+  T04: ['is_empty']
+  T06: ['apply_live_patch', 'close', 'count_unassigned_sessions', 'create_workspace', 'deactivate_repo', 'fleet_snapshot', 'get_app_state', 'get_session', 'get_session_by_engine_id', 'get_workspace', 'list_live_sessions', 'list_repos', 'list_workspaces', 'open', 'put_app_state', 'register_attached_session', 'register_repo', 'reserve_event_seq']
+  T08: ['recv']
+  T12: ['__init__', 'accept_transcript_path', 'capabilities', 'engine_id', 'hook_events', 'install_hooks', 'list_subagents', 'locate_transcript', 'parse_transcript_delta', 'process_names', 'uninstall_hooks']
+  T13: ['__init__', 'close_gate', 'count_rejected_frame', 'counters', 'handle_envelope_body', 'is_gated', 'open_gate', 'start', 'stop', 'submit', 'sweep']
+  T14: ['__init__', 'close', 'current_seq', 'next', 'publish', 'start', 'status', 'stop', 'subscribe']
+  T17: ['__init__', 'get', 'post']
+== Produces names (identifiers) not present anywhere in registry section of that task
+  T16: no registry section
+  T19: no registry section

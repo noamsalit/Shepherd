@@ -1,0 +1,27 @@
+== -root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f.jsonl compact_boundary at line 451 same file, sessionId unchanged
+   448 {'type': 'atis-latch', 'subtype': None, 'sessionId': '2fb6befd'}
+   449 {'type': 'frame-link', 'subtype': None, 'sessionId': '2fb6befd'}
+   450 {'type': 'bridge-session', 'subtype': None, 'sessionId': '2fb6befd'}
+   451 {'type': 'system', 'subtype': 'compact_boundary', 'sessionId': '2fb6befd', 'trigger': 'manual'}
+   452 {'type': 'user', 'subtype': None, 'sessionId': '2fb6befd', 'isCompactSummary': True, 'content': 'This session is being continued from a previous conversation'}
+   453 {'type': 'user', 'subtype': None, 'sessionId': '2fb6befd', 'content': '<local-command-caveat>Caveat: The messages below were genera'}
+   454 {'type': 'user', 'subtype': None, 'sessionId': '2fb6befd', 'content': '<command-name>/compact</command-name>\n            <command-m'}
+   455 {'type': 'user', 'subtype': None, 'sessionId': '2fb6befd', 'content': '<local-command-stdout>\x1b[2mCompacted (ctrl+o to see full summ'}
+== -root-Finopsera-poc/bc392997-a163-489a-a3fb-0aeada404b1f.jsonl compact_boundary at line 3081 same file, sessionId unchanged
+   3078 {'type': 'permission-mode', 'subtype': None, 'sessionId': 'bc392997'}
+   3079 {'type': 'bridge-session', 'subtype': None, 'sessionId': 'bc392997'}
+   3080 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997'}
+   3081 {'type': 'system', 'subtype': 'compact_boundary', 'sessionId': 'bc392997', 'trigger': 'auto'}
+   3082 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997', 'isCompactSummary': True, 'content': 'This session is being continued from a previous conversation'}
+   3083 {'type': 'attachment', 'subtype': None, 'sessionId': 'bc392997', 'att': 'compact_file_reference'}
+   3084 {'type': 'attachment', 'subtype': None, 'sessionId': 'bc392997', 'att': 'file'}
+   3085 {'type': 'attachment', 'subtype': None, 'sessionId': 'bc392997', 'att': 'compact_file_reference'}
+== -root-Finopsera-poc/bc392997-a163-489a-a3fb-0aeada404b1f.jsonl compact_boundary at line 5454 same file, sessionId unchanged
+   5451 {'type': 'mode', 'subtype': None, 'sessionId': 'bc392997'}
+   5452 {'type': 'permission-mode', 'subtype': None, 'sessionId': 'bc392997'}
+   5453 {'type': 'bridge-session', 'subtype': None, 'sessionId': 'bc392997'}
+   5454 {'type': 'system', 'subtype': 'compact_boundary', 'sessionId': 'bc392997', 'trigger': 'manual'}
+   5455 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997', 'isCompactSummary': True, 'content': 'This session is being continued from a previous conversation'}
+   5456 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997', 'content': '<local-command-caveat>Caveat: The messages below were genera'}
+   5457 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997', 'content': '<command-name>/compact</command-name>\n            <command-m'}
+   5458 {'type': 'user', 'subtype': None, 'sessionId': 'bc392997', 'content': '<local-command-stdout>\x1b[2mCompacted (ctrl+o to see full summ'}

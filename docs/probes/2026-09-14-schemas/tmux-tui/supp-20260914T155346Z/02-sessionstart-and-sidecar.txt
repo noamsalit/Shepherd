@@ -1,0 +1,4 @@
+SessionStart.session_id == requested: True
+pane_title=✳ shp-spawn-name
+transcript exists before first prompt: False
+sidecar: {"pid":4042647,"sessionId":"17b1da21-4505-43ae-8958-35764a620384","cwd":"/tmp/shp-tui-S-0omgx4oc","startedAt":1789401234011,"procStart":"543848221","version":"2.1.270","peerProtocol":1,"peerFeatures":["notify_idle","reply_across_default_dirs","artifact_yield"],"kind":"interactive","entrypoint":"cli","pidDomain":"linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]","tmux":"probe_s:@0.%0","messagingSocketPath":"/tmp/cc-socks/4042647.sock","name":"shp-spawn-name","nameSource":"user","nameSince":1789401234047,"updatedAt":1789401234131,"status":"idle","statusUpdatedAt":1789401234131}

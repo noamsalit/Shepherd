@@ -1,0 +1,65 @@
+2026-09-14T15:17:39.185Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:17:39.187Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/settings.json
+2026-09-14T15:17:39.188Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:39.226Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-http400-_5cb1us6/.claude/settings.local.json
+2026-09-14T15:17:39.227Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:17:39.243Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json'
+2026-09-14T15:17:39.244Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.49b848c0c2e5
+2026-09-14T15:17:39.247Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.49b848c0c2e5 to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.247Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.250Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.22735c3c4b95
+2026-09-14T15:17:39.252Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.22735c3c4b95 to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.252Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.254Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.09c080cf9f04
+2026-09-14T15:17:39.256Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.09c080cf9f04 to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.256Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.257Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.e9bcbe5a8bc6
+2026-09-14T15:17:39.259Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.e9bcbe5a8bc6 to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.259Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.261Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.aa4db45d4dfe
+2026-09-14T15:17:39.263Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.aa4db45d4dfe to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.263Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.264Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.88463cf7ce02
+2026-09-14T15:17:39.266Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.88463cf7ce02 to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.267Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.268Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.b5a9bdbe28ea
+2026-09-14T15:17:39.270Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.b5a9bdbe28ea to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.270Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.300Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/tmp/shp-hooks-mock-http400-_5cb1us6/cfg/skills, project=[]
+2026-09-14T15:17:39.302Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-09-14T15:17:39.303Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-http400-_5cb1us6/cfg/agents'
+2026-09-14T15:17:39.304Z [DEBUG] Skipping load-failure error for disabled plugin cc10x@cc10x
+2026-09-14T15:17:39.304Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-http400-_5cb1us6/cfg/commands'
+2026-09-14T15:17:39.307Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-09-14T15:17:39.308Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:17:39.308Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:17:39.308Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:17:39.309Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:17:39.309Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:17:39.321Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:39.321Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/settings.json
+2026-09-14T15:17:39.329Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-http400-_5cb1us6/.claude/settings.local.json
+2026-09-14T15:17:39.333Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)
+2026-09-14T15:17:39.333Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:17:39.334Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:17:39.357Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:17:39.374Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-09-14T15:17:39.389Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:39.415Z [DEBUG] Plugin autoupdate: command-source refresh disabled by tengu_plugin_command_source_refresh (still excluding command-sourced plugins from the regular pass)
+2026-09-14T15:17:39.423Z [DEBUG] "rg error (signal=undefined, code=2, stderr: rg: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/plugins/cache: IO error for operation on /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/plugins/cache: No such file or directory (os error 2)\n), 0 results"
+2026-09-14T15:17:39.427Z [DEBUG] Watching for changes in setting files /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/settings.json, /tmp/shp-hooks-mock-http400-_5cb1us6/.claude/settings.json, /tmp/shp-hooks-mock-http400-_5cb1us6/.claude/settings.local.json...
+2026-09-14T15:17:39.428Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.3ced4900bfaf
+2026-09-14T15:17:39.430Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:39.431Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:17:39.460Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/output-styles: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-http400-_5cb1us6/cfg/output-styles'
+2026-09-14T15:17:39.461Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:17:39.464Z [DEBUG] Renaming /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json.tmp.4034573.3ced4900bfaf to /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json
+2026-09-14T15:17:39.466Z [DEBUG] File /tmp/shp-hooks-mock-http400-_5cb1us6/cfg/.claude.json written atomically
+2026-09-14T15:17:39.478Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:17:39.479Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:17:39.499Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:39.568Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:39.588Z [DEBUG] StopFailure:unknown [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl] completed with status 0
+2026-09-14T15:17:39.588Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:39.608Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl] completed with status 0
+2026-09-14T15:17:39.608Z [DEBUG] Hook output does not start with {, treating as plain text

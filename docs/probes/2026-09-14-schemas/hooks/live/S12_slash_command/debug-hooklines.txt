@@ -1,0 +1,38 @@
+2026-09-14T15:20:01.702Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:20:01.747Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:20:01.754Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-slash-_ul_amd7/.claude/settings.local.json
+2026-09-14T15:20:01.755Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:20:01.819Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:20:01.841Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:20:01.848Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-slash-_ul_amd7/.claude/settings.local.json
+2026-09-14T15:20:01.885Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:20:01.888Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:20:01.889Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:20:01.889Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:20:01.890Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:20:01.890Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:20:01.890Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:20:01.890Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:20:01.891Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:20:01.893Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:20:01.894Z [DEBUG] getSkills returning: 1 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:20:01.921Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:20:01.924Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:20:01.976Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:01.977Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:20:01.979Z [DEBUG] Watching for changes in skill/command directories: /tmp/shp-hooks-slash-_ul_amd7/.claude/commands...
+2026-09-14T15:20:01.981Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:20:01.982Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-slash-_ul_amd7/.claude/settings.json, /tmp/shp-hooks-slash-_ul_amd7/.claude/settings.local.json...
+2026-09-14T15:20:01.982Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:20:02.048Z [DEBUG] InstructionsLoaded:session_start [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh InstructionsLoaded /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S12_slash_command/events.jsonl] completed with status 0
+2026-09-14T15:20:02.048Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:02.067Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:20:02.893Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:20:02.919Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:02.928Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:20:02.929Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:20:02.942Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:04.765Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:04.798Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:20:04.818Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S12_slash_command/events.jsonl] completed with status 0
+2026-09-14T15:20:04.818Z [DEBUG] Hook output does not start with {, treating as plain text

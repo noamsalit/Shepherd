@@ -1,0 +1,40 @@
+{
+ "form": {
+  "events_before_answer": [
+   "UserPromptSubmit",
+   "PreToolUse[tool_name=mcp__shepherd__ask_form]",
+   "Elicitation[mcp_server_name=shepherd][mode=form]",
+   "Notification[notification_type=elicitation_dialog]"
+  ],
+  "events_all": [
+   "UserPromptSubmit",
+   "PreToolUse[tool_name=mcp__shepherd__ask_form]",
+   "Elicitation[mcp_server_name=shepherd][mode=form]",
+   "Notification[notification_type=elicitation_dialog]",
+   "ElicitationResult[mcp_server_name=shepherd][action=accept][mode=form]",
+   "Notification[notification_type=elicitation_response]",
+   "PostToolUse[tool_name=mcp__shepherd__ask_form]",
+   "PostToolBatch",
+   "MessageDisplay",
+   "Stop"
+  ]
+ },
+ "url": {
+  "events_before_answer": [
+   "UserPromptSubmit",
+   "PreToolUse[tool_name=mcp__shepherd__ask_url]",
+   "PostToolUse[tool_name=mcp__shepherd__ask_url]",
+   "PostToolBatch",
+   "MessageDisplay",
+   "Stop"
+  ],
+  "events_all": [
+   "UserPromptSubmit",
+   "PreToolUse[tool_name=mcp__shepherd__ask_url]",
+   "PostToolUse[tool_name=mcp__shepherd__ask_url]",
+   "PostToolBatch",
+   "MessageDisplay",
+   "Stop"
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+2026-09-17T11:04:31.995+00:00 01-base: claude -p --model claude-haiku-4-5 --output-format json --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p2-fork-20260917T110431Z/settings.json --session-id bf35fe01-96ca-4f9b-923c-3b8c9331191f Remember the codeword PINEAPPLE-M3. Reply with only the word OK.
+2026-09-17T11:04:38.152+00:00 01-base: rc=0 stdout_bytes=2095 stderr=''
+2026-09-17T11:04:38.152+00:00 02-fork-with-session-id: claude -p --model claude-haiku-4-5 --output-format json --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p2-fork-20260917T110431Z/settings.json --resume bf35fe01-96ca-4f9b-923c-3b8c9331191f --fork-session --session-id 356b6e66-635e-424c-80fd-fef653880906 What is the codeword? Reply with only the codeword.
+2026-09-17T11:04:42.333+00:00 02-fork-with-session-id: rc=0 stdout_bytes=1805 stderr=''
+2026-09-17T11:04:42.333+00:00 03-fork-nsp-with-session-id: claude -p --model claude-haiku-4-5 --output-format json --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p2-fork-20260917T110431Z/settings.json --resume bf35fe01-96ca-4f9b-923c-3b8c9331191f --fork-session --session-id d8c9ba08-690b-429a-8339-b15d2b78544d --no-session-persistence What is the codeword? Reply with only the codeword.
+2026-09-17T11:04:46.235+00:00 03-fork-nsp-with-session-id: rc=0 stdout_bytes=1769 stderr=''
+2026-09-17T11:04:48.236+00:00 04-fork-nsp-no-session-id: claude -p --model claude-haiku-4-5 --output-format json --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p2-fork-20260917T110431Z/settings.json --resume bf35fe01-96ca-4f9b-923c-3b8c9331191f --fork-session --no-session-persistence What is the codeword? Reply with only the codeword.
+2026-09-17T11:04:52.372+00:00 04-fork-nsp-no-session-id: rc=0 stdout_bytes=1772 stderr=''
+2026-09-17T11:04:54.380+00:00 $ tmux -L shepherd-m3-probe ls -> rc=1 out='' err='no server running on /tmp/tmux-0/shepherd-m3-probe'
+2026-09-17T11:04:54.381+00:00 teardown: after kill-server: tmux -L shepherd-m3-probe ls rc=1 err='no server running on /tmp/tmux-0/shepherd-m3-probe' -> no server running

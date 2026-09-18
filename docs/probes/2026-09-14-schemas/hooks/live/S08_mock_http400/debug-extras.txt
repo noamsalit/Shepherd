@@ -1,0 +1,12 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-mock-http400-_5cb1us6/.debug-S08_mock_http400.log
+2026-09-14T15:17:39.389Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:39.389Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:17:39.389Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:17:39.389Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:17:39.510Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:17:39.560Z [ERROR] API error (attempt 1/1): 400 400 {"type":"error","error":{"type":"invalid_request_error","message":"messages: field required"},"request_id":"req_mock"}
+2026-09-14T15:17:39.571Z [DEBUG] [engine] turn 1 end (turns=1 usage in=0 out=0 cost=$0.0000 api=0ms stop=stop_sequence resultLen=0)
+2026-09-14T15:17:39.574Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:17:39.576Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:17:39.588Z [DEBUG] StopFailure:unknown [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl] completed with status 0
+2026-09-14T15:17:39.608Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl] completed with status 0

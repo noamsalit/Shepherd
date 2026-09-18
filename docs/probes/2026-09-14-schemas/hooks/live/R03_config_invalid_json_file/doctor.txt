@@ -1,0 +1,3 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-invalid_json_file-rs89tdiw; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-invalid_json_file-rs89tdiw/.claude/settings.json: Expected object, but received undefined

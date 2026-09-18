@@ -1,0 +1,3 @@
+pane_pid=4058166
+claude_pid=4058166
+transcript=/tmp/shp-gap-int-gzmuah9x/cfg/projects/-tmp-shp-gap-int-gzmuah9x-w/12965b0b-2454-4673-bbce-c3d0635982f5.jsonl

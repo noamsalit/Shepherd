@@ -1,0 +1,102 @@
+{
+ "api_error_status": {
+  "type": "NoneType",
+  "example": null
+ },
+ "duration_api_ms": {
+  "type": "int",
+  "example": 1516
+ },
+ "duration_ms": {
+  "type": "int",
+  "example": 1676
+ },
+ "fast_mode_disabled_reason": {
+  "type": "str",
+  "example": "sdk_opt_in_required"
+ },
+ "fast_mode_state": {
+  "type": "str",
+  "example": "off"
+ },
+ "first_content_frame_ms": {
+  "type": "int",
+  "example": 1167
+ },
+ "is_error": {
+  "type": "bool",
+  "example": false
+ },
+ "modelUsage": {
+  "type": "dict",
+  "example": "<dict>"
+ },
+ "num_turns": {
+  "type": "int",
+  "example": 1
+ },
+ "permission_denials": {
+  "type": "list",
+  "example": "<list>"
+ },
+ "queued_turn_count": {
+  "type": "int",
+  "example": 0
+ },
+ "result": {
+  "type": "str",
+  "example": "PINEAPPLE-M3"
+ },
+ "result_index": {
+  "type": "int",
+  "example": 0
+ },
+ "session_id": {
+  "type": "str",
+  "example": "356b6e66-635e-424c-80fd-fef653880906"
+ },
+ "stop_reason": {
+  "type": "str",
+  "example": "end_turn"
+ },
+ "subagent_stats": {
+  "type": "dict",
+  "example": "<dict>"
+ },
+ "subtype": {
+  "type": "str",
+  "example": "success"
+ },
+ "terminal_reason": {
+  "type": "str",
+  "example": "completed"
+ },
+ "time_to_request_ms": {
+  "type": "int",
+  "example": 144
+ },
+ "total_cost_usd": {
+  "type": "float",
+  "example": 0.0033510000000000002
+ },
+ "ttft_ms": {
+  "type": "int",
+  "example": 1567
+ },
+ "ttft_stream_ms": {
+  "type": "int",
+  "example": 1166
+ },
+ "type": {
+  "type": "str",
+  "example": "result"
+ },
+ "usage": {
+  "type": "dict",
+  "example": "<dict>"
+ },
+ "uuid": {
+  "type": "str",
+  "example": "2d8ca429-87cc-4ae5-bb30-364acf434605"
+ }
+}

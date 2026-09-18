@@ -1,0 +1,143 @@
+== MessageDisplay  (n=17)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  hook_event_name: str; always; MessageDisplay
+  turn_id: str; always; <uuid>
+  message_id: str; always; <uuid>
+  index: int; always; 0, 1, 10, 11, 2, 3 ...
+  final: bool; always; false, true
+  delta: str; always; <str len 12 multiline>, <str len 18 multiline>, <str len 2 multiline>, <str len 22 multiline>, <str len 24 multiline>, <str len 8 multiline> ...
+== Notification  (n=2)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  hook_event_name: str; always; Notification
+  message: str; always; Claude is waiting for your input, Claude needs your permission
+  notification_type: str; always; idle_prompt, permission_prompt
+== PermissionRequest  (n=1)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; PermissionRequest
+  tool_name: str; always; Bash
+  tool_input: dict; always; <dict len 2>
+  permission_suggestions: list; always; <list len 2>
+== PostCompact  (n=1)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  hook_event_name: str; always; PostCompact
+  trigger: str; always; manual
+  compact_summary: str; always; <str len 4168>
+== PostToolBatch  (n=2)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; PostToolBatch
+  tool_calls: list; always; <list len 1>
+== PostToolUse  (n=2)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; PostToolUse
+  tool_name: str; always; Bash
+  tool_input: dict; always; <dict len 2>
+  tool_response: dict; always; <dict len 5>
+  tool_use_id: str; always; <uuid>
+  duration_ms: int; always; 105, 12041
+== PreCompact  (n=1)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  hook_event_name: str; always; PreCompact
+  trigger: str; always; manual
+  custom_instructions: NoneType; always; null
+== PreToolUse  (n=2)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; PreToolUse
+  tool_name: str; always; Bash
+  tool_input: dict; always; <dict len 2>
+  tool_use_id: str; always; <uuid>
+== SessionEnd  (n=4)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; sometimes 3/4; <uuid>
+  hook_event_name: str; always; SessionEnd
+  reason: str; always; other, prompt_input_exit
+== SessionStart  (n=5)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  hook_event_name: str; always; SessionStart
+  source: str; always; compact, fork, startup
+  model: str; sometimes 4/5; claude-haiku-4-5-20251001
+  prompt_id: str; sometimes 1/5; <uuid>
+  session_title: str; sometimes 3/5; shp-probe-title-1, shp-spawn-name
+  seconds_since_last_response: int; sometimes 1/5; 77
+  context_tokens: int; sometimes 1/5; 2353
+  prompt_cache_likely_expired: bool; sometimes 1/5; true
+  estimated_cache_write_usd: float; sometimes 1/5; 0.0047
+== Stop  (n=6)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; Stop
+  stop_hook_active: bool; always; false
+  last_assistant_message: str; always; <str len 230 multiline>, Done. The file `perm-probe.txt` has been created., MULTI, PONG, SECOND
+  background_tasks: list; always; <list len 0>
+  session_crons: list; always; <list len 0>
+== SubagentStop  (n=3)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  agent_id: str; always; <uuid>
+  agent_type: str; always; 
+  hook_event_name: str; always; SubagentStop
+  stop_hook_active: bool; always; false
+  agent_transcript_path: str; always; <path>
+  last_assistant_message: str; sometimes 2/3; (silence), <str len 4168 multiline>
+  background_tasks: list; always; <list len 0>
+  session_crons: list; always; <list len 0>
+== UserPromptSubmit  (n=7)
+  session_id: str; always; <uuid>
+  transcript_path: str; always; <path>
+  cwd: str; always; <path>
+  scratchpad_dir: str; always; <path>
+  prompt_id: str; always; <uuid>
+  permission_mode: str; always; default
+  hook_event_name: str; always; UserPromptSubmit
+  prompt: str; always; <str len 53 multiline>, <str len 67>, <str len 74>, Print the integers from 1 to 80, one per line, nothing else., Reply with only the word PONG, Reply with only the word SECOND
+  session_title: str; sometimes 2/7; shp-probe-title-1, shp-spawn-name
+2.1.270 (Claude Code)

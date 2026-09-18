@@ -1,0 +1,7 @@
+$ tmux -L shepherd ls   (read-only, 2026-09-14)
+aivisor: <details elided>
+main: <details elided>
+spike: <details elided>
+rc=0
+$ echo $TMUX
+/tmp/tmux-0/shepherd,3971391,0

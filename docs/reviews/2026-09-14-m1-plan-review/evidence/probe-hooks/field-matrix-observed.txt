@@ -1,0 +1,81 @@
+claude 2.1.270; runs: run0..run3, v2..v8 (python capture) + v7 shell capture for StopFailure
+
+FIRED   PreToolUse           n= 12 runs=['run1', 'run2', 'run3']
+        fields=['agent_id', 'agent_type', 'cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"', '{"level": "low"}']
+FIRED   PostToolUse          n=  7 runs=['run1', 'run3']
+        fields=['agent_id', 'agent_type', 'cwd', 'duration_ms', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_response', 'tool_use_id', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"', '{"level": "low"}']
+FIRED   PostToolUseFailure   n=  2 runs=['run2']
+        fields=['cwd', 'duration_ms', 'error', 'hook_event_name', 'is_interrupt', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"']
+FIRED   PostToolBatch        n= 12 runs=['run1', 'run2', 'run3']
+        fields=['agent_id', 'agent_type', 'cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_calls', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"', '{"level": "low"}']
+NOT-CAPTURED Notification
+FIRED   UserPromptSubmit     n= 10 runs=['run0', 'run1', 'run2', 'run3', 'v2', 'v3', 'v6', 'v7', 'v8']
+        fields=['cwd', 'hook_event_name', 'permission_mode', 'prompt', 'prompt_id', 'session_id', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"']
+NOT-CAPTURED UserPromptExpansion
+FIRED   SessionStart         n=  9 runs=['run0', 'run1', 'run2', 'run3', 'v2', 'v3', 'v6', 'v7', 'v8']
+        fields=['context_tokens', 'cwd', 'estimated_cache_write_usd', 'hook_event_name', 'prompt_cache_likely_expired', 'seconds_since_last_response', 'session_id', 'source', 'transcript_path']
+        missing-common=['effort', 'permission_mode', 'prompt_id'] effort-values=['"<absent>"']
+FIRED   SessionEnd           n=  4 runs=['run1', 'run2', 'run3', 'v2']
+        fields=['cwd', 'hook_event_name', 'prompt_id', 'reason', 'session_id', 'transcript_path']
+        missing-common=['effort', 'permission_mode'] effort-values=['"<absent>"']
+FIRED   Stop                 n=  4 runs=['run1', 'run2', 'run3']
+        fields=['background_tasks', 'cwd', 'effort', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"', '{"level": "low"}']
+NOT-CAPTURED StopFailure
+FIRED   SubagentStart        n=  1 runs=['run1']
+        fields=['agent_id', 'agent_type', 'cwd', 'hook_event_name', 'prompt_id', 'session_id', 'transcript_path']
+        missing-common=['effort', 'permission_mode'] effort-values=['"<absent>"']
+FIRED   SubagentStop         n=  1 runs=['run1']
+        fields=['agent_id', 'agent_transcript_path', 'agent_type', 'background_tasks', 'cwd', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"']
+NOT-CAPTURED PreCompact
+NOT-CAPTURED PostCompact
+NOT-CAPTURED PreModelSwitch
+NOT-CAPTURED PostModelSwitch
+FIRED   PermissionRequest    n=  2 runs=['run1']
+        fields=['cwd', 'hook_event_name', 'permission_mode', 'permission_suggestions', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'transcript_path']
+        missing-common=['effort'] effort-values=['"<absent>"']
+NOT-CAPTURED PermissionDenied
+NOT-CAPTURED Setup
+NOT-CAPTURED TeammateIdle
+FIRED   TaskCreated          n=  1 runs=['run1']
+        fields=['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+        missing-common=['effort', 'permission_mode'] effort-values=['"<absent>"']
+FIRED   TaskCompleted        n=  1 runs=['run1']
+        fields=['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+        missing-common=['effort', 'permission_mode'] effort-values=['"<absent>"']
+NOT-CAPTURED Elicitation
+NOT-CAPTURED ElicitationResult
+NOT-CAPTURED ConfigChange
+NOT-CAPTURED WorktreeCreate
+NOT-CAPTURED WorktreeRemove
+NOT-CAPTURED InstructionsLoaded
+NOT-CAPTURED CwdChanged
+NOT-CAPTURED FileChanged
+NOT-CAPTURED DirectoryAdded
+FIRED   MessageDisplay       n= 19 runs=['run0', 'run1', 'run2', 'run3', 'v2', 'v3', 'v6', 'v7', 'v8']
+        fields=['cwd', 'delta', 'final', 'hook_event_name', 'index', 'message_id', 'prompt_id', 'session_id', 'transcript_path', 'turn_id']
+        missing-common=['effort', 'permission_mode'] effort-values=['"<absent>"']
+
+StopFailure (shell capture, v7): see v7-stopfailure-shell.txt -> fields session_id, transcript_path, cwd, prompt_id, effort{level}, hook_event_name, error=model_not_found, last_assistant_message
+
+Ancestry (python capture: index 0=python3, 1=sh, 2=claude):
+  ('MessageDisplay', 'claude_at_index=2') 19
+  ('PermissionRequest', 'claude_at_index=2') 2
+  ('PostToolBatch', 'claude_at_index=2') 12
+  ('PostToolUse', 'claude_at_index=2') 7
+  ('PostToolUseFailure', 'claude_at_index=2') 2
+  ('PreToolUse', 'claude_at_index=2') 12
+  ('SessionEnd', 'claude_at_index=2') 4
+  ('SessionStart', 'claude_at_index=2') 9
+  ('Stop', 'claude_at_index=2') 4
+  ('SubagentStart', 'claude_at_index=2') 1
+  ('SubagentStop', 'claude_at_index=2') 1
+  ('TaskCompleted', 'claude_at_index=2') 1
+  ('TaskCreated', 'claude_at_index=2') 1
+  ('UserPromptSubmit', 'claude_at_index=2') 10

@@ -1,0 +1,73 @@
+2026-09-14T15:42:17.804Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:42:17.806Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/settings.json
+2026-09-14T15:42:17.807Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:42:17.846Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/.claude/settings.local.json
+2026-09-14T15:42:17.847Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:42:17.866Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json'
+2026-09-14T15:42:17.867Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.a246b5f14d9b
+2026-09-14T15:42:17.870Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.a246b5f14d9b to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.870Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.873Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.16b2ce483a9d
+2026-09-14T15:42:17.876Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.16b2ce483a9d to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.876Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.877Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.83f286810c04
+2026-09-14T15:42:17.879Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.83f286810c04 to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.879Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.880Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.b52f9ff79f83
+2026-09-14T15:42:17.882Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.b52f9ff79f83 to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.882Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.884Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.b1442f31054e
+2026-09-14T15:42:17.885Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.b1442f31054e to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.885Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.886Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.7d3e7d3e9e86
+2026-09-14T15:42:17.888Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.7d3e7d3e9e86 to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.888Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.889Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.a5887b37103a
+2026-09-14T15:42:17.891Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.a5887b37103a to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:17.891Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:17.914Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/skills, project=[]
+2026-09-14T15:42:17.915Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-09-14T15:42:17.917Z [DEBUG] Skipping load-failure error for disabled plugin cc10x@cc10x
+2026-09-14T15:42:17.917Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/agents'
+2026-09-14T15:42:17.919Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-09-14T15:42:17.919Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:42:17.919Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:42:17.919Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:42:17.919Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:42:17.920Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:42:17.921Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/commands'
+2026-09-14T15:42:17.927Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:42:17.927Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/settings.json
+2026-09-14T15:42:17.933Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/.claude/settings.local.json
+2026-09-14T15:42:17.936Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)
+2026-09-14T15:42:17.936Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:42:17.937Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:42:17.952Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:42:17.963Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-09-14T15:42:17.971Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:42:17.987Z [DEBUG] Plugin autoupdate: command-source refresh disabled by tengu_plugin_command_source_refresh (still excluding command-sourced plugins from the regular pass)
+2026-09-14T15:42:17.993Z [DEBUG] "rg error (signal=undefined, code=2, stderr: rg: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/plugins/cache: IO error for operation on /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/plugins/cache: No such file or directory (os error 2)\n), 0 results"
+2026-09-14T15:42:17.998Z [DEBUG] Watching for changes in setting files /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/settings.json, /tmp/shp-hooks-mock-autocompact-5hdsmfvb/.claude/settings.json, /tmp/shp-hooks-mock-autocompact-5hdsmfvb/.claude/settings.local.json...
+2026-09-14T15:42:17.999Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.000Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:42:18.018Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.e2c7c3018baf
+2026-09-14T15:42:18.028Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/output-styles: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/output-styles'
+2026-09-14T15:42:18.028Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:42:18.033Z [DEBUG] Renaming /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json.tmp.4040494.e2c7c3018baf to /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json
+2026-09-14T15:42:18.033Z [DEBUG] File /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/.claude.json written atomically
+2026-09-14T15:42:18.045Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:42:18.046Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:42:18.059Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.129Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.142Z [DEBUG] Snapshots directory: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/shell-snapshots
+2026-09-14T15:42:18.143Z [DEBUG] Creating snapshot at: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/shell-snapshots/snapshot-bash-1789400538142-4772rh.sh
+2026-09-14T15:42:18.189Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.198Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.206Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.208Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:42:18.208Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:42:18.229Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.262Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:42:18.340Z [DEBUG] Cleaned up session snapshot: /tmp/shp-hooks-mock-autocompact-5hdsmfvb/cfg/shell-snapshots/snapshot-bash-1789400538142-4772rh.sh
+2026-09-14T15:42:18.354Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S22_mock_autocompact/events.jsonl] completed with status 0
+2026-09-14T15:42:18.354Z [DEBUG] Hook output does not start with {, treating as plain text

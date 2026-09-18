@@ -1,0 +1,2 @@
+cwd=/tmp/shp-m3-p1-o6_i047m/work
+settings=/root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/settings.json

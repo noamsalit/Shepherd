@@ -1,0 +1,14 @@
+{
+ "total_entries": 6,
+ "own": [
+  {
+   "pid": 4033805,
+   "cwd": "/tmp/shp-schemas-regint.KD6xG3/work",
+   "kind": "interactive",
+   "startedAt": 1789398970793,
+   "sessionId": "2efd1f5f-1b93-481a-8469-0f589a48d7ae",
+   "name": "shp regint probe",
+   "status": "idle"
+  }
+ ]
+}

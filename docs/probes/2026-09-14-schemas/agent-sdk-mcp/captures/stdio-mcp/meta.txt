@@ -1,0 +1,8 @@
+claude_bin=/root/.local/bin/claude
+claude_version=2.1.270 (Claude Code)
+tmpdir=/tmp/shp-mcp-AY6vTM
+scrubbed=-u CLAUDE_CODE_CHILD_SESSION -u AI_AGENT -u CLAUDE_CODE_SESSION_ID -u CLAUDE_PID -u CLAUDE_EFFORT -u CLAUDE_CODE_MESSAGING_SOCKET -u CLAUDE_CODE_BRIDGE_SESSION_ID -u CLAUDECODE -u CLAUDE_CODE_SESSION_ATTENDED -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_EXECPATH -u CLAUDE_CODE_MESSAGING_TOKEN 
+started=2026-09-14T16:14:49Z
+/root/.local/bin/claude -p $'Do these steps in order, one tool call per step, then reply DONE:\n1. call mcp__probe__echo_note with text="hello" and count=2\n2. call mcp__probe__fail_note with reason="probe"\n3. call mcp__probe__rpc_error_note\n4. call mcp__probe__danger_note with target="x"\n5. call mcp__probe__echo_note with count=5 and NO text argument' --model claude-haiku-4-5-20251001 --output-format stream-json --verbose --mcp-config /tmp/shp-mcp-AY6vTM/mcp.json --strict-mcp-config --tools '' --allowedTools mcp__probe__echo_note\,mcp__probe__fail_note\,mcp__probe__rpc_error_note --max-turns 10 --debug-file /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/debug.log 
+exit=0
+finished=2026-09-14T16:15:03Z

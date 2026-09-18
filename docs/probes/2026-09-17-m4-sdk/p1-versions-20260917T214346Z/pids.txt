@@ -1,0 +1,3 @@
+claude pids before: 2
+claude pids after: 2
+new claude pids surviving this probe: none

@@ -1,0 +1,52 @@
+{
+ "rules": [
+  {
+   "match": "INT-ESC-TOOL",
+   "not_tool_result": true,
+   "require_tools": true,
+   "once": true,
+   "tool_use": {
+    "name": "Bash",
+    "input": {
+     "command": "sleep 30",
+     "description": "Sleep 30 seconds"
+    }
+   }
+  },
+  {
+   "match": "INT-CC-TOOL",
+   "not_tool_result": true,
+   "require_tools": true,
+   "once": true,
+   "tool_use": {
+    "name": "Bash",
+    "input": {
+     "command": "sleep 30",
+     "description": "Sleep 30 seconds"
+    }
+   }
+  },
+  {
+   "match": "INT-SIGINT-TOOL",
+   "not_tool_result": true,
+   "require_tools": true,
+   "once": true,
+   "tool_use": {
+    "name": "Bash",
+    "input": {
+     "command": "sleep 30",
+     "description": "Sleep 30 seconds"
+    }
+   }
+  },
+  {
+   "match": "INT-ESC-STREAM",
+   "not_tool_result": true,
+   "require_tools": true,
+   "once": true,
+   "hang_s": 25,
+   "text": "LATE-TEXT"
+  }
+ ],
+ "default_text": "OK-MOCK"
+}

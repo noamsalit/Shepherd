@@ -1,0 +1,10 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-perm-dontAsk_write_outside-6d_5cdt1/.debug-S09_perm_dontAsk_write_outside.log
+2026-09-14T15:18:10.402Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:18:10.402Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:18:10.402Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=dontAsk ctx.prePlanMode=undefined reason=model
+2026-09-14T15:18:10.402Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:18:11.054Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:18:19.699Z [DEBUG] [engine] turn 1 end (turns=2 usage in=952 out=712 cost=$0.0252 api=9388ms stop=end_turn resultLen=235)
+2026-09-14T15:18:19.706Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:18:19.708Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:18:19.720Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S09_perm_dontAsk_write_outside/events.jsonl] completed with status 0

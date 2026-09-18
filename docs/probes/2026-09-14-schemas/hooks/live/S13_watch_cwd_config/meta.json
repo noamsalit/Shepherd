@@ -1,0 +1,33 @@
+{
+ "scenario": "S13_watch_cwd_config",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Hook test, one tool call per step, in order, no parallel calls:\n1. Bash: echo 1 >> /tmp/shp-hooks-watch-jnn4_1pq/watched.txt\n2. Bash: sleep 3\n3. Bash: cd sub && pwd\n4. Bash: pwd\n5. Bash: echo '{\"env\":{\"SHP_X\":\"1\"}}' > .claude/settings.local.json\n6. Bash: sleep 3\n7. Bash: rm /tmp/shp-hooks-watch-jnn4_1pq/watched.txt\n8. Bash: sleep 3\n9. Reply DONE.",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-watch-jnn4_1pq/.debug-S13_watch_cwd_config.log",
+  "--allowedTools",
+  "Bash"
+ ],
+ "cwd": "/tmp/shp-hooks-watch-jnn4_1pq",
+ "exit_code": 0,
+ "timed_out": false,
+ "started": "2026-09-14T15:24:07Z",
+ "duration_s": 18.84,
+ "session_id_from_stdout": "a52f91c4-4b46-49b1-9d95-c0c52b8a28af",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

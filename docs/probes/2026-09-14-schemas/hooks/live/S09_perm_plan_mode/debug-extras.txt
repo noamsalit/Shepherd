@@ -1,0 +1,9 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-perm-plan_mode-dq4yi4ue/.debug-S09_perm_plan_mode.log
+2026-09-14T15:18:32.198Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:18:32.198Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:18:32.199Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=plan ctx.prePlanMode=default reason=model
+2026-09-14T15:18:32.916Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:18:39.496Z [DEBUG] [engine] turn 1 end (turns=1 usage in=918 out=520 cost=$0.0227 api=7323ms stop=end_turn resultLen=359)
+2026-09-14T15:18:39.506Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:18:39.508Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:18:39.529Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S09_perm_plan_mode/events.jsonl] completed with status 0

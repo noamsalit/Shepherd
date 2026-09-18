@@ -1,0 +1,22 @@
+{"_ts": "2026-09-17T21:52:11.003Z", "tool": "slow_tool", "phase": "entered", "received": {"id": "ses_slow"}}
+{"_ts": "2026-09-17T21:52:12.005Z", "tool": "slow_tool", "phase": "thread_tick", "second": 1}
+{"_ts": "2026-09-17T21:52:13.005Z", "tool": "slow_tool", "phase": "thread_tick", "second": 2}
+{"_ts": "2026-09-17T21:52:14.006Z", "tool": "slow_tool", "phase": "thread_tick", "second": 3}
+{"_ts": "2026-09-17T21:52:15.007Z", "tool": "slow_tool", "phase": "thread_tick", "second": 4}
+{"_ts": "2026-09-17T21:52:16.007Z", "tool": "slow_tool", "phase": "thread_tick", "second": 5}
+{"_ts": "2026-09-17T21:52:17.008Z", "tool": "slow_tool", "phase": "thread_tick", "second": 6}
+{"_ts": "2026-09-17T21:52:18.009Z", "tool": "slow_tool", "phase": "thread_tick", "second": 7}
+{"_ts": "2026-09-17T21:52:19.010Z", "tool": "slow_tool", "phase": "thread_tick", "second": 8}
+{"_ts": "2026-09-17T21:52:20.010Z", "tool": "slow_tool", "phase": "thread_tick", "second": 9}
+{"_ts": "2026-09-17T21:52:21.011Z", "tool": "slow_tool", "phase": "thread_tick", "second": 10}
+{"_ts": "2026-09-17T21:52:22.012Z", "tool": "slow_tool", "phase": "thread_tick", "second": 11}
+{"_ts": "2026-09-17T21:52:23.012Z", "tool": "slow_tool", "phase": "thread_tick", "second": 12}
+{"_ts": "2026-09-17T21:52:24.013Z", "tool": "slow_tool", "phase": "thread_tick", "second": 13}
+{"_ts": "2026-09-17T21:52:25.013Z", "tool": "slow_tool", "phase": "thread_tick", "second": 14}
+{"_ts": "2026-09-17T21:52:26.014Z", "tool": "slow_tool", "phase": "thread_tick", "second": 15}
+{"_ts": "2026-09-17T21:52:27.015Z", "tool": "slow_tool", "phase": "thread_tick", "second": 16}
+{"_ts": "2026-09-17T21:52:28.016Z", "tool": "slow_tool", "phase": "thread_tick", "second": 17}
+{"_ts": "2026-09-17T21:52:29.016Z", "tool": "slow_tool", "phase": "thread_tick", "second": 18}
+{"_ts": "2026-09-17T21:52:30.017Z", "tool": "slow_tool", "phase": "thread_tick", "second": 19}
+{"_ts": "2026-09-17T21:52:31.017Z", "tool": "slow_tool", "phase": "thread_tick", "second": 20}
+{"_ts": "2026-09-17T21:52:31.018Z", "tool": "slow_tool", "phase": "await_returned", "outcome": "worker thread ran to completion"}

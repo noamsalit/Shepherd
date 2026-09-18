@@ -1,0 +1,14 @@
+original lines 87 fork lines 53
+original id 71757dd1-5375-4801-b467-7898a0bc1194 fork id c3f63742-5ff5-44ea-8f6e-a26d027b51d0
+fork entries whose uuid also exists in original: 16 of 29
+fork lines containing the original session id string: 11
+fork sessionId values: {'c3f63742-5ff5-44ea-8f6e-a26d027b51d0': 51, 'None': 2}
+original types: {('mode', None): 4, ('permission-mode', None): 4, ('atis-latch', None): 4, ('file-history-snapshot', None): 5, ('user', None): 12, ('attachment', None): 21, ('last-prompt', None): 4, ('ai-title', None): 3, ('assistant', None): 12, ('system', 'stop_hook_summary'): 4, ('system', 'turn_duration'): 4, ('queue-operation', None): 2, ('custom-title', None): 2, ('agent-name', None): 2, ('system', 'local_command'): 2, ('system', 'compact_boundary'): 1, ('cost-state', None): 1}
+fork types: {('custom-title', None): 3, ('ai-title', None): 3, ('agent-name', None): 3, ('mode', None): 3, ('permission-mode', None): 3, ('atis-latch', None): 3, ('file-history-snapshot', None): 2, ('system', 'compact_boundary'): 1, ('user', None): 6, ('assistant', None): 4, ('system', 'stop_hook_summary'): 2, ('system', 'turn_duration'): 2, ('system', 'local_command'): 2, ('attachment', None): 12, ('last-prompt', None): 2, ('cost-state', None): 2}
+keys present in fork entries but never in original: []
+original compact_boundary line indexes: [76]
+fork compact_boundary line indexes: [7]
+JSON paths in fork entries whose string value contains the original id: {'.message.content': 1, '.session_id': 11, '.attachment.snapshot.scratchpadDirectory': 1, '.rendered[].content': 1}
+fork entries carrying both keys -> (type, subtype, session_id is original?, sessionId is fork?): {('user', None, True, True): 4, ('assistant', None, True, True): 2, ('system', 'stop_hook_summary', True, True): 1, ('attachment', None, True, True): 4, ('attachment', None, False, True): 5, ('assistant', None, False, True): 2, ('system', 'stop_hook_summary', False, True): 1}
+original entries with session_id key: 34 all equal to original id: True
+2.1.270 (Claude Code)

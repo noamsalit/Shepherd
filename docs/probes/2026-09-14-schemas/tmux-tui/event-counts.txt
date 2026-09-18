@@ -1,0 +1,18 @@
+2.1.270 (Claude Code)
+run-20260914T154946Z/hooks-a.jsonl PermissionRequest: 1 Notification(permission_prompt): 1 Notification(idle_prompt): 1 SubagentStart: 0 SubagentStop: 3 payloads with an 'effort' key: 0
+   2026-09-14T15:51:25.526Z PermissionRequest 
+   2026-09-14T15:51:31.548Z Notification permission_prompt
+   2026-09-14T15:51:31.789Z PostToolUse 
+   2026-09-14T15:51:50.815Z PostToolUse 
+supp-20260914T155346Z/hooks-s.jsonl PermissionRequest: 0 Notification(permission_prompt): 0 Notification(idle_prompt): 0 SubagentStart: 0 SubagentStop: 0 payloads with an 'effort' key: 0
+supp2-20260914T155625Z/hooks-x.jsonl PermissionRequest: 3 Notification(permission_prompt): 0 Notification(idle_prompt): 1 SubagentStart: 0 SubagentStop: 5 payloads with an 'effort' key: 0
+   2026-09-14T15:56:38.871Z PermissionRequest 
+   2026-09-14T15:56:40.133Z PostToolUse 
+   2026-09-14T15:56:58.708Z PostToolUse 
+   2026-09-14T15:57:18.436Z PermissionRequest 
+   2026-09-14T15:57:19.757Z PostToolUse 
+   2026-09-14T15:58:46.113Z PermissionRequest 
+   2026-09-14T15:58:48.537Z PostToolUse 
+supp3-20260914T160052Z/hooks-x.jsonl PermissionRequest: 1 Notification(permission_prompt): 0 Notification(idle_prompt): 0 SubagentStart: 0 SubagentStop: 2 payloads with an 'effort' key: 0
+   2026-09-14T16:01:04.846Z PermissionRequest 
+   2026-09-14T16:01:06.396Z PostToolUse 

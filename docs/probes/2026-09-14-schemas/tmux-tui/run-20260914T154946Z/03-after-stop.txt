@@ -1,0 +1,45 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-tui-A-4tvrx00n
+
+▎ Debug mode enabled · logging to /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/debug-a.log
+
+❯ Reply with only the word PONG
+
+● PONG
+
+✻ Cooked for 1s · done 3:50 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                             tmux detected · scroll with PgUp/PgDn · or add 'set -g mouse on' to ~/.tmux.conf for wheel scroll
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

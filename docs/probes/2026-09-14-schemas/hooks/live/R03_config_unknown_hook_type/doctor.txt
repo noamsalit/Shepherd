@@ -1,0 +1,3 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-unknown_hook_type-fp3fnjhx; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-unknown_hook_type-fp3fnjhx/.claude/settings.json › hooks.UserPromptSubmit.0.hooks.0.type: Unknown hook type "bogus"; entry ignored. Valid types: command, prompt, agent, http, mcp_tool

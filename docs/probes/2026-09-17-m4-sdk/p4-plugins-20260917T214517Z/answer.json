@@ -1,0 +1,207 @@
+{
+  "setting-sources-empty": {
+    "setting_sources": [],
+    "flag_settings_body": "{}",
+    "plugins": [],
+    "skills_count": 18,
+    "skills": [
+      "deep-research",
+      "design",
+      "design-sync",
+      "dataviz",
+      "update-config",
+      "verify",
+      "debug",
+      "code-review",
+      "simplify",
+      "batch",
+      "fewer-permission-prompts",
+      "doctor",
+      "loop",
+      "schedule",
+      "claude-api",
+      "workflow-authoring",
+      "run",
+      "run-skill-generator"
+    ],
+    "slash_commands_count": 53,
+    "tools": [
+      "mcp__shepherd__fleet_summary"
+    ],
+    "mcp_servers": [
+      {
+        "name": "shepherd",
+        "status": "connected"
+      }
+    ],
+    "result": "Hello.",
+    "transcript": "/root/.claude/projects/-tmp-shp-m4-7-jt0lsy-work-p4/332441dc-ff6f-42d7-8c54-cf7e30d73f3b.jsonl",
+    "attachment_subtypes": [
+      {
+        "subtype": "environment",
+        "keys": [
+          "snapshot",
+          "type"
+        ]
+      },
+      {
+        "subtype": "model",
+        "keys": [
+          "identity",
+          "text",
+          "type"
+        ]
+      },
+      {
+        "subtype": "total_tokens_reminder",
+        "keys": [
+          "text",
+          "type"
+        ]
+      },
+      {
+        "subtype": "session_context",
+        "keys": [
+          "context",
+          "type"
+        ]
+      },
+      {
+        "subtype": "date",
+        "keys": [
+          "date",
+          "type"
+        ]
+      },
+      {
+        "subtype": "prompt_snapshot",
+        "keys": [
+          "systemPrompt",
+          "type"
+        ]
+      },
+      {
+        "subtype": "prompt_snapshot",
+        "keys": [
+          "cliPrefix",
+          "systemPrompt",
+          "tools",
+          "type"
+        ]
+      }
+    ]
+  },
+  "setting-sources-none": {
+    "setting_sources": null,
+    "flag_settings_body": "{}",
+    "plugins": [
+      {
+        "name": "cc10x",
+        "path": "/root/src/cc10x-qa/plugins/cc10x",
+        "source": "cc10x@cc10x",
+        "version": "12.8.2"
+      }
+    ],
+    "skills_count": 32,
+    "skills": [
+      "deep-research",
+      "cc10x:agent-common",
+      "cc10x:cc10x-guide",
+      "cc10x:cc10x-router",
+      "cc10x:diff-driven-docs",
+      "cc10x:update",
+      "design",
+      "design-sync",
+      "dataviz",
+      "update-config",
+      "verify",
+      "debug",
+      "code-review",
+      "simplify",
+      "batch",
+      "fewer-permission-prompts",
+      "doctor",
+      "loop",
+      "schedule",
+      "claude-api",
+      "workflow-authoring",
+      "run",
+      "run-skill-generator",
+      "anthropic-skills:docs",
+      "anthropic-skills:docx",
+      "anthropic-skills:import-memory",
+      "anthropic-skills:market-research-interview-summarizer",
+      "anthropic-skills:morning",
+      "anthropic-skills:pdf",
+      "anthropic-skills:pptx",
+      "anthropic-skills:skill-creator",
+      "anthropic-skills:xlsx"
+    ],
+    "slash_commands_count": 67,
+    "tools": [
+      "mcp__shepherd__fleet_summary"
+    ],
+    "mcp_servers": [
+      {
+        "name": "shepherd",
+        "status": "connected"
+      }
+    ],
+    "result": "Hello",
+    "transcript": "/root/.claude/projects/-tmp-shp-m4-7-jt0lsy-work-p4/c62b6059-5721-4ae9-b059-47f68df71941.jsonl",
+    "attachment_subtypes": [
+      {
+        "subtype": "environment",
+        "keys": [
+          "snapshot",
+          "type"
+        ]
+      },
+      {
+        "subtype": "model",
+        "keys": [
+          "identity",
+          "text",
+          "type"
+        ]
+      },
+      {
+        "subtype": "total_tokens_reminder",
+        "keys": [
+          "text",
+          "type"
+        ]
+      },
+      {
+        "subtype": "session_context",
+        "keys": [
+          "context",
+          "type"
+        ]
+      },
+      {
+        "subtype": "date",
+        "keys": [
+          "date",
+          "type"
+        ]
+      },
+      {
+        "subtype": "prompt_snapshot",
+        "keys": [
+          "systemPrompt",
+          "type"
+        ]
+      },
+      {
+        "subtype": "prompt_snapshot",
+        "keys": [
+          "cliPrefix",
+          "systemPrompt",
+          "tools",
+          "type"
+        ]
+      }
+    ]
+  }
+}

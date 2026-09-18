@@ -1,0 +1,26 @@
+15:37:49 trust dialog seen -> Down + Enter ('Yes, I trust this folder')
+15:37:49 send 'down'
+15:37:50 send 'enter'
+15:37:55 ok: SessionStart
+15:37:58 send 'prompt needing permission'
+15:38:00 send 'enter'
+15:38:05 ok: PermissionRequest
+15:38:12 ok: Notification permission_prompt
+15:38:14 send 'Esc (reject permission)'
+15:38:34 TIMEOUT waiting for Stop after reject (observed: none fires)
+15:38:36 send 'plain prompt'
+15:38:38 send 'enter'
+15:38:39 ok: Stop after plain prompt
+15:38:39 no keystrokes now; idling for idle_prompt notification (up to 100s)
+15:39:39 ok: Notification idle_prompt
+15:39:39 send 'add-dir text'
+15:39:41 send 'enter'
+15:39:45 send 'enter (confirm add-dir dialog)'
+15:39:46 ok: DirectoryAdded
+15:39:48 send 'clear text'
+15:39:49 send 'enter'
+15:39:50 ok: SessionStart clear
+15:39:53 send 'exit text'
+15:39:54 send 'enter'
+15:39:56 ok: SessionEnd prompt_input_exit
+15:39:56 done: ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PermissionRequest', 'Notification', 'UserPromptSubmit', 'MessageDisplay', 'Stop', 'SubagentStop', 'Notification', 'DirectoryAdded', 'SessionEnd', 'SessionStart', 'SessionEnd']

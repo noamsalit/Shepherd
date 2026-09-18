@@ -1,0 +1,9 @@
+{
+ "raw_up_recalls_history": true,
+ "bracketed_paste_prompt": "PASTE-LINE-ONE\nPASTE-LINE-TWO",
+ "raw_ctrl_c_idle_screen_hint": [
+  "Press Ctrl-C again to exit"
+ ],
+ "alive_after_one_ctrl_c": true,
+ "esc_clears_input": false
+}

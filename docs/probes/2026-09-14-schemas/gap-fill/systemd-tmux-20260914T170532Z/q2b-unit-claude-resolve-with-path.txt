@@ -1,0 +1,5 @@
+PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+command -v claude -> /root/.local/bin/claude
+claude --version -> 2.1.270 (Claude Code)
+claude auth status exit=0
+systemd-run exit=0

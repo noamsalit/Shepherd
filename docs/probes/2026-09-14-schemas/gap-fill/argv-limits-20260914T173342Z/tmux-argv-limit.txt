@@ -1,0 +1,5 @@
+largest accepted single argv word (bytes): 16324
+smallest rejected: 16325 -> failed to send command rc=1 
+check 16324 again -> rc=0 
+single command string of 16324 bytes -> rc=0 
+single command string of 16325 bytes -> failed to send command rc=1 

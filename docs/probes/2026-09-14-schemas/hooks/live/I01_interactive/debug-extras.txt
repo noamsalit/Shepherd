@@ -1,0 +1,17 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-tui-1tlg88mq/.debug-I01.log
+2026-09-14T15:37:50.831Z [DEBUG] clearPluginCache: invalidating loadAllPlugins cache (post-trust: re-discover project @skills-dir plugins)
+2026-09-14T15:37:51.430Z [DEBUG] [engine] send set_max_thinking_tokens max=null
+2026-09-14T15:37:51.430Z [DEBUG] [engine] send set_model model=claude-haiku-4-5-20251001
+2026-09-14T15:37:51.479Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:37:51.479Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:37:51.482Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=auto ctx.prePlanMode=undefined reason=model
+2026-09-14T15:38:00.183Z [DEBUG] [engine] yield system/init (first)
+2026-09-14T15:38:00.183Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:38:14.081Z [DEBUG] [engine] turn 1 end (turns=3 usage in=1858 out=501 cost=$0.0252 api=7091ms stop=tool_use resultLen=0)
+2026-09-14T15:38:14.083Z [DEBUG] [engine] turn ended in error: [ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use
+2026-09-14T15:38:38.064Z [DEBUG] [engine] turn 2 start
+2026-09-14T15:38:39.264Z [DEBUG] [engine] turn 2 end (turns=1 usage in=1868 out=535 cost=$0.0305 api=8218ms stop=end_turn resultLen=2)
+2026-09-14T15:39:49.784Z [DEBUG] SessionEnd:clear [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0
+2026-09-14T15:39:54.961Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:39:54.964Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:39:55.756Z [DEBUG] SessionEnd:prompt_input_exit [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl] completed with status 0

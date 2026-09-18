@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:08:39Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p Use\ the\ Agent\ tool\ with\ run_in_background\ set\ to\ true\ \(subagent_type\ general-purpose\,\ description\ \'probe\ bg\ child\'\,\ prompt\ \'Reply\ with\ exactly\ BGPONG.\'\).\ Wait\ until\ you\ are\ notified\ it\ completed\,\ then\ reply\ with\ exactly\ DONE. --model claude-haiku-4-5-20251001 --session-id 7515f181-14c5-4540-9107-4f1d1267cf83 --output-format stream-json --verbose --max-turns 8 --allowedTools Agent
+exit: 0

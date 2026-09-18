@@ -1,0 +1,5 @@
+{"_ts": "2026-09-14T16:05:25.616Z", "tool": "fleet_summary", "received": {}, "returned": {"content": [{"type": "text", "text": "{\"running\": 2, \"needs_you\": [\"ses_a1\"], \"stopped\": 1}"}]}}
+{"_ts": "2026-09-14T16:05:26.878Z", "tool": "spawn_session", "received": {"project_id": "p1", "task": "write tests"}, "returned": {"content": [{"type": "text", "text": "ses_new42"}]}}
+{"_ts": "2026-09-14T16:05:28.016Z", "tool": "kill_session", "received": {"id": "ses_a1"}, "returned": {"content": [{"type": "text", "text": "killed ses_a1"}]}}
+{"_ts": "2026-09-14T16:05:29.019Z", "tool": "fail_tool", "received": {"reason": "probe"}, "returned": {"content": [{"type": "text", "text": "max_children_per_session=5 reached"}], "is_error": true}}
+{"_ts": "2026-09-14T16:05:30.461Z", "tool": "raise_tool", "received": {}, "returned": "RAISES RuntimeError"}

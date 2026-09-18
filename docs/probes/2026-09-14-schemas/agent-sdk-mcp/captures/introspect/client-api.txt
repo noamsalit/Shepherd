@@ -1,0 +1,181 @@
+query(*, prompt: str | collections.abc.AsyncIterable[dict[str, typing.Any]], options: claude_agent_sdk.types.ClaudeAgentOptions | None = None, transport: claude_agent_sdk._internal.transport.Transport | None = None) -> collections.abc.AsyncIterator[claude_agent_sdk.types.UserMessage | claude_agent_sdk.types.AssistantMessage | claude_agent_sdk.types.SystemMessage | claude_agent_sdk.types.ResultMessage | claude_agent_sdk.types.StreamEvent | claude_agent_sdk.types.RateLimitEvent | claude_agent_sdk.types.ConversationResetMessage]
+
+ClaudeSDKClient.__init__(self, options: claude_agent_sdk.types.ClaudeAgentOptions | None = None, transport: claude_agent_sdk._internal.transport.Transport | None = None)
+    doc: Initialize Claude SDK client.
+ClaudeSDKClient.connect(self, prompt: str | collections.abc.AsyncIterable[dict[str, typing.Any]] | None = None) -> None
+    doc: Connect to Claude with a prompt or message stream.
+ClaudeSDKClient.disconnect(self) -> None
+    doc: Disconnect from Claude.
+         
+         Any SDK MCP tool call still running is cancelled first; a tool that
+         does not react to cancellation (one blocked in a worker thread, say)
+         is given up on after a grace period of a few seconds per server.
+ClaudeSDKClient.get_context_usage(self) -> claude_agent_sdk.types.ContextUsageResponse
+    doc: Get a breakdown of current context window usage by category.
+         
+         Returns the same data shown by the `/context` command in the CLI,
+         including token counts per category, total usage, and detailed
+         breakdowns of MCP tools, memory files, and agents.
+         
+         Returns:
+             ContextUsageResponse dictionary with keys including:
+             - 'categories': List of categories with name, tokens, color
+             - 'totalTokens': Total tokens in context
+             - 'maxTokens': Effective context limit
+             - 'percentage': Percent of context used (0-100)
+ClaudeSDKClient.get_mcp_status(self) -> claude_agent_sdk.types.McpStatusResponse
+    doc: Get current MCP server connection status (only works with streaming mode).
+         
+         Queries the Claude Code CLI for the live connection status of all
+         configured MCP servers.
+         
+         Returns:
+             McpStatusResponse dictionary with an 'mcpServers' key containing
+             a list of McpServerStatus entries. Each entry includes:
+             - 'name': Server name (str)
+             - 'status': Connection status ('connected', 'pending', 'failed',
+               'needs-auth', 'disabled')
+             - 'serverInfo': MCP server name/version (when connected)
+ClaudeSDKClient.get_server_info(self) -> dict[str, typing.Any] | None
+    doc: Get server initialization info including available commands and output styles.
+         
+         Returns initialization information from the Claude Code server including:
+         - Available commands (slash commands, system commands, etc.)
+         - Current and available output styles
+         - Server capabilities
+         
+         Returns:
+             Dictionary with server info, or None if not in streaming mode
+         
+         Example:
+             ```python
+ClaudeSDKClient.interrupt(self) -> None
+    doc: Send interrupt signal (only works with streaming mode).
+ClaudeSDKClient.query(self, prompt: str | collections.abc.AsyncIterable[dict[str, typing.Any]], session_id: str = 'default') -> None
+    doc: Send a new request in streaming mode.
+         
+         Args:
+             prompt: Either a string message or an async iterable of message dictionaries
+             session_id: Session identifier for the conversation
+ClaudeSDKClient.receive_messages(self) -> collections.abc.AsyncIterator[claude_agent_sdk.types.UserMessage | claude_agent_sdk.types.AssistantMessage | claude_agent_sdk.types.SystemMessage | claude_agent_sdk.types.ResultMessage | claude_agent_sdk.types.StreamEvent | claude_agent_sdk.types.RateLimitEvent | claude_agent_sdk.types.ConversationResetMessage]
+    doc: Receive all messages from Claude.
+ClaudeSDKClient.receive_response(self) -> collections.abc.AsyncIterator[claude_agent_sdk.types.UserMessage | claude_agent_sdk.types.AssistantMessage | claude_agent_sdk.types.SystemMessage | claude_agent_sdk.types.ResultMessage | claude_agent_sdk.types.StreamEvent | claude_agent_sdk.types.RateLimitEvent | claude_agent_sdk.types.ConversationResetMessage]
+    doc: Receive messages from Claude until and including a ResultMessage.
+         
+         This async iterator yields all messages in sequence and automatically terminates
+         after yielding a ResultMessage (which indicates the response is complete).
+         It's a convenience method over receive_messages() for single-response workflows.
+         
+         **Stopping Behavior:**
+         - Yields each message as it's received
+         - Terminates immediately after yielding a ResultMessage
+         - The ResultMessage IS included in the yielded messages
+         - If no ResultMessage is received, the iterator continues indefinitely
+         
+ClaudeSDKClient.reconnect_mcp_server(self, server_name: str) -> None
+    doc: Reconnect a disconnected or failed MCP server (only works with streaming mode).
+         
+         Use this to retry connecting to an MCP server that failed to connect
+         or was disconnected. Raises an exception if the reconnection fails.
+         
+         Args:
+             server_name: The name of the MCP server to reconnect
+         
+         Example:
+             ```python
+             async with ClaudeSDKClient(options) as client:
+                 status = await client.get_mcp_status()
+ClaudeSDKClient.rewind_files(self, user_message_id: str) -> None
+    doc: Rewind tracked files to their state at a specific user message.
+         
+         Requires:
+             - `enable_file_checkpointing=True` to track file changes
+             - `extra_args={"replay-user-messages": None}` to receive UserMessage
+               objects with `uuid` in the response stream
+         
+         Args:
+             user_message_id: UUID of the user message to rewind to. This should be
+                 the `uuid` field from a `UserMessage` received during the conversation.
+         
+         Example:
+ClaudeSDKClient.set_model(self, model: str | None = None) -> None
+    doc: Change the AI model during conversation (only works with streaming mode).
+         
+         Args:
+             model: The model to use, or None to use default. Examples:
+                 - 'claude-sonnet-4-5'
+                 - 'claude-opus-4-1-20250805'
+                 - 'claude-opus-4-20250514'
+         
+         Example:
+             ```python
+             async with ClaudeSDKClient() as client:
+                 # Start with default model
+ClaudeSDKClient.set_permission_mode(self, mode: Literal['default', 'acceptEdits', 'plan', 'bypassPermissions', 'dontAsk', 'auto']) -> None
+    doc: Change permission mode during conversation (only works with streaming mode).
+         
+         Args:
+             mode: The permission mode to set. Valid options:
+                 - 'default': CLI prompts for dangerous tools
+                 - 'acceptEdits': Auto-accept file edits
+                 - 'plan': Plan-only mode (no tool execution)
+                 - 'bypassPermissions': Allow all tools (use with caution)
+                 - 'dontAsk': Deny anything not pre-approved by allow rules
+                 - 'auto': A model classifier approves or denies each tool call
+         
+         Example:
+ClaudeSDKClient.stop_task(self, task_id: str) -> None
+    doc: Stop a running task (only works with streaming mode).
+         
+         After this resolves, a `task_notification` system message with
+         status `'stopped'` will be emitted by the CLI in the message stream.
+         
+         Args:
+             task_id: The task ID from `task_notification` events.
+         
+         Example:
+             ```python
+             async with ClaudeSDKClient() as client:
+                 await client.query("Start a long-running task")
+ClaudeSDKClient.toggle_mcp_server(self, server_name: str, enabled: bool) -> None
+    doc: Enable or disable an MCP server (only works with streaming mode).
+         
+         Disabling a server disconnects it and removes its tools from the
+         available tool set. Enabling a server reconnects it and makes its
+         tools available again. Raises an exception on failure.
+         
+         Args:
+             server_name: The name of the MCP server to toggle
+             enabled: True to enable the server, False to disable it
+         
+         Example:
+             ```python
+
+### source ClaudeSDKClient.interrupt
+    async def interrupt(self) -> None:
+        """Send interrupt signal (only works with streaming mode)."""
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        await self._query.interrupt()
+
+### source claude_agent_sdk._internal.query.Query.interrupt
+    async def interrupt(self) -> None:
+        """Send interrupt control request."""
+        await self._send_control_request({"subtype": "interrupt"})
+
+delete_session(session_id: 'str', directory: 'str | None' = None) -> 'None'
+delete_session_via_store(session_store: 'SessionStore', session_id: 'str', directory: 'str | None' = None) -> 'None'
+fold_session_summary(prev: 'SessionSummaryEntry | None', key: 'SessionKey', entries: 'list[SessionStoreEntry]') -> 'SessionSummaryEntry'
+fork_session(session_id: 'str', directory: 'str | None' = None, up_to_message_id: 'str | None' = None, title: 'str | None' = None) -> 'ForkSessionResult'
+fork_session_via_store(session_store: 'SessionStore', session_id: 'str', directory: 'str | None' = None, up_to_message_id: 'str | None' = None, title: 'str | None' = None) -> 'ForkSessionResult'
+get_session_info(session_id: 'str', directory: 'str | None' = None) -> 'SDKSessionInfo | None'
+get_session_info_from_store(session_store: 'SessionStore', session_id: 'str', directory: 'str | None' = None) -> 'SDKSessionInfo | None'
+get_session_messages(session_id: 'str', directory: 'str | None' = None, limit: 'int | None' = None, offset: 'int' = 0) -> 'list[SessionMessage]'
+get_session_messages_from_store(session_store: 'SessionStore', session_id: 'str', directory: 'str | None' = None, limit: 'int | None' = None, offset: 'int' = 0) -> 'list[SessionMessage]'
+import_session_to_store(session_id: 'str', store: 'SessionStore', *, directory: 'str | None' = None, include_subagents: 'bool' = True, batch_size: 'int' = 500) -> 'None'
+list_sessions(directory: 'str | None' = None, limit: 'int | None' = None, offset: 'int' = 0, include_worktrees: 'bool' = True) -> 'list[SDKSessionInfo]'
+list_sessions_from_store(session_store: 'SessionStore', directory: 'str | None' = None, limit: 'int | None' = None, offset: 'int' = 0) -> 'list[SDKSessionInfo]'
+rename_session(session_id: 'str', title: 'str', directory: 'str | None' = None) -> 'None'
+rename_session_via_store(session_store: 'SessionStore', session_id: 'str', title: 'str', directory: 'str | None' = None) -> 'None'
+tag_session(session_id: 'str', tag: 'str | None', directory: 'str | None' = None) -> 'None'
+tag_session_via_store(session_store: 'SessionStore', session_id: 'str', tag: 'str | None', directory: 'str | None' = None) -> 'None'

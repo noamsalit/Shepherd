@@ -1,0 +1,1 @@
+Error creating worktree: WorktreeCreate hook failed: hook succeeded but returned no worktree path (command: echo the path to stdout; http/callback: return hookSpecificOutput.worktreePath)

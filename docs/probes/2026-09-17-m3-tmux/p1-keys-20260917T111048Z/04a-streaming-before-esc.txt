@@ -1,0 +1,45 @@
+
+ ▐▛███▛█   Claude Code v2.1.274
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-m3-p1-o6_i047m/work
+
+▎ Debug mode enabled · logging to /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/debug.log
+
+❯ ESC-RESTORE-MARKER write a detailed 900-word essay on the history of terminal multiplexers, in full prose, no lists.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+✶ Booping…
+                                                             tmux detected · scroll with PgUp/PgDn · or add 'set -g mouse on' to ~/.tmux.conf for wheel scroll
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

@@ -1,0 +1,4057 @@
+{
+  "composed:I01_interactive/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R01_exit_codes/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R01_exit_codes/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R01_exit_codes/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R01_exit_codes/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R02_timeout_sync/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R02_timeout_sync/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R02_timeout_sync/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R02_timeout_sync/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_extra_keys_group_and_entry/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_extra_keys_group_and_entry/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_hooks_is_array/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_hooks_is_array/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_invalid_json_file/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_invalid_json_file/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_negative_timeout/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_negative_timeout/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_no_matcher_key/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_no_matcher_key/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_pretooluse_broken/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_pretooluse_broken/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_stop_not_a_list/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_stop_not_a_list/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_unknown_event_name/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:R03_config_unknown_hook_type/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_hook_type/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S01_startup_tools/0038": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S01_startup_tools/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S01_startup_tools/0039": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S01_startup_tools/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S02_resume/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S02_resume/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S02_resume/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S02_resume/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S03_continue/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S03_continue/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S03_continue/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S03_continue/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S04_fork/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S04_fork/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S04_fork/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S04_fork/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S05_compact/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S05_compact/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S06_clear/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S06_clear/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http400/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http401/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http401/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http402/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http402/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http403/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http403/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http404/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http404/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http500/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http500/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_http529/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http529/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_max_tokens/0008": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S08_mock_prompt_too_long/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_prompt_too_long/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_acceptEdits_write_inside/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_acceptEdits_write_inside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_acceptEdits_write_inside/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_acceptEdits_write_inside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_auto_mode_delete_outside/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_auto_mode_delete_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_auto_mode_delete_outside/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_auto_mode_delete_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_default_write_outside/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_default_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_default_write_outside/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_default_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_deny_rule_bash_rm/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_deny_rule_bash_rm/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_deny_rule_bash_rm/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_deny_rule_bash_rm/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_dontAsk_write_outside/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_dontAsk_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_dontAsk_write_outside/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_dontAsk_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_plan_mode/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_plan_mode/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_plan_mode/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_plan_mode/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_prompts_none_write_outside/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_prompts_none_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S09_perm_prompts_none_write_outside/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S09_perm_prompts_none_write_outside/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S11_background_task/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S11_background_task/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S12_slash_command/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S12_slash_command/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S12_slash_command/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S12_slash_command/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S13_watch_cwd_config/0021": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S13_watch_cwd_config/0022": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S14_model_switch/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S14_model_switch/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S14b_resume_other_model/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S14b_resume_other_model/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S14b_resume_other_model/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S14b_resume_other_model/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S16_setup__init/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S16_setup__init/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S16_setup__init_only/0002": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S16_setup__init_only/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S16_setup__maintenance/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S16_setup__maintenance/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S17_elicitation/0012": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S17_elicitation/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S17_elicitation/0013": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S17_elicitation/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S18_agents_tasks/0032": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "tasks still open at the stop"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: tasks still open at the stop"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S18_agents_tasks/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "tasks still open at the stop"
+  },
+  "composed:S18_agents_tasks/0035": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "tasks still open at the stop"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: tasks still open at the stop"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S18_agents_tasks/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "tasks still open at the stop"
+  },
+  "composed:S18_agents_tasks/0036": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "tasks still open at the stop"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: tasks still open at the stop"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S18_agents_tasks/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "tasks still open at the stop"
+  },
+  "composed:S19_perm_auto_sonnet/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S19_perm_auto_sonnet/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S19_perm_auto_sonnet/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S19_perm_auto_sonnet/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S20_perm_auto_deny/0009": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S20_perm_auto_deny/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S20_perm_auto_deny/0010": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S20_perm_auto_deny/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S21_config_change/0017": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S21_config_change/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S21_config_change/0018": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S21_config_change/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S22_mock_autocompact/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S22_mock_autocompact/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:S22_mock_autocompact/0008": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S22_mock_autocompact/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0011": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0013": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0018": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0023": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0031": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:autocompact-real-20260914T174911Z/0032": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/autocompact-real-20260914T174911Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:c13/observed-process-exit": {
+    "bucket": "error",
+    "confidence": 0.0,
+    "decided_by": "mechanical",
+    "expected": "unknown",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Open logs"
+      },
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Run shepherd replay after fixing the rule"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/pidfd-pty-20260914T175854Z/pty-hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/gap-fill/pidfd-pty-20260914T175854Z/results.json"
+    ],
+    "stop_reason": "unknown",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "process exited; an attached session gives an exit time but no exit code (C13)"
+  },
+  "composed:effort-20260914T171533Z/0002": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0008": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0011": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0014": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0017": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0020": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0023": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0026": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0029": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0032": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0035": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0038": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0041": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0044": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0047": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0050": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0053": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0056": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0059": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0062": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0065": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:effort-20260914T171533Z/0068": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/effort-20260914T171533Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:elicitation-tui-20260914T174206Z/0010": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/elicitation-tui-20260914T174206Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:elicitation-tui-20260914T174206Z/0016": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/elicitation-tui-20260914T174206Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:elicitation-tui-20260914T174206Z/0017": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/elicitation-tui-20260914T174206Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:g-m2-3/stalled-pending-tool": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "stalled_pending_tool",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Open logs \u2014 a tool call never executed; likely a bug"
+      },
+      {
+        "kind": "escalate",
+        "source": "heuristic",
+        "target": null,
+        "text": "Escalate"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S01_startup_tools/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "stalled_pending_tool",
+    "turn_ending": "held_tool_call",
+    "waiting_on": null,
+    "why": "the turn ended holding an unexecuted tool call"
+  },
+  "composed:heuristic-2/unkept-promise": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "promised a next step that never ran",
+      "the brief asked for a change and nothing was written"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: promised a next step that never ran"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: the brief asked for a change and nothing was written"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S02_resume/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-reg-Jv4MTo-work/ea5a5348-c427-4438-b6f1-23a46e260b59.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "promised a next step that never ran; the brief asked for a change and nothing was written"
+  },
+  "composed:heuristic-3/failure-tail": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "the last three tool calls failed on one tool",
+      "the brief asked for a change and nothing was written"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: the last three tool calls failed on one tool"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: the brief asked for a change and nothing was written"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S01_startup_tools/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-fork-RgNHRN-work/76d51cc7-3b32-4274-9ee4-e08f21f79042.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "the last three tool calls failed on one tool; the brief asked for a change and nothing was written"
+  },
+  "composed:heuristic-4/no-op-session": {
+    "bucket": "unfinished",
+    "confidence": 0.8,
+    "decided_by": "heuristic",
+    "expected": "incomplete",
+    "missing": [
+      "the brief asked for a change and nothing was written"
+    ],
+    "next_actions": [
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue: the brief asked for a change and nothing was written"
+      },
+      {
+        "kind": "requeue",
+        "source": "heuristic",
+        "target": null,
+        "text": "Requeue with what's missing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S01_startup_tools/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/667257d2-9430-4714-a8b1-fb07a95ae0bf.jsonl"
+    ],
+    "stop_reason": "incomplete",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "the brief asked for a change and nothing was written"
+  },
+  "composed:interrupt-20260914T172251Z/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-20260914T172251Z/0010": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-20260914T172251Z/0013": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-20260914T172251Z/0017": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-20260914T172251Z/0019": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-real-20260914T172811Z/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-real-20260914T172811Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:interrupt-real-20260914T172811Z/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/interrupt-real-20260914T172811Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:keys-claude-20260914T180105Z/0002": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/keys-claude-20260914T180105Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:keys-claude-20260914T180105Z/0004": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/keys-claude-20260914T180105Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:keys-claude-20260914T180105Z/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/keys-claude-20260914T180105Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0010": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0014": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0021": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0022": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0025": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:lifecycle-end-20260914T175238Z/0029": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:pidfd-pty-20260914T175854Z/0002": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/pidfd-pty-20260914T175854Z/pty-hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:pidfd-pty-20260914T175854Z/0005": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/pidfd-pty-20260914T175854Z/pty-hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:systemd-tmux-20260914T170532Z/0001": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/systemd-tmux-20260914T170532Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0003": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0011": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0017": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0024": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0031": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0034": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0039": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "composed:transcript-append-20260914T175435Z/0044": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "real:I01_interactive/0011": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "cleared",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl"
+    ],
+    "stop_reason": "cleared",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'clear'"
+  },
+  "real:I01_interactive/0013": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "user_exited",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/I01_interactive/events.jsonl"
+    ],
+    "stop_reason": "user_exited",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'prompt_input_exit'"
+  },
+  "real:R03_config_extra_keys_group_and_entry/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_extra_keys_group_and_entry/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_hooks_is_array/0002": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_hooks_is_array/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_invalid_json_file/0002": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_invalid_json_file/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_negative_timeout/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_negative_timeout/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_no_matcher_key/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_no_matcher_key/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_pretooluse_broken/0002": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_pretooluse_broken/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_stop_not_a_list/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_stop_not_a_list/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_unknown_event_name/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R03_config_unknown_hook_type/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_hook_type/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:R04_settings_flag/0002": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/R04_settings_flag/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:S06_clear/0002": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "cleared",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S06_clear/events.jsonl"
+    ],
+    "stop_reason": "cleared",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'clear'"
+  },
+  "real:S07_bad_model/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S07_bad_model/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:S08_mock_http400/0003": {
+    "bucket": "error",
+    "confidence": 0.0,
+    "decided_by": "mechanical",
+    "expected": "unknown",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Open logs"
+      },
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Run shepherd replay after fixing the rule"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http400/events.jsonl"
+    ],
+    "stop_reason": "unknown",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'unknown'"
+  },
+  "real:S08_mock_http401/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "auth_failed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "reauth",
+        "source": "heuristic",
+        "target": null,
+        "text": "Re-authenticate"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http401/events.jsonl"
+    ],
+    "stop_reason": "auth_failed",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'authentication_failed'"
+  },
+  "real:S08_mock_http402/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "account_blocked",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "external",
+        "source": "heuristic",
+        "target": null,
+        "text": "Check billing"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http402/events.jsonl"
+    ],
+    "stop_reason": "account_blocked",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'billing_error'"
+  },
+  "real:S08_mock_http403/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "auth_failed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "reauth",
+        "source": "heuristic",
+        "target": null,
+        "text": "Re-authenticate"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http403/events.jsonl"
+    ],
+    "stop_reason": "auth_failed",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'authentication_failed'"
+  },
+  "real:S08_mock_http404/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http404/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:S08_mock_http429/0003": {
+    "bucket": "paused",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "rate_limited",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "none",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resumes by itself \u2014 nothing to do"
+      },
+      {
+        "kind": "retry",
+        "source": "heuristic",
+        "target": null,
+        "text": "Retry now"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http429/events.jsonl"
+    ],
+    "stop_reason": "rate_limited",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'rate_limit'"
+  },
+  "real:S08_mock_http500/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "server_error",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "retry",
+        "source": "heuristic",
+        "target": null,
+        "text": "Retry"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http500/events.jsonl"
+    ],
+    "stop_reason": "server_error",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'server_error'"
+  },
+  "real:S08_mock_http529/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "server_error",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "retry",
+        "source": "heuristic",
+        "target": null,
+        "text": "Retry"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http529/events.jsonl"
+    ],
+    "stop_reason": "server_error",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'server_error'"
+  },
+  "real:S08_mock_max_tokens/0007": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "truncated",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume \u2014 output hit the token cap"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl"
+    ],
+    "stop_reason": "truncated",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'max_output_tokens'"
+  },
+  "real:S08_mock_prompt_too_long/0003": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S08_mock_prompt_too_long/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'invalid_request'"
+  },
+  "real:S10_effort_sonnet/0006": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S10_effort_sonnet/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-hooks-effort-7yb7myuc/5c59934b-3bd1-43ab-9506-a6a16f581034.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "real:S10_effort_sonnet/0007": {
+    "bucket": "finished",
+    "confidence": 0.5,
+    "decided_by": "heuristic",
+    "expected": "completed",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Review the diff"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S10_effort_sonnet/events.jsonl",
+      "docs/probes/2026-09-14-schemas/transcripts/copies/-tmp-shp-hooks-effort-7yb7myuc/5c59934b-3bd1-43ab-9506-a6a16f581034.jsonl"
+    ],
+    "stop_reason": "completed",
+    "turn_ending": "ended_turn",
+    "waiting_on": null,
+    "why": "no open tasks, no unkept promise, no failure tail, no waiting language"
+  },
+  "real:S16_setup__init/0004": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S16_setup__init/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:S16_setup__maintenance/0004": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "bad_request",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "inspect",
+        "source": "heuristic",
+        "target": null,
+        "text": "Inspect the request \u2014 model or args rejected"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/hooks/live/S16_setup__maintenance/events.jsonl"
+    ],
+    "stop_reason": "bad_request",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the engine reported 'model_not_found'"
+  },
+  "real:lifecycle-end-20260914T175238Z/0017": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "context_exhausted",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "respawn",
+        "source": "heuristic",
+        "target": null,
+        "text": "Re-spawn with a compacted brief"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl"
+    ],
+    "stop_reason": "context_exhausted",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "auto-compaction started and the session died before it finished"
+  },
+  "real:lifecycle-end-20260914T175238Z/0027": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "resumed_elsewhere",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl"
+    ],
+    "stop_reason": "resumed_elsewhere",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended and continued as a new session id"
+  },
+  "real:lifecycle-end-20260914T175238Z/0031": {
+    "bucket": "error",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "logged_out",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "reauth",
+        "source": "heuristic",
+        "target": null,
+        "text": "Re-authenticate"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/lifecycle-end-20260914T175238Z/hooks.jsonl"
+    ],
+    "stop_reason": "logged_out",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'logout'"
+  },
+  "real:pidfd-pty-20260914T175854Z/0003": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "user_exited",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/pidfd-pty-20260914T175854Z/pty-hooks.jsonl"
+    ],
+    "stop_reason": "user_exited",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'prompt_input_exit'"
+  },
+  "real:transcript-append-20260914T175435Z/0035": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "cleared",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl"
+    ],
+    "stop_reason": "cleared",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'clear'"
+  },
+  "real:transcript-append-20260914T175435Z/0040": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "user_exited",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl"
+    ],
+    "stop_reason": "user_exited",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'prompt_input_exit'"
+  },
+  "real:transcript-append-20260914T175435Z/0045": {
+    "bucket": "unfinished",
+    "confidence": 1.0,
+    "decided_by": "mechanical",
+    "expected": "user_exited",
+    "missing": [],
+    "next_actions": [
+      {
+        "kind": "resume",
+        "source": "heuristic",
+        "target": null,
+        "text": "Resume the session"
+      }
+    ],
+    "sources": [
+      "docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl"
+    ],
+    "stop_reason": "user_exited",
+    "turn_ending": "absent",
+    "waiting_on": null,
+    "why": "the session ended as 'prompt_input_exit'"
+  }
+}

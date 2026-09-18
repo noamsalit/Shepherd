@@ -1,0 +1,11 @@
+HOME=/root
+LANG=en_US.UTF-8
+LOGNAME=<redacted>
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
+SHELL=/usr/bin/bash
+USER=<redacted>
+XDG_RUNTIME_DIR=/run/user/0
+XDG_DATA_DIRS=<redacted>
+DBUS_SESSION_BUS_ADDRESS=<redacted>
+GSM_SKIP_SSH_AGENT_WORKAROUND=<redacted>
+SSH_AUTH_SOCK=<redacted>

@@ -1,0 +1,3 @@
+{"type":"launched"}
+{"type":"started","key":"v2:790ace0b7a70b7ce22b41ec6c8a1903b01ee817a5738b79071f6aafe00f92aef","agentId":"aff491fda998b3fe0","label":"ping","phase":"Ping"}
+{"type":"result","key":"v2:790ace0b7a70b7ce22b41ec6c8a1903b01ee817a5738b79071f6aafe00f92aef","agentId":"aff491fda998b3fe0","result":"PONG"}

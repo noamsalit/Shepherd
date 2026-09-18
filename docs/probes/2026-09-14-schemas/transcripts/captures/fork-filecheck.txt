@@ -1,0 +1,19 @@
+source_id: 0141fab3-8bf8-4b69-be1f-89552ccfce5d
+source_lines_before: 47
+total 204
+drwxr-xr-x  4 root root   4096 Sep 14 15:07 .
+drwx------ 13 root root   4096 Sep 14 15:07 ..
+drwxr-xr-x  3 root root   4096 Sep 14 15:07 0141fab3-8bf8-4b69-be1f-89552ccfce5d
+-rw-------  1 root root 190772 Sep 14 15:08 0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl
+drwxr-xr-x  2 root root   4096 Sep 14 15:07 memory
+fork_id: 7c27bb7f-5390-48b0-8b2e-cf4004113d09
+source_lines_after: 47
+fork_file: /root/.claude/projects/-tmp-shp-schemas-tx-blIf90-work/7c27bb7f-5390-48b0-8b2e-cf4004113d09.jsonl
+fork_lines: 45
+total 396
+drwxr-xr-x  4 root root   4096 Sep 14 15:08 .
+drwx------ 13 root root   4096 Sep 14 15:07 ..
+drwxr-xr-x  3 root root   4096 Sep 14 15:07 0141fab3-8bf8-4b69-be1f-89552ccfce5d
+-rw-------  1 root root 190772 Sep 14 15:08 0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl
+-rw-------  1 root root 193646 Sep 14 15:08 7c27bb7f-5390-48b0-8b2e-cf4004113d09.jsonl
+drwxr-xr-x  2 root root   4096 Sep 14 15:07 memory

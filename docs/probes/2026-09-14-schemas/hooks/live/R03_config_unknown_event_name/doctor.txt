@@ -1,0 +1,3 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-unknown_event_name-ebwjyh7d; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-unknown_event_name-ebwjyh7d/.claude/settings.json › hooks.BogusEvent: Unknown hook event "BogusEvent" was ignored. Valid events: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, Notification, UserPromptSubmit, UserPromptExpansion, SessionStart, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, PermissionRequest, PermissionDenied, Setup, TeammateIdle, TaskCreated, TaskCompleted, Elicitation, ElicitationResult, ConfigChange, WorktreeCreate, WorktreeRemove, InstructionsLoaded, CwdChanged, FileChanged, DirectoryAdded, MessageDisplay

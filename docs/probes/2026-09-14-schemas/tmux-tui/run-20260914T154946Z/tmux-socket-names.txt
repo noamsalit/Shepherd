@@ -1,0 +1,9 @@
+# ls /tmp/tmux-0/ (socket names only; nothing attached or signalled) 2026-09-14T16:00:46Z
+# 2.1.270 (Claude Code)
+default
+shepherd
+shepherd-probe
+shepherd-spike
+shp-schemas-fork
+shp-schemas-tx
+shp-spike-9bc1f3

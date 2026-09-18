@@ -1,0 +1,59 @@
+{
+ "claude_version": "2.1.270 (Claude Code)",
+ "registry_json_files": 4,
+ "key_files_present(not read)": 4,
+ "key_presence": {
+  "pid": 4,
+  "sessionId": 4,
+  "cwd": 4,
+  "startedAt": 4,
+  "procStart": 4,
+  "version": 4,
+  "peerProtocol": 4,
+  "peerFeatures": 4,
+  "kind": 4,
+  "entrypoint": 4,
+  "pidDomain": 4,
+  "name": 4,
+  "nameSource": 4,
+  "nameSince": 4,
+  "status": 4,
+  "updatedAt": 4,
+  "statusUpdatedAt": 4,
+  "messagingSocketPath": 4,
+  "tmux": 3,
+  "bridgeSessionId": 3,
+  "waitingFor": 1
+ },
+ "enum_values": {
+  "version": {
+   "2.1.269": 1,
+   "2.1.270": 3
+  },
+  "peerProtocol": {
+   "1": 4
+  },
+  "peerFeatures": {
+   "notify_idle": 4,
+   "reply_across_default_dirs": 4,
+   "artifact_yield": 4
+  },
+  "kind": {
+   "interactive": 4
+  },
+  "entrypoint": {
+   "cli": 4
+  },
+  "nameSource": {
+   "derived": 4
+  },
+  "status": {
+   "idle": 2,
+   "busy": 1,
+   "waiting": 1
+  },
+  "bridgeSessionId.prefix": {
+   "session": 3
+  }
+ }
+}

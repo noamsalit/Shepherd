@@ -1,0 +1,107 @@
+{
+ "results": {
+  "esc_tool": {
+   "how": "esc",
+   "events": [
+    "UserPromptSubmit",
+    "PreToolUse(Bash)"
+   ],
+   "claude_alive": true,
+   "pane_dead": "0",
+   "next_turn_stop": true
+  },
+  "cc_tool": {
+   "how": "cc",
+   "events": [
+    "UserPromptSubmit",
+    "PreToolUse(Bash)"
+   ],
+   "claude_alive": true,
+   "pane_dead": "0",
+   "next_turn_stop": true
+  },
+  "esc_stream": {
+   "how": "esc",
+   "events": [
+    "UserPromptSubmit"
+   ],
+   "claude_alive": true,
+   "next_turn_stop": true
+  },
+  "cc_idle": {
+   "events": [],
+   "claude_alive": true
+  },
+  "sigint_tool": {
+   "how": "sigint",
+   "events": [
+    "UserPromptSubmit",
+    "PreToolUse(Bash)",
+    "SessionEnd"
+   ],
+   "claude_alive": false,
+   "pane_dead": "1",
+   "next_turn_stop": false,
+   "pane": "dead=1 status=0 signal="
+  },
+  "sigint_idle": {
+   "events": [
+    "SessionEnd"
+   ],
+   "claude_alive": false,
+   "pane": "dead=1 status=0 signal="
+  }
+ },
+ "marks": [
+  {
+   "label": "esc_tool",
+   "hook_index": 1,
+   "t": 1789406575.8613112
+  },
+  {
+   "label": "esc_tool-after",
+   "hook_index": 3,
+   "t": 1789406587.196861
+  },
+  {
+   "label": "cc_tool",
+   "hook_index": 6,
+   "t": 1789406589.0075269
+  },
+  {
+   "label": "cc_tool-after",
+   "hook_index": 8,
+   "t": 1789406600.3518982
+  },
+  {
+   "label": "esc_stream",
+   "hook_index": 11,
+   "t": 1789406602.165346
+  },
+  {
+   "label": "esc_stream-after",
+   "hook_index": 12,
+   "t": 1789406611.9991593
+  },
+  {
+   "label": "cc_idle",
+   "hook_index": 15,
+   "t": 1789406613.814957
+  },
+  {
+   "label": "sigint_tool",
+   "hook_index": 15,
+   "t": 1789406618.3300433
+  },
+  {
+   "label": "sigint_tool-after",
+   "hook_index": 18,
+   "t": 1789406629.6667054
+  },
+  {
+   "label": "sigint_idle",
+   "hook_index": 19,
+   "t": 1789406671.6971507
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "rules": [
+  {
+   "match": "ELICIT-FORM",
+   "require_tools": true,
+   "not_tool_result": true,
+   "tool_use": {
+    "name": "mcp__shepherd__ask_form",
+    "input": {}
+   }
+  },
+  {
+   "match": "ELICIT-URL",
+   "require_tools": true,
+   "not_tool_result": true,
+   "tool_use": {
+    "name": "mcp__shepherd__ask_url",
+    "input": {}
+   }
+  }
+ ],
+ "default_text": "OK-MOCK",
+ "default_after_tool": "OK-AFTER-TOOL"
+}

@@ -1,0 +1,34 @@
+2026-09-14T17:39:09.210+00:00 MockEnv hot: root=/tmp/shp-gap-hot-q7dvx4xe port=48993
+2026-09-14T17:39:09.235+00:00 spawn shepherd_hot: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:39:10.464+00:00 shepherd_hot: trust dialog accepted
+2026-09-14T17:39:14.471+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: -l HOT-1 no hooks installed yet -> rc=0 out='' err=''
+2026-09-14T17:39:14.877+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: Enter -> rc=0 out='' err=''
+2026-09-14T17:39:17.396+00:00 wrote settings.local.json with hooks (running session)
+2026-09-14T17:39:22.402+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: -l HOT-2 after local hooks were written -> rc=0 out='' err=''
+2026-09-14T17:39:22.809+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: Enter -> rc=0 out='' err=''
+2026-09-14T17:39:25.213+00:00 wrote CLAUDE_CONFIG_DIR/settings.json with hooks (running session)
+2026-09-14T17:39:30.220+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: -l HOT-3 after user-scope hooks were written -> rc=0 out='' err=''
+2026-09-14T17:39:30.626+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: Enter -> rc=0 out='' err=''
+2026-09-14T17:39:33.035+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: -l /exit -> rc=0 out='' err=''
+2026-09-14T17:39:33.445+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_hot: Enter -> rc=0 out='' err=''
+2026-09-14T17:39:38.456+00:00 hot: {"local_events_right_after_write": [], "local_events_after_turn2": ["UserPromptSubmit", "MessageDisplay", "Stop"], "user_events_right_after_write": [], "local_events_all": ["UserPromptSubmit", "MessageDisplay", "Stop", "ConfigChange", "UserPromptSubmit", "MessageDisplay", "Stop", "SessionEnd"], "user_events_all": ["UserPromptSubmit", "MessageDisplay", "Stop", "SessionEnd"], "pane": "dead=1 status=0"}
+2026-09-14T17:39:39.260+00:00 MockEnv user: root=/tmp/shp-gap-user-znxxjq2i port=46269
+2026-09-14T17:39:39.886+00:00 user: {"run": {"rc": 0, "result": {"subtype": "success", "is_error": false, "result": "OK-MOCK", "permission_denials": []}, "stderr": ""}, "dup_events": ["SessionStart", "UserPromptSubmit", "Stop"], "user_only_events": ["SessionStart", "UserPromptSubmit", "Stop"], "project_only_events": ["SessionStart", "UserPromptSubmit", "Stop"], "debug_lines_matching": ["2026-09-14T17:39:39.554Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)", "2026-09-14T17:39:39.554Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process", "2026-09-14T17:39:39.555Z [DEBUG] Registered 0 hooks from 0 plugins", "2026-09-14T17:39:39.643Z [DEBUG] Hook output does not start with {, treating as plain text", "2026-09-14T17:39:39.661Z [DEBUG] Hook output does not start with {, treating as plain text", "2026-09-14T17:39:39.662Z [DEBUG] Hook output does not start with {, treating as plain text", "2026-09-14T17:39:39.662Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete", "2026-09-14T17:39:39.704Z [DEBUG] Hooks: Found 0 total hooks in registry", "2026-09-14T17:39:39.705Z [DEBUG] Hooks: checkForNewResponses returning 0 responses", "2026-09-14T17:39:39.720Z [DEBUG] Hook output does not start with {, treating as plain text", "2026-09-14T17:39:39.722Z [DEBUG] Hook output does not start with {, treating as plain text", "2026-0
+2026-09-14T17:39:40.689+00:00 MockEnv mcp: root=/tmp/shp-gap-mcp-rc4d_try port=41707
+2026-09-14T17:39:40.699+00:00 spawn shepherd_mcp1: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:39:41.929+00:00 shepherd_mcp1: trust dialog accepted
+2026-09-14T17:39:48.014+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp1: -l MCP-PING please call the shepherd ping tool -> rc=0 out='' err=''
+2026-09-14T17:39:48.422+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp1: Enter -> rc=0 out='' err=''
+2026-09-14T17:40:00.438+00:00 $ tmux -L shp-gap-cfg kill-session -t =shepherd_mcp1 -> rc=0 out='' err=''
+2026-09-14T17:40:03.617+00:00 mcp perms: {"none": {"allow": [], "rc": 0, "result": {"subtype": "success", "is_error": false, "result": "OK-AFTER-TOOL", "permission_denials": [{"tool_name": "mcp__shepherd__ping", "tool_use_id": "toolu_mock_1789407601045", "tool_input": {}}]}, "stub_tools_call_count": 0}, "server": {"allow": ["mcp__shepherd"], "rc": 0, "result": {"subtype": "success", "is_error": false, "result": "OK-AFTER-TOOL", "permission_denials": [{"tool_name": "mcp__shepherd__ping", "tool_use_id": "toolu_mock_1789407601888", "tool_input": {}}]}, "stub_tools_call_count": 0}, "wildcard": {"allow": ["mcp__shepherd__*"], "rc": 0, "result": {"subtype": "success", "is_error": false, "result": "OK-AFTER-TOOL", "permission_denials": [{"tool_name": "mcp__shepherd__ping", "tool_use_id": "toolu_mock_1789407602656", "tool_input": {}}]}, "stub_tools_call_count": 0}, "exact": {"allow": ["mcp__shepherd__ping"], "rc": 0, "result": {"subtype": "success", "is_error": false, "result": "OK-AFTER-TOOL", "permission_denials": [{"tool_name": "mcp__shepherd__ping", "tool_use_id": "toolu_mock_1789407603426", "tool_input": {}}]}, "stub_tools_call_count": 0}}
+2026-09-14T17:40:03.629+00:00 spawn shepherd_mcp2: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:40:10.148+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp2: -l MCP-PING please call the shepherd ping tool -> rc=0 out='' err=''
+2026-09-14T17:40:10.554+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp2: Enter -> rc=0 out='' err=''
+2026-09-14T17:40:16.976+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp2: Enter -> rc=0 out='' err=''
+2026-09-14T17:40:22.988+00:00 $ tmux -L shp-gap-cfg kill-session -t =shepherd_mcp2 -> rc=0 out='' err=''
+2026-09-14T17:40:23.003+00:00 spawn shepherd_mcp3: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:40:24.232+00:00 shepherd_mcp3: trust dialog accepted
+2026-09-14T17:40:30.239+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp3: -l MCP-PING please call the shepherd ping tool -> rc=0 out='' err=''
+2026-09-14T17:40:30.644+00:00 $ tmux -L shp-gap-cfg send-keys -t =shepherd_mcp3: Enter -> rc=0 out='' err=''
+2026-09-14T17:40:33.062+00:00 $ tmux -L shp-gap-cfg kill-session -t =shepherd_mcp3 -> rc=0 out='' err=''
+2026-09-14T17:40:33.081+00:00 $ tmux -L shp-gap-cfg kill-server -> rc=0 out='' err=''

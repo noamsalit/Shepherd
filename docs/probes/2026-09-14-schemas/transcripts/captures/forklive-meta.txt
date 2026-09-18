@@ -1,0 +1,15 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:21:57Z
+cwd: /tmp/shp-schemas-fork.RgNHRN/work
+target_file: /root/.claude/projects/-tmp-shp-schemas-fork-RgNHRN-work/de7c8ce7-f01c-4dcb-8219-b3d3d8b46178.jsonl
+target_lines_before_fork: 37
+fork_exit: 0
+target_lines_right_after_fork: 37
+fork_session_id: 76d51cc7-3b32-4274-9ee4-e08f21f79042
+target_lines_after_target_turn: 42
+fork_file: /root/.claude/projects/-tmp-shp-schemas-fork-RgNHRN-work/76d51cc7-3b32-4274-9ee4-e08f21f79042.jsonl
+target_entries_mentioning_fork_id: 0
+target_entries_with_fork_question: 0
+fork_sessionId_values: ['76d51cc7-3b32-4274-9ee4-e08f21f79042']
+fork_uuids_total: 30 shared_with_target: 19
+fork_contains_target_turn2_prompt: True

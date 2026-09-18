@@ -1,0 +1,7 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-effort-7yb7myuc/.debug-S10_effort_sonnet.log
+2026-09-14T15:19:44.522Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-sonnet-5 modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T15:19:45.156Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:19:47.581Z [DEBUG] [engine] turn 1 end (turns=2 usage in=912 out=65 cost=$0.0521 api=3028ms stop=end_turn resultLen=4)
+2026-09-14T15:19:47.587Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:19:47.588Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:19:47.597Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S10_effort_sonnet/events.jsonl] completed with status 0

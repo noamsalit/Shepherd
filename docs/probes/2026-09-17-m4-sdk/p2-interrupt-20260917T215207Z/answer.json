@@ -1,0 +1,47 @@
+{
+  "worker_thread_ticks_observed": 20,
+  "worker_thread_ran_to_completion": true,
+  "await_raised": [],
+  "await_returned": [
+    {
+      "_ts": "2026-09-17T21:52:31.018Z",
+      "tool": "slow_tool",
+      "phase": "await_returned",
+      "outcome": "worker thread ran to completion"
+    }
+  ],
+  "control_cancel_request_lines": [],
+  "interrupted_turn_result": [
+    {
+      "subtype": "error_during_execution",
+      "terminal_reason": "aborted_tools",
+      "is_error": true,
+      "stop_reason": "tool_use",
+      "permission_denials": [],
+      "errors": [
+        "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use"
+      ],
+      "result": null
+    },
+    {
+      "subtype": "success",
+      "terminal_reason": "completed",
+      "is_error": false,
+      "stop_reason": "end_turn",
+      "permission_denials": [],
+      "errors": null,
+      "result": "AFTER"
+    }
+  ],
+  "interrupt": {
+    "since_query_s": 5.0,
+    "returned": "None",
+    "call_s": 0.01
+  },
+  "turn_wall_s": 5.11,
+  "client_still_usable": {
+    "result": "AFTER",
+    "session_id": "27af6d75-21c8-44a7-a3f5-11305a30474d",
+    "subtype": "success"
+  }
+}

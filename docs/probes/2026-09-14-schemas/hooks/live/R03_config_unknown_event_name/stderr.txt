@@ -1,0 +1,1 @@
+[claude-code:unrecognized_model] {"model":"claude-nonexistent-model-shp","query_source":"sdk"}

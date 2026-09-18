@@ -1,0 +1,18 @@
+{
+  "allowed_tools": [
+    "mcp__shepherd__fleet_summary"
+  ],
+  "mounted_tools": [
+    "mcp__shepherd__fleet_summary",
+    "mcp__shepherd__shadow_tool"
+  ],
+  "can_use_tool_calls": [
+    "mcp__shepherd__shadow_tool"
+  ],
+  "shadow_tool_reached_can_use_tool": true,
+  "allowlisted_tool_reached_can_use_tool": false,
+  "warnings": [
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here."
+  ],
+  "shadowed_warning_emitted": true
+}

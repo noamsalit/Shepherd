@@ -1,0 +1,79 @@
+{
+ "SessionEnd.reason (rce)": [
+  "clear",
+  "resume",
+  "logout",
+  "prompt_input_exit",
+  "other"
+ ],
+ "StopFailure.error (o_)": [
+  "authentication_failed",
+  "oauth_org_not_allowed",
+  "account_on_hold",
+  "verification_required",
+  "billing_error",
+  "rate_limit",
+  "overloaded",
+  "invalid_request",
+  "model_not_found",
+  "server_error",
+  "unknown",
+  "max_output_tokens",
+  "cloud_credential_error"
+ ],
+ "SessionStart.source": "[\"startup\",\"resume\",\"clear\",\"compact\",\"fork\"]",
+ "PreCompact/PostCompact.trigger": "[\"manual\",\"auto\"]",
+ "UserPromptSubmit.source": "[\"user\",\"sdk\",\"system\",\"loop_wakeup\",\"schedule_wakeup\",\"poll_event\"]",
+ "FileChanged.event": "[\"change\",\"add\",\"unlink\"]",
+ "ConfigChange.source (Wle)": [
+  "user_settings",
+  "project_settings",
+  "local_settings",
+  "policy_settings",
+  "skills"
+ ],
+ "InstructionsLoaded.load_reason (Yle)": [
+  "session_start",
+  "nested_traversal",
+  "path_glob_match",
+  "include",
+  "compact"
+ ],
+ "InstructionsLoaded.memory_type (qle)": [
+  "User",
+  "Project",
+  "Local",
+  "Managed"
+ ],
+ "Setup.trigger": "[\"init\",\"maintenance\"]",
+ "Notification.notification_type literals (notificationType:\"...\" in source; schema types it as free string)": [
+  "agent_completed",
+  "agent_needs_input",
+  "auth_success",
+  "computer_use_exit",
+  "elicitation_complete",
+  "elicitation_response",
+  "idle_prompt",
+  "permission_prompt",
+  "push_notification",
+  "worker_permission_prompt"
+ ],
+ "Notification types list (VAr, next to preferredNotifChannel list P2)": [
+  "permission_prompt",
+  "idle_prompt",
+  "auth_success",
+  "elicitation_dialog",
+  "agent_needs_input",
+  "agent_completed",
+  "elicitation_url_dialog",
+  "worker_permission_prompt",
+  "push_notification",
+  "computer_use_enter",
+  "computer_use_exit",
+  "quota_auto_resume_fired",
+  "quota_auto_resume_stale",
+  "quota_auto_resume_disabled"
+ ],
+ "Notification dispatcher (source text)": "async function ZT(e,n,{timeoutMs:r=Mp,storageV5:s,credentials:d}={}){let{message:m,title:_,notificationType:E}=n,A={...La(e,Z()),hook_event_name:\"Notification\",message:m,title:_,notification_type:E};await VE({session:e,hookInput:A,timeoutMs:r,matchQuery:E",
+ "permission_mode values (Xt)": "[\"default\",\"acceptEdits\",\"bypassPermissions\",\"plan\",\"dontAsk\",\"auto\"]"
+}

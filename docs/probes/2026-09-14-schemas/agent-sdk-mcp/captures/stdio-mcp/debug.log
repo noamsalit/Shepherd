@@ -1,0 +1,227 @@
+2026-09-14T16:14:49.958Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T16:14:49.999Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T16:14:50.002Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-mcp-AY6vTM/work/.claude/settings.local.json
+2026-09-14T16:14:50.003Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T16:14:50.006Z [DEBUG] [init] configureGlobalMTLS starting
+2026-09-14T16:14:50.006Z [DEBUG] [init] configureGlobalMTLS complete
+2026-09-14T16:14:50.006Z [DEBUG] [init] configureGlobalAgents starting
+2026-09-14T16:14:50.006Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-09-14T16:14:50.006Z [DEBUG] CA certs: Loaded 121 bundled root certificates
+2026-09-14T16:14:50.011Z [DEBUG] CA certs: Loaded 121 system CA certificates
+2026-09-14T16:14:50.011Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T16:14:50.011Z [DEBUG] [init] configureGlobalAgents complete
+2026-09-14T16:14:50.013Z [DEBUG] Git remote URL: null
+2026-09-14T16:14:50.013Z [DEBUG] No git remote URL found
+2026-09-14T16:14:50.014Z [DEBUG] Error log sink initialized
+2026-09-14T16:14:50.022Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-09-14T16:14:50.028Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-09-14T16:14:50.033Z [DEBUG] [STARTUP] Running setup()...
+2026-09-14T16:14:50.043Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/root/.claude/skills, project=[]
+2026-09-14T16:14:50.058Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T16:14:50.060Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/agents: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/agents'
+2026-09-14T16:14:50.060Z [DEBUG] Failed to stat directory /root/.claude/agents: ENOENT: no such file or directory, stat '/root/.claude/agents'
+2026-09-14T16:14:50.061Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/commands: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/commands'
+2026-09-14T16:14:50.061Z [DEBUG] Failed to stat directory /root/.claude/commands: ENOENT: no such file or directory, stat '/root/.claude/commands'
+2026-09-14T16:14:50.062Z [DEBUG] Loaded 0 unique skills (0 unconditional, 0 conditional, managed: 0, user: 0, project: 0, additional: 0, legacy commands: 0)
+2026-09-14T16:14:50.070Z [DEBUG] Git remote URL: null
+2026-09-14T16:14:50.070Z [DEBUG] No git remote URL found
+2026-09-14T16:14:50.073Z [INFO] [uds-messaging] Listening: /run/user/0/cc-socks/4047179.sock
+2026-09-14T16:14:50.073Z [INFO] [uds-messaging] Inject messages (auth line optional here): { echo '{"type":"auth","token":"[REDACTED]"$CLAUDE_CODE_MESSAGING_TOKEN"'"}'; echo '{"type":"user","message":{"role":"user","content":"hello"}}'; } | socat - UNIX-CONNECT:/run/user/0/cc-socks/4047179.sock
+2026-09-14T16:14:50.075Z [INFO] [uds-messaging] Connect when the data is ready (e.g. out=$(cmd); printf '%s\n' "$out" | nc -N -U "$CLAUDE_CODE_MESSAGING_SOCKET" — or the socat form above): a connection that sends no complete line within 30000 ms is closed
+2026-09-14T16:14:50.078Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T16:14:50.081Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-mcp-AY6vTM/work/.claude/settings.local.json
+2026-09-14T16:14:50.081Z [DEBUG] Error log sink initialized
+2026-09-14T16:14:50.086Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T16:14:50.098Z [DEBUG] Cannot acquire lock for 2.1.270 - held by PID 3971404
+2026-09-14T16:14:50.099Z [ERROR] NON-FATAL: Lock acquisition failed for /root/.local/share/claude/versions/2.1.270 (expected in multi-process scenarios): Lock already held by another process
+2026-09-14T16:14:50.103Z [DEBUG] [STARTUP] setup() completed in 70ms
+2026-09-14T16:14:50.104Z [DEBUG] Cleared mTLS configuration cache
+2026-09-14T16:14:50.104Z [DEBUG] Cleared proxy agent cache
+2026-09-14T16:14:50.104Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T16:14:50.107Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-09-14T16:14:50.114Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T16:14:50.114Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T16:14:50.114Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T16:14:50.115Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T16:14:50.115Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T16:14:50.115Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T16:14:50.115Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T16:14:50.116Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T16:14:50.118Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T16:14:50.118Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T16:14:50.127Z [DEBUG] [STARTUP] Commands and agents loaded in 20ms
+2026-09-14T16:14:50.129Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-09-14T16:14:50.129Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-09-14T16:14:50.129Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-09-14T16:14:50.129Z [DEBUG] Starting background startup prefetches
+2026-09-14T16:14:50.129Z [DEBUG] [Bootstrap] Fetching
+2026-09-14T16:14:50.138Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-09-14T16:14:50.141Z [DEBUG] [STARTUP] MCP configs resolved in 1ms (awaited at +113ms)
+2026-09-14T16:14:50.141Z [DEBUG] Total LSP servers loaded: 0
+2026-09-14T16:14:50.142Z [DEBUG] mcp runtime arm: v2 (source: growthbook)
+2026-09-14T16:14:50.181Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-09-14T16:14:50.181Z [DEBUG] LSP manager initialized with 0 servers
+2026-09-14T16:14:50.182Z [DEBUG] Cleared mTLS configuration cache
+2026-09-14T16:14:50.182Z [DEBUG] Cleared proxy agent cache
+2026-09-14T16:14:50.182Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T16:14:50.183Z [DEBUG] LSP server manager initialized successfully
+2026-09-14T16:14:50.184Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-09-14T16:14:50.185Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T16:14:50.186Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.187Z [DEBUG] [MCP] --mcp-config servers running fully async (nonblocking)
+2026-09-14T16:14:50.187Z [DEBUG] [MCP] claude.ai connectors running fully async (nonblocking)
+2026-09-14T16:14:50.187Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T16:14:50.192Z [DEBUG] MCP server "probe": Starting connection with timeout of 30000ms
+2026-09-14T16:14:50.200Z [DEBUG] [servedCatalog] off (flag)
+2026-09-14T16:14:50.214Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-09-14T16:14:50.214Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-09-14T16:14:50.222Z [DEBUG] [event-loop-stall] detector started (interval=200ms, threshold=500ms)
+2026-09-14T16:14:50.224Z [DEBUG] Grove: Using fresh cached config
+2026-09-14T16:14:50.262Z [DEBUG] MCP server "probe": Successfully connected (transport: stdio) in 72ms
+2026-09-14T16:14:50.263Z [DEBUG] MCP server "probe": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"probe-logger","version":"0.0.1"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-14T16:14:50.264Z [DEBUG] [MCP] Server "probe" connected with subscribe=false
+2026-09-14T16:14:50.264Z [WARN] [3P telemetry] Event dropped (no event logger initialized): mcp_server_connection
+2026-09-14T16:14:50.284Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T16:14:50.284Z [DEBUG] [sessionRegistry] sweep declined by isRegistrySweepPermitted() — dead records are left in place (neither counted nor deleted)
+2026-09-14T16:14:50.285Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-mcp-AY6vTM/work/.claude/settings.json, /tmp/shp-mcp-AY6vTM/work/.claude/settings.local.json...
+2026-09-14T16:14:50.288Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T16:14:50.324Z [DEBUG] Ripgrep first use test: PASSED (mode=embedded, path=/root/.local/share/claude/versions/2.1.270)
+2026-09-14T16:14:50.365Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T16:14:50.365Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T16:14:50.365Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T16:14:50.365Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T16:14:50.370Z [DEBUG] Preserving file permissions: 100600
+2026-09-14T16:14:50.370Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.4047179.9f9ba252b57b
+2026-09-14T16:14:50.370Z [DEBUG] Applied original permissions to temp file
+2026-09-14T16:14:50.372Z [DEBUG] Temp file written successfully, size: 81562 bytes
+2026-09-14T16:14:50.372Z [DEBUG] Renaming /root/.claude.json.tmp.4047179.9f9ba252b57b to /root/.claude.json
+2026-09-14T16:14:50.372Z [DEBUG] File /root/.claude.json written atomically
+2026-09-14T16:14:50.479Z [DEBUG] Org fast mode: disabled (extra_usage_disabled)
+2026-09-14T16:14:50.574Z [DEBUG] [Bootstrap] Fetch ok
+2026-09-14T16:14:50.574Z [DEBUG] [Bootstrap] Cache unchanged, skipping write
+2026-09-14T16:14:50.652Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-09-14T16:14:50.655Z [DEBUG] session.start: raised (surface none, not interactive)
+2026-09-14T16:14:50.668Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.218; cc_entrypoint=sdk-cli; cch=00000;
+2026-09-14T16:14:50.669Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.670Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.688Z [DEBUG] [claudeai-mcp] Fetching from https://api.anthropic.com/v1/mcp_servers?limit=1000
+2026-09-14T16:14:50.691Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.692Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:50.694Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=3a6837f6-deb7-420f-8dce-f8703b9994cc source=generate_session_title
+2026-09-14T16:14:50.700Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/output-styles: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/output-styles'
+2026-09-14T16:14:50.700Z [DEBUG] Failed to stat directory /root/.claude/output-styles: ENOENT: no such file or directory, stat '/root/.claude/output-styles'
+2026-09-14T16:14:50.701Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T16:14:50.704Z [DEBUG] act_dont_rederive_arm_active source=growthbook
+2026-09-14T16:14:50.712Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:14:50.713Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:14:50.724Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.725Z [DEBUG] [session-notices] advertise=false mode=default flag=true(payload) pollChannel=false remote=false remoteEnv=false nonInteractive=true
+2026-09-14T16:14:50.726Z [DEBUG] [engine] turn 1 start
+2026-09-14T16:14:50.734Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:14:50.736Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:14:50.736Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.738Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.741Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:50.741Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:50.742Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=88a6cf72-0a1d-4795-88e4-6c3fec7a11b2 source=sdk
+2026-09-14T16:14:50.982Z [DEBUG] [claudeai-mcp] Fetched 6 servers
+2026-09-14T16:14:50.984Z [DEBUG] installPluginsForHeadless: starting
+2026-09-14T16:14:51.332Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:51.332Z [DEBUG] [API:timing] first byte after 591ms
+2026-09-14T16:14:51.359Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:51.359Z [DEBUG] [API:timing] first byte after 668ms
+2026-09-14T16:14:53.361Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:53.365Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__echo_note toolUseId=toolu_013516j4ARBNwtSPj9RWtTxG permissionDecisionMs=1
+2026-09-14T16:14:53.367Z [DEBUG] MCP server "probe": Calling MCP tool: echo_note
+2026-09-14T16:14:53.372Z [DEBUG] MCP server "probe": Tool 'echo_note' completed successfully in 5ms
+2026-09-14T16:14:53.373Z [INFO] [Stall] tool_dispatch_end tool=mcp__probe__echo_note toolUseId=toolu_013516j4ARBNwtSPj9RWtTxG outcome=ok durationMs=8
+2026-09-14T16:14:53.436Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:53.443Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:14:53.444Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:14:53.449Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:14:53.453Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prev_req=req_011Cf3dUAv8Fc41x9gvYb4w2; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:14:53.454Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:53.456Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:53.466Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:53.467Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:53.469Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=6b26e5b1-7b6d-40b2-891c-5506b949894a source=sdk
+2026-09-14T16:14:54.066Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:54.066Z [DEBUG] [API:timing] first byte after 600ms
+2026-09-14T16:14:54.738Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:54.740Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__fail_note toolUseId=toolu_01FsXNbwyhCiEBnL8GQh2JZG permissionDecisionMs=1
+2026-09-14T16:14:54.741Z [DEBUG] MCP server "probe": Calling MCP tool: fail_note
+2026-09-14T16:14:54.744Z [ERROR] MCP server "probe" max_session_depth=3 reached; refusing
+2026-09-14T16:14:54.744Z [DEBUG] MCP server "probe": Tool 'fail_note' failed after 0s: max_session_depth=3 reached; refusing
+2026-09-14T16:14:54.744Z [WARN] [Stall] tool_dispatch_end tool=mcp__probe__fail_note toolUseId=toolu_01FsXNbwyhCiEBnL8GQh2JZG outcome=error durationMs=4
+2026-09-14T16:14:54.745Z [DEBUG] mcp__probe__fail_note tool error (4ms): max_session_depth=3 reached; refusing
+2026-09-14T16:14:54.794Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:54.797Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:14:54.797Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:14:54.799Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:14:54.801Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prev_req=req_011Cf3dUNZ7jjb7NDqG3LVhg; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:14:54.802Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:54.803Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:54.806Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:54.806Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:54.807Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=549db6de-007e-49fa-9111-3fb071cd9995 source=sdk
+2026-09-14T16:14:55.383Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:55.383Z [DEBUG] [API:timing] first byte after 577ms
+2026-09-14T16:14:56.320Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:56.323Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__rpc_error_note toolUseId=toolu_01Ad55LkgJbpQSZDx13o2E7w permissionDecisionMs=1
+2026-09-14T16:14:56.324Z [DEBUG] MCP server "probe": Calling MCP tool: rpc_error_note
+2026-09-14T16:14:56.328Z [DEBUG] MCP server "probe": Tool 'rpc_error_note' failed after 0s: probe internal error
+2026-09-14T16:14:56.329Z [WARN] [Stall] tool_dispatch_end tool=mcp__probe__rpc_error_note toolUseId=toolu_01Ad55LkgJbpQSZDx13o2E7w outcome=error durationMs=6
+2026-09-14T16:14:56.329Z [DEBUG] mcp__probe__rpc_error_note tool error (6ms): probe internal error
+2026-09-14T16:14:56.389Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:56.443Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:14:56.444Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:14:56.446Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:14:56.448Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prev_req=req_011Cf3dUUM7qFvY7DyTj4tw2; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:14:56.448Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:56.449Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:56.453Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:56.453Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:56.454Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=4979401b-38f0-46cc-9dae-55d32bf02dc1 source=sdk
+2026-09-14T16:14:57.081Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:57.082Z [DEBUG] [API:timing] first byte after 629ms
+2026-09-14T16:14:58.081Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:58.082Z [DEBUG] "Permission suggestions for mcp__probe__danger_note: [\n  {\n    \"type\": \"addRules\",\n    \"rules\": [\n      {\n        \"toolName\": \"mcp__probe__danger_note\"\n      }\n    ],\n    \"behavior\": \"allow\",\n    \"destination\": \"localSettings\"\n  }\n]"
+2026-09-14T16:14:58.082Z [DEBUG] executePermissionRequestHooks called for tool: mcp__probe__danger_note
+2026-09-14T16:14:58.160Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:14:58.162Z [DEBUG] mcp__probe__danger_note tool permission denied
+2026-09-14T16:14:58.164Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:14:58.165Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:14:58.168Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:14:58.170Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prev_req=req_011Cf3dUbKp8FcUNJ7B2yHPq; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:14:58.170Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:58.172Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:58.176Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:14:58.176Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:14:58.177Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=f53a51da-14ad-4398-a2e5-11d3d9ba60e0 source=sdk
+2026-09-14T16:14:58.799Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:14:58.799Z [DEBUG] [API:timing] first byte after 623ms
+2026-09-14T16:15:00.127Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:15:00.130Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__echo_note toolUseId=toolu_01LTSw8eSCWywBV57sUW38kn permissionDecisionMs=0
+2026-09-14T16:15:00.131Z [DEBUG] MCP server "probe": Calling MCP tool: echo_note
+2026-09-14T16:15:00.135Z [DEBUG] MCP server "probe": Tool 'echo_note' completed successfully in 4ms
+2026-09-14T16:15:00.136Z [INFO] [Stall] tool_dispatch_end tool=mcp__probe__echo_note toolUseId=toolu_01LTSw8eSCWywBV57sUW38kn outcome=ok durationMs=6
+2026-09-14T16:15:00.198Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T16:15:00.202Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T16:15:00.202Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T16:15:00.206Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-09-14T16:15:00.208Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.270.380; cc_entrypoint=sdk-cli; cch=00000; cc_prev_req=req_011Cf3dUigprYzRoygdjRfMj; cc_prompt_id=6086eddb-1546-4789-97e9-afdf7d1ea1c1;
+2026-09-14T16:15:00.208Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:15:00.210Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:15:00.213Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:15:00.214Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-14T16:15:00.215Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=b7d57d8d-393e-487f-a63c-680c5e0ec83c source=sdk
+2026-09-14T16:15:00.853Z [DEBUG] Stream started - received first chunk
+2026-09-14T16:15:00.853Z [DEBUG] [API:timing] first byte after 639ms
+2026-09-14T16:15:03.307Z [DEBUG] [engine] turn 1 end (turns=6 usage in=1050 out=977 cost=$0.0269 api=12598ms stop=end_turn resultLen=359)
+2026-09-14T16:15:03.308Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-09-14T16:15:03.311Z [DEBUG] MCP server "probe": Sending SIGINT to MCP server process
+2026-09-14T16:15:03.317Z [DEBUG] MCP server "probe": STDIO connection closed after 13s (cleanly)
+2026-09-14T16:15:03.318Z [DEBUG] MCP server "probe": Cleared connection cache for reconnection
+2026-09-14T16:15:03.362Z [DEBUG] MCP server "probe": MCP server process exited cleanly
+2026-09-14T16:15:03.364Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T16:15:03.366Z [DEBUG] LSP server manager shut down successfully

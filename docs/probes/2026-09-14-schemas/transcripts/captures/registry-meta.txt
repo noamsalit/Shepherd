@@ -1,0 +1,6 @@
+claude_version: 2.1.270 (Claude Code)
+2026-09-14T15:14:21Z
+registry_file: 
+agents_json_exit: 0
+agents_json_all_exit: 0
+after_exit_registry_file_exists: no

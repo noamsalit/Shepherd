@@ -1,0 +1,69 @@
+2026-09-14T15:17:50.715Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:17:50.717Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/settings.json
+2026-09-14T15:17:50.718Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:50.757Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/.claude/settings.local.json
+2026-09-14T15:17:50.757Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:17:50.776Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json'
+2026-09-14T15:17:50.777Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.d815c7ff02b7
+2026-09-14T15:17:50.780Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.d815c7ff02b7 to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.780Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.782Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.0b9b1216e8da
+2026-09-14T15:17:50.785Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.0b9b1216e8da to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.785Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.787Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.3429ad790431
+2026-09-14T15:17:50.788Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.3429ad790431 to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.789Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.790Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.bd813f457e18
+2026-09-14T15:17:50.791Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.bd813f457e18 to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.792Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.793Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.6ae2b5430db8
+2026-09-14T15:17:50.795Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.6ae2b5430db8 to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.795Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.796Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.3b63a4b6532f
+2026-09-14T15:17:50.797Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.3b63a4b6532f to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.797Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.798Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.70d8f86e882f
+2026-09-14T15:17:50.801Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.70d8f86e882f to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.801Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.823Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/skills, project=[]
+2026-09-14T15:17:50.823Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-09-14T15:17:50.824Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/agents: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/agents'
+2026-09-14T15:17:50.824Z [DEBUG] Skipping load-failure error for disabled plugin cc10x@cc10x
+2026-09-14T15:17:50.825Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/commands: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/commands'
+2026-09-14T15:17:50.826Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-09-14T15:17:50.826Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:17:50.826Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:17:50.826Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:17:50.827Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:17:50.827Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:17:50.838Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:17:50.838Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/settings.json
+2026-09-14T15:17:50.844Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/.claude/settings.local.json
+2026-09-14T15:17:50.847Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)
+2026-09-14T15:17:50.848Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:17:50.848Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:17:50.864Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:17:50.877Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-09-14T15:17:50.887Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:50.901Z [DEBUG] Plugin autoupdate: command-source refresh disabled by tengu_plugin_command_source_refresh (still excluding command-sourced plugins from the regular pass)
+2026-09-14T15:17:50.907Z [DEBUG] "rg error (signal=undefined, code=2, stderr: rg: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/plugins/cache: IO error for operation on /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/plugins/cache: No such file or directory (os error 2)\n), 0 results"
+2026-09-14T15:17:50.910Z [DEBUG] Watching for changes in setting files /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/settings.json, /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/.claude/settings.json, /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/.claude/settings.local.json...
+2026-09-14T15:17:50.911Z [DEBUG] Writing to temp file: /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.dc451f0416c6
+2026-09-14T15:17:50.912Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:50.913Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:17:50.937Z [DEBUG] Failed to stat directory /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/output-styles: ENOENT: no such file or directory, stat '/tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/output-styles'
+2026-09-14T15:17:50.937Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:17:50.956Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:17:50.957Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:17:50.961Z [DEBUG] Renaming /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json.tmp.4034753.dc451f0416c6 to /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json
+2026-09-14T15:17:50.963Z [DEBUG] File /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/cfg/.claude.json written atomically
+2026-09-14T15:17:50.978Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.049Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.100Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.123Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.151Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.161Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.177Z [DEBUG] StopFailure:max_output_tokens [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl] completed with status 0
+2026-09-14T15:17:51.177Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:17:51.191Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl] completed with status 0
+2026-09-14T15:17:51.191Z [DEBUG] Hook output does not start with {, treating as plain text

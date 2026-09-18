@@ -1,0 +1,1 @@
+hook_event_name:R("StopFailure"),error:o_(),error_details:o().optional(),last_assistant_message:o().optional()

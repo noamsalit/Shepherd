@@ -1,0 +1,2 @@
+tmux -L shepherd-probe new-session -d -s probe_b -x 160 -y 45 -c /tmp/shp-tui-B-gs_kiv4r 'claude --model claude-haiku-4-5-20251001 --debug-file /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/debug-b.log --settings /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/settings-b-flag.json'
+rc=0

@@ -1,0 +1,38 @@
+Architecture element -> status in docs/specs/orchestrator-platform.md (working tree, 2,409 lines)
+Method: full reads of sections 0-11, 13-18 plus grep (spec-term-grep.txt). Line numbers are absolute.
+
+1  Five layers L1..L5 named                         ABSENT  - zero hits for "L1".."L4", "PERSIST/OBSERVE/DRIVE/GATE/CONSUME"; only dangling "three L5 siblings" at 1347
+1a Module placement: store/                         PRESENT - D26 (130), 7 (413), 7.0 (422-449), store/migrations/ (696)
+1b logs/ as a module                                PARTIAL - only runtime file paths (680-685); no logs/ package owning writers
+1c core/ (types, enums, ids, palette)               ABSENT  - no hits
+1d signals/                                         PARTIAL - only signals/verdict.py::classify_end_turn (866, 2122)
+1e runner/                                          ABSENT as a package; "runner" appears as forbidden import name (1394)
+1f providers/                                       ABSENT
+1g engines/  (claude_code, hookd)                   ABSENT; hookd.py named (744) with no package
+1h orchestration/                                   ABSENT; D19/1394 say "queues" (different name)
+1i toolsurface/                                     PARTIAL - only "toolsurface.client" (1393, 2039); registry/invoke described in 11.0 without a package
+1j master/ web/ cli/                                PRESENT as names (1268-1269, 1329-1330, 1344, 1392)
+1k testkit/                                         in spec (1992) but not in the layer map; no layer given
+2  Downward-only import rule                        ABSENT  - no "down", "upward", "never the reverse", "may import any layer below"
+3a Consumer boundary (L5 only via L4), with test    PARTIAL - written and tested for master/ only (D19 122, 222-227, 1392-1396, 2038-2041); web/, cli/ have no import rule or test
+3b Storage boundary, with test                      PARTIAL - rule present (D26 130, 413); test only as "enforced by the same test as D19" (D26); 14 lane 2b omits it; no test_import_boundary.py
+4a Invariant: store owns all SQL                    PRESENT (D26, D33, 7.0)
+4b Invariant: master is a consumer                  PRESENT (D19, 5, 11)
+4c Invariant: one chokepoint / one audit log        PRESENT in prose (D8 111, 1596-1599) but contradicted: browser WS keystrokes to sessiond (999-1002, 1020); authorize() and invoke() both write audit (1578/1581 log_action vs audit() in invoke)
+4d Invariant: one contract suite per seam           PARTIAL - principle 3 (155) says every pluggable thing; 14.2 (1982-1986) lists 4 of 6 seams; Scripted* list (1990-1991) 4 of 6 (no ModelProvider, Credentials)
+   "Invariants" as a named set                      ABSENT - "invariant" appears only inside D19 as "one direction, one store" invariant
+5a controld/sessiond split, restart rationale       PRESENT (190-232, D14, 2060-2061)
+5b controld runs migrations; sessiond never         PRESENT (694-714)
+5c hookd 250 ms, exit 0; principle 4                PRESENT (742-757, 157-159)
+5d UDS mode 0600                                    PRESENT but ambiguous: "Both Unix sockets" (1890) never enumerated
+5e Which layers/modules run in each daemon          ABSENT - diagram (197-217) puts SQLite in controld, "hook ingest UDS" in sessiond; who folds/writes session columns unstated. Plan PD-02 (plan:157) makes sessiond a store writer.
+6  L4 as the only path for every consumer           PARTIAL/CONTRADICTED - 11.0 lists 5 consumers (1261-1272) and "Generate web/ routes" as a benefit (1344); SSE /api/events (1860) is not a ToolDef; cli replay/recompute/uninstall not in tool list (1480-1531); worker tick() calls acquire/writeback/spawn_session directly (1210-1225)
+7  Named risk: web/cli reach below L4 "just once"   PARTIAL - 1344-1347 names the erosion; no rule, no test, and "L5" undefined
+8  Engine-swap requirement (every engine)           PARTIAL - D11, D26, D30, D33 cover storage/master/axes individually
+9  Runtime-swap -> Protocol / edit-time -> module    ABSENT as a general rule; only Store-specific trigger (D33 443-449) and D34 "no seam with zero impls" (138)
+10 Six Protocol seams                               PRESENT (266-321), MasterRuntime.configure(tools, system_prompt) (294), MasterCapabilities (365)
+11 Scripted* not base classes                       PRESENT (1988-2037, glossary 2218)
+12 D34 LLM lane deferred                            PRESENT (138, 860-869, 2121-2122, M2 row)
+13 Registry lands M4                                PRESENT (M4 row 2086)
+14 M1 scope                                         PRESENT (M1 row 2083) - fleet page + SSE in M1, registry M4; spec does not say what web/ reads M1-M3
+15 Section 15 file layout vs layer map modules      NO OVERLAP - 15 (2053-2071) is install layout only; 0 (35) says no file layout beyond 15

@@ -1,0 +1,356 @@
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:00.489Z {"command": "echo \"=== probes dir ===\" && find docs/probes -type f | head -40 && echo && echo \"=== .cc10x ===\" && find .cc10x -type f | head -40 && echo && echo \"=== gitignore ===\" && cat .gitignore", "description": "Inspect probes and cc10x dirs"}
+OUT === probes dir ===
+bfs: error: docs/probes: No such file or directory.
+
+=== .cc10x ===
+bfs: error: .cc10x: No such file or directory.
+
+=== gitignore ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:01.134Z {"command": "wc -l docs/methodology/*.md", "description": "Size of methodology docs"}
+OUT    52 docs/methodology/findings.md
+   68 docs/methodology/lane-prompts.md
+  174 docs/methodology/parallel-qa-experiment.md
+  294 total
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:04.443Z {"command": "git status --short && echo \"=== FINDINGS ===\" && cat docs/methodology/findings.md", "description": "Git status and findings doc"}
+OUT === FINDINGS ===
+# Findings — QA-parallel-to-BUILD under cc10x
+
+Written **during** the run. Protocol: `parallel-qa-experiment.md`.
+
+Rule for this file: record what happened, including the parts that make the
+methodology look bad. An experiment that only produces confirmations was not an
+experiment.
+
+---
+
+## Run log
+
+| When | Lane | Phase | What happened | Worked / Didn't |
+|---|---|---|---|---|
+| 2026-09-12 | — | setup | cc10x installed mid-session; components bind at session start, so it was **not loaded** and could not be used in the session that installed it. | **Didn't** — costs a full restart. Not documented in the plugin's README; `claude plugin details` shows the inventory that *will* load, which reads as if it is live. |
+| | | | | |
+
+---
+
+## The five measurements
+
+### 1. Did the QA harness catch BUILD drifting off a Protocol?
+*(primary signal — quote the mismatch)*
+
+> not yet run
+
+### 2. Did the `.cc10x/` memory files lose an update?
+*(hashes of `activeContext.md`, `progress.md`, `patterns.md` at each phase boundary)*
+
+> not yet run
+
+### 3. Where did Lane Q block on Lane B?
+*(predicted: `qa-executor` only)*
+
+> not yet run
+
+### 4. Did the router misroute?
+*(especially BUILD prompts pulled into QA by a stray keyword)*
+
+> not yet run
+
+### 5. Cost
+*(~3,415 tok always-on per lane; ~23k per router invocation; two lanes pay both)*
+
+> not yet run
+
+---
+
+## Verdict
+
+*(fill in at the end: keep the methodology, keep it with changes, or drop it —
+and say which of the five measurements decided it)*
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:17.850Z {"command": "echo \"=== python ===\" && python3 --version && which python3 && echo \"=== sqlite via python ===\" && python3 -c \"import sqlite3; print('sqlite', sqlite3.sqlite_version)\" && echo \"=== FULL OUTER JOIN probe ===\" && python3 -c \"\nimport sqlite3\nc=sqlite3.connect(':memory:')\nc.exec
+OUT === python ===
+Python 3.12.3
+/usr/bin/python3
+=== sqlite via python ===
+sqlite 3.45.1
+=== FULL OUTER JOIN probe ===
+FULL OUTER JOIN: SUPPORTED
+=== tools ===
+tmux     /usr/bin/tmux
+git      /usr/bin/git
+node     MISSING
+npm      MISSING
+tsc      MISSING
+claude   /root/.local/bin/claude
+jq       MISSING
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:20.178Z {"command": "echo \"=== ~/.claude tree (depth 2) ===\" && ls -la ~/.claude/ 2>/dev/null | head -30 && echo && echo \"=== projects ===\" && ls ~/.claude/projects/ 2>/dev/null | head -20 && echo && echo \"=== transcript jsonl count ===\" && find ~/.claude/projects -name \"*.jsonl\" 2>/dev/null | wc -l
+OUT === ~/.claude tree (depth 2) ===
+total 76
+drwxr-xr-x 13 root root 4096 Sep 12 11:44 .
+drwx------ 14 root root 4096 Sep 12 12:23 ..
+drwxr-xr-x  2 root root 4096 Sep 12 12:23 backups
+drwxr-xr-x  3 root root 4096 Sep 12 05:51 cache
+-rw-------  1 root root  508 Sep 12 05:54 .credentials.json
+drwxr-xr-x  2 root root 4096 Sep 12 05:51 downloads
+drwxr-xr-x  4 root root 4096 Sep 12 11:48 file-history
+-rw-------  1 root root 4570 Sep 12 06:35 history.jsonl
+-rw-r--r--  1 root root   24 Sep 12 06:01 .last-cleanup
+-rw-r--r--  1 root root  161 Aug  4 00:36 .last-update-result.json
+drwxr-xr-x  2 root root 4096 Sep 12 06:07 paste-cache
+drwxr-xr-x  5 root root 4096 Sep 12 12:15 plugins
+drwx------  7 root root 4096 Sep 12 11:44 projects
+drwxr-xr-x 15 root root 4096 Sep 12 12:15 session-env
+drwx------  2 root root 4096 Sep 12 12:15 sessions
+-rw-r--r--  1 root root  223 Sep 12 11:15 settings.json
+drwxr-xr-x  2 root root 4096 Sep 12 12:23 shell-snapshots
+drwxr-xr-x  3 root root 4096 Sep 12 11:44 tasks
+
+=== projects ===
+-root
+-root-AIVisor
+-root-Finopsera-poc
+-root-Shepherd
+-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo
+
+=== transcript jsonl count ===
+18
+=== settings.json ===
+{
+  "enabledPlugins": {
+    "cc10x@cc10x": true
+  },
+  "extraKnownMarketplaces": {
+    "cc10x": {
+      "source": {
+        "source": "directory",
+        "path": "/root/src/cc10x-qa"
+      }
+    }
+  },
+  "theme": "dark"
+}
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:26.536Z {"command": "cd ~/.claude/projects && for d in */; do echo \"=== $d ===\"; ls -la \"$d\" | head -8; done 2>/dev/null | head -60", "description": "List transcripts per project"}
+OUT === -root/ ===
+=== -root-AIVisor/ ===
+=== -root-Finopsera-poc/ ===
+=== -root-Shepherd/ ===
+=== -tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/ ===
+Shell cwd was reset to /root/Shepherd
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:30.225Z {"command": "cd ~/.claude/projects && python3 - <<'EOF'\nimport json, glob, collections\nfiles = sorted(glob.glob(str(__import__('pathlib').Path.home()/'.claude/projects/**/*.jsonl'), recursive=True))\nprint(f\"{len(files)} transcript files\\n\")\ntypes = collections.Counter()\ntopkeys = collections
+OUT 18 transcript files
+
+--- entry `type` values across ALL real transcripts ---
+    2838  assistant
+    1612  user
+     799  attachment
+     420  queue-operation
+     388  last-prompt
+     372  mode
+     372  permission-mode
+     357  bridge-session
+     263  custom-title
+     263  agent-name
+     232  system
+     200  file-history-snapshot
+     129  atis-latch
+     116  ai-title
+      46  file-history-delta
+      39  frame-link
+       3  artifact-autoreact-ledger
+       2  artifact-comment-monitor
+       1  cost-state
+
+--- top-level keys ---
+    8452  type
+    8206  sessionId
+    5986  timestamp
+    5481  parentUuid
+    5481  isSidechain
+    5481  uuid
+    5481  userType
+    5481  entrypoint
+    5481  cwd
+    5481  version
+    5481  gitBranch
+    4450  message
+    4382  session_id
+    2837  requestId
+    2834  effort
+    2034  slug
+    1612  promptId
+    1364  sourceToolAssistantUUID
+    1363  toolUseResult
+     799  attachment
+     767  apiBlockIndex
+     767  perTurnEffort
+     580  permissionMode
+     546  rendered
+     420  operation
+     415  agentId
+     388  leafUuid
+     385  lastPrompt
+     372  mode
+     357  bridgeSessionId
+     357  lastSequenceNum
+     313  wireToolInputs
+     263  customTitle
+     263  agentName
+     246  messageId
+     237  content
+     232  subtype
+     225  isMeta
+     208  promptSource
+     202  origin
+Shell cwd was reset to /root/Shepherd
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:43.263Z {"command": "cd ~/.claude/projects/-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo 2>/dev/null && ls -la && echo \"=== first lines ===\" && head -c 3000 *.jsonl 2>/dev/null", "description": "Inspect prior probe-repo transcript"}
+OUT total 852
+drwxr-xr-x 4 root root   4096 Sep 12 12:07 .
+drwx------ 7 root root   4096 Sep 12 11:44 ..
+drwxr-xr-x 3 root root   4096 Sep 12 11:43 151394bf-ccfb-4745-819d-b8ff89b88c49
+-rw------- 1 root root 170385 Sep 12 11:43 151394bf-ccfb-4745-819d-b8ff89b88c49.jsonl
+-rw------- 1 root root 126797 Sep 12 11:46 443471cf-d1b4-4318-9100-fa80c6b90f34.jsonl
+-rw------- 1 root root 168048 Sep 12 11:45 84b57ff4-9e31-49fa-866b-edb90b9a23ca.jsonl
+-rw------- 1 root root 132273 Sep 12 11:46 ba74b626-16b4-4a2a-a565-a7f96f11a6fa.jsonl
+-rw------- 1 root root 122896 Sep 12 12:08 e26bbb6e-8877-4a46-9358-569af7f934b8.jsonl
+-rw------- 1 root root 122814 Sep 12 12:07 f28a95df-3b7a-402b-ad01-8dc5e14b40ba.jsonl
+drwxr-xr-x 2 root root   4096 Sep 12 11:43 memory
+=== first lines ===
+==> 151394bf-ccfb-4745-819d-b8ff89b88c49.jsonl <==
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-09-12T11:43:19.496Z","sessionId":"151394bf-ccfb-4745-819d-b8ff89b88c49","content":"skip cc10x. Use your todo list with four separate items to track this: (1) read README.md; (2) glob all files here; (3) dispatch one general-purpose subagent to count files in this directory; (4) summarise. Keep it brief."}
+{"type":"queue-operation","operation":"dequeue","timestamp":"2026-09-12T11:43:19.502Z","sessionId":"151394bf-ccfb-4745-819d-b8ff89b88c49"}
+{"parentUuid":null,"isSidechain":false,"promptId":"595f0862-d452-4d47-8f58-f122fa23a294","type":"user","message":{"role":"user","content":"skip cc10x. Use your todo list with four separate items to track this: (1) read README.md; (2) glob all files here; (3) dispatch one general-purpose subagent to count files in this directory; (4) summarise. Keep it brief."},"uuid":"74cecee3-74aa-4129-ae87-9204c369ec2c","timestamp":"2026-09-12T11:43:19.826Z","permissionMode":"defa
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:45.713Z {"command": "claude --version 2>&1; echo \"---\"; ls /tmp/claude-0/-root-Shepherd/ 2>/dev/null; echo \"--- scratchpad of THIS session ---\"; ls -la /tmp/claude-0/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6/scratchpad 2>/dev/null", "description": "Claude version and scratchpad dirs"}
+OUT 2.1.269 (Claude Code)
+---
+2fb6befd-2e8e-47f2-986a-e24ed36aab8f
+32df7fce-8744-4758-8fa2-2af88e1fbcad
+9bc1bf13-50fd-438b-ad09-18a9d05de7d6
+--- scratchpad of THIS session ---
+total 8
+drwx------ 2 root root 4096 Sep 12 12:15 .
+drwx------ 4 root root 4096 Sep 12 12:23 ..
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:51.634Z {"command": "cd /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad 2>/dev/null && find . -type f | head -60", "description": "Find prior probe session artifacts"}
+OUT ./tasks/bukrv1jrc.output
+./tasks/bw8rzzm3t.output
+./tasks/byf8g5tpx.output
+./tasks/b4zm7f17w.output
+./tasks/bgq1e0uy7.output
+./scratchpad/probe/events-run3.jsonl
+./scratchpad/probe/hookd_probe.py
+./scratchpad/probe/events-run2.jsonl
+./scratchpad/probe/events-run1.jsonl
+./scratchpad/probe/events.jsonl
+./scratchpad/probe/repo/watched.txt
+./scratchpad/probe/repo/notes.txt
+./scratchpad/probe/repo/watched2.txt
+./scratchpad/probe/repo/README.md
+./scratchpad/probe/repo/.claude/settings.json
+./scratchpad/probe/repo/.git/description
+./scratchpad/probe/repo/.git/HEAD
+./scratchpad/probe/repo/.git/index
+./scratchpad/probe/repo/.git/COMMIT_EDITMSG
+./scratchpad/probe/repo/.git/objects/d3/afccd3e6ed0d9c249cd70ce3b893d8174ff9ed
+./scratchpad/probe/repo/.git/objects/23/7dd8d02fafee6139169c156fff1d45fa4d5d46
+./scratchpad/probe/repo/.git/objects/c9/ae426b954a681dde44efe6f630e30d9c5ad56e
+./scratchpad/probe/repo/.git/config
+./scratchpad/probe/repo/.git/objects/a0/39fb59a2473882b67e9f4930e090341fc4e89d
+./scratchpad/probe/repo/.git/objects/45/ccbce2d5f437b31c7545cc07df58a7c2f4eed0
+./scratchpad/probe/repo/.git/refs/heads/master
+./scratchpad/probe/repo/.git/info/exclude
+./scratchpad/probe/repo/.git/logs/HEAD
+./scratchpad/probe/repo/.git/hooks/applypatch-msg.sample
+./scratchpad/probe/repo/.git/hooks/post-update.sample
+./scratchpad/probe/repo/.git/hooks/commit-msg.sample
+./scratchpad/probe/repo/.git/hooks/push-to-checkout.sample
+./scratchpad/probe/repo/.git/hooks/pre-receive.sample
+./scratchpad/probe/repo/.git/hooks/update.sample
+./scratchpad/probe/repo/.git/hooks/pre-merge-commit.sample
+./scratchpad/probe/repo/.git/hooks/pre-rebase.sample
+./scratchpad/probe/repo/.git/hooks/pre-commit.sample
+./scratchpad/probe/repo/.git/hooks/sendemail-validate.sample
+./scratchpad/probe/repo/.git/hooks/pre-applypa
+-----
+SOURCE: ~/.claude/projects/-root-Shepherd/9bc1bf13-50fd-438b-ad09-18a9d05de7d6.jsonl
+CMD 2026-09-12T12:24:57.861Z {"command": "P=/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe\necho \"=== probe hook config ===\"; cat $P/repo/.claude/settings.json\necho; echo \"=== event counts by hook_event_name (all runs) ===\"\npython3 - <<EOF\nimport json,glob,collections\nc=collections.Co
+OUT === probe hook config ===
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROBE_LOG=/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl python3 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/hookd_probe.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROBE_LOG=/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl python3 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/hookd_probe.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROBE_LOG=/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl python3 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/hookd_probe.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "MessageDisplay": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROBE_LOG=/tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl python3 /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/hookd_probe.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+     
+-----

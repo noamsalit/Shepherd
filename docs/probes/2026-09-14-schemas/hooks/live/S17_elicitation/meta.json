@@ -1,0 +1,36 @@
+{
+ "scenario": "S17_elicitation",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Call the tool mcp__shpelicit__ask_name exactly once, then reply DONE.",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-elicit-zg1uunox/.debug-S17_elicitation.log",
+  "--mcp-config",
+  "/tmp/shp-hooks-elicit-zg1uunox/mcp.json",
+  "--strict-mcp-config",
+  "--allowedTools",
+  "mcp__shpelicit__ask_name"
+ ],
+ "cwd": "/tmp/shp-hooks-elicit-zg1uunox",
+ "exit_code": 0,
+ "timed_out": false,
+ "started": "2026-09-14T15:25:32Z",
+ "duration_s": 6.86,
+ "session_id_from_stdout": "d7624398-e34c-412b-aef6-07060eef081c",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

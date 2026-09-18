@@ -1,0 +1,8 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:16:00Z
+cwd: /tmp/shp-schemas-regint.KD6xG3/work
+startup registry_file: none
+after-trust registry_file: /root/.claude/sessions/4033805.json
+busy registry_file: /root/.claude/sessions/4033805.json
+after-turn registry_file: /root/.claude/sessions/4033805.json
+after_exit registry_file: none

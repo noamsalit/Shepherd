@@ -1,0 +1,71 @@
+# Module layout (plan lines 321-375) mapped against the five-layer architecture
+# Source lines extracted verbatim; mapping column is the reviewer's judgement.
+
+plan-layout-row 4:src/shepherd/__init__.py                         T00
+plan-layout-row 5:src/shepherd/jsontypes.py                        T00  JsonValue, JsonObject
+plan-layout-row 6:src/shepherd/timeutil.py                         T00  utc_now_iso, to_iso, parse_iso, iso_age_s
+plan-layout-row 7:src/shepherd/ids.py                              T00  new_id
+plan-layout-row 8:src/shepherd/exitcodes.py                        T00  EXIT_OK, EXIT_CONFIG, EXIT_LOCKED, EXIT_SCHEMA_REFUSED
+plan-layout-row 9:src/shepherd/config.py                           T02  ShepherdConfig, resolve_profile, load_config, ConfigError, TMUX_SESSION_PREFIX
+plan-layout-row 10:src/shepherd/platform/__init__.py                T03  Platform, current_platform
+plan-layout-row 11:src/shepherd/platform/base.py                    T02  PlatformPaths, ensure_private_dirs, ProcessProbe, ServiceSupervisor, ServiceSpec, ServiceStatus, names
+plan-layout-row 12:src/shepherd/platform/linux.py                   T02+T03  linux_paths, LinuxProcessProbe (T02); SystemdUserSupervisor (T03)
+plan-layout-row 13:src/shepherd/platform/macos.py                   T02+T03  macos_paths, DarwinProcessProbe (T02); LaunchdSupervisor (T03)   (UNVERIFIED)
+plan-layout-row 14:src/shepherd/platform/credentials.py             T01  Credentials, AuthMaterial, FileCredentials, KeychainCredentials, errors
+plan-layout-row 15:src/shepherd/domain/models.py                    T04  dataclasses + Literals + UNSET
+plan-layout-row 16:src/shepherd/domain/signals.py                   T04  Signal union
+plan-layout-row 17:src/shepherd/domain/binding.py                   T04  path binding (pure)
+plan-layout-row 18:src/shepherd/domain/ordering.py                  T04  order keys + labels (pure)
+plan-layout-row 19:src/shepherd/store/_conn.py                      T05  connection factory, pragmas
+plan-layout-row 20:src/shepherd/store/migrate.py                    T05  apply_migrations
+plan-layout-row 21:src/shepherd/store/schema.py                     T05  SCHEMA_VERSION, read_schema_version
+plan-layout-row 22:src/shepherd/store/errors.py                     T05+T06
+plan-layout-row 23:src/shepherd/store/migrations/0001_foundation.sql T05
+plan-layout-row 24:src/shepherd/store/__init__.py                   T06  exports Store + errors
+plan-layout-row 25:src/shepherd/store/store.py                      T06  Store (open, workspace/repo/app_state verbs; delegates session verbs)
+plan-layout-row 26:src/shepherd/store/_sessions.py                  T06  session SQL
+plan-layout-row 27:src/shepherd/store/_rows.py                      T06  row → dataclass converters
+plan-layout-row 28:src/shepherd/discovery.py                        T07
+plan-layout-row 29:src/shepherd/ipc/frames.py                       T08
+plan-layout-row 30:src/shepherd/ipc/messages.py                     T08
+plan-layout-row 31:src/shepherd/hookd.py                            T08  standalone, stdlib only
+plan-layout-row 32:src/shepherd/ingest/events.py                    T09
+plan-layout-row 33:src/shepherd/ingest/fold.py                      T09
+plan-layout-row 34:src/shepherd/jsonl.py                            T10
+plan-layout-row 35:src/shepherd/engine/claude_code/transcript.py    T10
+plan-layout-row 36:src/shepherd/engine/claude_code/hooks_settings.py T11
+plan-layout-row 37:src/shepherd/engine/base.py                      T12
+plan-layout-row 38:src/shepherd/engine/claude_code/adapter.py       T12
+plan-layout-row 39:src/shepherd/testkit/env.py                      T02  isolated_env, make_short_base_dir
+plan-layout-row 40:src/shepherd/testkit/scripted_platform.py        T02+T03  ScriptedProcessProbe (T02); ScriptedSupervisor (T03)
+plan-layout-row 41:src/shepherd/testkit/scripted_credentials.py     T01
+plan-layout-row 42:src/shepherd/testkit/hook_payloads.py            T09
+plan-layout-row 43:src/shepherd/testkit/scripted_engine.py          T12
+plan-layout-row 44:src/shepherd/logs.py                             T13
+plan-layout-row 45:src/shepherd/sessiond/{writer,ingest_service,servers,main}.py   T13
+plan-layout-row 46:src/shepherd/controld/{events,sessiond_link,main}.py            T14
+plan-layout-row 47:src/shepherd/controld/{security,projections,http}.py            T15
+plan-layout-row 48:src/shepherd/web/static/{index.html, css/app.css, js/app.js, js/api.js, js/sse.js, js/fleet.js, js/dom.js}  T16
+plan-layout-row 49:src/shepherd/cli/{__main__,main,http_client}.py  T17
+
+MAPPING (module -> architecture layer; '??' = no layer in the reference architecture)
+shepherd/jsontypes.py, timeutil.py, ids.py, exitcodes.py  -> L1 core/ in intent, but there is no core/ package (loose top-level files)
+shepherd/config.py                                        -> ??  (no layer; imports platform.base.PlatformPaths; platform.base raises config.ConfigError -> cycle)
+shepherd/platform/{base,linux,macos}.py                   -> ??  (no layer; introduces ProcessProbe + ServiceSupervisor Protocols not among the six seams)
+shepherd/platform/credentials.py                          -> architecture puts Credentials seam in L2 providers/ ; plan puts it in platform/
+shepherd/domain/{models,signals,binding,ordering}.py      -> ??  (no domain/ in architecture; closest is L1 core/ "types, enums, ids, palette")
+shepherd/store/*                                          -> L1 store/  (aligned)
+shepherd/discovery.py                                     -> ??  (no layer)
+shepherd/ipc/{frames,messages}.py                         -> ??  (no layer; the controld<->sessiond wire; architecture draws this link as the Runner seam)
+shepherd/hookd.py                                         -> architecture: L2 engines/ ("claude_code . hookd"); plan: top-level, outside engine/
+shepherd/ingest/{events,fold}.py                          -> L2 signals/ in intent ("ingest -> fold -> classify"), renamed ingest/
+shepherd/jsonl.py                                         -> L1 logs/ in intent (reader), top-level file
+shepherd/engine/{base,claude_code/*}.py                   -> L2 engines/ (named engine/)
+shepherd/logs.py                                          -> L1 logs/ in intent, top-level file
+shepherd/sessiond/{writer,ingest_service,servers,main}.py -> ??  process package; IngestService is L2 signals/ orchestration living in a process package
+shepherd/controld/{events,sessiond_link,main}.py          -> ??  process package
+shepherd/controld/{security,projections,http}.py          -> L5 web/ in intent (HTTP + SSE server), but placed in controld/, not web/
+shepherd/web/static/*                                     -> L5 web/ (static assets only; no Python)
+shepherd/cli/*                                            -> L5 cli/
+shepherd/testkit/*                                        -> not a layer (spec §14 testkit/, ships with package) - acceptable
+MISSING in M1 by design: toolsurface/ (L4, M4), orchestration/ (L3), runner/ (M3), master/ (M4), providers/ WorkItemProvider (M5)

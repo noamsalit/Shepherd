@@ -1,0 +1,15 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:19:49Z
+cwd: /tmp/shp-schemas-fork.dz1dGx/work
+target_file: /root/.claude/projects/-tmp-shp-schemas-fork-dz1dGx-work/25d98c92-e0d7-4b71-92e1-0e91e5398157.jsonl
+target_lines_before_fork: 42
+fork_exit: 0
+target_lines_right_after_fork: 42
+fork_session_id: 7e53554f-31aa-4586-9e18-290fb5945bf0
+target_lines_after_target_turn: 42
+fork_file: /root/.claude/projects/-tmp-shp-schemas-fork-dz1dGx-work/7e53554f-31aa-4586-9e18-290fb5945bf0.jsonl
+target_entries_mentioning_fork_id: 0
+target_entries_with_fork_question: 0
+fork_sessionId_values: ['7e53554f-31aa-4586-9e18-290fb5945bf0']
+fork_uuids_total: 32 shared_with_target: 24
+fork_contains_target_turn2_prompt: True

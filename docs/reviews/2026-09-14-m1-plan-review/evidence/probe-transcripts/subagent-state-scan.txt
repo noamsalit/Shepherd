@@ -1,0 +1,35 @@
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a0ab31c1652414a68.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a45578aed8785be72.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a70b556c4e7da227e.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a87ef285027ea2cea.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a9a68f369dcbb1207.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-ab2ce063cc984818a.meta.json {'agentType': 'workflow-subagent', 'workflowPhase': 'Review', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': False}
+  PD-09 tool_result for toolUseId in SESSION transcript: NO toolUseId in meta
+== 32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a2109d4ef26637fdc.meta.json {'agentType': 'cc10x:qa-researcher', 'toolUseId': 'toolu_01MaWenudZtWLXWnpbkNX4as', 'parentAgentId': 'a226a799f49cd73ed', 'spawnDepth': 2, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'sonnet'}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(430, 'queue-operation', ('enqueue', '<task-notification>\n<task-id>a2109d4ef26637fdc</task-id>\n<tool-use-id>toolu_01MaWenudZtWLX')), (437, 'queue-operation', ('remove', '<task-notification>\n<task-id>a2109d4ef26637fdc</task-id>\n<tool-use-id>toolu_01MaWenudZtWLX'))]
+  ... in PARENT AGENT transcript: [(118, 'assistant', ''), (119, 'user', [('tool_result', True)]), (160, 'attachment', '')]
+== 32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a226a799f49cd73ed.meta.json {'agentType': 'general-purpose', 'toolUseId': 'toolu_019WrsyZH74Mw3ev3nyP5WPz', 'spawnDepth': 1, 'requestShape': 'background', 'requestNonInteractive': True}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(371, 'assistant', ''), (372, 'user', [('tool_result', True)])]
+== 32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-a94617281e7f7bc3e.meta.json {'agentType': 'cc10x:qa-researcher', 'toolUseId': 'toolu_017PyzH8MLK1DxdVpBDy2ARn', 'parentAgentId': 'a226a799f49cd73ed', 'spawnDepth': 2, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'opus'}
+  PD-09 tool_result for toolUseId in SESSION transcript: []
+  ... in PARENT AGENT transcript: [(116, 'assistant', ''), (117, 'user', [('tool_result', True)])]
+== 32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-adc2f512a48160e2e.meta.json {'agentType': 'general-purpose', 'toolUseId': 'toolu_01LwV1vx8g1Z8ZnGbCvsLfqh', 'spawnDepth': 1, 'requestShape': 'background', 'requestNonInteractive': True}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(369, 'assistant', ''), (370, 'user', [('tool_result', True)])]
+== 32df7fce-8744-4758-8fa2-2af88e1fbcad/subagents/agent-af4464db7d6d4d91d.meta.json {'agentType': 'cc10x:qa-researcher', 'toolUseId': 'toolu_0156hqHdSLEDR9GUFwyQ4pch', 'parentAgentId': 'a226a799f49cd73ed', 'spawnDepth': 2, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'opus'}
+  PD-09 tool_result for toolUseId in SESSION transcript: []
+  ... in PARENT AGENT transcript: [(114, 'assistant', ''), (115, 'user', [('tool_result', True)])]
+== 9bc1bf13-50fd-438b-ad09-18a9d05de7d6/subagents/agent-a15b14b1bf24fea41.meta.json {'agentType': 'cc10x:planner', 'toolUseId': 'toolu_017e4AQDk1DZ2cfc2M7mzGvV', 'spawnDepth': 1, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'opus'}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(316, 'assistant', ''), (317, 'user', [('tool_result', True)])]
+== 9bc1bf13-50fd-438b-ad09-18a9d05de7d6/subagents/agent-ad3763d204bac8b98.meta.json {'agentType': 'cc10x:plan-gap-reviewer', 'toolUseId': 'toolu_01P8Xu2Kj6g6SBbaF3riiwni', 'spawnDepth': 1, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'opus'}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(523, 'assistant', ''), (530, 'user', [('tool_result', True)]), (535, 'queue-operation', ('enqueue', '<task-notification>\n<task-id>ad3763d204bac8b98</task-id>\n<tool-use-id>toolu_01P8Xu2Kj6g6SB')), (537, 'user', 'str:<task-notification>\n<task-id>ad3763d204bac8b98</task-id>\n<to')]
+== 9bc1bf13-50fd-438b-ad09-18a9d05de7d6/subagents/agent-ade845ee8181dc016.meta.json {'agentType': 'cc10x:plan-gap-reviewer', 'toolUseId': 'toolu_01U6Qb6u8bMrb25SNRDD81UX', 'spawnDepth': 1, 'requestShape': 'background', 'requestNonInteractive': True, 'model': 'opus'}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(474, 'assistant', ''), (475, 'user', [('tool_result', True)]), (481, 'queue-operation', ('enqueue', '<task-notification>\n<task-id>ade845ee8181dc016</task-id>\n<tool-use-id>toolu_01U6Qb6u8bMrb2')), (483, 'user', 'str:<task-notification>\n<task-id>ade845ee8181dc016</task-id>\n<to')]
+== 151394bf-ccfb-4745-819d-b8ff89b88c49/subagents/agent-ae70fa8a4623d8913.meta.json {'agentType': 'general-purpose', 'toolUseId': 'toolu_01XtqwjjMSH7RGbrexoK8djt', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': True}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(35, 'assistant', ''), (36, 'user', [('tool_result', True)])]
+== 0d0074ba-a47f-4628-b08b-31d5bacf777f/subagents/agent-afed49b329c21bc5e.meta.json {'agentType': 'general-purpose', 'toolUseId': 'toolu_01KVoUcjx5JAeFWVmiWpxgrm', 'spawnDepth': 1, 'requestShape': 'foreground', 'requestNonInteractive': True}
+  PD-09 tool_result for toolUseId in SESSION transcript: [(21, 'assistant', ''), (22, 'user', [('tool_result', True)])]

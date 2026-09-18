@@ -1,0 +1,123 @@
+{
+ "session_start_seen": true,
+ "second_client_attached": true,
+ "second_client_sees_tui": true,
+ "round1_sequential": {
+  "input_box": [
+   "\u276f\u00a0AAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBB"
+  ],
+  "a_count": 20,
+  "b_count": 20,
+  "runs": [
+   [
+    "A",
+    20
+   ],
+   [
+    "B",
+    20
+   ]
+  ]
+ },
+ "round2_concurrent": {
+  "input_box": [
+   "\u276f\u00a0AAAABBBBBBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAABBBBAAAA"
+  ],
+  "a_count": 40,
+  "b_count": 40,
+  "a_sent": 40,
+  "b_sent": 40,
+  "no_bytes_lost": true,
+  "runs": [
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    8
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ],
+   [
+    "B",
+    4
+   ],
+   [
+    "A",
+    4
+   ]
+  ],
+  "interleaved": true,
+  "thread_errors": []
+ },
+ "round3_submit_under_typing": {
+  "user_prompt_submit_seen": true,
+  "submitted_prompt": "Reply with only the word CONCURRENTZZZZZZZ",
+  "client_noise_in_submitted_prompt": true,
+  "input_box_after": [
+   "\u276f Reply with only the word CONCURRENTZZZZZZZ",
+   "\u276f\u00a0Z"
+  ],
+  "thread_errors": []
+ },
+ "second_client_view_tracks_inner": true
+}

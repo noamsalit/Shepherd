@@ -1,0 +1,80 @@
+# Skeptic re-checks for probe-hooks (2026-09-14). Read-only reads; no new claude runs.
+
+## Transcript of probe session a2146ff1 (run1/run2): last-prompt vs task-notification user entry
+last-prompt: This is a hook test. Do these steps in order, one tool call per step, and do not skip any even if one fails: 1. Bash: ls
+last-prompt: This is a hook test. Do these steps in order, one tool call per step, and do not skip any even if one fails: 1. Bash: ls
+last-prompt: This is a hook test. Do these steps in order, one tool call per step, and do not skip any even if one fails: 1. Bash: ls
+user entry origin= {'kind': 'task-notification'} promptId= 67190591-7677-4dc7-846b-6fc50b253fc7 content[:80]= <task-notification> <task-id>a5eea7329e7fff8bf</task-id> <tool-use-id>toolu_01S7
+last-prompt: This is a hook test. Do these steps in order, one tool call per step, and do not skip any even if one fails: 1. Bash: ls
+last-prompt: Hook test part 2. One tool call per step, do not skip steps: 1. Bash: false 2. Read the file /tmp/shp-hookprobe-364yiq/w
+
+## run1 event sequence (time, event, tool, agent_id, input)
+10:13:52.636 SessionStart None None  
+10:13:53.555 UserPromptSubmit None None c49b22fe 
+10:13:57.045 MessageDisplay None None c49b22fe 
+10:13:57.538 PreToolUse Bash None c49b22fe ls /nonexistent_dir_shp_probe
+10:13:57.593 PermissionRequest Bash None c49b22fe ls /nonexistent_dir_shp_probe
+10:13:57.627 PostToolBatch None None c49b22fe 
+10:13:58.946 MessageDisplay None None c49b22fe 
+10:13:59.315 PreToolUse Bash None c49b22fe echo hello
+10:13:59.412 PostToolUse Bash None c49b22fe echo hello
+10:13:59.449 PostToolBatch None None c49b22fe 
+10:14:00.995 MessageDisplay None None c49b22fe 
+10:14:01.464 PreToolUse ToolSearch None c49b22fe 
+10:14:01.515 PostToolUse ToolSearch None c49b22fe 
+10:14:01.547 PostToolBatch None None c49b22fe 
+10:14:03.276 PreToolUse TaskCreate None c49b22fe 
+10:14:03.321 TaskCreated None None c49b22fe 
+10:14:03.351 PostToolUse TaskCreate None c49b22fe 
+10:14:03.403 PostToolBatch None None c49b22fe 
+10:14:04.558 MessageDisplay None None c49b22fe 
+10:14:04.919 PreToolUse TaskUpdate None c49b22fe 
+10:14:04.981 TaskCompleted None None c49b22fe 
+10:14:05.015 PostToolUse TaskUpdate None c49b22fe 
+10:14:05.047 PostToolBatch None None c49b22fe 
+10:14:06.401 MessageDisplay None None c49b22fe 
+10:14:07.079 PreToolUse Bash None c49b22fe rm /tmp/shp-hookprobe-364yiq/nofile.txt
+10:14:07.120 PostToolBatch None None c49b22fe 
+10:14:08.535 MessageDisplay None None c49b22fe 
+10:14:09.043 PreToolUse Write None c49b22fe /tmp/shp-hookprobe-364yiq/outside.txt
+10:14:09.084 PermissionRequest Write None c49b22fe /tmp/shp-hookprobe-364yiq/outside.txt
+10:14:09.120 PostToolBatch None None c49b22fe 
+10:14:10.224 MessageDisplay None None c49b22fe 
+10:14:11.061 PreToolUse Agent None c49b22fe 
+10:14:11.134 PostToolUse Agent None c49b22fe 
+10:14:11.132 SubagentStart None a5eea7329e7fff8bf c49b22fe 
+10:14:11.208 PostToolBatch None None c49b22fe 
+10:14:12.639 MessageDisplay None None c49b22fe 
+10:14:12.683 Stop None None c49b22fe 
+10:14:12.994 PreToolUse Bash a5eea7329e7fff8bf c49b22fe echo sub
+10:14:13.051 PostToolUse Bash a5eea7329e7fff8bf c49b22fe echo sub
+10:14:13.080 PostToolBatch None a5eea7329e7fff8bf c49b22fe 
+10:14:14.119 SubagentStop None a5eea7329e7fff8bf c49b22fe 
+10:14:14.294 UserPromptSubmit None None 67190591 
+10:14:19.693 MessageDisplay None None 67190591 
+10:14:19.751 Stop None None 67190591 
+10:14:19.790 SessionEnd None None 67190591 
+
+## Binary 2.1.270: StopFailure dispatcher (pet) call sites return from the query loop (no Stop path)
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+OSError: [Errno 9] Bad file descriptor
+
+## Prior 2.1.269 probe (32df7fce scratchpad) event counts
+{'SessionStart': 4, 'UserPromptSubmit': 4, 'PreToolUse': 23, 'PermissionRequest': 1, 'MessageDisplay': 7, 'Stop': 4, 'SessionEnd': 4, 'PostToolUse': 22, 'SubagentStart': 1, 'SubagentStop': 1, 'TaskCreated': 3, 'TaskCompleted': 3} 77
+
+## claude --help on settings validation
+                                        redirected output). Only use this in
+                                        directories you trust. Settings files
+                                        that fail validation are silently
+                                        ignored in this mode (no error dialog is
+                                        shown).
+
+## (retry) Binary 2.1.270 call sites: pet = StopFailure dispatcher, lAn = PermissionDenied dispatcher
+pet( 193632382 ed"),compactionImpossible:!0,totalGroups:pv,overheadTokensEstimate:e0});let t0=oE==="prompt_too_long"?Opt(Uo,wNn({actualTokens:sy,limitTokens:ax,conversationTokensEstimate:aD}),we):Uo;return yield t0,pet(t0,xt),jO(xt,A,t0),{reason:oE}}let Dp=performance.now(),Pg=Ra&&Uo?YJ(Uo):voi
+pet( 193634434 tedFailureCause:ye(RT.kind==="failed"?RT.failure.cause:void 0),reactiveUnsupported:!uF(),compactFailureReason:ye(sx?.reason)});let sD=Ra?nSt(sx):void 0,iR=sD!==void 0?Opt(Uo,sD,we):Uo;return yield iR,pet(iR,xt),jO(xt,A,iR),{reason:Qk}}if(ier($i,Ys),cer(Uo)){if(ro<ler){let $c=Xhs(
+pet( 193636729 t:0,turnCount:Eo,transition:{reason:"malformed_tool_use_retry"}};continue}let Bd=Ho({content:"The model's tool call could not be parsed (retry also failed).",now:we.now,uuid:we.uuid});return yield Bd,pet(Bd,xt),jO(xt,A,Bd),{reason:"malformed_tool_use_exhausted"}}let du=Uo?.messag
+pet( 193637774 ;if(Uo?.isApiErrorMessage){if(rC&&OH(xt)&&hl()&&A.startsWith("repl_main_thread")&&!xt.agentId){let $c=CM(Uo)??Uo.errorDetails??"";await rC().markApiFailure(OH(xt),zu(),Uo.error,$c,Uo.apiError)}return pet(Uo,xt),{reason:"api_error",errorKind:Uo.error,isTransient:Awt(Uo),quotaLimit
+pet( 195388328 monitor_ws":case"auto_mode_scan":break;default:}n.push(s)}return n}function X$r(e=gh()){return e.map((n)=>({id:n.id,schedule:n.cron,recurring:n.recurring??!1,prompt:Ld(n.prompt,C$t)}))}async function pet(e,n,r=Mp){if(si(n.agentContext))return;if(!qE("StopFailure",n.sessionHooksRe
+lAn( 191699061 on.id)))return;let _={...La(r.session,Z(),s,r),hook_event_name:"PostToolBatch",tool_calls:e};yield*rS({session:r.session,hookInput:_,toolUseID:n,signal:d,timeoutMs:m,toolUseContext:r})}async function*lAn(e,n,r,s,d,m,_,E=Mp){if(!qE("PermissionDenied",d.sessionHooksRegistry,LN(d,"P
+lAn( 193830086 Controller.signal.aborted)Gbe(xe,{toolName:e.name,toolUseID:n,message:Ze??jn});if(hn.decisionReason?.type==="classifier"&&hn.decisionReason.classifier==="auto-mode"){let xt=!1;try{for await(let Yn of lAn(e.name,n,Ce,hn.decisionReason.reason??"Permission denied",s,jt,s.abortContro

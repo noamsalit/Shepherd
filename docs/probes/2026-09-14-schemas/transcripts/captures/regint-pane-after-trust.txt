@@ -1,0 +1,50 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-schemas-regint.KD6xG3/work · /rc
+
+▎ Keep working from anywhere
+▎ Check progress or reply to any session from the mobile app, desktop app, or claude.ai. To keep a session in this terminal only, run /remote-control
+  +1 more · /status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                          auto mode unavailable for this model
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── shp regint probe ─
+❯ Try "how does <filepath> work?"
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

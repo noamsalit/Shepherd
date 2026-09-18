@@ -1,0 +1,2 @@
+{'type': 'result', 'subtype': 'success', 'is_error': False, 'result': 'PONG', 'num_turns': 1}
+systemd-run exit=0

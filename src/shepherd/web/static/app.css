@@ -1,0 +1,582 @@
+/* Plain CSS, served from the package. No build step, no preprocessor (D51). */
+
+:root {
+  color-scheme: light dark;
+  --gap: 0.5rem;
+}
+
+body {
+  margin: 0;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid currentColor;
+}
+
+.masthead h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.counts {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.count-value {
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+/* §12 / DP10: the `unknown` rate and, beside it, the cohort D34 calls the
+   residue — a clean stop the heuristics could not verify. `finished` is green
+   whatever the confidence, so a page without this number shows a green chip
+   claiming a verification nobody performed. */
+.stop-summary {
+  display: flex;
+  gap: 0.75rem;
+  opacity: 0.85;
+}
+
+.stop-summary-label {
+  margin-right: 0.25rem;
+  opacity: 0.7;
+}
+
+.stream {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.stream-label {
+  margin-right: 0.35rem;
+}
+
+.empty-state {
+  margin: 2rem auto;
+  max-width: 34rem;
+  padding: 1.25rem;
+  border: 1px dashed currentColor;
+  border-radius: 6px;
+}
+
+.empty-state h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.empty-state-sources {
+  display: flex;
+  gap: 1rem;
+  font-family: ui-monospace, monospace;
+}
+
+.empty-state-hint {
+  opacity: 0.7;
+  margin-bottom: 0;
+}
+
+.workspace {
+  padding: 0.5rem 1rem;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+}
+
+.workspace-name {
+  font-size: 0.95rem;
+  margin: 0.5rem 0;
+}
+
+.workspace-count {
+  opacity: 0.7;
+}
+
+.sessions,
+.subagents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.session {
+  padding: 0.4rem 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.session-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+}
+
+.session-title {
+  font-weight: 600;
+}
+
+.session-ask {
+  opacity: 0.85;
+}
+
+.session-toggle {
+  margin-left: auto;
+  font: inherit;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 0.4rem;
+  cursor: pointer;
+}
+
+.session-meta {
+  display: flex;
+  gap: var(--gap);
+  opacity: 0.7;
+}
+
+/* §4's eight buckets. Each carries a colour **and** a glyph (the glyph is in
+   `fleet.js`, beside the label), because amber and red are the two chips a
+   colourblind reader most needs to tell apart and in greyscale they are the
+   same grey. `tests/web/test_palette.py` reads these hexes back and compares
+   them to `core.stops.PALETTE`: a hand-copied hex is how a palette drifts. */
+
+.bucket-needs_you {
+  --bucket-colour: #F59E0B;
+}
+
+.bucket-error {
+  --bucket-colour: #EF4444;
+}
+
+.bucket-unfinished {
+  --bucket-colour: #8B5CF6;
+}
+
+.bucket-running {
+  --bucket-colour: #3B82F6;
+}
+
+.bucket-paused {
+  --bucket-colour: #06B6D4;
+}
+
+/* Deliberately desaturated: a blocked session reads as *parked*, not as
+   demanding. It is real, it is visible, and it is not yours to act on. */
+.bucket-blocked {
+  --bucket-colour: #64748B;
+}
+
+.bucket-finished {
+  --bucket-colour: #10B981;
+}
+
+/* D-4: a stopped row with no verdict is neither good news nor bad. */
+.bucket-unclassified {
+  --bucket-colour: #9CA3AF;
+}
+
+.chip .chip-mark,
+.chip .chip-label,
+.count .count-mark {
+  color: var(--bucket-colour, currentColor);
+}
+
+.chip-mark,
+.count-mark {
+  margin-right: 0.3rem;
+}
+
+.subagents {
+  margin: 0.35rem 0 0 1.75rem;
+}
+
+.subagent {
+  display: flex;
+  gap: var(--gap);
+  opacity: 0.9;
+}
+
+.subagent-empty {
+  opacity: 0.6;
+}
+
+/* ----- §12's stopped row: the why line, the actions, the honest note ------- */
+
+.session-stop {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+  margin-left: 1.75rem;
+}
+
+.session-why {
+  opacity: 0.9;
+}
+
+.session-no-action {
+  opacity: 0.6;
+}
+
+.action {
+  font: inherit;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 0.4rem;
+  cursor: pointer;
+}
+
+/* RD6: never silently dead. The capability lands at M3/M4, so the control says
+   so — visibly, and in its title — rather than looking live and doing nothing. */
+.action-not-yet {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.action-badge {
+  margin-left: 0.35rem;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.action-link {
+  text-decoration: underline;
+}
+
+/* N10: a disclosure, not a button. It expands evidence the row already has. */
+.why-note {
+  opacity: 0.8;
+}
+
+.why-summary {
+  cursor: pointer;
+}
+
+.why-evidence,
+.why-lane {
+  margin: 0.25rem 0 0;
+  max-width: 44rem;
+}
+
+.stop-expansion {
+  margin: 0.35rem 0 0 1.75rem;
+}
+
+.stop-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stop-action {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap);
+  padding: 0.15rem 0;
+}
+
+.action-ordinal {
+  opacity: 0.6;
+  min-width: 1.2rem;
+}
+
+.action-source,
+.stop-sources {
+  opacity: 0.7;
+}
+
+/* ----- §12's Needs-You rail ------------------------------------------------ */
+
+.rail {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Empty: a 4 px green line. Nothing is waiting on you, and the rail says that
+   by taking almost no room rather than by announcing a zero. The green is the
+   `finished` green from the one palette (T14), not a second one. */
+.rail-empty {
+  height: 4px;
+  background: #10B981;
+}
+
+/* Not read yet: the `unclassified` grey, never the green. */
+.rail-unknown {
+  height: 4px;
+  background: #9CA3AF;
+}
+
+.rail-active {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.4rem 1rem;
+  /* The `needs_you` amber, from the same palette. */
+  background: #F59E0B;
+  color: #1f2937;
+}
+
+.rail-count {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rail-rows {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.rail-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.rail-title {
+  font-weight: 600;
+}
+
+/* ---- §12's page 3 ------------------------------------------------------- */
+/* The terminal is xterm.js's own DOM (vendor/xterm.css sizes and colours it);
+   everything here is the band around it. A fixed-size pane deliberately: no
+   `fit` addon, because an addon is another vendored file and D51 has no build
+   step to justify one. */
+
+.session-view {
+  border-top: 1px solid #374151;
+  padding: 1rem;
+}
+
+.session-band {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.session-title {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.session-rename {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* D29: quiet, and never coloured like a failure. A rename that did not reach
+   the engine is a degrade we are telling the truth about, not an error. */
+.session-local-only {
+  color: #9CA3AF;
+  font-size: 0.8rem;
+}
+
+.session-meta {
+  color: #9CA3AF;
+  font-size: 0.85rem;
+}
+
+.session-why {
+  color: #D1D5DB;
+  margin: 0.5rem 0;
+}
+
+.session-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.session-action {
+  background: #1F2937;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  color: #E5E7EB;
+  cursor: pointer;
+  padding: 0.3rem 0.7rem;
+}
+
+/* §9's banner. It replaces the terminal; it never sits on top of one. */
+.session-banner {
+  background: #1F2937;
+  border-left: 3px solid #9CA3AF;
+  color: #D1D5DB;
+  padding: 0.6rem 0.8rem;
+}
+
+.session-terminal {
+  background: #000;
+  min-height: 24rem;
+  margin-top: 0.6rem;
+}
+
+/* T19-a step 3's degrade, and T19-c's missing keystroke path. Both are states
+   a human is told about rather than left to infer from an empty box. */
+.terminal-degraded,
+.session-input-note {
+  color: #9CA3AF;
+  font-size: 0.85rem;
+  margin: 0.4rem 0;
+}
+
+.terminal-screen {
+  background: #000;
+  color: #E5E7EB;
+  margin: 0;
+  overflow: auto;
+  padding: 0.6rem;
+  white-space: pre;
+}
+
+/* D29's click-to-edit rename: the input that replaces the title, and the one
+   line that says a rename did not happen (principle 5). */
+.session-rename-input {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  color: #E5E7EB;
+  font: inherit;
+  padding: 0.1rem 0.3rem;
+}
+
+.session-rename-status {
+  color: #F59E0B;
+  font-size: 0.85rem;
+}
+
+/* §12 page 3 is opened from a fleet row, so the row says so. */
+.session {
+  cursor: pointer;
+}
+
+/* §12's page 1. Two columns: the conversation on the left, the live sidebar on
+   the right, so you are never reading a stale claim while the chat is
+   turn-based. The nav above them is the only thing that moves between pages —
+   one document, one view revealed at a time. */
+.nav {
+  display: flex;
+  gap: var(--gap);
+  padding: 0.5rem 1rem 0;
+}
+
+.nav-entry {
+  font: inherit;
+}
+
+.chat-view {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  padding: 1rem;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 12rem;
+}
+
+.chat-line {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-composer {
+  display: flex;
+  gap: var(--gap);
+  padding-top: 0.75rem;
+}
+
+.chat-input {
+  flex: 1;
+  font: inherit;
+}
+
+/* Principle 5 / §13: a refusal or a failure is one line, the generic literal
+   and the correlation id, in the colour the rest of the page uses for "this
+   did not happen". */
+.chat-status {
+  color: #F59E0B;
+  font-size: 0.85rem;
+  min-height: 1.2rem;
+}
+
+.chat-sidebar {
+  border-left: 1px solid currentColor;
+  padding-left: 1rem;
+}
+
+.chat-sidebar h2 {
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+/* The card is the thing a person decides on, so it is the loudest element in
+   the sidebar and its two buttons are side by side. */
+.approval-card {
+  border: 1px solid #F59E0B;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: var(--gap);
+  padding: 0.5rem;
+}
+
+.approval-tool {
+  font-weight: 600;
+  margin: 0;
+}
+
+.approval-summary,
+.approval-deadline {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.approval-choice {
+  font: inherit;
+}
+
+/* D8's toggle, visible at all times — never a modal, never behind a menu. */
+.chat-autonomy {
+  align-items: baseline;
+  display: flex;
+  gap: var(--gap);
+  padding-top: 0.75rem;
+}
+
+.chat-autonomy-value {
+  font-weight: 600;
+}
+
+/* D25's literal tail: monospace, because it is a log and reads like one. */
+.chat-audit {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.audit-line {
+  margin: 0;
+  white-space: pre;
+}

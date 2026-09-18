@@ -1,0 +1,25 @@
+{
+    "pid": 4049962,
+    "sessionId": "d4cbf6bc-e1f4-4835-a01d-56ac93893647",
+    "cwd": "/tmp/shp-lpg-preg.Xus9uo",
+    "startedAt": 1789403029332,
+    "procStart": "544028471",
+    "version": "2.1.270",
+    "peerProtocol": 1,
+    "peerFeatures": [
+        "notify_idle",
+        "reply_across_default_dirs",
+        "artifact_yield"
+    ],
+    "kind": "interactive",
+    "entrypoint": "sdk-cli",
+    "pidDomain": "linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]",
+    "tmux": "main:@0.%0",
+    "messagingSocketPath": "/run/user/0/cc-socks/4049962.sock",
+    "name": "shp-lpg-preg-xus9uo-34",
+    "nameSource": "derived",
+    "nameSince": 1789403029333,
+    "status": "busy",
+    "updatedAt": 1789403029727,
+    "statusUpdatedAt": 1789403029727
+}

@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:09:07Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p Reply\ OK. --model claude-nonexistent-model-shp --session-id 89b8683f-b2ea-4874-934a-9cadbb6cb276 --output-format stream-json --verbose --max-turns 1
+exit: 1

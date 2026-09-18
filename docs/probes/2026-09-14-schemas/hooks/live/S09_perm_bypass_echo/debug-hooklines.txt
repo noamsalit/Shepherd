@@ -1,0 +1,7 @@
+2026-09-14T15:18:51.334Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:18:51.375Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:18:51.383Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-perm-bypass_echo-n_3b2k5s/.claude/settings.local.json
+2026-09-14T15:18:51.384Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:18:51.477Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:18:51.495Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:18:51.501Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-perm-bypass_echo-n_3b2k5s/.claude/settings.local.json

@@ -1,0 +1,175 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "SessionStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PreToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "MessageDisplay": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PermissionRequest": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "TaskCreated": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "TaskCompleted": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SubagentStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SubagentStop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostToolUseFailure": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PermissionDenied": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/hook_logger.py /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/live-hooks-run2marker.jsonl run2marker",
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ]
+ }
+}

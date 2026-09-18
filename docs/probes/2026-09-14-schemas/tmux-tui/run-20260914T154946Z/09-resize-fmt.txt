@@ -1,0 +1,2 @@
+pane=70x30 window=70x30
+max captured line length=70 lines=30

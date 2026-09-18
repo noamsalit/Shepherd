@@ -1,0 +1,25 @@
+2026-09-14T10:17:20.087Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T10:17:20.134Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T10:17:20.135Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hookprobe-364yiq/work/.claude/settings.json
+2026-09-14T10:17:20.139Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T10:17:20.301Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T10:17:20.302Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hookprobe-364yiq/work/.claude/settings.json
+2026-09-14T10:17:20.338Z [DEBUG] Read hooks.json for plugin cc10x (enabled=true): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T10:17:20.350Z [DEBUG] Checking plugin cc10x: skillsPath=exists, skillsPaths=0 paths
+2026-09-14T10:17:20.350Z [DEBUG] Attempting to load skills from plugin cc10x default skillsPath: /root/src/cc10x-qa/plugins/cc10x/skills
+2026-09-14T10:17:20.351Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T10:17:20.351Z [DEBUG] Loading hooks from plugin: cc10x
+2026-09-14T10:17:20.351Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T10:17:20.353Z [DEBUG] Registered 12 hooks from 1 plugins
+2026-09-14T10:17:20.360Z [DEBUG] Loaded 14 agents from plugin cc10x default directory
+2026-09-14T10:17:20.367Z [DEBUG] Loaded 22 skills from plugin cc10x default directory
+2026-09-14T10:17:20.446Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_registered
+2026-09-14T10:17:20.476Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hookprobe-364yiq/work/.claude/settings.json, /tmp/shp-hookprobe-364yiq/work/.claude/settings.local.json...
+2026-09-14T10:17:20.552Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T10:17:20.559Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-nonexistent-model-xyz modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T10:17:21.220Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T10:17:21.221Z [WARN] Skill listing over budget: 34 skills, 12975 chars > 6000 budget — descriptions will be truncated. Run /skills to disable some, or raise skillListingBudgetFraction in settings.
+2026-09-14T10:17:21.221Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T10:17:21.907Z [DEBUG] Hooks: Config-based async hook, backgrounding process async_hook_4014544
+2026-09-14T10:17:21.907Z [DEBUG] Hooks: Registering async hook async_hook_4014544 (StopFailure:model_not_found) with timeout 3000ms
+2026-09-14T10:17:21.907Z [DEBUG] Hook output does not start with {, treating as plain text

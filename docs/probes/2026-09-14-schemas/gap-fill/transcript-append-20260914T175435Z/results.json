@@ -1,0 +1,111 @@
+{
+ "observations": 34,
+ "violations": 0,
+ "partial_tail_observations": 0,
+ "files": [
+  "7a7a7fbe-092d-4464-925e-aaf9e6d72370.jsonl",
+  "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+ ],
+ "ids_before_clear": [
+  "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+ ],
+ "per_phase": {
+  "turn_small": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "big_assistant_text": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "big_tool_result": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "write_tool_1": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "write_tool_2": {
+   "changes": 2,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "rename": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "manual_compact": {
+   "changes": 2,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "after_compact_turn": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "after_rewind_turn": {
+   "changes": 1,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "clear": {
+   "changes": 5,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "7a7a7fbe-092d-4464-925e-aaf9e6d72370.jsonl",
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  },
+  "after_clear_turn": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "7a7a7fbe-092d-4464-925e-aaf9e6d72370.jsonl"
+   ]
+  },
+  "resume_turn": {
+   "changes": 3,
+   "violations": 0,
+   "partial": 0,
+   "files": [
+    "9242f47e-a0ba-4505-92cf-7e697e964216.jsonl"
+   ]
+  }
+ }
+}

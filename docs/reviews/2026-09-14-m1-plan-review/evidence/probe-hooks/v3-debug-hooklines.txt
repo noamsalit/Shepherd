@@ -1,0 +1,21 @@
+2026-09-14T10:17:07.377Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T10:17:07.423Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T10:17:07.424Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hookprobe-364yiq/work/.claude/settings.json
+2026-09-14T10:17:07.434Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T10:17:07.607Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T10:17:07.608Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hookprobe-364yiq/work/.claude/settings.json
+2026-09-14T10:17:07.654Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T10:17:07.673Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T10:17:07.673Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T10:17:07.677Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T10:17:07.795Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hookprobe-364yiq/work/.claude/settings.json, /tmp/shp-hookprobe-364yiq/work/.claude/settings.local.json...
+2026-09-14T10:17:07.814Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-nonexistent-model-xyz modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T10:17:07.821Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T10:17:07.822Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T10:17:08.585Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T10:17:08.586Z [WARN] Skill listing over budget: 13 skills, 6181 chars > 6000 budget — descriptions will be truncated. Run /skills to disable some, or raise skillListingBudgetFraction in settings.
+2026-09-14T10:17:08.587Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T10:17:08.659Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T10:17:09.351Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T10:17:09.394Z [DEBUG] StopFailure:model_not_found [python3 /tmp/shp-hookprobe-364yiq/capture.py StopFailure /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v3-events.jsonl] completed with status 1
+2026-09-14T10:17:09.394Z [DEBUG] Hook output does not start with {, treating as plain text

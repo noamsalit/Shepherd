@@ -1,0 +1,11 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-mock-max_tokens-hmk7q9jw/.debug-S08_mock_max_tokens.log
+2026-09-14T15:17:50.887Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:50.887Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:17:50.887Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:17:50.887Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:17:50.991Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:17:51.163Z [DEBUG] [engine] turn 1 end (turns=4 usage in=40 out=128000 cost=$0.6400 api=111ms stop=stop_sequence resultLen=0)
+2026-09-14T15:17:51.167Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:17:51.169Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:17:51.177Z [DEBUG] StopFailure:max_output_tokens [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl] completed with status 0
+2026-09-14T15:17:51.191Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_max_tokens/events.jsonl] completed with status 0

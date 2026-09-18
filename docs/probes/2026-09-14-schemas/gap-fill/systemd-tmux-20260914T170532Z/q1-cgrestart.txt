@@ -1,0 +1,73 @@
+## variant cgrestart  unit=shp-gap-sessiond-cgrestart  props=[-p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin]  server-launch=direct  action=restart
+## launch command (unit ExecStart /bin/sh -c): tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000
+## systemctl --user show shp-gap-sessiond-cgrestart
+MainPID=4054543
+ControlGroup=/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-cgrestart.service
+KillMode=control-group
+KillSignal=15
+SendSIGHUP=no
+Id=shp-gap-sessiond-cgrestart.service
+ActiveState=active
+SubState=running
+## pids: unit MainPID=4054543 tmux-server=4054547 pane0(claude)=4054548 pane1(sleep)=4054551
+## /proc/<pid>/cgroup before restart
+unit-main:   0::/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-cgrestart.service
+tmux-server: 0::/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-cgrestart.service
+pane-claude: 0::/user.slice/user-0.slice/user@0.service/app.slice/tmux-spawn-8a415743-4873-4c57-99c6-d0f0d0c194a6.scope  comm=claude
+pane-sleep:  0::/user.slice/user-0.slice/user@0.service/app.slice/tmux-spawn-84e8f6ea-3546-4411-9a8f-f948fbd237d8.scope
+## pane process env (names + PATH/TERM/TMUX values) of pane-claude
+DBUS_SESSION_BUS_ADDRESS=<redacted>
+GSM_SKIP_SSH_AGENT_WORKAROUND=<redacted>
+HOME=/root
+INVOCATION_ID=<redacted>
+JOURNAL_STREAM=<redacted>
+LANG=<redacted>
+LOGNAME=<redacted>
+MANAGERPID=<redacted>
+MEMORY_PRESSURE_WATCH=<redacted>
+MEMORY_PRESSURE_WRITE=<redacted>
+PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PWD=<redacted>
+_=<redacted>
+SHELL=<redacted>
+SHLVL=<redacted>
+SSH_AUTH_SOCK=<redacted>
+SYSTEMD_EXEC_PID=<redacted>
+TERM_PROGRAM=<redacted>
+TERM_PROGRAM_VERSION=<redacted>
+TERM=tmux-256color
+TMUX_PANE=%0
+TMUX=/tmp/tmux-0/shp-gap-sysd-b,4054547,0
+USER=<redacted>
+XDG_DATA_DIRS=<redacted>
+XDG_RUNTIME_DIR=<redacted>
+## systemd-cgls of the unit cgroup
+CGroup /user.slice/user-0.slice/user@0.service/app.slice/shp-gap-sessiond-cgrestart.service:
+├─4054543 sleep 100000
+└─4054547 tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c …
+## t=17:06:04.220 systemctl --user restart shp-gap-sessiond-cgrestart
+systemctl exit=0
+## after restart (+4s)
+MainPID=4054593
+NRestarts=0
+ActiveState=active
+SubState=running
+unit-main(old 4054543): dead   unit-main(new 4054593): alive(sleep)
+tmux-server 4054547: dead
+pane-claude 4054548: dead
+pane-sleep  4054551: dead
+## tmux -L shp-gap-sysd-b list-sessions
+shepherd_t1: 2 windows (created Mon Sep 14 17:06:04 2026)
+## tmux -L shp-gap-sysd-b list-panes -a -F
+shepherd_t1:claude pane_pid=4054598 dead=0
+shepherd_t1:sleeper pane_pid=4054601 dead=0
+## journal (unit, last lines)
+<ts> <host> systemd[1014041]: Stopped shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-sHttxZ 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> systemd[1014041]: Started shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-sHttxZ 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> systemd[1014041]: Stopping shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-sHttxZ 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000"...
+<ts> <host> systemd[1014041]: Stopped shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-sHttxZ 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> systemd[1014041]: Started shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> systemd[1014041]: Stopping shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000"...
+<ts> <host> systemd[1014041]: Stopped shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+<ts> <host> systemd[1014041]: Started shp-gap-sessiond-cgrestart.service - /bin/sh -c "tmux -L shp-gap-sysd-b new-session -d -s shepherd_t1 -x 120 -y 40 -c /tmp/shp-gap-sysd-Gd3cKd 'claude --model claude-haiku-4-5-20251001'; tmux -L shp-gap-sysd-b new-window -d -t =shepherd_t1: -n sleeper 'sleep 100000'; exec sleep 100000".
+## teardown: tmux -L shp-gap-sysd-b ls -> no server running on /tmp/tmux-0/shp-gap-sysd-b

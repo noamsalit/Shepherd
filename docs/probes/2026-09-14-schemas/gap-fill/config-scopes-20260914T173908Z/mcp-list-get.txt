@@ -1,0 +1,18 @@
+$ claude mcp list
+rc=0
+Checking MCP server health…
+
+shepherd: /usr/bin/python3 /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/mcp_stub.py /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/mcp-stub-messages.jsonl - ✔ Connected
+
+$ claude mcp get shepherd
+rc=0
+shepherd:
+  Scope: User config (available in all your projects)
+  Status: ✔ Connected
+  Type: stdio
+  Command: /usr/bin/python3
+  Args: /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/mcp_stub.py /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/mcp-stub-messages.jsonl
+  Environment:
+
+To remove this server, run: claude mcp remove shepherd -s user
+

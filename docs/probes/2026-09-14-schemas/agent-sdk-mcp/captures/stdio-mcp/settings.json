@@ -1,0 +1,67 @@
+{
+  "enabledPlugins": {
+    "cc10x@cc10x": false
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/capture_hook.sh PreToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/hooks.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/capture_hook.sh PostToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/hooks.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/capture_hook.sh PostToolUseFailure /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/hooks.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/capture_hook.sh PermissionRequest /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/hooks.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/capture_hook.sh PermissionDenied /root/Shepherd/docs/probes/2026-09-14-schemas/agent-sdk-mcp/stdio/../captures/stdio-mcp/hooks.jsonl",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

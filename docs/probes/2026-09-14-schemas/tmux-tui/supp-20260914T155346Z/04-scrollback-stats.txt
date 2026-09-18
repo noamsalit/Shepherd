@@ -1,0 +1,5 @@
+format '#{alternate_on} #{history_size} #{history_limit} #{pane_height}' -> 1 0 2000 30
+capture -S -2000 lines=30 visible lines=30
+'1' present in -S -2000 capture: False; '80' present: True
+ESC count in -e capture: 12
+pipe-pane raw bytes: 4839

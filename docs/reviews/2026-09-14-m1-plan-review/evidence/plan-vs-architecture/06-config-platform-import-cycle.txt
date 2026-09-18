@@ -1,0 +1,11 @@
+# Plan text establishing the two imports
+833:def ensure_private_dirs(paths: PlatformPaths) -> None      # 0700 dirs; verifies owner uid; raises ConfigError
+857:def load_config(profile: str, paths: PlatformPaths, env: Mapping[str, str]) -> ShepherdConfig
+
+# Minimal reproduction with plain module-level imports (python3 Python 3.12.3)
+--- import shepherd.config
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: cannot import name 'ConfigError' from partially initialized module 'shepherd.config' (most likely due to a circular import) (/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/cycle/shepherd/config.py)
+--- import shepherd.platform.base
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: cannot import name 'PlatformPaths' from partially initialized module 'shepherd.platform.base' (most likely due to a circular import) (/tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/cycle/shepherd/platform/base.py)

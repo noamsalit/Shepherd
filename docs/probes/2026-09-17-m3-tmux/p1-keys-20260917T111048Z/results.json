@@ -1,0 +1,56 @@
+{
+ "session_start_seen": true,
+ "session_id": "4a16d9a8-08fa-4853-8981-568e3026367b",
+ "a_input_before": [
+  "\u276f\u00a0ALPHA BRAVO CHARLIE"
+ ],
+ "a_input_after": [
+  "\u276f"
+ ],
+ "a_ctrl_a_ctrl_k_clears_input": true,
+ "b_input_before": [
+  "\u276f\u00a0WORDONE WORDTWO WORDTHREE"
+ ],
+ "b_after_each_ctrl_w": [
+  {
+   "presses": 1,
+   "input_box": [
+    "\u276f\u00a0WORDONE WORDTWO"
+   ]
+  },
+  {
+   "presses": 2,
+   "input_box": [
+    "\u276f\u00a0WORDONE"
+   ]
+  },
+  {
+   "presses": 3,
+   "input_box": [
+    "\u276f"
+   ]
+  }
+ ],
+ "b_ctrl_w_deletes_word_backward": true,
+ "b_three_presses_clear_three_words": true,
+ "c_streaming_input_box": [
+  "\u276f ESC-RESTORE-MARKER write a detailed 900-word essay on the history of terminal multiplexers, in full prose, no lists.",
+  "\u276f"
+ ],
+ "c_stop_before_esc": false,
+ "c_esc_pressed_mid_flight": true,
+ "c_streaming_hint_on_screen": true,
+ "c_input_box_after_esc": [
+  "\u276f\u00a0ESC-RESTORE-MARKER write a detailed 900-word essay on the history of terminal multiplexers, in full prose, no lists."
+ ],
+ "c_esc_restores_prompt_into_input_box": true,
+ "c_input_box_after_ctrl_u": [
+  "\u276f"
+ ],
+ "c_ctrl_u_clears_restored_prompt": true,
+ "c_pane_dead_after": "0",
+ "c_reread_input_box": [
+  "\u276f"
+ ],
+ "c_reread_agrees": true
+}

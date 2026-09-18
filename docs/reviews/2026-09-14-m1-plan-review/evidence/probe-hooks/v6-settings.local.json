@@ -1,0 +1,436 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "PreToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PreToolUse /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PostToolUse /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostToolUseFailure": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PostToolUseFailure /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostToolBatch": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PostToolBatch /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "Notification": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py Notification /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py UserPromptSubmit /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "UserPromptExpansion": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py UserPromptExpansion /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SessionStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py SessionStart /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "bogus",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py SessionEnd /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py Stop /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "StopFailure": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py StopFailure /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SubagentStart": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py SubagentStart /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "SubagentStop": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py SubagentStop /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PreCompact": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PreCompact /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostCompact": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PostCompact /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PreModelSwitch": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PreModelSwitch /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PostModelSwitch": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PostModelSwitch /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PermissionRequest": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PermissionRequest /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "PermissionDenied": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py PermissionDenied /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "Setup": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py Setup /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "TeammateIdle": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py TeammateIdle /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "TaskCreated": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py TaskCreated /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "TaskCompleted": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py TaskCompleted /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "Elicitation": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py Elicitation /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "ElicitationResult": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py ElicitationResult /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "ConfigChange": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py ConfigChange /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "WorktreeCreate": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py WorktreeCreate /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "WorktreeRemove": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py WorktreeRemove /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "InstructionsLoaded": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py InstructionsLoaded /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "CwdChanged": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py CwdChanged /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "FileChanged": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py FileChanged /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "DirectoryAdded": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py DirectoryAdded /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ],
+  "MessageDisplay": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python3 /tmp/shp-hookprobe-364yiq/capture.py MessageDisplay /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-hooks/v6-events.jsonl",
+      "timeout": 5,
+      "_shepherd_managed": true
+     }
+    ]
+   }
+  ]
+ }
+}

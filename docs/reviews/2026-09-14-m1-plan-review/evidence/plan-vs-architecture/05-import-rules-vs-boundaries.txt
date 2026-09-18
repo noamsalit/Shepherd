@@ -1,0 +1,32 @@
+# (b) Import rules R1-R14 (plan lines 377-394) vs the architecture's enforced boundaries
+### Import rules (enforced by `tests/test_repo_rules.py`; AST-based, written in T00, applies to packages as they appear)
+
+| Rule | Statement |
+|---|---|
+| R1 | `sqlite3` is imported only under `shepherd/store/` (D26). |
+| R2 | `shepherd.store.migrate` is imported only by `shepherd.store`, `shepherd.controld`, and tests. **`shepherd.sessiond` never** (§7 migration rule 3). |
+| R3 | `shepherd.store._conn`, `._rows`, `._sessions` are imported only inside `shepherd.store` (D33). |
+| R4 | `shepherd.sessiond` ↛ `shepherd.controld`, and `shepherd.controld` ↛ `shepherd.sessiond`. They share only `shepherd.ipc`. |
+| R5 | `shepherd.hookd` imports only `{sys, os, json, socket, struct, time}` and nothing from `shepherd`. |
+| R6 | Pure modules `shepherd.domain.*`, `shepherd.ingest.*`, `shepherd.ipc.frames`, `shepherd.ipc.messages`, `shepherd.engine.base` import none of `{socket, sqlite3, http, subprocess, threading, urllib}` and none of `shepherd.{store,controld,sessiond,cli,platform}`. `shepherd.ipc.frames.read_frame` takes a socket-like `Protocol`, so it does not import `socket`. |
+| R7 | `shepherd.engine` ↛ `shepherd.store`. |
+| R8 | Production modules ↛ `shepherd.testkit`. |
+| R9 | If `shepherd/master/` exists, it imports only `shepherd.toolsurface.client`, `claude_agent_sdk`, and stdlib (D19). Vacuous in M1. |
+| R10 | No `shell=True`, `os.system`, `os.popen`, `subprocess.getoutput`, `subprocess.getstatusoutput` (§13). |
+| R11 | No `Any` imported from `typing` (principle 6). mypy `disallow_any_explicit = true` as well. |
+| R12 | No `.py` file under `src/` or `tests/` exceeds 600 lines. |
+| R13 | `src/shepherd/web/**` contains none of `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval(`, `new Function` (§13). |
+| R14 | In `src/`, `tests/`, `scripts/`, every `tmux` invocation (string or argv literal) includes `-L`. `kill-server` appears only right after `-L <name>` with name ∉ {`shepherd`, `default`} (CLAUDE.md). |
+
+REVIEWER CROSS-CHECK
+Storage boundary ("nothing outside store/ imports a database driver", D26):
+  R1 covers only the module name `sqlite3`. No rule names any other driver; scope (src only, or tests too) is unstated,
+  while T05/T13 tests assert on sqlite_master and so need sqlite3 in tests/.
+  R3 keeps _conn/_rows/_sessions private. T06 test_store_api_surface checks return annotations. -> storage boundary substantially enforced.
+Consumer boundary ("L5 reaches the system only through L4"):
+  R9 is the only consumer rule; it covers master/ only and is vacuous in M1.
+  No rule restricts shepherd.cli, shepherd.web, or controld's HTTP modules (http/projections) from importing shepherd.store,
+  shepherd.ingest, shepherd.engine, shepherd.sessiond internals.
+Downward-only dependencies (five layers):
+  No general layering rule exists. Only pairwise rules: R4 (sessiond<->controld), R6 (pure modules), R7 (engine -/-> store), R8 (testkit).
+  Nothing forbids store -> ingest, store -> controld, ingest -> engine, engine -> ingest (T12 actually needs engine -> ingest.fold.CONSUMED_EVENTS).

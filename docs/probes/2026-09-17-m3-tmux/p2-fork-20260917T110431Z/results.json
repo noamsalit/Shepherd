@@ -1,0 +1,203 @@
+{
+ "engine_version": "2.1.274 (Claude Code)",
+ "help_mentions": {
+  "--fork-session": true,
+  "--session-id": true,
+  "--no-session-persistence": true,
+  "--resume": true
+ },
+ "uuids": {
+  "base": "bf35fe01-96ca-4f9b-923c-3b8c9331191f",
+  "fork_with_session_id": "356b6e66-635e-424c-80fd-fef653880906",
+  "fork_nsp_with_session_id": "d8c9ba08-690b-429a-8339-b15d2b78544d",
+  "fork_nsp_no_session_id": "456a6b89-e04c-4558-9324-eb3b8301af93"
+ },
+ "base": {
+  "rc": 0,
+  "result_keys": [
+   "api_error_status",
+   "duration_api_ms",
+   "duration_ms",
+   "fast_mode_disabled_reason",
+   "fast_mode_state",
+   "first_content_frame_ms",
+   "is_error",
+   "modelUsage",
+   "num_turns",
+   "permission_denials",
+   "queued_turn_count",
+   "result",
+   "result_index",
+   "session_id",
+   "stop_reason",
+   "subagent_stats",
+   "subtype",
+   "terminal_reason",
+   "time_to_request_ms",
+   "total_cost_usd",
+   "ttft_ms",
+   "ttft_stream_ms",
+   "type",
+   "usage",
+   "uuid"
+  ],
+  "session_id": "bf35fe01-96ca-4f9b-923c-3b8c9331191f",
+  "session_id_equals_requested": true
+ },
+ "fork_with_session_id": {
+  "rc": 0,
+  "accepted": true,
+  "stderr": "",
+  "result_session_id": "356b6e66-635e-424c-80fd-fef653880906",
+  "result_session_id_equals_requested": true,
+  "result_text": "PINEAPPLE-M3",
+  "result_keys": [
+   "api_error_status",
+   "duration_api_ms",
+   "duration_ms",
+   "fast_mode_disabled_reason",
+   "fast_mode_state",
+   "first_content_frame_ms",
+   "is_error",
+   "modelUsage",
+   "num_turns",
+   "permission_denials",
+   "queued_turn_count",
+   "result",
+   "result_index",
+   "session_id",
+   "stop_reason",
+   "subagent_stats",
+   "subtype",
+   "terminal_reason",
+   "time_to_request_ms",
+   "total_cost_usd",
+   "ttft_ms",
+   "ttft_stream_ms",
+   "type",
+   "usage",
+   "uuid"
+  ],
+  "new_files": [
+   "356b6e66-635e-424c-80fd-fef653880906.jsonl"
+  ]
+ },
+ "fork_nsp_with_session_id": {
+  "rc": 0,
+  "accepted": true,
+  "stderr": "",
+  "result_session_id": "d8c9ba08-690b-429a-8339-b15d2b78544d",
+  "result_text": "PINEAPPLE-M3",
+  "new_files": [],
+  "transcript_left": false
+ },
+ "fork_nsp_no_session_id": {
+  "rc": 0,
+  "stderr": "",
+  "result_session_id": "6105a67a-a660-4879-9a4c-2c9176f60224",
+  "new_files": [],
+  "transcript_left": false
+ },
+ "result_object_fields": {
+  "api_error_status": {
+   "type": "NoneType",
+   "example": null
+  },
+  "duration_api_ms": {
+   "type": "int",
+   "example": 1516
+  },
+  "duration_ms": {
+   "type": "int",
+   "example": 1676
+  },
+  "fast_mode_disabled_reason": {
+   "type": "str",
+   "example": "sdk_opt_in_required"
+  },
+  "fast_mode_state": {
+   "type": "str",
+   "example": "off"
+  },
+  "first_content_frame_ms": {
+   "type": "int",
+   "example": 1167
+  },
+  "is_error": {
+   "type": "bool",
+   "example": false
+  },
+  "modelUsage": {
+   "type": "dict",
+   "example": "<dict>"
+  },
+  "num_turns": {
+   "type": "int",
+   "example": 1
+  },
+  "permission_denials": {
+   "type": "list",
+   "example": "<list>"
+  },
+  "queued_turn_count": {
+   "type": "int",
+   "example": 0
+  },
+  "result": {
+   "type": "str",
+   "example": "PINEAPPLE-M3"
+  },
+  "result_index": {
+   "type": "int",
+   "example": 0
+  },
+  "session_id": {
+   "type": "str",
+   "example": "356b6e66-635e-424c-80fd-fef653880906"
+  },
+  "stop_reason": {
+   "type": "str",
+   "example": "end_turn"
+  },
+  "subagent_stats": {
+   "type": "dict",
+   "example": "<dict>"
+  },
+  "subtype": {
+   "type": "str",
+   "example": "success"
+  },
+  "terminal_reason": {
+   "type": "str",
+   "example": "completed"
+  },
+  "time_to_request_ms": {
+   "type": "int",
+   "example": 144
+  },
+  "total_cost_usd": {
+   "type": "float",
+   "example": 0.0033510000000000002
+  },
+  "ttft_ms": {
+   "type": "int",
+   "example": 1567
+  },
+  "ttft_stream_ms": {
+   "type": "int",
+   "example": 1166
+  },
+  "type": {
+   "type": "str",
+   "example": "result"
+  },
+  "usage": {
+   "type": "dict",
+   "example": "<dict>"
+  },
+  "uuid": {
+   "type": "str",
+   "example": "2d8ca429-87cc-4ae5-bb30-364acf434605"
+  }
+ }
+}

@@ -1,0 +1,25 @@
+=== locked ===
+system/init: IDENTICAL
+tools/list result.tools[]: IDENTICAL
+tools/call result: IDENTICAL
+can_use_tool request: IDENTICAL
+ResultMessage: DRIFT
+    added since 2026-09-14: ['first_content_frame_ms', 'result_index']
+
+=== deny ===
+system/init: IDENTICAL
+tools/list result.tools[]: IDENTICAL
+tools/call result: NOT OBSERVED in this run
+can_use_tool request: IDENTICAL
+ResultMessage: DRIFT
+    added since 2026-09-14: ['first_content_frame_ms', 'result_index']
+
+=== locked-syscli ===
+system/init: IDENTICAL
+tools/list result.tools[]: IDENTICAL
+tools/call result: IDENTICAL
+can_use_tool request: DRIFT
+    added since 2026-09-14: ['mcp_server']
+ResultMessage: DRIFT
+    added since 2026-09-14: ['first_content_frame_ms', 'result_index']
+

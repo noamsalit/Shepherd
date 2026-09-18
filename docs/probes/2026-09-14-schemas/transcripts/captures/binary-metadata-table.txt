@@ -1,0 +1,8 @@
+claude_version: 2.1.270 (Claude Code)
+binary: /root/.local/share/claude/versions/2.1.270
+date_utc: 2026-09-14T15:36:17Z
+# metadata merge-policy table(s)
+ory-snapshot":"boundary-cleared","file-history-delta":"boundary-cleared","last-prompt":"boundary-cleared","continued-in":"boundary-cleared","marble-origami-commit":"boundary-cleared","marble-origami-snapshot":"boundary-cleared","marble-origami-reset":"boundary-cleared","content-replacement":"accumulate","fork-context-ref":"accumulate","frame-link":"accumulate",summary:"last-wins","custom-title":"last-wins","ended-by-model":"last-wins","ai-title":"last-wins",tag:"last-wins",relocated:"last-wins","agent-name":"last-wins","agent-color":"last-wins","agent-setting":"last-wins","pr-link":"last-wins","artifact-comment-monitor":"accumulate","artifact-autoreact-ledger":"last-wins","bridge-session":"last-wins","history-suppression":"last-wins","attribution-snapshot":"last-wins",mode:"last-wins","permission-mode":"last-wins
+# pr-link writer
+ber!==void 0&&this.currentSessionPrUrl&&this.currentSessionPrRepository)P.push({type:"pr-link",sessionId:d,prNumber:this.currentSessionPrNumber,prUrl:this.currentSessionPrUrl,prRepository:this.currentSessionPrRepository,timestamp:new Date().toISOString()});if(this.currentSessionArtifactCount&&e!=="")P.push({type:
+leChanged.emit()}async function _Dr(e,n,r,s,d,m){let _=d??hf(e);try{await pA(_,{type:"pr-link",sessionId:e,prNumber:n,prUrl:r,prRepository:s,timestamp:new Date().toISOString()},m),i("tengu_session_linked_to_pr",{prNumber:n})}catch(E){let A=k(E);if(Fo(E))t(`linkSessionToPR: failed to append pr-link entry to ${_} (

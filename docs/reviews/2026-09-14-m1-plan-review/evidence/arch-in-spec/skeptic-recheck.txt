@@ -1,0 +1,39 @@
+# skeptic re-check 2026-09-14T10:26:08Z
+## layer/module terms
+1347:   that can reach it. This is the specific erosion the three L5 siblings invite.
+## wake set mechanism
+132:| D31 | **Wake queue.** A session that stops is routed by whoever owns it: queue-spawned → the worker loop (unchanged); **master-spawned → a wake set the master drains**. At level 2 it drains at the start of your next turn as a summary; at level 3 it wakes the master immediately. Capped at **2 master-initiated attempts per lineage**, and narrow by construction — only `unfinished` and `error` outcomes on master-owned sessions wake anything. | The worker loop runs forever, so it notices a stop at 3am; the master only runs while you are typing, so it does not. That inverts the two halves: the component holding the context to decide is asleep, and the component that is awake has no context. Nothing is *lost* — the conclusion and its action items are already written — so this is latency, not data loss, which is why level 2 stays a summary rather than silent autonomy. The retry cap mirrors the worker's `attempt < 2`; without it "stops → retry → stops → retry" runs until morning. `needs_you` deliberately does **not** wake the master: that is the human's rail, and handing it to an agent would hide the one thing you asked to be shown. |
+1098:            level 2 → added to the wake set; the master is handed
+1100:            level 3 → the master is woken now, acts, and logs
+1104:The wake set is **a query, not a table**: master-owned sessions whose `ended_at`
+2086:| **M4** | Orchestrator | **The tool registry first (§11.0, D32)** — `ToolDef`, `invoke()`, and the two MCP exporters — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
+2213:| **wake set** | master-owned sessions that stopped `unfinished` or `error` since the master's last turn (D31) — a query, not a table |
+## sessiond mentions
+86:| Daemon names | `controld`, `sessiond` | unchanged — generic on purpose, they are not user-facing |
+117:| D14 | **tmux for `LocalRunner`**, not a bare pty. | Survives `sessiond` restarts; `capture-pane -e -p` gives correct late-attach resync; `tmux attach` makes "jump to terminal" exact instead of AppleScript keystroke injection; alt-screen and resize already handled. |
+215:│  sessiond — pty supervisor (long-lived)      │
+712:3. **`sessiond` never migrates.** It waits for `controld` to report the expected
+745:every event we need. It reads the JSON on stdin, writes it to `sessiond`'s UDS
+988:| Survive `sessiond` restart/upgrade | the tmux server is its own process |
+999:browser ──WS──► sessiond
+2048:   mailbox idempotency, SSE reconnect gap replay, `sessiond` restart with live
+2061:~/Library/LaunchAgents/ai.shepherd.sessiond.plist          KeepAlive
+## plan import rules
+### Import rules (enforced by `tests/test_repo_rules.py`; AST-based, written in T00, applies to packages as they appear)
+
+| Rule | Statement |
+|---|---|
+| R1 | `sqlite3` is imported only under `shepherd/store/` (D26). |
+| R2 | `shepherd.store.migrate` is imported only by `shepherd.store`, `shepherd.controld`, and tests. **`shepherd.sessiond` never** (§7 migration rule 3). |
+| R3 | `shepherd.store._conn`, `._rows`, `._sessions` are imported only inside `shepherd.store` (D33). |
+| R4 | `shepherd.sessiond` ↛ `shepherd.controld`, and `shepherd.controld` ↛ `shepherd.sessiond`. They share only `shepherd.ipc`. |
+| R5 | `shepherd.hookd` imports only `{sys, os, json, socket, struct, time}` and nothing from `shepherd`. |
+| R6 | Pure modules `shepherd.domain.*`, `shepherd.ingest.*`, `shepherd.ipc.frames`, `shepherd.ipc.messages`, `shepherd.engine.base` import none of `{socket, sqlite3, http, subprocess, threading, urllib}` and none of `shepherd.{store,controld,sessiond,cli,platform}`. `shepherd.ipc.frames.read_frame` takes a socket-like `Protocol`, so it does not import `socket`. |
+| R7 | `shepherd.engine` ↛ `shepherd.store`. |
+| R8 | Production modules ↛ `shepherd.testkit`. |
+| R9 | If `shepherd/master/` exists, it imports only `shepherd.toolsurface.client`, `claude_agent_sdk`, and stdlib (D19). Vacuous in M1. |
+| R10 | No `shell=True`, `os.system`, `os.popen`, `subprocess.getoutput`, `subprocess.getstatusoutput` (§13). |
+| R11 | No `Any` imported from `typing` (principle 6). mypy `disallow_any_explicit = true` as well. |
+| R12 | No `.py` file under `src/` or `tests/` exceeds 600 lines. |
+| R13 | `src/shepherd/web/**` contains none of `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval(`, `new Function` (§13). |
+| R14 | In `src/`, `tests/`, `scripts/`, every `tmux` invocation (string or argv literal) includes `-L`. `kill-server` appears only right after `-L <name>` with name ∉ {`shepherd`, `default`} (CLAUDE.md). |

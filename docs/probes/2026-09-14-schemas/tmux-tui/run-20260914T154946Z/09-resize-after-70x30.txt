@@ -1,0 +1,30 @@
+  - note one
+  - note two
+
+● MULTI
+
+✻ Cogitated for 1s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly this command: touch perm-probe.txt
+
+  Ran 1 shell command
+
+● Done. The file perm-probe.txt has been created.
+
+✻ Sautéed for 3s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly: sleep 12 ; then reply with only
+  DONE-ONE
+
+  Ran 1 shell command
+
+❯ Reply with only the word SECOND
+
+● SECOND
+
+✻ Brewed for 19s · done 3:51 PM
+
+──────────────────────────────────────────────────────────────────────
+❯ 
+──────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

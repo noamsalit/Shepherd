@@ -1,0 +1,16 @@
+# (d) hookd: 250 ms and exit 0 (aligned) vs 'degrade is visible' claim
+| Claude Code hooks | command hook, JSON on stdin | they call us | §Ground Truth 1 | hookd exits 0, event lost, degrade is visible | none (principle 4) |
+
+**hookd algorithm** (`src/shepherd/hookd.py`, stdlib only, entire `main` body in `try/except BaseException: pass`, then `os._exit(0)`):
+1. `t = time.time()`, `deadline = time.monotonic() + 0.25`.
+2. Parse `--runtime-dir` from argv by hand, without argparse (import cost and `SystemExit` output).
+3. `raw = sys.stdin.buffer.read(16 MiB cap)`.
+4. Try `json.loads`. On success, if it is a dict: drop `tool_response`, truncate strings > 8192 chars (depth ≤ 6). If it is not a dict or fails to parse: `unparsed_len`.
+5. Ancestry: start at `os.getppid()`. Up to 6 levels, read `/proc/<pid>/stat`: comm is the text between the first `(` and the last `)`; after `)`, field 2 is ppid and field 20 is starttime. Stop at pid ≤ 1. Any error → stop.
+6. `body = json.dumps(envelope, separators=(",", ":")).encode()`. If > 1 MiB → oversize envelope.
+7. `token = bytes.fromhex(open(runtime_dir/"token").read().strip())`, which must be 32 bytes.
+8. `socket.AF_UNIX` connect with `settimeout(max(0.001, deadline - monotonic()))`, then `sendall(header + body)` with the timeout reset to the remaining time, then `close`.
+9. Write nothing to stdout or stderr. Exit 0.
+
+## counters available (none is incremented by a hookd-side failure; hookd cannot reach sessiond when it fails)
+- **Counters (principle 5, shown on the fleet footer):** `frames_rejected`, `malformed`, `unknown_event`, `deferred_no_cwd`, `dropped_backpressure`, `notifications_dropped`, `transcript_malformed_lines`, plus `unassigned_sessions` and `hidden_idle` from the store.

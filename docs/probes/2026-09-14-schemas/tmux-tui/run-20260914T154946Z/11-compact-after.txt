@@ -1,0 +1,45 @@
+
+● PONG
+
+✻ Cooked for 1s · done 3:50 PM
+
+❯ Reply with only the word MULTI.
+  - note one
+  - note two
+
+● MULTI
+
+✻ Cogitated for 1s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly this command: touch perm-probe.txt
+
+  Ran 1 shell command
+
+● Done. The file perm-probe.txt has been created.
+
+✻ Sautéed for 3s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly: sleep 12 ; then reply with only DONE-ONE
+
+  Ran 1 shell command
+
+❯ Reply with only the word SECOND
+
+● SECOND
+
+✻ Brewed for 19s · done 3:51 PM
+
+❯ /rename shp-probe-title-1
+  ⎿  Session renamed to: shp-probe-title-1
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+     PreCompact [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PreCompact
+     /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed successfully
+     PostCompact [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PostCompact
+     /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/hooks-a.jsonl] completed successfully
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── shp-probe-title-1 ─
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

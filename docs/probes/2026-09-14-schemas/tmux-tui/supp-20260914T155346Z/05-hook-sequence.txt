@@ -1,0 +1,15 @@
+2026-09-14T15:53:54.011Z SessionStart {"source": "startup", "session_title": "shp-spawn-name"}
+2026-09-14T15:53:57.591Z UserPromptSubmit {"session_title": "shp-spawn-name"}
+2026-09-14T15:53:59.064Z MessageDisplay {}
+2026-09-14T15:53:59.155Z MessageDisplay {}
+2026-09-14T15:53:59.254Z MessageDisplay {}
+2026-09-14T15:53:59.356Z MessageDisplay {}
+2026-09-14T15:53:59.456Z MessageDisplay {}
+2026-09-14T15:53:59.555Z MessageDisplay {}
+2026-09-14T15:53:59.656Z MessageDisplay {}
+2026-09-14T15:53:59.755Z MessageDisplay {}
+2026-09-14T15:53:59.857Z MessageDisplay {}
+2026-09-14T15:53:59.959Z MessageDisplay {}
+2026-09-14T15:54:00.057Z MessageDisplay {}
+2026-09-14T15:54:00.163Z MessageDisplay {}
+2026-09-14T15:54:00.168Z Stop {}

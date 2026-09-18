@@ -1,0 +1,51 @@
+# claude 2.1.270 (Claude Code)
+sce=f(()=>u({async:R(!0),asyncTimeout:v().optional()}))
+
+ace=f(()=>u({hookEventName:R("PreToolUse"),permissionDecision:Ele().optional(),permissionDecisionReason:o().optional(),updatedInput:de(o(),ie()).optional(),additionalContext:o().optional()}))
+
+lce=f(()=>u({hookEventName:R("UserPromptSubmit"),additionalContext:o().optional(),sessionTitle:o().optional(),suppressOriginalPrompt:H().optional().describe('When decision is "block", omit the original prompt from the block message')}))
+
+cce=f(()=>u({hookEventName:R("UserPromptExpansion"),additionalContext:o().optional(),suppressOriginalPrompt:H().optional().describe('When decision is "block", omit the original prompt from the block message')}))
+
+dce=f(()=>u({hookEventName:R("SessionStart"),additionalContext:o().optional(),initialUserMessage:o().optional(),sessionTitle:o().optional(),watchPaths:T(o()).optional(),reloadSkills:H().optional().describe("Re-scan skill and command directories after SessionStart hooks complete, so skills installed by the hook are available in the same session")}))
+
+uce=f(()=>u({hookEventName:R("Setup"),additionalContext:o().optional()}))
+
+pce=f(()=>u({hookEventName:R("PreModelSwitch"),permissionDecision:V(["allow","deny","ask"]).optional().describe("Same contract as PreToolUse: allow proceeds (skipping the interactive cache-miss confirm), deny cancels the switch, ask asks the user to confirm (a headless session refuses instead)"),permissionDecisionReason:o().optional()}))
+
+fce=f(()=>u({hookEventName:R("PostModelSwitch"),additionalContext:o().optional().describe("Reaches the model with the next request the new model serves")}))
+
+_ce=f(()=>u({hookEventName:R("SubagentStart"),additionalContext:o().optional()}))
+
+gce=f(()=>u({hookEventName:R("PostToolUse"),additionalContext:o().optional(),classifierContext:o().optional().describe("Host-asserted context shown to the auto-mode permission classifier alongside this tool call's result. In the live session the classifier may weigh a user statement relayed here as user intent (it can satisfy a consent bar a user turn would satisfy, never a hard boundary); values restored from saved session state are treated as unverified context only. Relay discipline is the host's obligation: put ONLY genuine user statements in intent-bearing positions \u2014 never tool output or model text dressed as one. Capped at 2000 UTF-16 code units, a budget shared across all hooks that contribute to one call (surrogate-pair-safe; emoji and other astral characters count as two). Honored on synchronous hook responses only: an async hook's late response arrives after the result message is frozen and this field in it is silently ignored. Security note: do not copy untrusted tool output or third-party text into it blindly \u2014 content placed here reaches the permission classifier with host-application framing. Applies only to calls the classifier transcript shows: read-only lookups the transcript omits (file reads, searches), inner REPL calls, and remote-engine shells produce no per-result line, and context attached to them is silently unused. Not a delivery channel: it is bound to a single call id and sized for a short assertion, not for relaying messages or events. Rewrite integrity: if this assertion describes output you are rewriting, return it in the SAME hook result as the rewrite \u2014 it is then dropped automatically if your rewrite is rejected or superseded by a later hook's rewrite; assertions returned without a rewrite are never invalidated by other hooks' rewrites, so a non-rewriting hook should assert only what holds regardless of other hooks' rewrites \u2014 hosts that need an assertion bound to exact output bytes should make it in the hook that produces those bytes. (Do NOT return an identity rewrite just to pair an assertion: hooks run in parallel on the ORIGINAL output, so an identity rewrite competes last-write-wins with sibling rewrites and can clobber a real redaction.)"),updatedToolOutput:ie().optional().describe("Replaces the tool output before it is sent to the model"),updatedMCPToolOutput:ie().optional().describe("Replaces the output for MCP tools only. Prefer updatedToolOutput, which works for all tools")}))
+
+mce=f(()=>u({hookEventName:R("PostToolBatch"),additionalContext:o().optional()}))
+
+hce=f(()=>u({hookEventName:R("PostToolUseFailure"),additionalContext:o().optional()}))
+
+Sce=f(()=>u({hookEventName:R("Stop"),additionalContext:o().optional()}).describe("Hook-specific output for the Stop event. additionalContext is non-error feedback delivered to the model; the conversation continues so the model can act on it."))
+
+bce=f(()=>u({hookEventName:R("SubagentStop"),additionalContext:o().optional()}).describe("Hook-specific output for the SubagentStop event. additionalContext is non-error feedback delivered to the subagent; the subagent continues so it can act on it."))
+
+yce=f(()=>u({hookEventName:R("PermissionDenied"),retry:H().optional()}))
+
+vce=f(()=>u({hookEventName:R("Notification"),additionalContext:o().optional()}))
+
+wce=f(()=>u({hookEventName:R("PermissionRequest"),decision:Ne([u({behavior:R("allow"),updatedInput:de(o(),ie()).optional(),updatedPermissions:T(Ii()).optional()}),u({behavior:R("deny"),message:o().optional(),interrupt:H().optional()})])}))
+
+ede=f(()=>u({hookEventName:R("CwdChanged"),watchPaths:T(o()).optional()}))
+
+nde=f(()=>u({hookEventName:R("FileChanged"),watchPaths:T(o()).optional()}))
+
+rde=f(()=>u({hookEventName:R("MessageDisplay"),displayContent:o().optional().describe("Text displayed in place of the delta. Omit (or return the delta unchanged) to display the original.")}).describe("Hook-specific output for the MessageDisplay event. Display-only: replaces the delta on screen without changing the stored message."))
+
+ode=f(()=>u({continue:H().optional(),suppressOutput:H().optional(),stopReason:o().optional(),decision:V(["approve","block"]).optional(),systemMessage:o().optional(),terminalSequence:o().optional().describe("A terminal escape sequence (e.g. OSC 9 / OSC 777 desktop-notification) for Claude Code to emit on your behalf. Only notification/title OSCs (0, 1, 2, 9, 99, 777) and BEL are permitted; anything else is dropped."),reason:o().optional(),hookSpecificOutput:Ne([ace(),lce(),cce(),dce(),uce(),pce(),fce(),_ce(),gce(),hce(),mce(),Sce(),bce(),yce(),vce(),wce(),ide(),sde(),ede(),nde(),ade(),rde()]).optional()}))
+
+ide=f(()=>u({hookEventName:R("Elicitation"),action:V(["accept","decline","cancel"]).optional(),content:de(o(),ie()).optional()}).describe("Hook-specific output for the Elicitation event. Return this to programmatically accept or decline an MCP elicitation request."))
+
+sde=f(()=>u({hookEventName:R("ElicitationResult"),action:V(["accept","decline","cancel"]).optional(),content:de(o(),ie()).optional()}).describe("Hook-specific output for the ElicitationResult event. Return this to override the action or content before the response is sent to the MCP server."))
+
+ade=f(()=>u({hookEventName:R("WorktreeCreate"),worktreePath:o()}).describe("Hook-specific output for the WorktreeCreate event. Provides the absolute path to the created worktree directory. Command hooks print the path on stdout instead."))
+
+Zz=f(()=>Ne([sce(),ode()]))
+

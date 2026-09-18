@@ -1,0 +1,12 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-agents-_y7kt13l/.debug-S18_agents_tasks.log
+2026-09-14T15:23:31.848Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:23:31.848Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:23:31.848Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:23:31.848Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:23:32.794Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:23:49.345Z [DEBUG] [engine] turn 1 end (turns=7 usage in=1045 out=1242 cost=$0.0585 api=17956ms stop=end_turn resultLen=98)
+2026-09-14T15:23:49.375Z [DEBUG] [engine] turn 2 start
+2026-09-14T15:23:50.655Z [DEBUG] [engine] turn 2 end (turns=1 usage in=1055 out=1300 cost=$0.0627 api=19200ms stop=end_turn resultLen=13)
+2026-09-14T15:23:50.691Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:23:50.693Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:23:50.711Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S18_agents_tasks/events.jsonl] completed with status 0

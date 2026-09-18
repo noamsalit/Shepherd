@@ -1,0 +1,31 @@
+{
+ "scenario": "R03_config_hooks_is_array",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Say hi.",
+  "--model",
+  "claude-nonexistent-model-shp",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-cfg-hooks_is_array-pgu16w0j/.debug-R03_config_hooks_is_array.log"
+ ],
+ "cwd": "/tmp/shp-hooks-cfg-hooks_is_array-pgu16w0j",
+ "exit_code": 1,
+ "timed_out": false,
+ "started": "2026-09-14T15:26:49Z",
+ "duration_s": 2.44,
+ "session_id_from_stdout": "47a19c96-38a9-4016-a946-2b772ec532e3",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

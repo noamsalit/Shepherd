@@ -1,0 +1,10 @@
+notificationType literals: ['agent_completed', 'agent_needs_input', 'auth_success', 'computer_use_exit', 'elicitation_complete', 'elicitation_response', 'idle_prompt', 'permission_prompt', 'push_notification', 'worker_permission_prompt']
+agent_needs_input True
+quota_auto_resume_stale True
+quota_auto_resume_disabled True
+permission_prompt True
+elicitation_dialog True
+auth_success True
+end_reason False
+start_reason False
+error_type True

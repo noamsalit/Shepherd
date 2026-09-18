@@ -1,0 +1,9 @@
+probe: p1-versions
+claude_agent_sdk.__version__: 0.2.153
+bundled __cli_version__: 2.1.273
+PATH claude --version: 2.1.274 (Claude Code)
+cli spawned by this run: /root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude -> 2.1.273 (Claude Code)
+cli spawned by this run: /root/.local/bin/claude -> 2.1.274 (Claude Code)
+python: 3.12.3
+model requested: claude-haiku-4-5
+run: p1-versions-20260917T214346Z

@@ -1,0 +1,4 @@
+hook_event_name:R("SessionEnd"),reason:oce()
+d","Elicitation","ElicitationResult","ConfigChange","WorktreeCreate","WorktreeRemove","InstructionsLoaded","CwdChanged","FileChanged","DirectoryAdded","MessageDisplay"],XAr=["clear","resume","logout","prompt_input_exit"
+lay event. Fired with each batch of newly completed lines while an assistant message streams. Display-only: the stored message and what the model sees are untouched.")),rce=["clear","resume","logout","prompt_input_exit"
+hrow ase(),s}return!0}async function T2t(e,{responseStreaming:r=!1}={},n){try{await WV(e,"process_exit",{responseStreaming:r},n)}catch(o){g(o)}}async function J5(e,r={},n){await T2t(e,r,n),await Dn(0,"prompt_input_exit"

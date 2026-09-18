@@ -1,0 +1,1 @@
+{"_ts": "2026-09-14T16:09:33.997Z", "tool_name": "mcp__shepherd__kill_session", "tool_input": {"id": "ses_x"}, "returned": {"behavior": "deny", "message": "you declined this", "interrupt": false}}

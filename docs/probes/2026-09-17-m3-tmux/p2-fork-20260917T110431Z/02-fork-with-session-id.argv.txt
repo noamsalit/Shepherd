@@ -1,0 +1,1 @@
+claude -p --model claude-haiku-4-5 --output-format json --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p2-fork-20260917T110431Z/settings.json --resume bf35fe01-96ca-4f9b-923c-3b8c9331191f --fork-session --session-id 356b6e66-635e-424c-80fd-fef653880906 What is the codeword? Reply with only the codeword.

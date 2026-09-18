@@ -1,0 +1,60 @@
+HOOK CLAIMS INVENTORY + LIVE READINGS (claude 2.1.270, 2026-09-14, throwaway dir /tmp/shp-hookprobe-364yiq/work,
+project .claude/settings.local.json, enabledPlugins cc10x@cc10x=false -> debug: "enabled=false; will NOT register")
+
+Probe runs (all headless -p, timeouts on each):
+ run0  invalid model, plan-shaped settings WITH _shepherd_managed, all 33 events, matcher "*"
+ run1  haiku-4.5: failing ls (outside cwd), echo, TaskCreate+TaskUpdate, rm (disallowed), Write outside cwd, Agent subagent
+ run2  haiku-4.5 --resume run1's session: Bash `false`, Read missing file
+ run3  sonnet --effort low: echo
+ v2..v8 invalid model; settings-validation and StopFailure diagnostics
+Raw captures: run*-events.jsonl, v*-events.jsonl, v7-stopfailure-shell.txt; field matrix: field-matrix-observed.txt
+
+SPEC (docs/specs/orchestrator-platform.md)
+ S-1 :399 "hooks rich (32 events)"                         -> MISALIGNED: binary enum Im/Sle has 33 names (binary-hook-event-contexts.txt)
+ S-2 :730-736 event->column table (SessionStart, UserPromptSubmit, Notification/PermissionRequest, Task*, Subagent*, FileChanged, Stop/StopFailure/SessionEnd)
+       -> PermissionRequest, Task*, Subagent*, Stop, SessionEnd, SessionStart, UserPromptSubmit fired; Notification/FileChanged not provoked
+ S-3 :744-757 hookd reads stdin, 250ms UDS, exit 0          -> not a CC claim; hook runs as `/bin/sh -c <command>` (dash) child of claude (ancestry)
+ S-4 :763-772 24 subscribed events                          -> names all exist in 2.1.270; list omits PostToolBatch, UserPromptExpansion, Setup, TeammateIdle, ConfigChange, WorktreeCreate/Remove, InstructionsLoaded, DirectoryAdded
+ S-5 :774-776 SessionStart carries session_id and cwd       -> ALIGNED (run0..v8)
+ S-6 :778-780 common fields on EVERY event incl prompt_id, permission_mode, effort.level
+       -> MISALIGNED: SessionStart lacks prompt_id/permission_mode/effort; TaskCreated/TaskCompleted/SubagentStart/MessageDisplay/SessionEnd lack permission_mode; effort absent on all events for haiku and on lifecycle events for sonnet
+ S-7 :786 Notification.notification_type values             -> could-not-provoke live (-p); binary literals: permission_prompt, idle_prompt, agent_needs_input, worker_permission_prompt, auth_success, elicitation_complete, elicitation_response, agent_completed, computer_use_exit, push_notification (binary-notification-types.txt)
+ S-8 :800-814 StopFailure.error_type                        -> MISALIGNED field name: payload field is `error` (v7-stopfailure-shell.txt: "error":"model_not_found"); enum adds verification_required, cloud_credential_error
+ S-9 :812 Stop.stop_reason                                   -> MISALIGNED: Stop has no stop_reason (run1-3)
+ S-10 :816-819 SessionEnd.end_reason                          -> MISALIGNED name: `reason`; enum [clear,resume,logout,prompt_input_exit,other]; only "other" observed in -p
+ S-11 :1051 SessionStart start_reason includes fork           -> name wrong (`source`), value `fork` present in enum [startup,resume,clear,compact,fork]
+ S-12 :2068-2071 _shepherd_managed marker in ~/.claude/settings.json -> marker key tolerated (run0-3 fired with it); user scope NOT tested (safety)
+ S-13 :2168 "documented, not observed"                         -> this probe observes most
+
+PLAN (docs/plans/2026-09-13-m1-foundation-visibility-plan.md)
+ GT1 :85-90 fields per event
+   SessionStart{source}                     -> ALIGNED (+ on resume: seconds_since_last_response, context_tokens, prompt_cache_likely_expired, estimated_cache_write_usd)
+   UserPromptSubmit{prompt,prompt_id}       -> ALIGNED; schema also has optional `source` (user|sdk|system|...) — ABSENT in all observed payloads, including a system-injected <task-notification> prompt (run1)
+   Pre/PostToolUse{tool_name,tool_input,tool_use_id,agent_id?,agent_type?} -> ALIGNED (agent_* present only inside subagent)
+   PermissionRequest (no tool_use_id)       -> ALIGNED (+permission_suggestions)
+   Stop{last_assistant_message,stop_hook_active,background_tasks} no stop_reason -> ALIGNED (+session_crons)
+   SessionEnd{reason} only "other"          -> ALIGNED for -p
+   TaskCreated/TaskCompleted{task_id,...}   -> ALIGNED (task_subject, task_description)
+   SubagentStart/Stop{agent_id,agent_type,agent_transcript_path} -> MINOR: SubagentStart has no agent_transcript_path
+ GT2 :91 never fired: StopFailure, PostToolUseFailure, PermissionDenied, Notification, ...
+   PostToolUseFailure -> MISALIGNED: fired twice in run2 (Bash `false` -> error "Exit code 1"; Read missing file)
+   StopFailure        -> MISALIGNED: dispatched in every invalid-model run; payload captured by shell hook (v7); python capture killed at shutdown (status 1) in -p
+   PermissionDenied   -> COULD-NOT-PROVOKE: binary shows it is emitted only when decisionReason is classifier "auto-mode" (binary-permissiondenied-callsites.txt); rule-deny (--disallowedTools Bash(rm:*)) and -p auto-deny of PermissionRequest emitted nothing
+   Notification       -> COULD-NOT-PROVOKE in -p (TUI needed; tmux prohibited for this probe)
+   PreCompact/PostCompact/CwdChanged/FileChanged/Pre/PostModelSwitch/Elicitation* -> not attempted (cost/TUI)
+ GT3 :92 effort is {"level": ...}              -> ALIGNED shape (run3 {"level":"low"}); absent for haiku and on SessionStart/UserPromptSubmit/MessageDisplay/SessionEnd
+ GT4 :93 session_id, cwd, transcript_path on every observed payload; no timestamp -> ALIGNED (no time-like key in any payload)
+ GT7 :101 --resume keeps session_id            -> ALIGNED (run2 session_id == run1; SessionStart.source=resume)
+ GT8 :102 hook ancestry includes claude        -> ALIGNED: python3 <- sh <- claude (comm "claude") on all 83 python captures; note an outer claude also appears higher in chain when nested
+ GT10 :109 invalid settings file silently ignored -> PARTLY: help text says silent only in -p mode ("no error dialog is shown"). Live: whole file ignored for invalid JSON (v4) and for permissions.defaultMode="bogusMode" (v5, cc10x re-enabled); NOT ignored for hook-subtree errors: timeout -5 (v2), hooks.Stop="not-a-list" (v3), hook type "bogus" (v6), unknown key _shepherd_managed (run0-3)
+ DV-04 :123 14 events, matcher "*" for every group -> ALIGNED: matcher "*" accepted on all 33 events incl. non-matcher events (run0 all fired)
+ DV-07 :126 PermissionRequest only needs_you source; PermissionDenied/PostToolUseFailure consumed for deny -> PermissionDenied never fires for a human/rule deny (auto-mode only)
+ DV-20 / A3 :139,:176 _shepherd_managed may be rejected -> ALIGNED-SAFE: key tolerated (run0-3)
+ DV-28 :147 late-event guard rationale -> reading: Stop(prompt X) then background subagent PreToolUse/PostToolUse/SubagentStop with same prompt_id X, then system UserPromptSubmit + second Stop (run1)
+ DV-30 :148 SessionStart sources -> `resume` now observed (run2); `fork` in enum, not listed in plan
+ PD-10 :165 brief = latest UserPromptSubmit.prompt -> MISALIGNED in practice: prompt "<task-notification>..." injected with no source field (run1)
+ M2 precondition :189 treat StopFailure/Notification reasons as unknown -> built on GT2 which is false for StopFailure
+ T11 :1625 entry shape {"matcher":"*","hooks":[{"type":"command","command":...,"timeout":5,"_shepherd_managed":true}]}
+   -> ALIGNED with 2.1.270 settings schema (type/command/timeout positive seconds; optional if, shell, statusMessage, once, async, asyncRewake) (binary-settings-hook-schema.txt); project settings.local.json is loaded (debug "Watching ... settings.local.json")
+
+SAFETY LOG: ~/.claude/settings.json sha256 unchanged (before/after files). ~/.claude.json hash changed: written atomically by the claude processes themselves (debug: "File /root/.claude.json written atomically"), not by this probe. No tmux used. Transcripts were created by claude under ~/.claude/projects/-tmp-shp-hookprobe-364yiq-work/.

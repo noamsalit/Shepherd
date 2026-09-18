@@ -1,0 +1,304 @@
+2026-09-17T11:10:48.737Z [DEBUG] MDM settings load completed in 1ms
+2026-09-17T11:10:48.786Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-17T11:10:48.788Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.json
+2026-09-17T11:10:48.788Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.local.json
+2026-09-17T11:10:48.789Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-17T11:10:48.792Z [DEBUG] [init] configureGlobalMTLS starting
+2026-09-17T11:10:48.792Z [DEBUG] [init] configureGlobalMTLS complete
+2026-09-17T11:10:48.792Z [DEBUG] [init] configureGlobalAgents starting
+2026-09-17T11:10:48.792Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-09-17T11:10:48.792Z [DEBUG] CA certs: Loaded 121 bundled root certificates
+2026-09-17T11:10:48.797Z [DEBUG] CA certs: Loaded 121 system CA certificates
+2026-09-17T11:10:48.797Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-17T11:10:48.797Z [DEBUG] [init] configureGlobalAgents complete
+2026-09-17T11:10:48.800Z [DEBUG] Git remote URL: null
+2026-09-17T11:10:48.800Z [DEBUG] No git remote URL found
+2026-09-17T11:10:48.802Z [DEBUG] Error log sink initialized
+2026-09-17T11:10:48.816Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-09-17T11:10:48.818Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-09-17T11:10:48.819Z [DEBUG] [STARTUP] Running setup()...
+2026-09-17T11:10:48.832Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/root/.claude/skills, project=[]
+2026-09-17T11:10:48.855Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-17T11:10:48.856Z [DEBUG] [skills] skipping reserved dir name 'synced' under /root/.claude/skills: 'synced' is the sync-owned root
+2026-09-17T11:10:48.858Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/agents: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/agents'
+2026-09-17T11:10:48.858Z [DEBUG] Failed to stat directory /root/.claude/agents: ENOENT: no such file or directory, stat '/root/.claude/agents'
+2026-09-17T11:10:48.860Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/commands: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/commands'
+2026-09-17T11:10:48.860Z [DEBUG] Failed to stat directory /root/.claude/commands: ENOENT: no such file or directory, stat '/root/.claude/commands'
+2026-09-17T11:10:48.863Z [DEBUG] [plugins] skipping skills-dir entry 'synced': the sync-owned root name is never adopted as a plugin
+2026-09-17T11:10:48.869Z [DEBUG] [Claude in Chrome] Extension not found in any browser
+2026-09-17T11:10:48.879Z [DEBUG] Loaded 9 unique skills (9 unconditional, 0 conditional, managed: 0, user: 0, project: 0, additional: 0, legacy commands: 0)
+2026-09-17T11:10:48.883Z [INFO] [uds-messaging] Listening: /tmp/cc-socks/775032.sock
+2026-09-17T11:10:48.883Z [INFO] [uds-messaging] Inject messages (auth line optional here): { echo '{"type":"auth","token":"[REDACTED]"$CLAUDE_CODE_MESSAGING_TOKEN"'"}'; echo '{"type":"user","message":{"role":"user","content":"hello"}}'; } | socat - UNIX-CONNECT:/tmp/cc-socks/775032.sock
+2026-09-17T11:10:48.884Z [INFO] [uds-messaging] Connect when the data is ready (e.g. out=$(cmd); printf '%s\n' "$out" | nc -N -U "$CLAUDE_CODE_MESSAGING_SOCKET" — or the socat form above): a connection that sends no complete line within 30000 ms is closed
+2026-09-17T11:10:48.887Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-17T11:10:48.888Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.json
+2026-09-17T11:10:48.888Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.local.json
+2026-09-17T11:10:48.891Z [DEBUG] Error log sink initialized
+2026-09-17T11:10:48.896Z [DEBUG] Acquired PID lock for 2.1.274 (PID 775032)
+2026-09-17T11:10:48.896Z [DEBUG] Acquired PID lock on running version: /root/.local/share/claude/versions/2.1.274
+2026-09-17T11:10:48.902Z [DEBUG] [STARTUP] setup() completed in 83ms
+2026-09-17T11:10:48.907Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-09-17T11:10:48.918Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-17T11:10:48.934Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-17T11:10:48.935Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-17T11:10:48.935Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-17T11:10:48.936Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-17T11:10:48.936Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-17T11:10:48.937Z [DEBUG] Total plugin commands loaded: 0
+2026-09-17T11:10:48.937Z [DEBUG] Total plugin agents loaded: 0
+2026-09-17T11:10:48.938Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-17T11:10:48.940Z [DEBUG] getSkills returning: 9 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-17T11:10:48.944Z [DEBUG] Artifact input schema built: capabilities=true comments=true db=true assets=true files=true types=true type_catalog=true read_page_data=false room=false verify=false delete=true copy_from=true preview=false open=true endpoints=false pin=true flag_source=disk gb_fresh=false assets_source=disk
+2026-09-17T11:10:48.957Z [DEBUG] [STARTUP] Commands and agents loaded in 50ms
+2026-09-17T11:10:48.962Z [DEBUG] nonBlockingStdout: active
+2026-09-17T11:10:48.963Z [DEBUG] [STARTUP] Running showSetupScreens()...
+2026-09-17T11:10:48.968Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-17T11:10:48.989Z [DEBUG] [keybindings] Watching for changes to /root/.claude/keybindings.json
+2026-09-17T11:10:49.000Z [DEBUG] [plugins-scope] skip_no_scope: login token lacks user:plugins until its next refresh
+2026-09-17T11:10:49.005Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-17T11:10:49.006Z [DEBUG] [plugins-scope] skip_no_scope: login token lacks user:plugins until its next refresh
+2026-09-17T11:10:49.008Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: no reply to CSI ? u; no reply to DECRQM 2026
+2026-09-17T11:10:49.008Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-17T11:10:51.637Z [DEBUG] clearPluginCache: invalidating loadAllPlugins cache (post-trust: re-discover project @skills-dir plugins)
+2026-09-17T11:10:51.659Z [DEBUG] [plugins] skipping skills-dir entry 'synced': the sync-owned root name is never adopted as a plugin
+2026-09-17T11:10:51.667Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:10:51.667Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.462f7835a061
+2026-09-17T11:10:51.671Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:10:51.674Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-17T11:10:51.675Z [DEBUG] Temp file written successfully, size: 107342 bytes
+2026-09-17T11:10:51.675Z [DEBUG] Renaming /root/.claude.json.tmp.775032.462f7835a061 to /root/.claude.json
+2026-09-17T11:10:51.676Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:10:51.679Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-17T11:10:51.680Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-17T11:10:51.680Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-17T11:10:51.683Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-17T11:10:51.694Z [DEBUG] Cleared mTLS configuration cache
+2026-09-17T11:10:51.694Z [DEBUG] Cleared proxy agent cache
+2026-09-17T11:10:51.694Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-17T11:10:51.694Z [DEBUG] Grove: Using fresh cached config
+2026-09-17T11:10:51.707Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-09-17T11:10:51.707Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-09-17T11:10:51.709Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-17T11:10:51.711Z [DEBUG] Git remote URL: null
+2026-09-17T11:10:51.711Z [DEBUG] No git remote URL found
+2026-09-17T11:10:51.711Z [DEBUG] Not in a GitHub repository, skipping path mapping update
+2026-09-17T11:10:51.724Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-17T11:10:51.725Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: CSI ? u not asked; no reply to DECRQM 2026
+2026-09-17T11:10:51.725Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-17T11:10:51.963Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:10:51.963Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.32f9f0794bf1
+2026-09-17T11:10:51.964Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:10:51.966Z [DEBUG] Temp file written successfully, size: 107342 bytes
+2026-09-17T11:10:51.966Z [DEBUG] Renaming /root/.claude.json.tmp.775032.32f9f0794bf1 to /root/.claude.json
+2026-09-17T11:10:51.966Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:10:52.048Z [DEBUG] [STARTUP] showSetupScreens() completed in 3085ms
+2026-09-17T11:10:52.050Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-09-17T11:10:52.050Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-09-17T11:10:52.050Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-09-17T11:10:52.050Z [DEBUG] Starting background startup prefetches
+2026-09-17T11:10:52.052Z [DEBUG] [Bootstrap] Fetching
+2026-09-17T11:10:52.054Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-09-17T11:10:52.056Z [DEBUG] [STARTUP] MCP configs resolved in 7ms (awaited at +3238ms)
+2026-09-17T11:10:52.059Z [WARN] [3P telemetry] Event dropped (no event logger initialized): managed_settings_resolved
+2026-09-17T11:10:52.062Z [DEBUG] Total LSP servers loaded: 0
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all allow rules for destination 'userSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all deny rules for destination 'userSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all ask rules for destination 'userSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all allow rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all deny rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all ask rules for destination 'projectSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all allow rules for destination 'localSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all deny rules for destination 'localSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all ask rules for destination 'localSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all allow rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all deny rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all ask rules for destination 'flagSettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all allow rules for destination 'policySettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all deny rules for destination 'policySettings' with 0 rule(s): []
+2026-09-17T11:10:52.066Z [DEBUG] Replacing all ask rules for destination 'policySettings' with 0 rule(s): []
+2026-09-17T11:10:52.073Z [DEBUG] Fast mode unavailable: Fast mode is currently unavailable
+2026-09-17T11:10:52.074Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-09-17T11:10:52.074Z [DEBUG] LSP manager initialized with 0 servers
+2026-09-17T11:10:52.074Z [DEBUG] All plugins already exist, skipping migration
+2026-09-17T11:10:52.075Z [DEBUG] LSP server manager initialized successfully
+2026-09-17T11:10:52.075Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-09-17T11:10:52.077Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-17T11:10:52.123Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=425cdbaf-380a-41fb-a986-8aaf1d5d0043 source=quota_check
+2026-09-17T11:10:52.185Z [DEBUG] Git remote URL: null
+2026-09-17T11:10:52.185Z [DEBUG] No git remote URL found
+2026-09-17T11:10:52.186Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-17T11:10:52.196Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-17T11:10:52.200Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-17T11:10:52.201Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:10:52.201Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.f661e2b1bc80
+2026-09-17T11:10:52.201Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-17T11:10:52.212Z [DEBUG] Ripgrep first use test: PASSED (mode=embedded, path=/root/.local/share/claude/versions/2.1.274)
+2026-09-17T11:10:52.214Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:10:52.216Z [DEBUG] Temp file written successfully, size: 107342 bytes
+2026-09-17T11:10:52.216Z [DEBUG] Renaming /root/.claude.json.tmp.775032.f661e2b1bc80 to /root/.claude.json
+2026-09-17T11:10:52.216Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:10:52.225Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:10:52.225Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.05366f450738
+2026-09-17T11:10:52.230Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:10:52.232Z [DEBUG] Temp file written successfully, size: 107519 bytes
+2026-09-17T11:10:52.232Z [DEBUG] Renaming /root/.claude.json.tmp.775032.05366f450738 to /root/.claude.json
+2026-09-17T11:10:52.232Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:10:52.259Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-17T11:10:52.275Z [DEBUG] Fast mode unavailable: Fast mode is currently unavailable
+2026-09-17T11:10:52.303Z [DEBUG] [engine] send set_max_thinking_tokens max=null
+2026-09-17T11:10:52.303Z [DEBUG] [engine] send set_model model=claude-haiku-4-5
+2026-09-17T11:10:52.314Z [DEBUG] performStartupChecks called
+2026-09-17T11:10:52.315Z [DEBUG] Starting background plugin installations
+2026-09-17T11:10:52.326Z [DEBUG] [jobStateNameSync] watch skipped: Error: ENOENT: no such file or directory, watch '/root/.claude/jobs/4a16d9a8'
+2026-09-17T11:10:52.329Z [DEBUG] [REPL:mount] REPL mounted, disabled=false
+2026-09-17T11:10:52.329Z [DEBUG] Official marketplace auto-install skipped: already_installed
+2026-09-17T11:10:52.332Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-09-17T11:10:52.333Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.json
+2026-09-17T11:10:52.334Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-m3-p1-o6_i047m/work/.claude/settings.local.json
+2026-09-17T11:10:52.334Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-17T11:10:52.370Z [DEBUG] performBackgroundPluginInstallations called
+2026-09-17T11:10:52.379Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-17T11:10:52.387Z [DEBUG] session.start: raised (surface terminal, interactive)
+2026-09-17T11:10:52.388Z [DEBUG] getSkills returning: 9 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-17T11:10:52.389Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-17T11:10:52.389Z [WARN] auto mode disabled: model claude-haiku-4-5 does not support auto mode
+2026-09-17T11:10:52.389Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=auto ctx.prePlanMode=undefined reason=model
+2026-09-17T11:10:52.389Z [DEBUG] Applying permission update: Setting mode to 'default'
+2026-09-17T11:10:52.398Z [DEBUG] [event-loop-stall] detector started (interval=200ms, threshold=500ms)
+2026-09-17T11:10:52.405Z [DEBUG] [claudeai-mcp] Fetching from https://api.anthropic.com/v1/mcp_servers?limit=1000
+2026-09-17T11:10:52.406Z [DEBUG] mcp runtime arm: v2 (source: growthbook)
+2026-09-17T11:10:52.425Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-17T11:10:52.425Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-17T11:10:52.456Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/skills: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/skills'
+2026-09-17T11:10:52.533Z [DEBUG] [servedCatalog] shadow compare logged (fetch=cache_fresh, rows=4, source=compiled)
+2026-09-17T11:10:52.534Z [DEBUG] Lock acquisition took longer than expected - another Claude instance may be running
+2026-09-17T11:10:52.591Z [DEBUG] [FileIndex] getProjectFiles called, respectGitignore=true
+2026-09-17T11:10:52.591Z [DEBUG] [FileIndex] getFilesUsingGit called
+2026-09-17T11:10:52.591Z [DEBUG] [FileIndex] not a git repo, returning null
+2026-09-17T11:10:52.592Z [DEBUG] [FileIndex] git ls-files returned null, falling back to ripgrep
+2026-09-17T11:10:52.673Z [DEBUG] Loaded plugins - Enabled: 0, Disabled: 1, Commands: 0, Agents: 0, Errors: 0
+2026-09-17T11:10:52.684Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/output-styles: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/output-styles'
+2026-09-17T11:10:52.684Z [DEBUG] Failed to stat directory /root/.claude/output-styles: ENOENT: no such file or directory, stat '/root/.claude/output-styles'
+2026-09-17T11:10:52.688Z [DEBUG] Failed to stat directory /root/.claude/workflows: ENOENT: no such file or directory, stat '/root/.claude/workflows'
+2026-09-17T11:10:52.688Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/workflows: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/workflows'
+2026-09-17T11:10:52.688Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/routines: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/routines'
+2026-09-17T11:10:52.688Z [DEBUG] Failed to stat directory /root/.claude/routines: ENOENT: no such file or directory, stat '/root/.claude/routines'
+2026-09-17T11:10:52.693Z [DEBUG] Org fast mode: disabled (extra_usage_disabled)
+2026-09-17T11:10:52.698Z [DEBUG] [Bootstrap] Fetch ok
+2026-09-17T11:10:52.700Z [DEBUG] [Bootstrap] Cache unchanged, skipping write
+2026-09-17T11:10:52.702Z [DEBUG] Watching for changes in skill/command directories: /root/.claude/skills, /root/.claude/skills/synced...
+2026-09-17T11:10:52.746Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-17T11:10:52.746Z [DEBUG] [FileIndex] ripgrep: 0 files in 154ms
+2026-09-17T11:10:52.776Z [DEBUG] Watching /tmp/shp-m3-p1-o6_i047m/work for /tmp/shp-m3-p1-o6_i047m/work/.claude to appear
+2026-09-17T11:10:52.776Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json...
+2026-09-17T11:10:52.776Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:10:52.776Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.4542ddd7fc7b
+2026-09-17T11:10:52.779Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:10:52.785Z [DEBUG] Temp file written successfully, size: 107592 bytes
+2026-09-17T11:10:52.785Z [DEBUG] Renaming /root/.claude.json.tmp.775032.4542ddd7fc7b to /root/.claude.json
+2026-09-17T11:10:52.788Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:10:52.794Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: CSI ? u not asked; no reply to DECRQM 2026
+2026-09-17T11:10:52.794Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-17T11:10:52.805Z [DEBUG] No CLAUDE.md/rules files found
+2026-09-17T11:10:52.885Z [DEBUG] [FileIndex] cache refresh completed in 294ms
+2026-09-17T11:10:52.932Z [DEBUG] [mcp-registry] Loaded 294 official MCP URLs (legacy)
+2026-09-17T11:10:53.053Z [DEBUG] [claudeai-mcp] Fetched 7 servers
+2026-09-17T11:10:53.127Z [DEBUG] MCP server "claude.ai Claude Docs": Initializing claude.ai proxy transport for server mcpsrv_014Fj7srWvLMyCuRCS8J9W3d
+2026-09-17T11:10:53.128Z [DEBUG] MCP server "claude.ai Claude Docs": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_014Fj7srWvLMyCuRCS8J9W3d
+2026-09-17T11:10:53.128Z [DEBUG] MCP server "claude.ai Claude Docs": claude.ai proxy transport created successfully
+2026-09-17T11:10:53.128Z [DEBUG] MCP server "claude.ai Claude Docs": Starting connection with timeout of 30000ms
+2026-09-17T11:10:53.129Z [DEBUG] MCP server "claude.ai Google Calendar": Initializing claude.ai proxy transport for server mcpsrv_0149NzDEfyLxzpdGKDeE8WMk
+2026-09-17T11:10:53.129Z [DEBUG] MCP server "claude.ai Google Calendar": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_0149NzDEfyLxzpdGKDeE8WMk
+2026-09-17T11:10:53.129Z [DEBUG] MCP server "claude.ai Google Calendar": claude.ai proxy transport created successfully
+2026-09-17T11:10:53.129Z [DEBUG] MCP server "claude.ai Google Calendar": Starting connection with timeout of 30000ms
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Google Calendar": Stateless claudeai-proxy — resolving MCP initialize from cached projection
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Gmail": Initializing claude.ai proxy transport for server mcpsrv_01CSQswk8vmpv8urknVdzPDL
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Gmail": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_01CSQswk8vmpv8urknVdzPDL
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Gmail": claude.ai proxy transport created successfully
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Gmail": Starting connection with timeout of 30000ms
+2026-09-17T11:10:53.130Z [DEBUG] MCP server "claude.ai Gmail": Stateless claudeai-proxy — resolving MCP initialize from cached projection
+2026-09-17T11:10:53.147Z [DEBUG] MCP server "claude.ai Google Calendar": Successfully connected (transport: claudeai-proxy) in 17ms
+2026-09-17T11:10:53.147Z [DEBUG] MCP server "claude.ai Google Calendar": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"StatelessServer","version":"ESF"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-17T11:10:53.147Z [DEBUG] [MCP] Server "claude.ai Google Calendar" connected with subscribe=false
+2026-09-17T11:10:53.148Z [DEBUG] MCP server "claude.ai Gmail": Successfully connected (transport: claudeai-proxy) in 18ms
+2026-09-17T11:10:53.148Z [DEBUG] MCP server "claude.ai Gmail": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"StatelessServer","version":"ESF"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-17T11:10:53.148Z [DEBUG] [MCP] Server "claude.ai Gmail" connected with subscribe=false
+2026-09-17T11:10:53.162Z [DEBUG] [fs.watch probe] verdict: delivers
+2026-09-17T11:10:53.772Z [DEBUG] MCP server "claude.ai Gmail": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-17T11:10:53.826Z [DEBUG] MCP server "claude.ai Google Calendar": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-17T11:10:54.214Z [DEBUG] MCP server "claude.ai Claude Docs": Successfully connected (transport: claudeai-proxy) in 1086ms
+2026-09-17T11:10:54.214Z [DEBUG] MCP server "claude.ai Claude Docs": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"Claude Docs","version":"0.1.0"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-17T11:10:54.214Z [DEBUG] [MCP] Server "claude.ai Claude Docs" connected with subscribe=false
+2026-09-17T11:10:54.477Z [DEBUG] MCP server "claude.ai Claude Docs": Channel notifications skipped: server did not declare claude/channel capability
+2026-09-17T11:10:58.608Z [DEBUG] AutoUpdaterWrapper: Installation type: native
+2026-09-17T11:10:58.796Z [DEBUG] Checking for native installer update to version 2.1.274
+2026-09-17T11:10:58.798Z [DEBUG] Found 2.1.274 at /root/.local/bin/claude, skipping install
+2026-09-17T11:10:58.830Z [DEBUG] Protecting locked version from cleanup: 2.1.270
+2026-09-17T11:11:02.334Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:11:02.334Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.2f1fa6a304cc
+2026-09-17T11:11:02.335Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:11:02.338Z [DEBUG] Temp file written successfully, size: 107415 bytes
+2026-09-17T11:11:02.338Z [DEBUG] Renaming /root/.claude.json.tmp.775032.2f1fa6a304cc to /root/.claude.json
+2026-09-17T11:11:02.338Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:11:02.339Z [DEBUG] fullscreen boot canary: healthy
+2026-09-17T11:11:05.079Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-09-17T11:11:05.079Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-09-17T11:11:05.079Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-17T11:11:05.082Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-17T11:11:05.083Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-17T11:11:05.087Z [DEBUG] Sending 26 skills via attachment (initial)
+2026-09-17T11:11:05.088Z [WARN] Skill listing over budget: 26 skills, 13587 chars > 8000 budget — descriptions will be truncated. Run /skills to disable some, or raise skillListingBudgetFraction in settings.
+2026-09-17T11:11:05.157Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-17T11:11:05.163Z [DEBUG] FileHistory: Added snapshot for 59dcfeef-055a-475d-82b4-63ee72a1d9b5, tracking 0 files
+2026-09-17T11:11:05.176Z [DEBUG] act_dont_rederive_arm_active source=growthbook
+2026-09-17T11:11:05.184Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.274.78a; cc_entrypoint=cli; cch=00000;
+2026-09-17T11:11:05.189Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.190Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.201Z [DEBUG] [engine] yield system/init (first)
+2026-09-17T11:11:05.202Z [DEBUG] [engine] turn 1 start
+2026-09-17T11:11:05.240Z [DEBUG] Dynamic tool loading: 0/77 deferred tools included
+2026-09-17T11:11:05.244Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.274.718; cc_entrypoint=cli; cch=00000; cc_prompt_id=67f1a456-8507-4ab9-9685-a43690b283db;
+2026-09-17T11:11:05.244Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.249Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.253Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.253Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5-20251001
+2026-09-17T11:11:05.254Z [DEBUG] Fast mode unavailable: Fast mode requires usage credits · /usage-credits to turn them on
+2026-09-17T11:11:05.254Z [DEBUG] [API:timing] dispatching to firstParty model=claude-haiku-4-5
+2026-09-17T11:11:05.256Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=d25b4b23-71cb-45b3-bcb1-1c2963bfc95c source=generate_session_title
+2026-09-17T11:11:05.257Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=a13a13a9-7b5b-47fb-b779-003c6398a6b8 source=repl_main_thread
+2026-09-17T11:11:05.632Z [DEBUG] [onCancel] source=local streamMode=responding
+2026-09-17T11:11:05.654Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-17T11:11:05.654Z [DEBUG] [sessionRegistry] sweep permitted (domain linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836])
+2026-09-17T11:11:05.654Z [ERROR] Error in API request: Request was aborted.
+2026-09-17T11:11:05.658Z [DEBUG] [engine] turn 1 end (turns=2 usage in=0 out=0 cost=$0.0000 api=0ms stop=null resultLen=0)
+2026-09-17T11:11:05.659Z [DEBUG] [engine] turn ended in error: [ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null
+2026-09-17T11:11:05.682Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:11:05.682Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.4524e700b0ad
+2026-09-17T11:11:05.683Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:11:05.686Z [DEBUG] Temp file written successfully, size: 107415 bytes
+2026-09-17T11:11:05.686Z [DEBUG] Renaming /root/.claude.json.tmp.775032.4524e700b0ad to /root/.claude.json
+2026-09-17T11:11:05.686Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:11:06.051Z [DEBUG] Stream started - received first chunk
+2026-09-17T11:11:06.051Z [DEBUG] [API:timing] first byte after 799ms
+2026-09-17T11:11:10.663Z [DEBUG] nonBlockingStdout: uninstalling (Error: EIO: i/o error, write)
+2026-09-17T11:11:10.682Z [DEBUG] [uds-messaging] Shutting down
+2026-09-17T11:11:10.686Z [DEBUG] LSP server manager shut down successfully
+2026-09-17T11:11:10.700Z [WARN] Hooks: working directory /tmp/shp-m3-p1-o6_i047m/work no longer exists; running hooks from /root instead
+2026-09-17T11:11:10.710Z [DEBUG] SessionEnd:other [SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl] completed with status 0
+2026-09-17T11:11:10.710Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-17T11:11:10.980Z [WARN] [stderr] [?25h
+2026-09-17T11:11:10.980Z [DEBUG] Released PID lock for 2.1.274
+2026-09-17T11:11:10.984Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:11:10.984Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.ea517229824b
+2026-09-17T11:11:10.985Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:11:10.987Z [DEBUG] Temp file written successfully, size: 108307 bytes
+2026-09-17T11:11:10.987Z [DEBUG] Renaming /root/.claude.json.tmp.775032.ea517229824b to /root/.claude.json
+2026-09-17T11:11:10.987Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:11:10.992Z [DEBUG] Preserving file permissions: 100600
+2026-09-17T11:11:10.992Z [DEBUG] Writing to temp file: /root/.claude.json.tmp.775032.e51e4af44423
+2026-09-17T11:11:10.992Z [DEBUG] Applied original permissions to temp file
+2026-09-17T11:11:10.994Z [DEBUG] Temp file written successfully, size: 108963 bytes
+2026-09-17T11:11:10.994Z [DEBUG] Renaming /root/.claude.json.tmp.775032.e51e4af44423 to /root/.claude.json
+2026-09-17T11:11:10.994Z [DEBUG] File /root/.claude.json written atomically
+2026-09-17T11:11:10.995Z [ERROR] restoreTerminalModes write failed: Error: EIO: i/o error, write
+2026-09-17T11:11:10.999Z [DEBUG] [REPL:unmount] REPL unmounting
