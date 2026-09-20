@@ -33,6 +33,7 @@ import pytest
 from claude_agent_sdk import ClaudeAgentOptions, CLIConnectionError
 
 from shepherd.core.anomalies import AnomalyKind
+from shepherd.host.detect import detect_host
 from shepherd.core.master import (
     CURATED_MASTER_FACTS,
     ExportedTool,
@@ -642,12 +643,19 @@ INHERITED_PREFIXES = ("CLAUDE", "ANTHROPIC", "AI_AGENT")
 
 
 def pid_is_alive(pid: int) -> bool:
-    """Linux `/proc`, never a signal (CLAUDE.md 2026-09-17).
+    """The host seam, never a signal (D55, CLAUDE.md 2026-09-17).
 
     A liveness probe that sends a signal is a liveness probe that can end
-    something. A directory test sends nothing.
+    something, so `os.kill(pid, 0)` stays refused. `process_liveness` reads a
+    table on both platforms — `/proc/<pid>/stat` on Linux, `ps -o lstart=` on
+    macOS — and sends nothing.
+
+    It was `Path(f"/proc/{pid}").exists()`, which on macOS is `False` for every
+    pid. `test_close_terminates_the_cli` therefore failed at its *arrival*
+    assertion (`assert pid_is_alive(pid)`) against a real engine that was
+    running perfectly well.
     """
-    return Path(f"/proc/{pid}").exists()
+    return detect_host().process_liveness(pid, None).alive
 
 
 @pytest.mark.live

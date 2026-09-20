@@ -174,10 +174,55 @@ def throwaway(tmp_path: Path) -> Throwaway:
 
 @pytest.fixture()
 def shepherd_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Shepherd's *own* dirs, thrown away — never the engine's (ADR-2)."""
+    """Shepherd's *own* dirs, thrown away — never the engine's (ADR-2).
+
+    **`TMPDIR` is part of that and was missing until 2026-09-20.** This fixture
+    redirected the `XDG_*` family only, which is `LinuxHost`'s half of the
+    question; `MacHost` reads `HOME` and `TMPDIR` and correctly ignores every
+    `XDG_` name. With `TMPDIR` left alone, every `controld` this lane started
+    bound its control socket in the operator's **real** `$TMPDIR/Shepherd/` —
+    which is why `test_sessiond_relays_and_the_buffer_drains_in_order_across_a_restart`
+    failed with `ConnectionRefusedError` and nothing about a restart: two
+    daemons that were meant to hold separate throwaway runtime directories were
+    sharing one global socket path.
+
+    **`HOME` is deliberately *not* redirected, and the reason is a real
+    tension.** On macOS `MacHost` derives `data_dir` from `HOME`, so redirecting
+    it is what would isolate Shepherd's *database* here. But this lane needs the
+    engine's own config to be the real one — `spawn()` passes
+    `engine_config_home=None` so a spawn meets a real workspace-trust dialog,
+    and `test_hookless_discovery_sees_this_hosts_real_sessions` reads this
+    host's actual registry. The engine resolves its account record from
+    `$CLAUDE_CONFIG_DIR/.claude.json` (measured: with a throwaway `HOME` it
+    reports `Not logged in · Please run /login`), so no combination of
+    environment variables gives "throwaway home for Shepherd, real login for the
+    engine" — the two want the same variable to point in opposite directions.
+
+    **Consequence, recorded rather than hidden:** on macOS the `controld` this
+    lane starts still opens the operator's real
+    `~/Library/Application Support/Shepherd/shepherd.db`. That is the residue
+    behind the fixture workspace `shepherd-m3-live` visible in the user's own
+    UI. `tests/qa/test_s8_*` and `test_s9_*` do not share it — they drive
+    `shepherd-controld` as a subprocess with an environment they fully own, and
+    both redirect `HOME`.
+
+    Closing it properly means injecting a `HostPlatform` into this lane rather
+    than mutating the process environment — `controld.start(host=...)` already
+    takes one, which is exactly what the seam is for — so that Shepherd's
+    directories and the engine's are chosen independently. That is a change
+    across ~8 call sites in live tests that cannot be executed here, so it is
+    named as open work rather than applied blind.
+    """
     for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         monkeypatch.setenv(name, str(tmp_path / name.lower()))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "run"))
+
+    # Arrival, not trust: the driver really did follow the redirect for the one
+    # directory this fixture can currently isolate on both platforms.
+    assert tmp_path in detect_host().control_socket("probe").path.parents, (
+        "the control socket escaped the throwaway runtime directory"
+    )
     return tmp_path
 
 
@@ -362,8 +407,8 @@ def installed_settings(shepherd_home: Path, throwaway: Throwaway) -> Path:
 # directory that is **not** the repo; every inherited `CLAUDE*` / `ANTHROPIC*` /
 # `AI_AGENT` variable scrubbed before the subprocess exists; the turn bounded by
 # `asyncio.timeout`; the engine's pid recorded, asserted alive while the turn
-# runs and asserted gone afterwards on a bounded wait read from `/proc` — never
-# from a signal (CLAUDE.md, 2026-09-17). `~/.claude/` is read and never written;
+# runs and asserted gone afterwards on a bounded wait read through the host
+# seam — never from a signal (CLAUDE.md, 2026-09-17). `~/.claude/` is read and never written;
 # the per-test `settings_guard` above asserts that, per test, by digest.
 #
 # **The mounted tools are inert fakes**, for the reason the probe harness gives
@@ -425,9 +470,26 @@ FAKE_TOOL_ANSWER = "t22 fixture tool; it does nothing"
 
 
 def pid_is_alive(pid: int) -> bool:
-    """Linux `/proc`, never a signal. A probe that signals is a probe that can end
-    something — and on 2026-09-17 one did, to pid 1."""
-    return Path(f"/proc/{pid}").exists()
+    """The host seam, never a signal (D55, CLAUDE.md 2026-09-17).
+
+    The rule is unchanged and it is the important half: a probe that signals is
+    a probe that can end something, and on 2026-09-17 one did, to pid 1. So
+    `os.kill(pid, 0)` — the short portable idiom — stays refused.
+
+    What changed is where the answer comes from. `Path(f"/proc/{pid}").exists()`
+    is Linux's spelling of it, and on macOS that path never exists: this
+    returned `False` for every pid, alive or dead. That is not a crash, which is
+    what makes it dangerous — `assert not pid_is_alive(pid)` after a teardown
+    passed for a daemon that was still running, and the arrival assertions that
+    would have caught it (`assert pid_is_alive(pid)`) failed instead, so the
+    lane reported the *opposite* of the truth at both ends.
+
+    `HostPlatform.process_liveness` is the seam the product already uses for
+    exactly this question: `/proc/<pid>/stat` on Linux, `ps -o lstart=` on
+    macOS, read-only on both, measured on this host in
+    `docs/probes/2026-09-20-macos-g1-capture.md` §5.
+    """
+    return detect_host().process_liveness(pid, None).alive
 
 
 def probe_system_init(capture: Path) -> Mapping[str, object]:
@@ -499,7 +561,7 @@ class LiveMaster:
     pids: tuple[int, ...]
     """Every engine pid seen during the turn, each asserted alive when found."""
     survivors: tuple[int, ...]
-    """Any of them still in `/proc` after the bounded wait. Must be empty."""
+    """Any of them the host still reports alive after the wait. Must be empty."""
     workdir: Path
     transcript: Path | None
     """The engine's own transcript for this session, under `~/.claude/projects/`."""

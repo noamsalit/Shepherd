@@ -130,7 +130,20 @@ MAC_DETACH_DETAIL = (  # UNVERIFIED (no capture) — D55
     "no Mac has ever been observed keeping a tmux server alive across an agent "  # UNVERIFIED
     "reload, so this is written and annotated, never measured (T7)"  # UNVERIFIED
 )
-MAC_LIVENESS_ARGV_HEAD = ("ps", "-o", "lstart=", "-p")  # UNVERIFIED (no capture) — D55
+#: Measured against real pids on a real Mac: a live process, an unreaped
+#: zombie and a pid this user does not own all answer rc=0 with a start
+#: string; an exited pid and an impossible one answer rc=1 and empty. The
+#: **caveat is the token's resolution**: `lstart` is spelled to the second
+#: (`Sun Sep 20 13:18:59 2026`), where Linux's field 22 is in jiffies — so a
+#: pid reused inside the same second would present the same token and the
+#: pid-reuse guard would not see the substitution. Narrower than Linux's, and
+#: recorded rather than smoothed over.
+MAC_LIVENESS_ARGV_HEAD = (  # VERIFIED (docs/probes/2026-09-20-macos-g1-capture.md §5)
+    "ps",  # VERIFIED (docs/probes/…§5) — D55
+    "-o",  # VERIFIED (docs/probes/…§5) — D55
+    "lstart=",  # VERIFIED (docs/probes/…§5) — D55: the `=` suppresses the header
+    "-p",  # VERIFIED (docs/probes/…§5) — D55
+)
 MAC_OFF_PLATFORM_REASON = (  # UNVERIFIED (no capture) — D55
     "MacHost host probes refuse off-platform: running them here would answer "  # UNVERIFIED
     "about this Linux host, which is the failure D41 forbids"  # UNVERIFIED
@@ -142,8 +155,14 @@ class UnverifiedHostCapability(RuntimeError):
 
 
 def mac_liveness_argv(pid: int) -> tuple[str, ...]:
-    """The intended macOS liveness probe. Read-only; never verified."""
-    return (*MAC_LIVENESS_ARGV_HEAD, str(pid))  # UNVERIFIED (no capture) — D55
+    """The macOS liveness probe. Read-only, and it sends nothing.
+
+    That second property is the load-bearing one and it is why this is the
+    answer the tests take too: CLAUDE.md's 2026-09-17 rule forbids a probe that
+    signals, because a probe that signals is a probe that can end something.
+    `ps` reads a table.
+    """
+    return (*MAC_LIVENESS_ARGV_HEAD, str(pid))  # VERIFIED (docs/probes/…§5) — D55
 
 
 def mac_dispatch_missing_reason(missing: tuple[str, ...]) -> str:
@@ -249,21 +268,34 @@ class MacHost:
         )
 
     def process_liveness(self, pid: int, start_token: str | None) -> Liveness:
-        """`ps`-based liveness (D55). The parse below has never been run."""
+        """`ps`-based liveness — **run, and measured** (G1 item 4).
+
+        Seven cases on a real Mac (§5): this process, a live child, an unreaped
+        zombie and `launchd` (pid 1, owned by root, not ours) all report alive;
+        an exited child and an impossible pid report gone; and a mismatched
+        start token reports gone, which is the pid-reuse guard doing its job.
+        4.1 ms median per call.
+
+        It reads a table and sends nothing, which is what makes it the answer
+        the **tests** take as well — `os.kill(pid, 0)` is the idiom this repo
+        refuses by name (CLAUDE.md, 2026-09-17).
+        """
         if not self._on_platform():
             raise UnverifiedHostCapability(MAC_OFF_PLATFORM_REASON)
-        import subprocess  # UNVERIFIED (no capture) — D55: imported only on the Mac path
+        import subprocess  # VERIFIED (docs/probes/…§5) — D55: imported only on the Mac path
 
         observed_at = _now()
         completed = subprocess.run(
             list(mac_liveness_argv(pid)),
             capture_output=True,
             text=True,
-            timeout=2.0,  # UNVERIFIED (no capture) — D55
+            timeout=2.0,  # VERIFIED (docs/probes/…§5) — D55: 4.1 ms median, 8.8 ms worst
             check=False,
         )
         observed = completed.stdout.strip()
-        if completed.returncode != 0 or not observed:  # UNVERIFIED (no capture) — D55
+        # rc=1 for an impossible pid (`ps: process id too large`) and empty
+        # output for a pid that has gone: both are "not alive" (§5).
+        if completed.returncode != 0 or not observed:  # VERIFIED (docs/probes/…§5) — D55
             return Liveness(alive=False, start_token=None, observed_at=observed_at)
         if start_token is not None and observed != start_token:
             return Liveness(alive=False, start_token=observed, observed_at=observed_at)

@@ -16,8 +16,9 @@ then confirms the port really answers. A `sleep` here would be a race condition
 with a comment, and it would make every later assertion a statement about
 timing.
 
-**Teardown verifies itself:** `SIGTERM`, a bounded wait, `/proc` checked for the
-pid, and the socket file asserted gone. Never a signal to a pid this fixture did
+**Teardown verifies itself:** `SIGTERM`, a bounded wait, the pid asked of
+`HostPlatform.process_liveness` (read-only on both platforms, never a signal),
+and the socket file asserted gone. Never a signal to a pid this fixture did
 not create (CLAUDE.md, 2026-09-17), and never `kill -9`.
 
 *Lying implementations this now catches:* a `status` that answers from a stale
@@ -37,15 +38,18 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
 from shepherd.cli.commands import EXIT_FAILURE
 from shepherd.daemons.controld import DB_NAME
 from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME
+from shepherd.host.base import HostDirs
+from shepherd.host.detect import detect_host
 
 pytestmark = pytest.mark.live
 
@@ -95,6 +99,19 @@ def isolated_env(home: Path) -> dict[str, str]:
     for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         env[name] = str(home / name.lower())
     env["XDG_RUNTIME_DIR"] = str(home / "run")
+    # `HOME` and `TMPDIR` are the **other driver's spelling of the same two
+    # questions**, and until 2026-09-20 neither was set here. `MacHost`
+    # correctly ignores every `XDG_` name above, so on macOS this scrub
+    # isolated nothing: a single run of one test in this file opened the
+    # operator's real `~/Library/Application Support/Shepherd/shepherd.db` and
+    # bound a control socket in the real `$TMPDIR`. Both were found on disk.
+    #
+    # The lesson generalises past the two names: a scrub written from one
+    # platform's variables is a scrub that cannot isolate the other, and
+    # `test_nothing_was_left_behind_outside_the_throwaway` could not see it
+    # because it was checking the variables rather than the directories.
+    env["HOME"] = str(home)
+    env["TMPDIR"] = str(home / "run")
     env["PYTHONPATH"] = str(SRC)
     # **Load-bearing, and measured.** A child's stdout is block-buffered when it
     # is a pipe, so `controld`'s one-line readiness banner sits in an 8 KB
@@ -104,6 +121,36 @@ def isolated_env(home: Path) -> dict[str, str]:
     # run of this file hung until the suite timeout, which is how it was found.
     env["PYTHONUNBUFFERED"] = "1"
     return env
+
+
+def host_dirs_for(env: Mapping[str, str]) -> HostDirs:
+    """The three directories **this host's** driver resolves from `env` (D55).
+
+    Asked through `HostPlatform`, never by re-spelling one platform's variable
+    names: `LinuxHost` reads `XDG_*`, `MacHost` reads `HOME` and `TMPDIR`, and a
+    check that knows only the first cannot tell isolation from its absence on
+    the second. `env` is applied to this process for the length of the call
+    because that is what the driver reads, and `clear=True` so a real `TMPDIR`
+    cannot leak in behind a scrub that forgot to set one.
+    """
+    with mock.patch.dict(os.environ, dict(env), clear=True):
+        return detect_host().dirs()
+
+
+def pid_is_gone(pid: int) -> bool:
+    """`not alive`, through the seam the product itself uses (D55).
+
+    `Path(f"/proc/{pid}").exists()` was the reader here. On macOS that path
+    never exists, so "the daemon's pid is gone" was true of every pid, alive or
+    dead, and the teardown check below passed **without checking** — this
+    repo's signature defect, in its own teardown.
+
+    `process_liveness` is read-only on both platforms (`/proc/<pid>/stat`,
+    `ps -o lstart=`) and sends nothing. `os.kill(pid, 0)` would be the shorter
+    portable idiom and is the one this repo refuses by name: a probe that
+    signals is a probe that can end something (CLAUDE.md, 2026-09-17).
+    """
+    return not detect_host().process_liveness(pid, None).alive
 
 
 @dataclass(frozen=True)
@@ -117,7 +164,15 @@ class Daemon:
     banner: str
 
     def data_dir(self) -> Path:
-        return self.home / "xdg_data_home" / "shepherd"
+        """Where **this host's** driver puts the database, asked through the seam.
+
+        Spelled `home / "xdg_data_home" / "shepherd"` until 2026-09-20, which is
+        one platform's layout asserted at whichever platform is running. macOS
+        puts it under `Library/Application Support/Shepherd`, so the literal
+        named a directory that never existed and every check that read it was
+        looking somewhere empty.
+        """
+        return host_dirs_for(self.env).data_dir
 
 
 def _wait_for_banner(process: subprocess.Popen[str]) -> str:
@@ -195,8 +250,8 @@ def _stop(process: subprocess.Popen[str]) -> None:
         process.stdout.close()
     if process.stderr is not None:
         process.stderr.close()
-    assert not Path(f"/proc/{process.pid}").exists(), (
-        f"controld's pid {process.pid} is still in /proc after teardown"
+    assert pid_is_gone(process.pid), (
+        f"controld's pid {process.pid} is still alive after teardown"
     )
 
 
@@ -373,4 +428,18 @@ def test_nothing_was_left_behind_outside_the_throwaway(daemon: Daemon, tmp_path:
     for name, value in daemon.env.items():
         if name.startswith("XDG_") or name == "CLAUDE_CONFIG_DIR":
             assert Path(value).is_relative_to(tmp_path), (name, value)
+
+    # The half that was missing, and the reason this check passed on a host
+    # where it could not possibly hold. Asserting that the *variables* point
+    # inside the throwaway says nothing on a platform whose driver does not
+    # read them — it is a check on the fixture, not on the daemon. These are
+    # the directories the driver actually resolved from that environment.
+    dirs = host_dirs_for(daemon.env)
+    for directory in (dirs.data_dir, dirs.config_dir, dirs.runtime_dir):
+        assert directory.is_relative_to(daemon.home), directory
+
+    # …and the database really landed in one of them, so "nothing outside" is
+    # not satisfied by a daemon that wrote nothing anywhere (B1).
+    assert sorted(daemon.home.rglob(DB_NAME)), f"no {DB_NAME} under {daemon.home}"
+
     assert not (REPO_ROOT / DB_NAME).exists(), "a database was written into the repo root"

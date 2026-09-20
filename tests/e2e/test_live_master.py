@@ -57,8 +57,9 @@ the blast classes are read back off the shipped registry.
   tool mounted acts on a row with **no `runner_handle`**, so `handle_for`
   answers `None` and `kill()` returns `no_pane` without an argv being built at
   all;
-* every wait is bounded and liveness is read from `/proc`, **never** from a
-  signal (CLAUDE.md, 2026-09-17 — that rule cost a host).
+* every wait is bounded and liveness is read through the host seam (`/proc` on
+  Linux, `ps` on macOS), **never** from a signal (CLAUDE.md, 2026-09-17 — that
+  rule cost a host).
 
 **RD10: a restricted tool set, and exactly one destructive tool.** *"A live
 master holding the whole destructive surface is a test that can act on the
@@ -75,6 +76,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import subprocess
 import time
 import uuid
 from collections.abc import Callable, Iterator, Mapping
@@ -200,20 +202,62 @@ def interrupted_turn_text(destructive_name: str, session_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def pid_cmdline(pid: int) -> tuple[str, ...]:
-    """One process's argv, read from `/proc`. `()` if it is already gone.
+#: Linux's process table. Present or absent; that is the only thing that
+#: distinguishes the two readers below, and the absent case is macOS rather
+#: than an error (principle 5).
+PROC = Path("/proc")
 
-    Read as **bytes and split on NUL**, because that is what `/proc` holds; a
-    reader that split on whitespace would merge a word containing a space and
-    then report a basename nothing has.
+#: BSD `ps`: every process, pid and full argv, with `-ww` so a long argv is not
+#: truncated to the terminal width — which would cut exactly the `…/_bundled/`
+#: prefix `engine_pids` matches on.
+PS_ARGV: tuple[str, ...] = ("ps", "-axww", "-o", "pid=,args=")
+
+#: `ps` is a read of a kernel table and returns in milliseconds; this bounds a
+#: host wedged badly enough that it does not, rather than hanging the lane.
+PS_TIMEOUT_S = 10.0
+
+
+def pid_cmdline(pid: int) -> tuple[str, ...]:
+    """One process's argv. `()` if it is already gone.
+
+    On Linux, read from `/proc` as **bytes split on NUL**, because that is what
+    `/proc` holds; a reader that split on whitespace would merge a word
+    containing a space and then report a basename nothing has. That fidelity is
+    not available from `ps`, which joins the argv with spaces before we ever see
+    it — so the macOS reader splits on whitespace and `engine_pids` below takes
+    only `argv[0]`, which is the one word this lane needs and the one word a
+    space cannot appear in for an executable resolved from PATH or a bundle.
     """
-    try:
-        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
-    except OSError:
-        return ()
-    return tuple(
-        word.decode("utf-8", "replace") for word in raw.split(b"\x00") if word
+    if PROC.exists():
+        try:
+            raw = (PROC / str(pid) / "cmdline").read_bytes()
+        except OSError:
+            return ()
+        return tuple(
+            word.decode("utf-8", "replace") for word in raw.split(b"\x00") if word
+        )
+    return _ps_table().get(pid, ())
+
+
+def _ps_table() -> dict[int, tuple[str, ...]]:
+    """`{pid: argv}` for every process this user can see, from BSD `ps`.
+
+    One `ps` per call rather than one per pid: `engine_pids` asks about every
+    process on the host, and forking `ps` once per pid would be thousands of
+    processes to answer one question.
+    """
+    completed = subprocess.run(
+        list(PS_ARGV), capture_output=True, text=True, check=False, timeout=PS_TIMEOUT_S
     )
+    if completed.returncode != 0:
+        return {}
+    table: dict[int, tuple[str, ...]] = {}
+    for line in completed.stdout.splitlines():
+        head, _, rest = line.strip().partition(" ")
+        if not head.isdigit():
+            continue
+        table[int(head)] = tuple(rest.split())
+    return table
 
 
 def engine_pids() -> frozenset[int]:
@@ -224,17 +268,28 @@ def engine_pids() -> frozenset[int]:
     the string `"claude"` would see the operator's Remote Control sessions and
     miss the one this lane started — an emptiness that means nothing.
 
-    `/proc` and never a signal. `os.kill(pid, 0)` is the idiom and it is the one
+    A read, and never a signal. `os.kill(pid, 0)` is the idiom and it is the one
     this repo refuses: a probe that signals is a probe that can end something,
-    and on 2026-09-17 one did, to pid 1.
+    and on 2026-09-17 one did, to pid 1. Both readers below read a table.
+
+    There is no `HostPlatform` member for *enumerating* processes and this does
+    not add one: D55 fixes the seam at seven things, and widening it so a test
+    harness can walk the process table would be re-deciding that for a
+    convenience. Liveness of a **known** pid does have a seam member, and
+    `pid_is_alive` uses it.
     """
     found: set[int] = set()
-    for entry in Path("/proc").iterdir():
-        if not entry.name.isdigit():
-            continue
-        argv = pid_cmdline(int(entry.name))
+    if PROC.exists():
+        for entry in PROC.iterdir():
+            if not entry.name.isdigit():
+                continue
+            argv = pid_cmdline(int(entry.name))
+            if argv and PurePosixPath(argv[0]).name == ENGINE_ARGV0:
+                found.add(int(entry.name))
+        return frozenset(found)
+    for pid, argv in _ps_table().items():
         if argv and PurePosixPath(argv[0]).name == ENGINE_ARGV0:
-            found.add(int(entry.name))
+            found.add(pid)
     return frozenset(found)
 
 
@@ -384,7 +439,7 @@ def _note_engines(built: _Built, seen: dict[int, tuple[str, ...]]) -> None:
         argv = pid_cmdline(pid)
         assert argv, (  # the arrival, as an assertion and not a comment
             f"engine pid {pid} was reported by the transport and is already gone"
-            " from /proc, so nothing was ever observed alive"
+            " from the process table, so nothing was ever observed alive"
         )
         seen[pid] = argv
 
@@ -803,8 +858,8 @@ def test_live_no_engine_process_survives_the_lane(live_run: LiveRun) -> None:
 
     A runtime that never spawned anything would satisfy an emptiness check
     perfectly, so the order is: a pid was found off the transport **and asserted
-    alive at that instant** while the turn ran, its argv was read from `/proc`
-    and is the engine's, and only then is it asserted gone.
+    alive at that instant** while the turn ran, its argv was read from the
+    process table and is the engine's, and only then is it asserted gone.
 
     The host-wide half is the set of every `claude` on this machine before and
     after. It is asserted as *"the after-set contains nothing the before-set did

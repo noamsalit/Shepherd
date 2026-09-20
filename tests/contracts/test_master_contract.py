@@ -65,6 +65,7 @@ from shepherd.core.master import (
     MasterRefusal,
     MasterRuntime,
 )
+from shepherd.host.detect import detect_host
 from shepherd.testkit.scripted_master import ScriptedMaster, Turn
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -377,13 +378,22 @@ def terminals(events: Sequence[MasterEvent]) -> tuple[MasterEvent, ...]:
 
 
 def pid_is_alive(pid: int) -> bool:
-    """Linux `/proc`, never a signal.
+    """The host seam, never a signal (D55).
 
     CLAUDE.md (2026-09-17) is categorical about signals in this repo, and a
-    liveness probe that sends one is a liveness probe that can end something. A
-    directory test sends nothing.
+    liveness probe that sends one is a liveness probe that can end something —
+    so `os.kill(pid, 0)` stays refused. `process_liveness` reads a table on
+    both platforms and sends nothing.
+
+    **This one was latent and nothing in the suite was failing on it.** Its two
+    call sites sit behind `if harness.spawns_a_process:`, and every harness in
+    the default lane is a double that spawns nothing, so the branch is never
+    entered and the old `/proc` read was never evaluated on macOS. It would
+    have gone red the first time a real-process harness reached it — which is
+    the point at which the contract suite would finally be testing the thing it
+    is named for.
     """
-    return Path(f"/proc/{pid}").exists()
+    return detect_host().process_liveness(pid, None).alive
 
 
 ONE_CALL: tuple[tuple[str, Mapping[str, object]], ...] = (("fleet_summary", {}),)

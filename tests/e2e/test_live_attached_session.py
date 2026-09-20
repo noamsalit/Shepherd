@@ -226,6 +226,12 @@ def start_sessiond(shepherd_home: Path) -> subprocess.Popen[bytes]:
     for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         environment[name] = str(shepherd_home / name.lower())
     environment["XDG_RUNTIME_DIR"] = str(shepherd_home / "run")
+    # `MacHost` reads `TMPDIR` rather than `XDG_RUNTIME_DIR`; without this the
+    # child bound its ingest socket in the operator's real `$TMPDIR/Shepherd/`
+    # while the parent looked for it under the throwaway. `HOME` is left alone
+    # for the reason `shepherd_home` records — this subprocess starts no engine,
+    # but it must agree with the parent about where the sockets are.
+    environment["TMPDIR"] = str(shepherd_home / "run")
     environment["PYTHONPATH"] = str(REPO_ROOT / "src")
     return subprocess.Popen(
         [

@@ -140,19 +140,60 @@ Two things follow, and the second is the one that matters.
    probe measured, 125× below the 5 s the settings entry allows (E18). It is a ceiling on what an
    agent can feel, not a discriminator between dispatcher designs.
 
+## Result 5 — `ps -o lstart=` is a working liveness probe, with a coarser token
+
+Added 2026-09-20 (second pass), when the live lane ran on this Mac for the first time and seven
+`/proc` reads in `tests/` turned out to be either a `FileNotFoundError` or — worse — a check that
+passed without checking, because `Path("/proc/<pid>").exists()` is simply always `False` here.
+
+`MacHost.process_liveness()` was written from D55's prose and had never been executed. It was run
+against real pids on this host:
+
+| case | `ps -o lstart= -p <pid>` | `process_liveness(...).alive` |
+|---|---|---|
+| this process | rc=0, `Sun Sep 20 13:18:59 2026` | `True` |
+| a live child (`sh -c 'sleep 30'`) | rc=0, a start string | `True` |
+| an **unreaped zombie** (child exited, not waited) | rc=0, a start string | `True` |
+| `launchd` (pid 1, owned by root, **not ours**) | rc=0, `Sun Sep 20 08:32:03 2026` | `True` |
+| a child that has exited and been reaped | rc=1, empty | `False` |
+| an impossible pid (`0x7FFFFFFF`) | rc=1, `ps: process id too large` | `False` |
+| this process, with a **mismatched** start token | — | `False` (the pid-reuse guard) |
+
+Cost: **4.1 ms median, 8.8 ms worst** over 20 calls, comfortably inside the 2 s probe timeout.
+
+Two things follow.
+
+1. **The code was right and is now measured.** No behaviour changed; the annotations did. The
+   zombie row is worth naming because it matches Linux: `/proc/<pid>` also exists for a zombie, so
+   both drivers answer "alive" for a process that has exited and not been reaped. That is the same
+   answer, not a platform difference.
+2. **The token is coarser here, and that is a real narrowing.** `lstart` is spelled to the second;
+   Linux's field 22 is in jiffies. A pid reused *within the same second* would present the same
+   token, and the pid-reuse guard would not see the substitution. Recorded rather than smoothed
+   over — it is the one place where the macOS driver is weaker than the Linux one.
+
+This is what lets `tests/` ask the seam instead of reading `/proc`, which matters beyond
+portability: `os.kill(pid, 0)` is the obvious portable idiom and this repo refuses it by name
+(`tests/e2e/conftest.py`, `tests/e2e/test_live_master.py`) because a probe that signals is a probe
+that can end something — on 2026-09-17 one rebooted the host. `ps` reads a table.
+
 ## What this does not settle
 
-G1 has five items. Three close here (and Result 4 is a fourth measurement, of the cost
-rather than of a constant). Two do not, and their `# UNVERIFIED (no capture)` annotations
-in `src/shepherd/host/mac.py` are unchanged and still true:
+G1 has five items. **Four close here** — the socket budget (§1), the netcat flag set (§2), the
+runtime dir (§3) and `ps` liveness (§5) — and Result 4 is a fifth measurement, of the hook's cost
+rather than of a constant. One does not, and its `# UNVERIFIED (no capture)` annotations in
+`src/shepherd/host/mac.py` are unchanged and still true:
 
 * **`launchctl print gui/<uid>`** — no capture of its output shape exists, so `supervision()`'s
   `manageable=False` and `MAC_SUPERVISION_DETAIL` remain written-not-measured.
-* **`ps -o lstart=` as a pid-reuse start token**, and `LOCAL_PEERCRED` / `LOCAL_PEERPID` for
-  `peercred()`, which still answers `None`.
+* **`LOCAL_PEERCRED` / `LOCAL_PEERPID`** for `peercred()`, which still answers `None`. macOS
+  returns an `xucred` carrying no pid in the documented struct, and D41 forbids typing a shape from
+  memory. Not a `HostPlatform` member (it is a module function per platform, chosen in
+  `host/detect.py`), so it does not block `supervision()` — it is simply still unknown.
 
-`MacHost.verified()` therefore still returns `False`. It reports on the driver, not on any one
-value, and two of its seven members are still unmeasured.
+`MacHost.verified()` therefore still returns `False`, and the reason is now a single one:
+`supervision()` is written from prose. The flag reports on the **driver**, not on any one value, so
+one unmeasured member of seven is enough to keep it down — which is the point of having it.
 
 ## Reproduce Result 2
 
