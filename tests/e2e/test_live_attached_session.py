@@ -38,6 +38,7 @@ import pytest
 from e2e.conftest import (
     LIVE_MODEL,
     LIVE_TMUX_SOCKET,
+    SHEPHERD_HOME_DIRNAME,
     TMUX_CALLS,
     Throwaway,
     live_socket_listing,
@@ -51,7 +52,7 @@ from shepherd.daemons import controld
 from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME, INGEST_SOCKET_NAME
 from shepherd.engines.claude_code.registry import claude_config_dir, scan_registry
 from shepherd.engines.claude_code.spawn import BINARY_NAME
-from shepherd.host.detect import detect_host
+from shepherd.host.base import HostPlatform
 from shepherd.runner.tmux_cmd import (
     FORBIDDEN_SOCKET,
     THROWAWAY_SOCKET_RE,
@@ -179,12 +180,22 @@ def test_every_tmux_call_in_the_live_lane_names_a_throwaway_socket() -> None:
 # ----- 1. hookless discovery against this host -------------------------------
 
 
-def test_hookless_discovery_sees_this_hosts_real_sessions(shepherd_home: Path) -> None:
+def test_hookless_discovery_sees_this_hosts_real_sessions(
+    shepherd_host: HostPlatform,
+) -> None:
     """Decision pressure 5's acceptance test, on the machine it exists for.
 
     No hook is installed anywhere. `controld` scans the user's real registry
-    read-only and the rows land in a throwaway database under `shepherd_home`.
-    The page is then non-empty — which is the milestone's whole point.
+    read-only and the rows land in a throwaway database. The page is then
+    non-empty — which is the milestone's whole point.
+
+    The *real registry* and the *throwaway database* are the two halves, and
+    they used to be resolved from one place: `detect_host()` reads the process
+    environment, which on macOS has to keep the engine's real `HOME` — so this
+    docstring's "throwaway database" was false there and the rows landed in the
+    operator's own `shepherd.db`. The registry now comes from the environment
+    (real, as intended) and the database from the injected host (throwaway, as
+    stated).
     """
     live, _ = scan_registry(claude_config_dir())
     if not live:
@@ -192,7 +203,7 @@ def test_hookless_discovery_sees_this_hosts_real_sessions(shepherd_home: Path) -
 
     before = {path: path.stat().st_mtime_ns for path in claude_config_dir().glob("sessions/*")}
 
-    started = controld.start(host=detect_host(), port=0, engine_config_dir=None)
+    started = controld.start(host=shepherd_host, port=0, engine_config_dir=None)
     try:
         await_true(
             lambda: json.loads(get(started.port, "/api/fleet/tree")[1])["data"]["session_count"]
@@ -228,10 +239,13 @@ def start_sessiond(shepherd_home: Path) -> subprocess.Popen[bytes]:
     environment["XDG_RUNTIME_DIR"] = str(shepherd_home / "run")
     # `MacHost` reads `TMPDIR` rather than `XDG_RUNTIME_DIR`; without this the
     # child bound its ingest socket in the operator's real `$TMPDIR/Shepherd/`
-    # while the parent looked for it under the throwaway. `HOME` is left alone
-    # for the reason `shepherd_home` records — this subprocess starts no engine,
-    # but it must agree with the parent about where the sockets are.
+    # while the parent looked for it under the throwaway.
     environment["TMPDIR"] = str(shepherd_home / "run")
+    # …and `HOME`, so this child's `detect_host()` resolves the same directories
+    # the parent injects as `shepherd_host`. Safe to redirect **here** and not in
+    # the process environment: `sessiond` starts no engine, so nothing in this
+    # subprocess needs the account record that a throwaway `HOME` would hide.
+    environment["HOME"] = str(shepherd_home / SHEPHERD_HOME_DIRNAME)
     environment["PYTHONPATH"] = str(REPO_ROOT / "src")
     return subprocess.Popen(
         [
@@ -248,11 +262,11 @@ def start_sessiond(shepherd_home: Path) -> subprocess.Popen[bytes]:
 
 
 def test_sessiond_relays_and_the_buffer_drains_in_order_across_a_restart(
-    shepherd_home: Path,
+    shepherd_home: Path, shepherd_host: HostPlatform
 ) -> None:
     """D37/T10b with two real processes: `controld` restarts, nothing is lost,
     and the frames land in the order they were dispatched."""
-    host = detect_host()
+    host = shepherd_host
     ingest_path = host.control_socket(INGEST_SOCKET_NAME).path
     control_path = host.control_socket(CONTROL_SOCKET_NAME).path
 
@@ -325,7 +339,7 @@ def test_a_real_claude_run_is_authenticated_under_this_isolation(
 
 
 def test_an_unhooked_p_run_is_not_registered_as_an_attached_session(
-    throwaway: Throwaway, shepherd_home: Path
+    throwaway: Throwaway, shepherd_host: HostPlatform
 ) -> None:
     """E35/RD9/C8 **through the discovery lane**: `entrypoint` is the
     discriminator there, and a `-p` run is not an attached interactive session.
@@ -348,7 +362,7 @@ def test_an_unhooked_p_run_is_not_registered_as_an_attached_session(
     completed = throwaway.run("Reply with exactly: SHEPHERD_P_RUN")
     assert completed.returncode == 0, completed.stderr
 
-    started = controld.start(host=detect_host(), port=0, engine_config_dir=None)
+    started = controld.start(host=shepherd_host, port=0, engine_config_dir=None)
     try:
         await_true(
             lambda: json.loads(get(started.port, "/api/fleet/tree")[1])["data"] is not None,
@@ -368,10 +382,10 @@ def test_an_unhooked_p_run_is_not_registered_as_an_attached_session(
 
 
 def test_an_update_reaches_a_subscriber_over_sse_with_no_polling(
-    shepherd_home: Path,
+    shepherd_home: Path, shepherd_host: HostPlatform
 ) -> None:
     """§12: one connection, opened once, and the update is pushed onto it."""
-    host = detect_host()
+    host = shepherd_host
     (shepherd_home / "engine" / "sessions").mkdir(parents=True, exist_ok=True)
     started = controld.start(host=host, port=0, engine_config_dir=shepherd_home / "engine")
     frames: list[str] = []

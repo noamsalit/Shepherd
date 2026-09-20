@@ -67,7 +67,14 @@ from typing import Any
 
 import pytest
 from conftest import SettingsObservation, observe_settings
-from e2e.conftest import CLAUDE_TIMEOUT_S, Throwaway, real_config_dir, settings_digest
+from e2e.conftest import (
+    CLAUDE_TIMEOUT_S,
+    SHEPHERD_HOME_DIRNAME,
+    Throwaway,
+    real_config_dir,
+    settings_digest,
+    throwaway_host,
+)
 
 from shepherd.daemons import controld
 from shepherd.daemons.sessiond import INGEST_SOCKET_NAME
@@ -75,7 +82,6 @@ from shepherd.engines.claude_code.events import SUBSCRIBED_EVENTS
 from shepherd.engines.claude_code.hookd_command import HookEntry, build_hook_entry
 from shepherd.engines.claude_code.hooks_config import install_hooks
 from shepherd.engines.claude_code.transcript import locate_transcript
-from shepherd.host.detect import detect_host
 from shepherd.logs.stops import STOP_PREFIX, read_stop_records
 from shepherd.signals.replay import DIFF_DIRNAME, ReplayReport, replay
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
@@ -276,8 +282,28 @@ def live_stop(tmp_path_factory: pytest.TempPathFactory) -> Iterator[LiveStop]:
         for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
             patch.setenv(name, str(root / name.lower()))
         patch.setenv("XDG_RUNTIME_DIR", str(root / "run"))
+        # `MacHost` reads `TMPDIR`, not `XDG_RUNTIME_DIR`. This one goes in the
+        # **process** environment because `start_sessiond` below inherits it and
+        # has to agree with the injected host about where the sockets are.
+        patch.setenv("TMPDIR", str(root / "run"))
 
-        host = detect_host()
+        # `HOME` deliberately does **not** go in the process environment: this
+        # fixture spawns a real `claude`, and a throwaway `HOME` hides the
+        # account record (`Not logged in · Please run /login`). Shepherd's own
+        # directories arrive by injection instead — which is what `log_root`'s
+        # docstring means by "a test relocates both by handing in a host".
+        #
+        # Until that injection existed, `log_dir` below resolved to the real
+        # `~/Library/Application Support/Shepherd/logs/stops/` and stop records
+        # **accumulated across runs**. `test_exactly_one_engine_session_is_in_the_log`
+        # and its four siblings passed on a clean machine, then failed with one
+        # extra engine_session_id per live run and got permanently worse.
+        shepherd_home = root / SHEPHERD_HOME_DIRNAME
+        shepherd_home.mkdir(parents=True, exist_ok=True)
+        host = throwaway_host(shepherd_home)
+        for directory in (host.dirs().data_dir, host.dirs().runtime_dir):
+            assert root in directory.parents, f"{directory} escaped the throwaway"
+
         workdir = root / "work"
         workdir.mkdir()
         settings = root / "settings.json"

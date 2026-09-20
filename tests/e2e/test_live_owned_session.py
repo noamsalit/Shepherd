@@ -62,6 +62,7 @@ from e2e.conftest import (
     LIVE_MODEL,
     LIVE_TMUX_SOCKET,
     NO_SERVER,
+    SHEPHERD_HOME_DIRNAME,
     TMUX_CALLS,
     Throwaway,
     lane_run_argv,
@@ -77,6 +78,7 @@ from shepherd.core.stream import StreamEvent
 from shepherd.daemons import controld
 from shepherd.daemons.sessiond import INGEST_SOCKET_NAME
 from shepherd.engines.claude_code.hooks_config import MANAGED_MARKER, inspect_hooks
+from shepherd.host.base import HostPlatform
 from shepherd.host.detect import detect_host
 from shepherd.orchestration.spawn import SpawnOutcome, SpawnRefused, spawn_owned_session
 from shepherd.runner.local import LocalRunner
@@ -374,7 +376,9 @@ def test_a_real_stop_carries_an_exit_code(lane: Lane) -> None:
 # ----- 3. the pane survives a real `controld` restart -------------------------
 
 
-def test_the_pane_survives_a_controld_restart(lane: Lane, shepherd_home: Path) -> None:
+def test_the_pane_survives_a_controld_restart(
+    lane: Lane, shepherd_home: Path, shepherd_host: HostPlatform
+) -> None:
     """D14 / DP5, with a real process boundary rather than two threads.
 
     The tmux server is started outside the caller's supervision through the
@@ -386,7 +390,11 @@ def test_the_pane_survives_a_controld_restart(lane: Lane, shepherd_home: Path) -
     names_before = [ref.session_name for ref in lane.runner.list_owned_panes()]
     assert lane.handle.session_name in names_before, names_before
 
-    host = detect_host()
+    # Injected, not detected: `detect_host()` answers from the process
+    # environment, which this lane must keep pointed at the engine's real
+    # `HOME` — so on macOS both daemons below opened the operator's own
+    # `shepherd.db`. See `shepherd_host` in `e2e/conftest.py`.
+    host = shepherd_host
     (shepherd_home / "engine" / "sessions").mkdir(parents=True, exist_ok=True)
     started = controld.start(host=host, port=0, engine_config_dir=shepherd_home / "engine")
     # Arrival: `controld` really came up, so what follows is really a restart.
@@ -478,6 +486,13 @@ def start_sessiond(home: Path) -> subprocess.Popen[bytes]:
     for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         environment[name] = str(home / name.lower())
     environment["XDG_RUNTIME_DIR"] = str(home / "run")
+    # `MacHost` reads `TMPDIR` and `HOME`, not `XDG_*`, so without these two the
+    # child bound its ingest socket in the operator's real `$TMPDIR/Shepherd/`
+    # while the parent looked for it under the throwaway. Safe to redirect in
+    # this subprocess and not in the process environment: `sessiond` starts no
+    # engine, so nothing here needs the account record a throwaway `HOME` hides.
+    environment["TMPDIR"] = str(home / "run")
+    environment["HOME"] = str(home / SHEPHERD_HOME_DIRNAME)
     environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[2] / "src")
     return subprocess.Popen(
         [
@@ -512,6 +527,7 @@ def test_a_spawn_registers_exactly_one_row(
     throwaway: Throwaway,
     tmp_path: Path,
     shepherd_home: Path,
+    shepherd_host: HostPlatform,
     installed_settings: Path,
     tmux_live: str,
 ) -> None:
@@ -527,7 +543,7 @@ def test_a_spawn_registers_exactly_one_row(
     stamped by the fold on every received frame and by nothing else on this path
     — before anything is asserted about how many rows there are.
     """
-    host = detect_host()
+    host = shepherd_host  # injected, for the reason `shepherd_host` records
     ingest = host.control_socket(INGEST_SOCKET_NAME)
     (shepherd_home / "engine" / "sessions").mkdir(parents=True, exist_ok=True)
     started = controld.start(host=host, port=0, engine_config_dir=shepherd_home / "engine")

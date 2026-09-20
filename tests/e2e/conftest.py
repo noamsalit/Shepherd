@@ -40,6 +40,7 @@ import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -49,6 +50,7 @@ from shepherd.engines.claude_code.events import SUBSCRIBED_EVENTS
 from shepherd.engines.claude_code.hookd_command import build_hook_entry
 from shepherd.engines.claude_code.hooks_config import install_hooks
 from shepherd.engines.claude_code.spawn import BINARY_NAME, resolve_binary, spawn_argv
+from shepherd.host.base import HostPlatform
 from shepherd.host.detect import detect_host
 from shepherd.runner.local import CommandResult, RunArgv, make_run_argv
 from shepherd.runner.tmux_cmd import (
@@ -186,44 +188,91 @@ def shepherd_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     daemons that were meant to hold separate throwaway runtime directories were
     sharing one global socket path.
 
-    **`HOME` is deliberately *not* redirected, and the reason is a real
-    tension.** On macOS `MacHost` derives `data_dir` from `HOME`, so redirecting
-    it is what would isolate Shepherd's *database* here. But this lane needs the
-    engine's own config to be the real one — `spawn()` passes
-    `engine_config_home=None` so a spawn meets a real workspace-trust dialog,
-    and `test_hookless_discovery_sees_this_hosts_real_sessions` reads this
-    host's actual registry. The engine resolves its account record from
-    `$CLAUDE_CONFIG_DIR/.claude.json` (measured: with a throwaway `HOME` it
-    reports `Not logged in · Please run /login`), so no combination of
-    environment variables gives "throwaway home for Shepherd, real login for the
-    engine" — the two want the same variable to point in opposite directions.
+    **`HOME` is deliberately *not* redirected here, and that is the whole
+    reason `shepherd_host` below exists.** On macOS `MacHost` derives
+    `data_dir` from `HOME`, so redirecting it in the process environment is
+    what would isolate Shepherd's database — and it also logs the engine out.
+    Measured: with a throwaway `HOME`, `claude -p` answers `Not logged in ·
+    Please run /login`, because it resolves its account record from
+    `$CLAUDE_CONFIG_DIR/.claude.json`; pointing `CLAUDE_CONFIG_DIR` at the real
+    `~/.claude` does not help, because it then looks for `~/.claude/.claude.json`
+    and the real record is at `~/.claude.json`. No environment satisfies both.
 
-    **Consequence, recorded rather than hidden:** on macOS the `controld` this
-    lane starts still opens the operator's real
-    `~/Library/Application Support/Shepherd/shepherd.db`. That is the residue
-    behind the fixture workspace `shepherd-m3-live` visible in the user's own
-    UI. `tests/qa/test_s8_*` and `test_s9_*` do not share it — they drive
-    `shepherd-controld` as a subprocess with an environment they fully own, and
-    both redirect `HOME`.
-
-    Closing it properly means injecting a `HostPlatform` into this lane rather
-    than mutating the process environment — `controld.start(host=...)` already
-    takes one, which is exactly what the seam is for — so that Shepherd's
-    directories and the engine's are chosen independently. That is a change
-    across ~8 call sites in live tests that cannot be executed here, so it is
-    named as open work rather than applied blind.
+    That is not a reason to pick a winner. It is a sign that the *environment*
+    is the wrong channel for one of the two subjects, and Shepherd is the one
+    with an alternative: `controld.start(host=...)` takes a `HostPlatform`. So
+    the process environment stays the **engine's** — real `HOME`, real login,
+    real trust dialog — and Shepherd's directories arrive by injection.
     """
     for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         monkeypatch.setenv(name, str(tmp_path / name.lower()))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
     monkeypatch.setenv("TMPDIR", str(tmp_path / "run"))
 
-    # Arrival, not trust: the driver really did follow the redirect for the one
-    # directory this fixture can currently isolate on both platforms.
+    # Arrival, not trust: the driver really did follow the redirect for the
+    # directory the environment *can* carry on both platforms.
     assert tmp_path in detect_host().control_socket("probe").path.parents, (
         "the control socket escaped the throwaway runtime directory"
     )
     return tmp_path
+
+
+#: Where the throwaway `HOME` lives under `shepherd_home`. A directory rather
+#: than `tmp_path` itself, so that what a driver composes beneath it
+#: (`Library/Application Support/Shepherd`) is visibly Shepherd's and not mixed
+#: in with the engine's workdir and settings file.
+SHEPHERD_HOME_DIRNAME = "shepherd-home"
+
+
+def throwaway_host(home: Path) -> HostPlatform:
+    """This platform's driver, with **Shepherd's** directories under `home`.
+
+    The driver captures `os.environ` when it is constructed (both `LinuxHost`
+    and `MacHost` default `environ` to `dict(os.environ)`), so overriding `HOME`
+    for the length of the constructor is enough to freeze a throwaway layout
+    into the instance — and the process environment, which the *engine* reads,
+    is never changed. That asymmetry is the point: one subject gets its answer
+    by injection, the other keeps the environment.
+
+    `clear=True` is deliberately **not** used, unlike `host_dirs_for` in the QA
+    scenarios. Those build an environment for a subprocess and must prove
+    nothing leaked into it; this needs the ambient `XDG_*` and `TMPDIR` that
+    `shepherd_home` has already redirected.
+    """
+    with mock.patch.dict(os.environ, {"HOME": str(home)}):
+        return detect_host()
+
+
+@pytest.fixture()
+def shepherd_host(shepherd_home: Path) -> HostPlatform:
+    """Shepherd's own `HostPlatform`, pointed at a throwaway — for injection.
+
+    Hand this to `controld.start(host=...)` instead of calling `detect_host()`.
+    A `detect_host()` at a call site answers from the process environment, and
+    on macOS that environment must keep the engine's real `HOME` (see
+    `shepherd_home`), so every such call site resolved
+    `~/Library/Application Support/Shepherd/shepherd.db` — the operator's real
+    database. Fixture workspaces from this lane were visible in the user's own
+    fleet page because of it.
+
+    Nothing in `src/` changed to make this possible: `start()` already threads
+    its `host` through `control_socket`, `dirs()`, `compose_tool_surface`,
+    `log_root` and the discovery loop, and the only `detect_host()` calls left
+    in product code are in `main()` entry points, which a subprocess's
+    environment reaches.
+    """
+    home = shepherd_home / SHEPHERD_HOME_DIRNAME
+    home.mkdir(parents=True, exist_ok=True)
+    host = throwaway_host(home)
+
+    # Arrival, and it is the assertion this whole fixture exists to make: every
+    # directory this driver resolves is inside the throwaway, on either
+    # platform. Without it the fixture is happy to hand back a driver pointed
+    # at the operator's real home, which is exactly what the call sites did.
+    dirs = host.dirs()
+    for directory in (dirs.data_dir, dirs.config_dir, dirs.runtime_dir):
+        assert shepherd_home in directory.parents, f"{directory} escaped the throwaway"
+    return host
 
 
 # ============================================================================
@@ -347,7 +396,7 @@ def tmux_live() -> Iterator[str]:
 
 
 @pytest.fixture()
-def installed_settings(shepherd_home: Path, throwaway: Throwaway) -> Path:
+def installed_settings(shepherd_host: HostPlatform, throwaway: Throwaway) -> Path:
     """Shepherd's **real** installed hook block, in the throwaway settings file.
 
     The shipped `throwaway` fixture writes `{}`, and a session spawned with an
@@ -359,10 +408,14 @@ def installed_settings(shepherd_home: Path, throwaway: Throwaway) -> Path:
     the probe's block in `docs/probes/2026-09-14-schemas/tmux-tui/make_settings.py`
     is the *probe's*, and what this lane must exercise is Shepherd's.
 
-    Depends on `shepherd_home` so the ingest socket the entry names is the
-    throwaway one `sessiond` will bind, not a path under the user's real dirs.
+    Takes `shepherd_host` — the injected driver — so the ingest socket the
+    entry names is the throwaway one `sessiond` will bind, not a path under the
+    user's real dirs. It used to call `detect_host()`, which answers from the
+    process environment; that is correct for the runtime directory (which
+    `shepherd_home` redirects) and wrong for everything `HOME` decides, so the
+    two could disagree the moment a driver composed a path from both.
     """
-    host = detect_host()
+    host = shepherd_host
     ingest = host.control_socket(INGEST_SOCKET_NAME)
     entry = build_hook_entry(ingest, host.hook_dispatch(ingest))
     assert entry.available, f"this host cannot dispatch a hook: {entry.reason}"
