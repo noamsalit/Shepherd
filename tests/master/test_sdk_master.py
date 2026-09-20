@@ -722,7 +722,13 @@ def test_close_terminates_the_cli(
     servers = reported["mcp_servers"]
     assert isinstance(servers, list), servers
     assert [server["name"] for server in servers] == ["shepherd"]
-    (REPO_ROOT / "scratchpad/m4-t21/system-init.json").write_text(
+    # `scratchpad/` is gitignored builder residue, so it exists on the host that
+    # wrote this test and on no other. A clone that has never run a mutation
+    # driver has no `m4-t21/`, and the evidence dump below then fails the test
+    # after every assertion it exists to make has already passed.
+    capture = REPO_ROOT / "scratchpad/m4-t21/system-init.json"
+    capture.parent.mkdir(parents=True, exist_ok=True)
+    capture.write_text(
         json.dumps(reported, indent=2, sort_keys=True), encoding="utf-8"
     )
 
