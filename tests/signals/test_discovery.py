@@ -32,8 +32,22 @@ def test_discovery_skips_non_repo_directories(git_world: GitWorld) -> None:
 
     assert git_world.plain not in found
     assert git_world.plain.parent not in found
-    # A repo it cannot read is skipped, not guessed at.
-    assert git_world.foreign not in found
+    assert git_world.noremote in found
+
+
+def test_discovery_skips_a_repo_it_cannot_read(
+    git_world: GitWorld, foreign_owned_repo: Path
+) -> None:
+    """A repo owned by someone else is skipped, not guessed at.
+
+    Split out of `test_discovery_skips_non_repo_directories` — not dropped from
+    it — because the only way to build the case is `chown` to another uid, which
+    needs root. The assertion is unchanged; what changed is that the three
+    non-repo cases above no longer need the privilege this one does.
+    """
+    found = {repo.root_path for repo in discover_repos(git_world.root)}
+
+    assert foreign_owned_repo not in found
     assert git_world.noremote in found
 
 

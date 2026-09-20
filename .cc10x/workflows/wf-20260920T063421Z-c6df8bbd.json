@@ -1,0 +1,530 @@
+{
+  "workflow_uuid": "wf-20260920T063421Z-c6df8bbd",
+  "workflow_id": "wf-20260920T063421Z-c6df8bbd",
+  "workflow_type": "DEBUG",
+  "state_root": ".cc10x",
+  "user_request": "Fix 39 test failures that appear when the Shepherd suite runs on macOS (built and verified on Linux as root). Three causes: (1) src/shepherd/host/mac.py MAC_DISPATCH_REQUIREMENTS=('timeout','nc') is wrong - macOS has no timeout binary, so hook dispatch is available=False and the signal engine would receive nothing; (2) tests/signals/conftest.py os.chown(path,65534,65534) is root-only and raises PermissionError for a normal macOS user; (3) macOS TMPDIR makes pytest tmp_path exceed the AF_UNIX sun_path budget (real macOS limit is 104, not Linux's 107).",
+  "plan_file": null,
+  "design_file": null,
+  "research_files": [],
+  "approved_decisions": [],
+  "plan_mode": null,
+  "build_scope": null,
+  "worktree": null,
+  "execution_mode": "inline_fallback",
+  "inline_fallback_reason": "primitive_unavailable",
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": "The default pytest lane is green on macOS with no product behaviour lost, and hook dispatch actually works on this host.",
+    "non_goals": [
+      "Changing Linux behaviour",
+      "Weakening or deleting any existing assertion",
+      "Running the live lane as part of this fix"
+    ],
+    "constraints": [
+      "Repo CLAUDE.md: never bare `tmux kill-server` - pass -L on every tmux invocation",
+      "Repo CLAUDE.md: never plant executable mutations; inert fixtures in tests/boundaries/fixtures/ only",
+      "patterns.md: no shell=True anywhere, argv lists only (spec S13)",
+      "patterns.md: mypy --strict, Python 3.12 target, no Any",
+      "patterns.md: unknown is a first-class value, counted and displayed, never hidden",
+      "Spec S3 decision log is law - do not silently reverse a decision; MAC_* constants cite D55",
+      "src/shepherd/daemons/controld.py must stay at 140 lines with guard constants unedited"
+    ],
+    "acceptance_criteria": [
+      "`.venv/bin/pytest --basetemp=/tmp/shp` reports 0 failed and 0 errors",
+      "No test is deleted; any newly skipped test is skipped by an explicit documented platform/privilege guard, and the skip count is reported",
+      "`.venv/bin/mypy --strict src` stays clean",
+      "`.venv/bin/pytest tests/boundaries` stays at 105 passed",
+      "macOS hook dispatch resolves to available=True using only binaries present on a stock macOS",
+      "MAC_SOCKET_PATH_BUDGET reflects the real macOS sun_path limit, evidenced by a measurement on this host"
+    ],
+    "open_decisions": []
+  },
+  "normalized_phases": [
+    "debug-investigate",
+    "debug-review",
+    "debug-verify",
+    "memory-finalize"
+  ],
+  "phase_cursor": "memory-finalize",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": null,
+    "planning_review_pass1": null,
+    "planner_replan": null,
+    "planning_review_pass2": null,
+    "memory_finalize": null
+  },
+  "phase_status": {},
+  "deferred_findings": [],
+  "results": {
+    "git_preflight": null,
+    "baseline": null,
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": null,
+    "investigator": {
+      "status": "FIXED",
+      "confidence": 95,
+      "remediation_needed": false,
+      "next_action": "review",
+      "root_cause": "Product and tests both asked the Linux driver about a macOS host: MacHost.environ defaulted to {} (blind to HOME/TMPDIR), MacHost.hook_dispatch() refused unconditionally over an unmeasured netcat flag set, and eight test modules spelled LinuxHost() where they meant 'this host'.",
+      "product_change": "src/shepherd/host/mac.py only",
+      "decisions": [
+        "D55 re-decided out loud for the macOS dispatch line: MAC_DISPATCH_REQUIREMENTS ('timeout','nc') -> ('perl','nc'), command gains a Time::HiRes alarm",
+        "D55's budget/runtime-env/platform values were correct and are unchanged, re-annotated as measured",
+        "MacHost.verified() deliberately stays False - 3 of G1's 5 closed; launchctl and ps/LOCAL_PEERCRED did not",
+        "Rejected `nc -U -w 0` on measurement: truncates a 40KB frame to ~16KB, 3/3"
+      ],
+      "deferred": [
+        "mypy --strict src has 2 macOS-only errors identical at pristine HEAD (linux.py:104 SO_PEERCRED, detect.py:29 unreachable) - typeshed platform narrowing, not introduced here",
+        "macOS hook dispatch 14-16ms vs Linux 3.4ms; MAC_LATENCY_BUDGET_S=0.040 is a ceiling, not a discriminator",
+        "docs/plans/2026-09-16-m1-foundation-visibility-plan.md l.632/l.736 (G1/A12) still read as if nothing measured"
+      ]
+    },
+    "reviewer": {
+      "status": "CHANGES_REQUESTED",
+      "confidence": 40,
+      "functionality": "Works",
+      "signal_scores": {
+        "security": "[HARD] 85",
+        "correctness": "[HARD] 40",
+        "performance": "[SOFT] 60",
+        "maintainability": "[SOFT] 85"
+      },
+      "remediation_needed": true,
+      "scope_requested": "ALL_ISSUES",
+      "revert_recommended": false,
+      "critical_issues": [
+        {
+          "confidence": 99,
+          "file": "tests/engines/test_hook_dispatch_delivery.py",
+          "line": "79-85",
+          "title": "The wedged-peer guard cannot fail - the listener it wedges against is not wedged",
+          "evidence": "`conn` is a local; on return the frame dies, refcount hits zero, CPython closes the fd, so the 'accepts and never reads' peer hangs up immediately. Test runs in 0.02s vs the probe's own 264-324ms. Reviewer drove the test's Listener/dispatch by import with a command having NO outer bound: both assertions passed (code=0, elapsed=0.030s).",
+          "why": "This is the single executable proof behind the D55 re-decision and acceptance criterion 6. Delete the perl/Time::HiRes wrapper and the suite stays green.",
+          "fix": "Hold the accepted connection for the listener's lifetime (keep.append(conn)); add a negative control proving the fixture can produce the slow case."
+        }
+      ],
+      "findings": [
+        {
+          "sev": "HIGH",
+          "cat": "correctness/performance",
+          "file": "tests/conftest.py:280,298-311",
+          "title": "Age-only temp retention with no count cap",
+          "evidence": "du -sh /private/tmp/shp-501 -> 2.8G across 155 run dirs created today; largest base 218MB/1810 entries. RUN_RETENTION_S=24h is the only bound.",
+          "fix": "Union: never delete a base younger than a short grace window, AND keep only newest N by mtime beyond it."
+        },
+        {
+          "sev": "MEDIUM",
+          "cat": "security",
+          "file": "tests/conftest.py:291-296",
+          "title": "/tmp/shp-<uid> accepted regardless of owner or mode",
+          "evidence": "mkdir(mode=0o700, exist_ok=True) silently accepts a pre-existing dir; os.access(W_OK) returns True for root regardless. Tree runs as root on Linux, so a local user pre-creating /tmp/shp-0 gets a dir root then populates and prunes inside.",
+          "fix": "lstat the root; require st_uid==os.getuid() and st_mode & 0o077 == 0; else return None (already handled as 'leave pytest default alone')."
+        },
+        {
+          "sev": "MEDIUM",
+          "cat": "correctness (false red)",
+          "file": "tests/contracts/test_hostplatform_contract.py:571",
+          "title": "startswith('/usr/bin/') asserts PATH order, not stock-macOS presence",
+          "evidence": "A Homebrew perl or netcat puts /opt/homebrew/bin first and reds this test on a host where hook_dispatch() is correct.",
+          "fix": "Assert Path('/usr/bin/perl').is_file() for the stock claim and shutil.which(req) is not None for reachability - two different facts."
+        },
+        {
+          "sev": "MEDIUM",
+          "cat": "maintainability",
+          "file": "tests/engines/test_hookd_runtime.py:56-80",
+          "title": "One node id, two meanings: 40ms is a ceiling on macOS, a discriminator on Linux",
+          "fix": "macOS-only companion assertion that still discriminates, or accept explicitly as deferred."
+        },
+        {
+          "sev": "MEDIUM",
+          "cat": "spec drift",
+          "file": "docs/specs/orchestrator-platform.md:166 (D55)",
+          "title": "D55's entry still frames macOS as '-q0 omitted costs 250ms while still delivering'",
+          "evidence": "Measured failure is truncation, a different and worse mode; the driver now requires perl. Re-decision IS recorded in mac.py docstring, HANDOFF.md and the probe doc, so not a silent reversal - but the law itself is stale.",
+          "fix": "One amendment sentence in D55 citing docs/probes/2026-09-20-macos-g1-capture.md S2."
+        }
+      ],
+      "verified_as_holding": [
+        "Delivery half is real: 40011 bytes compared off the socket, the -w 0 trap would fail it",
+        "Product command correct: 0.266s held-open vs >6s timeout for bare nc - the alarm survives execve",
+        "New skips narrow and honest: pytest.skip only from inside except PermissionError on the chown; exactly 2 new",
+        "world fixture arrival check is the right shape",
+        "mypy's 2 errors reproduced identically at pristine HEAD"
+      ],
+      "cannot_verify": [
+        "acceptance criterion 8 (Linux unchanged) - reasoned per site and plausible, but no Linux host reachable"
+      ]
+    },
+    "hunter": null,
+    "verifier": {
+      "status": "PASS",
+      "proof_status": "gaps_found",
+      "scenarios_total": 13,
+      "scenarios_passed": 12,
+      "scenarios_failed": 0,
+      "scenarios_blocked": 1,
+      "remediation_needed": false,
+      "revert_recommended": false,
+      "tested_identity": "bd10b01 + dirty tree, git diff HEAD sha256 34040fe9ddca6367898d87eb5016293b2db4bc2b5b9c8d09b44c8d71a40a6d92, plus 4 untracked files",
+      "blocked": {
+        "criterion": "AC7 Linux unchanged",
+        "reason": "no Linux host reachable; docker run refused by harness isolation policy",
+        "kind": "environment-blocked, not code-failing",
+        "static_evidence": "linux.py/detect.py/base.py/hookd_command.py byte-identical to HEAD; LinuxHost().control_socket('sessiond').socket_path_budget == 107; LinuxHost().hook_dispatch() still returns the timeout/nc command; macOS additions gated by ON_DARWIN"
+      },
+      "green_is_real": [
+        "25 added tests reconcile exactly: Linux collected 1841, this host 1866, 1841+25=1866 (the brief's '14 added' was an undercount)",
+        "collected_node_ids.txt (1482 frozen ids) untouched and its subset check green; all 4 removed `-def test_` lines pair with a same-name `+def`",
+        "The one skip that could hide a regression has its complement running: MacHost is real_host=True here, so the supervision/login/liveness contract cases execute against it for real"
+      ],
+      "independent_measurements": {
+        "delivery": "8/8 and 40011/40011 bytes byte-identical through the product command, exit 0",
+        "boundedness": "product 275.8ms exit 0 vs unbounded control TimeoutExpired at 2008.8ms on the verifier's OWN listener built outside the repo harness",
+        "d55_rationale_confirmed": "nc -U -w 0 reproduced truncating 40011 -> 16896 bytes at exit 0",
+        "mypy_linux": "mypy --strict --platform linux src -> Success, 127 files, exit 0; 0 errors in mac.py",
+        "no_user_state": "~/Library/Application Support/Shepherd, ~/Library/Preferences/Shepherd, /tmp/Shepherd all ABSENT"
+      },
+      "findings_validation": "All 11 reviewer findings across both passes validated true, none hallucinated or stale, all closed. No REM-FIX warranted.",
+      "open_observations": [
+        "tests/conftest.py pytest_configure is NOT platform-gated: on Linux it relocates --basetemp from /tmp/pytest-of-root/pytest-N to /tmp/shp-0/<mkdtemp>, and pytest_sessionfinish deletes a GREEN run's base where pytest kept the last three. Test-harness behaviour only, not product - but it is the one change Linux will actually feel, against a stated non-goal.",
+        "Three sites still carry a silent pytest.skip('no dispatcher on this host'): if /usr/bin/perl or /usr/bin/nc vanished, 28 hook-lane tests would disappear without a red. The new test_hook_dispatch_delivery.py::entry_command asserts available is True rather than skipping, so the lane has one tripwire that cannot be skipped past.",
+        "tests/boundaries/_imports.py DISPATCH_LITERALS = ('nc','-q0') unchanged, so the P20 one-definition-site scan covers the macOS command through the `nc` token alone where Linux gets two.",
+        "$TMPDIR/Shepherd/sessiond.sock residual on disk, mtime 10:05:34, predates the fix and is not recreated by current runs - a one-line manual delete."
+      ]
+    },
+    "planner": null,
+    "planning_reviewer": null,
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    },
+    "router_independent_verification": {
+      "ts": "2026-09-20T07:36:44Z",
+      "note": "Router re-ran every acceptance command itself rather than trusting the agent's report.",
+      "bare_pytest": "1838 passed, 12 skipped, 75 deselected, 0 failed, 0 errors (exit 0)",
+      "boundaries": "105 passed",
+      "controld_lines": 140,
+      "mypy_working_tree": "2 errors in 2 files (127 checked)",
+      "mypy_pristine_HEAD_via_git_archive": "2 errors in 2 files (127 checked) - byte-identical, so pre-existing not introduced",
+      "quarantine": "~/Library/Application Support/Shepherd and /tmp/Shepherd both absent after a full run",
+      "files_changed": "1 product file (src/shepherd/host/mac.py), 12 test files, 2 new test files, 1 new probe doc, HANDOFF.md"
+    },
+    "remfix_cycle1": {
+      "status": "PASS",
+      "confidence": 93,
+      "critical_issues": 0,
+      "blocking": false,
+      "origin": "code-reviewer",
+      "scope": "ALL_ISSUES",
+      "tdd_red": "Failed: DID NOT RAISE TimeoutExpired - test_hook_dispatch_delivery.py:245, 0.04s",
+      "tdd_green": "exit 0",
+      "fixes": {
+        "critical_wedge_fixture": "Listener._held keeps the accepted conn for the listener's lifetime; negative control drives the SAME fixture with an unbounded stdlib writer and requires TimeoutExpired. Measured bounded 0.27s vs unbounded 2.01s (both were 0.02-0.04s before).",
+        "retention": "grace floor (15min) + count ceiling (newest 8). Floor preserves the concurrency property; ceiling is what 2.8G/155 dirs proved missing.",
+        "ownership_gate": "lstat: S_ISDIR, st_uid==getuid(), st_mode & 0o077 == 0; rejects symlinks; returns None -> pytest default",
+        "path_order": "split into Path('/usr/bin/x').is_file() (stock claim) and shutil.which(x) is not None (reachability)",
+        "latency": "macOS companion measures a real Python dispatcher against the same listener in the same run, margin 1.25x; node id test_hookd_latency_under_10ms unchanged per Clause 16",
+        "d55": "amendment sentence citing docs/probes/2026-09-20-macos-g1-capture.md S2; original not rewritten"
+      },
+      "self_caught": "First draft guarded the companion with `assert baseline > LATENCY_BUDGET_S`; it went RED at 29.6ms vs the 40ms budget - the reviewer's finding reproduced as a measurement. Precondition removed, episode kept as an in-code comment.",
+      "deferred": [
+        "tests/engines/test_hookd_runtime.py listener(read_to_eof=False) holds its connection correctly but is the second place with the same shape and has no negative control of its own"
+      ]
+    },
+    "router_independent_verification_cycle1": {
+      "ts": "2026-09-20T08:08:45Z",
+      "suite": "1850 passed, 12 skipped, 75 deselected, 0 failed, 0 errors (exit 0)",
+      "boundaries": "105 passed",
+      "mypy": "exactly the 2 pre-existing darwin errors, 127 files",
+      "controld_lines": 140,
+      "src_diff": "1 file changed (src/shepherd/host/mac.py) - product scope respected",
+      "disk": "/private/tmp/shp-501 2.8G/155 dirs -> 656M/43 dirs"
+    },
+    "re_review_cycle1": {
+      "status": "CHANGES_REQUESTED",
+      "confidence": 85,
+      "critical_issues": 0,
+      "blocking": false,
+      "signal_scores": {
+        "security": "[HARD] 100",
+        "correctness": "[HARD] 85",
+        "performance": "[SOFT] 100",
+        "maintainability": "[SOFT] 90"
+      },
+      "spec_compliance": "PASS - all 7 acceptance criteria met and independently reproduced",
+      "six_prior_findings": "ALL VERIFIED CLOSED. The critical was proven closed by reverting Listener._accept in memory via an out-of-tree autouse plugin (no repo file touched, nothing planted): the negative control went RED at 0.04s while the bound test passed falsely at 0.03s - exactly the regression it exists to catch.",
+      "findings": [
+        {
+          "sev": "MEDIUM",
+          "conf": 95,
+          "file": "tests/engines/test_hookd_runtime.py:307-312 vs :339",
+          "title": "Comment claims a negative control that `assert baseline > 0.0` does not provide",
+          "evidence": "A wall-clock delta / 25 is always > 0; the assertion cannot fail. A second comment block at :332-338 admits the real precondition was removed after it went red, so the file contains two contradicting comment blocks and the earlier one is false about the shipped code.",
+          "note": "The remaining check at :341 (best * 1.25 < baseline) IS genuine and does discriminate. The test is not vacuous - the claim about it is.",
+          "fix": "Give baseline a measured floor from the capture (assert baseline > 0.020, the Python-dispatcher class in the probe S4), or delete both the sentence and the line."
+        },
+        {
+          "sev": "MEDIUM",
+          "conf": 90,
+          "file": "tests/contracts/test_hostplatform_contract.py:661-666",
+          "title": "`VERIFIED (docs/probes/...)` with an elided citation is a stamp any new constant can claim",
+          "evidence": "Ran the module's own regex against a fabricated line: MAC_NEW_GUESS = \"launchctl\"  # VERIFIED (docs/probes/...S2) - D55 -> accepted. The docstring claims the opposite.",
+          "fix": "Allow elision only as a continuation of a literal whose first line carries a full .md citation."
+        },
+        {
+          "sev": "MEDIUM",
+          "conf": 90,
+          "file": "tests/conftest.py:391-396",
+          "title": "Temp-root ceiling is lazy and grace-bounded, so the burst is unbounded",
+          "evidence": "Measured this session: 1.3GB across 64 bases, all created inside 18 minutes (~4 bases per invocation - the tree spawns child pytests). Persistent accumulation IS bounded now; the burst is not, and CLAUDE.md rule 4 mandates tight pytest loops that keep the whole population inside the grace window.",
+          "fix": "pytest_sessionfinish removing this run's own base unless session.testsfailed - a run knows it is finished, which is the fact mtime is guessing at."
+        },
+        {
+          "sev": "LOW",
+          "conf": 90,
+          "file": "tests/contracts/test_hostplatform_contract.py:588",
+          "title": "`\"-w\" not in command.split()` misses `-w0`, the spelling the trap would be written in",
+          "fix": "Prefix test, not set membership."
+        },
+        {
+          "sev": "LOW",
+          "conf": 85,
+          "file": "tests/test_temproot_policy.py:34",
+          "title": "Redundant global sys.path mutation; function-local shutil/time imports in conftest",
+          "fix": "Hygiene only."
+        }
+      ],
+      "cannot_verify": [
+        "Acceptance criterion 7 (Linux unchanged) - argued from the diff, src/ diff is mac.py only and every test change is host-detecting, but not executed; no Linux host in this session"
+      ],
+      "product_code_cleared": "mac_dispatch_command interpolates the socket path outside the perl -e single quotes; build_hook_entry applies shlex.quote; exec @ARGV in list form is execvp, so no second shell parses the path. No shell=True. environ/uid defaults now mirror LinuxHost exactly."
+    },
+    "remfix_cycle2": {
+      "status": "PASS",
+      "confidence": 94,
+      "critical_issues": 0,
+      "blocking": false,
+      "tdd_red": "AttributeError: module 'conftest' has no attribute 'remove_own_run'",
+      "tdd_green": "exit 0, 15 passed",
+      "fixes": {
+        "baseline_floor": "MAC_PYTHON_DISPATCHER_FLOOR_S = 0.020 from probe S4; baseline now measured min-of-3 against min-of-3; both contradicting comment blocks rewritten",
+        "elided_citation": "elision rejected on the head line of an assignment (scoped to lines carrying a literal); docstring rewritten to the exact residual guarantee",
+        "burst": "pure remove_own_run(base, failed) + pytest_sessionfinish delegate; never enumerates a directory, is handed the single mkdtemp path this process created, so it structurally cannot reach a child's base; failed runs keep their base",
+        "w_flag": "token.startswith('-w') prefix match",
+        "hygiene": "sys.path hack and function-local imports removed; foreign_owned_repo docstring counts corrected"
+      },
+      "negative_controls_executed": [
+        "elided-VERIFIED rule: out-of-tree TEXT copy of mac.py parsed as AST, inspect.getfile patched - 4-way discrimination control/violation/variantA/variantB",
+        "baseline floor: out-of-tree autouse plugin on PYTHONPATH patching PYTHON_DISPATCHER to /usr/bin/true in memory -> RED at 5.43ms vs the 20ms floor",
+        "criterion 8: two REAL concurrent pytest processes - live base survived the neighbour's sessionfinish, both exit 0, zero leaked"
+      ],
+      "deferred": [
+        "16 pre-existing temp bases left for the lazy prune rather than deleted by hand (CLAUDE.md rule 4)",
+        "No text rule can enforce that a full VERIFIED citation names a capture which actually measured THAT value - now stated in the docstring rather than overclaimed"
+      ]
+    },
+    "router_independent_verification_cycle2": {
+      "ts": "2026-09-20T08:44:01Z",
+      "suite": "1854 passed, 12 skipped, 75 deselected, 0 failed, 0 errors (exit 0)",
+      "boundaries": "105 passed",
+      "mypy": "exactly the 2 pre-existing darwin errors",
+      "controld_lines": 140,
+      "src_diff": "src/shepherd/host/mac.py only - src/ scope respected across both cycles",
+      "disk": "/private/tmp/shp-501 656M/43 -> 60K/10 dirs; sessionfinish confirmed working"
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": null,
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "converged"
+  },
+  "planning_review_runs": 0,
+  "planning_review_findings": [],
+  "planning_review_status": "not_started",
+  "plan_revision": 0,
+  "last_reviewed_revision": 0,
+  "memory_notes": [],
+  "pending_gate": null,
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-20T06:34:22Z",
+      "phase": "debug"
+    },
+    {
+      "ts": "2026-09-20T06:35:10Z",
+      "event": "inline_fallback_entered",
+      "reason": "TaskCreate/TaskList absent in this harness; Agent dispatch available, so phase agents still run as subagents and only task bookkeeping moves into the artifact"
+    },
+    {
+      "ts": "2026-09-20T07:36:44Z",
+      "event": "phase_exit_gate_passed",
+      "phase": "debug-investigate",
+      "reason": "STATUS=FIXED with all 4 scenarios PASS; router independently reproduced pytest/boundaries/mypy/controld/quarantine evidence"
+    },
+    {
+      "ts": "2026-09-20T07:54:12Z",
+      "event": "remediation_opened",
+      "phase": "debug-review",
+      "reason": "CHANGES_REQUESTED, 1 critical at confidence 99"
+    },
+    {
+      "ts": "2026-09-20T08:08:45Z",
+      "event": "remediation_completed",
+      "phase": "debug-remfix",
+      "reason": "6/6 findings fixed, 0 critical, router reproduced all gates; suite 1838->1850 passed (+12 new tests)"
+    },
+    {
+      "ts": "2026-09-20T08:25:06Z",
+      "event": "remediation_opened",
+      "phase": "re-review",
+      "reason": "CHANGES_REQUESTED at 0 critical; all 6 prior findings verified closed"
+    },
+    {
+      "ts": "2026-09-20T08:44:01Z",
+      "event": "remediation_completed",
+      "phase": "debug-remfix-2",
+      "reason": "5/5 closed, 0 critical, 3 negative controls executed without planting; suite 1850->1854"
+    },
+    {
+      "ts": "2026-09-20T09:03:34Z",
+      "event": "phase_exit_gate_passed",
+      "phase": "debug-verify",
+      "reason": "PASS 12/13, 0 failed, 1 environment-blocked; revert not recommended"
+    }
+  ],
+  "remediation_history": [
+    {
+      "ts": "2026-09-20T07:54:12Z",
+      "cycle": 1,
+      "origin": "code-reviewer",
+      "scope": "ALL_ISSUES",
+      "reason": "1 critical (inert boundedness guard) + 5 findings; JUST_GO auto-selected the reviewer's requested scope"
+    },
+    {
+      "ts": "2026-09-20T08:25:06Z",
+      "cycle": 2,
+      "origin": "code-reviewer",
+      "scope": "ALL_ISSUES",
+      "reason": "0 critical, 3 MEDIUM + 2 LOW residuals in check code; JUST_GO auto-proceeds, circuit breaker is at cycle 3"
+    }
+  ],
+  "created_at": "2026-09-20T06:34:22Z",
+  "updated_at": "2026-09-20T09:03:34Z",
+  "baseline": {
+    "linux": "1840 passed / 1 skipped / 75 deselected",
+    "macos_current": "1766 passed / 14 failed / 25 errors / 36 skipped / 75 deselected",
+    "command": ".venv/bin/pytest --basetemp=/tmp/shp",
+    "git_head": "bd10b01",
+    "tree": "clean at workflow start"
+  }
+}

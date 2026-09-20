@@ -20,7 +20,8 @@ from shepherd.engines.claude_code.hookd_command import (
     build_hook_entry,
 )
 from shepherd.host.base import HookDispatchPlan, SocketPlan
-from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, LinuxHost
+from shepherd.host.detect import detect_host
+from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET
 
 MODULE_PATH = (
     Path(__file__).resolve().parents[2]
@@ -32,13 +33,24 @@ MODULE_PATH = (
 )
 
 
-def socket_plan(path: Path, budget: int = LINUX_SOCKET_PATH_BUDGET) -> SocketPlan:
+#: The budget and the dispatcher both belong to **the platform running this
+#: suite**, not to Linux. Pinning them to `LinuxHost` read as harmless — every
+#: assertion here is about a string — but `hook_dispatch()` resolves its
+#: requirements against the *running* host's PATH, so on macOS, where `timeout`
+#: does not exist (`docs/probes/2026-09-20-macos-g1-capture.md` §2), the Linux
+#: driver reported `available=False` and three tests about quoting and byte
+#: stability failed for a reason that had nothing to do with either.
+HOST = detect_host()
+HOST_SOCKET_PATH_BUDGET = HOST.control_socket("sessiond").socket_path_budget
+
+
+def socket_plan(path: Path, budget: int = HOST_SOCKET_PATH_BUDGET) -> SocketPlan:
     return SocketPlan(path=path, dir_mode=0o700, sock_mode=0o600, socket_path_budget=budget)
 
 
 def host_dispatch(plan: SocketPlan) -> HookDispatchPlan:
     """The real seam, so no test here ever spells the command itself (P20)."""
-    return LinuxHost().hook_dispatch(plan)
+    return HOST.hook_dispatch(plan)
 
 
 def test_command_is_byte_stable() -> None:
@@ -97,14 +109,20 @@ def test_command_quotes_socket_path() -> None:
 
 
 def test_command_refuses_path_over_budget() -> None:
-    """E19: 107 bytes bind on Linux, 108 do not — so 108 never reaches a file."""
+    """E19: 107 bytes bind on Linux and 103 on macOS — a byte over never ships.
+
+    The refusal reports **this platform's** number, because that is the number
+    the bind would have failed at. Linux's constant is asserted alongside it so
+    the case cannot quietly become a tautology about whatever the host returned.
+    """
+    assert LINUX_SOCKET_PATH_BUDGET == 107
     too_long = Path("/run/user/0/shepherd") / ("x" * 90) / "sessiond.sock"
     plan = socket_plan(too_long)
-    assert len(str(too_long).encode("utf-8")) > LINUX_SOCKET_PATH_BUDGET
+    assert len(str(too_long).encode("utf-8")) > HOST_SOCKET_PATH_BUDGET
     entry = build_hook_entry(plan, host_dispatch(plan))
     assert entry.available is False
     assert entry.command == ""
-    assert str(LINUX_SOCKET_PATH_BUDGET) in entry.reason
+    assert str(HOST_SOCKET_PATH_BUDGET) in entry.reason
     assert entry.reason != ""
 
 

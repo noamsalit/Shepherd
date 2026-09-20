@@ -22,7 +22,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
+import stat
 import sys
+import tempfile
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -232,3 +236,203 @@ def no_signal_ever_reaches_init() -> Iterator[None]:
         yield
     finally:
         os.kill, os.killpg = real_kill, real_killpg
+
+
+# ----- a `tmp_path` short enough to hold a Unix socket (E19, macOS G1) -------
+#
+# `sun_path` is 108 bytes on Linux and **104 on macOS** (this probe:
+# `docs/probes/2026-09-20-macos-g1-capture.md` Result 1), so the usable budget
+# is 107 and 103. Dozens of tests in this suite bind a real `AF_UNIX` socket
+# under `tmp_path`, which means the *base pytest chooses* is load-bearing.
+#
+# On Linux it is `/tmp/pytest-of-<user>/pytest-<n>/` and nobody ever noticed.
+# On macOS `tempfile.gettempdir()` is `$TMPDIR`, which is
+# `/var/folders/1c/mgs46bfj23zd342sscpd8r_80000gn/T/` — 47 bytes before pytest
+# adds anything — and the suite does not fail cleanly, it fails as
+# `SocketPathTooLong` and `OSError: AF_UNIX path too long` in 60-odd tests that
+# have nothing to do with path length.
+#
+# Passing `--basetemp=` on the command line fixes it and is not a fix: it makes
+# a bare `pytest` wrong and puts the repair in the caller's memory. So the
+# repo picks its own short base when the caller has not picked one, and
+# `tests/test_tmp_socket_budget.py` asserts the headroom is really there rather
+# than leaving it to luck.
+#
+# The base is unique per run (`mkdtemp`), so setting `basetemp` — which makes
+# pytest `rm_rf` it first — can never touch another run's tree. pytest's own
+# retention only applies to bases it numbered itself, so the retention below
+# replaces it.
+#
+# Retention is by **age and by count**, with age as a floor under both, and
+# that is not a style choice either way.
+#
+# Several tests in this suite run pytest as a subprocess
+# (`tests/boundaries/test_collected_node_ids.py` collects the whole tree in a
+# child), so more than one run of this conftest is live at once. A plain
+# "keep the newest three" rule had each child delete the *parent's* base out
+# from under it, and 30-odd tests that had nothing to do with temporary
+# directories died on `FileNotFoundError` inside pytest's own `find_prefixed`.
+# That argument is correct and is preserved: a concurrent run's base is by
+# definition recent, and `RUN_GRACE_S` makes recent untouchable.
+#
+# **Amended 2026-09-20.** What it is not is an argument against a ceiling. Age
+# alone, with nothing removing a base at session end, left 2.8 GB across 155
+# bases here in one day. The floor protects concurrency; the ceiling
+# (`RUN_KEEP_NEWEST`) bounds the disk. They are compatible because they act on
+# disjoint sets: nothing inside the grace window is a candidate for either
+# rule. `tests/test_temproot_policy.py` asserts both, and asserts the floor
+# wins over the cap.
+
+#: Every byte here is a byte a test cannot spend on a socket path, and on macOS
+#: `/tmp` resolves through a symlink to `/private/tmp`, so this costs 21 bytes
+#: and not 13. Per-uid because `/tmp` is shared.
+SHORT_TEMPROOT_PARENT = Path("/tmp")
+SHORT_TEMPROOT_NAME = f"shp-{os.getuid()}"
+
+#: How long a run's base survives for post-mortem, once it is past the grace
+#: window below.
+RUN_RETENTION_S = 24 * 60 * 60
+
+#: The floor the paragraph above argues for, stated as a number. **Nothing**
+#: younger than this is ever removed, by age or by count, because a base that
+#: young may belong to a pytest that is still running — including one this run
+#: started. The full suite takes 94 s, so 15 min is ~10x cover for the slowest
+#: child this tree spawns.
+RUN_GRACE_S = 15 * 60
+
+#: The ceiling the floor does not provide. Age alone left **2.8 GB across 155
+#: bases** in a single day on this host (largest 218 MB / 1810 entries), because
+#: nothing removes a base at session end and 24 h is a long time. Past the grace
+#: window, only this many survive — enough that the last few runs are still
+#: there for a post-mortem, few enough that a day of work is bounded.
+RUN_KEEP_NEWEST = 8
+
+
+def short_temproot(
+    parent: Path = SHORT_TEMPROOT_PARENT, name: str = SHORT_TEMPROOT_NAME
+) -> Path | None:
+    """A short, per-user directory to hold this run's base, or `None`.
+
+    `None` — not a raise — when the root is not usable: an unusable `/tmp` is a
+    reason to leave pytest's own default alone, never a reason to fail
+    collection. Principle 5: the unknown is a value.
+
+    **Usable means ours.** `/tmp` is world-writable and sticky, and
+    `mkdir(exist_ok=True)` succeeds against a directory somebody else created,
+    with whatever owner and mode they gave it. `os.access(root, W_OK)` cannot
+    catch that — running as root (which this tree does on Linux) it answers
+    True for every directory on the system. So the check is an explicit
+    `lstat`: a real directory, owned by us, with no group or other bits at all.
+    Anything else and an unprivileged local user who pre-created `/tmp/shp-0`
+    would own a tree a root pytest then fills with fixtures and prunes inside.
+
+    `lstat` rather than `stat` because a symlink pointing at a directory we own
+    is still a redirect somebody else chose.
+    """
+    root = parent / name
+    try:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        status = root.lstat()
+    except OSError:
+        return None
+    if not stat.S_ISDIR(status.st_mode):
+        return None
+    if status.st_uid != os.getuid():
+        return None
+    if status.st_mode & 0o077:
+        return None
+    return root
+
+
+def prune_old_runs(
+    root: Path,
+    retention_s: float = RUN_RETENTION_S,
+    grace_s: float = RUN_GRACE_S,
+    keep_newest: int = RUN_KEEP_NEWEST,
+) -> None:
+    """Bound the tree by age **and** by count, with a grace window under both.
+
+    A base is removable only once it is older than `grace_s` — that is the
+    concurrency floor, and it is what makes this safe to run while a child
+    pytest holds a base of its own. Among the removable ones, a base goes if it
+    is older than `retention_s` *or* if it is not among the `keep_newest` most
+    recent by mtime. A failed removal is never fatal.
+
+    This is the *persistent* bound and it is lazy: it runs from the next
+    session's `pytest_configure`, and nothing inside the grace window is a
+    candidate. `remove_own_run` is the eager half and bounds the burst — see
+    its docstring for why one cannot do both jobs.
+    """
+    now = time.time()
+    removable: list[tuple[float, Path]] = []
+    for child in root.iterdir():
+        try:
+            if not child.is_dir() or child.is_symlink():
+                continue
+            mtime = child.stat().st_mtime
+        except OSError:  # pragma: no cover - a concurrent run removed it first
+            continue
+        if now - mtime > grace_s:
+            removable.append((mtime, child))
+
+    removable.sort(key=lambda entry: entry[0], reverse=True)
+    for rank, (mtime, child) in enumerate(removable):
+        if rank < keep_newest and now - mtime <= retention_s:
+            continue
+        shutil.rmtree(child, ignore_errors=True)
+
+
+#: The one base **this** process created in `pytest_configure`, or `None` when
+#: the caller supplied `--basetemp` (their directory, not ours) or no writable
+#: root was found. `remove_own_run` is handed this and nothing else.
+OWN_RUN_BASE: Path | None = None
+
+
+def remove_own_run(base: Path | None, failed: int) -> None:
+    """Remove *this* run's base at session end — one path, and only ours.
+
+    `prune_old_runs` bounds the tree in steady state but cannot bound a
+    **burst**: a base becomes a candidate only once it is older than
+    `RUN_GRACE_S`, and the prune only runs when the *next* session starts, so a
+    tight loop of runs — which `CLAUDE.md` rule 4 mandates for mutation work —
+    keeps its whole population inside the grace window. Measured on 2026-09-20:
+    1.3 GB across 64 bases created inside 18 minutes, roughly four per
+    invocation because several tests collect the tree in a child pytest.
+
+    A session knows it has finished. That is the fact `mtime` was being used to
+    guess at, so this path needs no grace window — and it must not have one,
+    because a grace window is what made the burst possible. What keeps it safe
+    beside a concurrent child pytest is that it **never enumerates**: it is
+    handed the single path this process created with `mkdtemp`, and a child
+    pytest's base is a different `mkdtemp` result under the same root. The
+    floor `prune_old_runs` provides is therefore untouched — nothing here can
+    reach a base it did not create.
+
+    A failed run keeps its base: the fixtures are the post-mortem, and that is
+    the only reason a base outlives its session at all.
+    """
+    if base is None or failed:
+        return
+    shutil.rmtree(base, ignore_errors=True)
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Choose a short `--basetemp` when the caller did not choose one."""
+    global OWN_RUN_BASE
+    if config.option.basetemp is not None:
+        return
+    root = short_temproot()
+    if root is None:  # pragma: no cover - only on a host with no writable /tmp
+        return
+    try:
+        prune_old_runs(root)
+        own = Path(tempfile.mkdtemp(prefix="", dir=root))
+    except OSError:  # pragma: no cover - only on a host with no writable /tmp
+        return
+    config.option.basetemp = str(own)
+    OWN_RUN_BASE = own
+
+
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    """The eager half of the temp-root policy; see `remove_own_run`."""
+    remove_own_run(OWN_RUN_BASE, session.testsfailed)

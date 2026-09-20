@@ -52,7 +52,7 @@ from shepherd.engines.claude_code.hooks_config import (
 )
 from shepherd.engines.claude_code.hookd_command import build_hook_entry
 from shepherd.host.base import SocketPlan
-from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, LinuxHost
+from shepherd.host.detect import detect_host
 
 #: The one event that carries a refusal, named **here in the test** and nowhere
 #: in `src/` outside `engines/`: §5.0's engine-vocabulary rule fails the build on
@@ -75,6 +75,18 @@ FOREIGN_GROUP: dict[str, object] = {
 }
 
 
+#: **The host this suite is running on**, not Linux. These fixtures used to
+#: build their entry from `LinuxHost()` and call it "the real host's dispatch
+#: command". On Linux that is true. On macOS `LinuxHost.hook_dispatch()` probes
+#: for `timeout`, which does not exist there, reports `available=False`, and the
+#: `pytest.skip` below fired — silently removing 28 tests of the hook-install
+#: and hook-runtime lane on the one platform whose hook lane had never been
+#: exercised. The guard itself is right: a host with no dispatcher cannot test
+#: one. It has to ask about *this* host to mean anything.
+HOST = detect_host()
+HOST_SOCKET_PATH_BUDGET = HOST.control_socket("sessiond").socket_path_budget
+
+
 @pytest.fixture()
 def entry() -> HookEntry:
     """The real host's dispatch command — the same construction
@@ -84,9 +96,9 @@ def entry() -> HookEntry:
         path=Path("/run/user/0/shepherd/sessiond.sock"),
         dir_mode=0o700,
         sock_mode=0o600,
-        socket_path_budget=LINUX_SOCKET_PATH_BUDGET,
+        socket_path_budget=HOST_SOCKET_PATH_BUDGET,
     )
-    built = build_hook_entry(plan, LinuxHost().hook_dispatch(plan))
+    built = build_hook_entry(plan, HOST.hook_dispatch(plan))
     if not built.available:
         pytest.skip(f"no dispatcher on this host: {built.reason}")
     return built

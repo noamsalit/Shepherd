@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import http.client
 import socket
+import subprocess
 import threading
 import time
 from collections.abc import Iterator
@@ -78,18 +79,69 @@ def connect_and_be_hung_up_on(port: int) -> int:
         connection.close()
 
 
-def time_wait_on(port: int) -> int:
-    """Sockets whose *local* address is this port and which are in `TIME_WAIT`."""
+#: Linux's kernel table. Present or absent; nothing else distinguishes the two
+#: readers below, and the absent case is macOS, not an error (principle 5).
+PROC_NET_TCP = Path("/proc/net/tcp")
+
+#: `TCP_TIME_WAIT` as `/proc/net/tcp` spells it.
+PROC_TCP_TIME_WAIT = "06"
+
+#: …and as `netstat` spells it.
+NETSTAT_TIME_WAIT = "TIME_WAIT"
+
+
+def time_wait_from_proc(port: int) -> int:
+    """`/proc/net/tcp`: `local_address` is `<hex ip>:<hex port>`, state is hex."""
     found = 0
-    with open("/proc/net/tcp", encoding="utf-8") as table:
+    with PROC_NET_TCP.open(encoding="utf-8") as table:
         next(table)
         for line in table:
             fields = line.split()
             local_port = int(fields[1].split(":")[1], 16)
-            state = fields[3]
-            if local_port == port and state == "06":  # TCP_TIME_WAIT
+            if local_port == port and fields[3] == PROC_TCP_TIME_WAIT:
                 found += 1
     return found
+
+
+def time_wait_from_netstat(port: int) -> int:
+    """BSD `netstat -an -p tcp`: `127.0.0.1.<port>`, state is the last column.
+
+    The port is separated from the address by a **dot**, not a colon, on both
+    `tcp4` (`127.0.0.1.54321`) and `tcp6` (`::1.54321`), so it is taken from the
+    right rather than by splitting the whole field.
+    """
+    completed = subprocess.run(
+        ["netstat", "-an", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    found = 0
+    for line in completed.stdout.splitlines():
+        fields = line.split()
+        if len(fields) < 6 or fields[-1] != NETSTAT_TIME_WAIT:
+            continue
+        local = fields[3].rsplit(".", 1)
+        if len(local) == 2 and local[1].isdigit() and int(local[1]) == port:
+            found += 1
+    return found
+
+
+def time_wait_on(port: int) -> int:
+    """Sockets whose *local* address is this port and which are in `TIME_WAIT`.
+
+    Two kernels, two tables. This used to read `/proc/net/tcp` unconditionally,
+    which on macOS is a `FileNotFoundError` inside a helper the test's own
+    precondition depends on — so the failure arrived as a missing file rather
+    than as anything about `SO_REUSEADDR`.
+
+    A reader that silently returned 0 would be worse than the crash: the caller
+    asserts `await_time_wait(port) > 0` precisely so a table this code cannot
+    read shows up as a red precondition instead of a vacuous pass (B1).
+    """
+    if PROC_NET_TCP.exists():
+        return time_wait_from_proc(port)
+    return time_wait_from_netstat(port)
 
 
 def await_time_wait(port: int, ceiling_s: float = 10.0) -> int:

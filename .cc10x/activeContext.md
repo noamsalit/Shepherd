@@ -9,6 +9,9 @@ Full flow requested: planner → builder → review → QA route.
 
 ## Recent Changes
 
+[DEBUG-RESET: wf:wf-20260920T063421Z-c6df8bbd]
+macOS portability pass: 14 failed / 25 errors on the first Mac run of a tree built and verified on Linux as root.
+
 - Repo was docs-only at session start (spec + QA-experiment methodology docs, one baseline commit).
 - Environment and hook-payload ground truth established before planning (see `## Learnings`).
 
@@ -258,3 +261,9 @@ None blocking. Known gaps to resolve in the milestone that needs them, not to st
 ## Last Updated
 
 2026-09-16
+
+## Debug History
+[DEBUG-1]: Lead 1 as stated ("tests/engines/test_hookd_command.py fails because MacHost refuses") → WRONG. Those 3 tests never touch MacHost: their `host_dispatch()` helper calls `LinuxHost().hook_dispatch(plan)`, which does a live `shutil.which("timeout")` against the *running* host. `timeout` is absent on macOS, so the Linux driver reports `available=False` here. The MacHost product gap is real and separate.
+[DEBUG-2]: Candidate macOS dispatch `nc -U -w 0` (the obvious `-q0` analogue) → REJECTED by measurement: it silently TRUNCATES a 40 KB frame to ~16-18 KB (3/3 runs). It is the exact "delivers, but not all of it" failure class E34 names.
+[DEBUG-3]: Lead 3's account of the test_controld failures ("tmp_path too long") → INCOMPLETE. Root cause is that `MacHost.environ` defaults to `{}` (LinuxHost defaults to `dict(os.environ)`), so `detect_host()` on macOS returns a host blind to HOME and TMPDIR: it wrote a real `shepherd.db` into `~/Library/Application Support/Shepherd` and a real socket into the shared `/tmp/Shepherd`. Both confirmed present on disk.
+[DEBUG-4]: WINNING — one root cause behind Lead 1 and most of Lead 3: **the product and its tests both asked the Linux driver about a macOS host.** `MacHost.environ` defaulted to `{}` (so `detect_host()` returned a driver blind to HOME/TMPDIR), `MacHost.hook_dispatch()` refused unconditionally over a flag set nobody had measured, and eight test modules spelled `LinuxHost()` where they meant "this host". Fixed at the seam in every case; 28 tests that had been silently skipping on macOS now run.

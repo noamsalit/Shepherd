@@ -38,7 +38,8 @@ from shepherd.engines.claude_code.hookd_command import (
     build_hook_entry,
 )
 from shepherd.host.base import HookDispatchPlan, SocketPlan
-from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, LinuxHost
+from shepherd.host.detect import detect_host
+from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET
 from shepherd.host.mac import MacHost
 
 #: A user's own hook, in the captured shape. It must survive us, byte for byte.
@@ -61,19 +62,31 @@ def write_settings(path: Path, settings: object) -> bytes:
     return payload
 
 
-def linux_entry(socket_path: Path) -> HookEntry:
+#: **The host this suite is running on**, not Linux. These fixtures used to
+#: build their entry from `LinuxHost()` and call it "the real host's dispatch
+#: command". On Linux that is true. On macOS `LinuxHost.hook_dispatch()` probes
+#: for `timeout`, which does not exist there, reports `available=False`, and the
+#: `pytest.skip` below fired — silently removing 28 tests of the hook-install
+#: and hook-runtime lane on the one platform whose hook lane had never been
+#: exercised. The guard itself is right: a host with no dispatcher cannot test
+#: one. It has to ask about *this* host to mean anything.
+HOST = detect_host()
+HOST_SOCKET_PATH_BUDGET = HOST.control_socket("sessiond").socket_path_budget
+
+
+def host_entry(socket_path: Path) -> HookEntry:
     plan = SocketPlan(
         path=socket_path,
         dir_mode=0o700,
         sock_mode=0o600,
-        socket_path_budget=LINUX_SOCKET_PATH_BUDGET,
+        socket_path_budget=HOST_SOCKET_PATH_BUDGET,
     )
-    return build_hook_entry(plan, LinuxHost().hook_dispatch(plan))
+    return build_hook_entry(plan, HOST.hook_dispatch(plan))
 
 
 @pytest.fixture
 def entry() -> HookEntry:
-    built = linux_entry(Path("/run/user/0/shepherd/sessiond.sock"))
+    built = host_entry(Path("/run/user/0/shepherd/sessiond.sock"))
     if not built.available:
         pytest.skip(f"no dispatcher on this host: {built.reason}")
     return built
@@ -191,12 +204,12 @@ def test_installed_command_is_the_host_command_verbatim(
     settings_path: Path, entry: HookEntry
 ) -> None:
     """P20: no second spelling reaches disk — the host's string, substituted only."""
-    dispatch = LinuxHost().hook_dispatch(
+    dispatch = HOST.hook_dispatch(
         SocketPlan(
             path=Path("/run/user/0/shepherd/sessiond.sock"),
             dir_mode=0o700,
             sock_mode=0o600,
-            socket_path_budget=LINUX_SOCKET_PATH_BUDGET,
+            socket_path_budget=HOST_SOCKET_PATH_BUDGET,
         )
     )
     install_hooks(settings_path, entry)
@@ -214,14 +227,24 @@ def test_install_registers_no_worktree_create(settings_path: Path, entry: HookEn
     assert "WorktreeCreate" not in hooks_of(settings_path)
 
 
-def test_install_refuses_without_dispatch_binary(settings_path: Path) -> None:
-    """G2, both shapes: a missing binary, and `MacHost`'s unverified flag set."""
+def test_install_refuses_without_dispatch_binary(
+    settings_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """G2, both shapes: a hand-built refusal, and a real driver on a bare PATH.
+
+    The second half used to lean on `MacHost` refusing **unconditionally**,
+    which it did while its flag set was a guess. The flag set was measured on
+    2026-09-20 (`docs/probes/2026-09-20-macos-g1-capture.md` §2), so the
+    refusal is now provoked rather than inherited: a PATH with nothing on it.
+    That is the shape this test was always about — a driver that cannot find
+    its dispatcher must leave the settings file untouched.
+    """
     pre_image = settings_path.read_bytes()
     plan = SocketPlan(
         path=Path("/run/user/0/shepherd/sessiond.sock"),
         dir_mode=0o700,
         sock_mode=0o600,
-        socket_path_budget=LINUX_SOCKET_PATH_BUDGET,
+        socket_path_budget=HOST_SOCKET_PATH_BUDGET,
     )
     missing = build_hook_entry(
         plan,
@@ -233,8 +256,10 @@ def test_install_refuses_without_dispatch_binary(settings_path: Path) -> None:
     assert result.refused_reason is not None
     assert settings_path.read_bytes() == pre_image
 
+    monkeypatch.setenv("PATH", str(tmp_path))
     mac_dispatch = MacHost().hook_dispatch(plan)
-    assert mac_dispatch.available is False  # unverified off-platform (D55, G1)
+    assert mac_dispatch.available is False  # nothing resolves on this PATH (G2)
+    assert "missing on this host" in mac_dispatch.reason
     mac_result = install_hooks(settings_path, build_hook_entry(plan, mac_dispatch))
     assert mac_result.refused_reason is not None
     assert settings_path.read_bytes() == pre_image
@@ -243,12 +268,14 @@ def test_install_refuses_without_dispatch_binary(settings_path: Path) -> None:
 def test_install_refuses_over_socket_path_budget(settings_path: Path) -> None:
     """E19: a path that cannot bind never reaches a settings file."""
     pre_image = settings_path.read_bytes()
+    assert LINUX_SOCKET_PATH_BUDGET == 107
     too_long = Path("/run/user/0/shepherd") / ("x" * 90) / "sessiond.sock"
-    over_budget = linux_entry(too_long)
+    over_budget = host_entry(too_long)
     assert over_budget.available is False
     result = install_hooks(settings_path, over_budget)
     assert result.refused_reason is not None
-    assert str(LINUX_SOCKET_PATH_BUDGET) in result.refused_reason
+    # This platform's number, because that is the bind that would have failed.
+    assert str(HOST_SOCKET_PATH_BUDGET) in result.refused_reason
     assert settings_path.read_bytes() == pre_image
 
 

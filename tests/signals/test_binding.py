@@ -118,9 +118,14 @@ def test_bind_bare_repo_is_counted(store: Store, git_world: GitWorld) -> None:
     assert store.get_app_state("anomaly.git_bare_repo") == 1
 
 
-def test_bind_dubious_ownership_is_counted(store: Store, git_world: GitWorld) -> None:
-    """E15 — reported, never fixed: `safe.directory` is not ours to write."""
-    binding = bind_cwd_to_repo(store, str(git_world.foreign))
+def test_bind_dubious_ownership_is_counted(store: Store, foreign_owned_repo: Path) -> None:
+    """E15 — reported, never fixed: `safe.directory` is not ours to write.
+
+    Takes `foreign_owned_repo` rather than `git_world` because building the case
+    needs root; see that fixture for why the other 24 tests here no longer pay
+    for this one's privilege.
+    """
+    binding = bind_cwd_to_repo(store, str(foreign_owned_repo))
 
     assert binding.repo_id is None
     assert binding.anomaly is not None

@@ -63,7 +63,6 @@ class GitWorld:
     bare: Path
     symlink: Path
     plain: Path
-    foreign: Path
     noremote: Path
 
 
@@ -122,12 +121,6 @@ def git_world(tmp_path: Path) -> GitWorld:
     plain = root / "plain" / "dir"
     plain.mkdir(parents=True)
 
-    foreign = root / "foreign"
-    foreign.mkdir()
-    git(foreign, "init", "-q", "-b", "main")
-    for path in [foreign, *foreign.rglob("*")]:
-        os.chown(path, 65534, 65534)
-
     noremote = root / "noremote"
     noremote.mkdir()
     git(noremote, "init", "-q", "-b", "main")
@@ -142,6 +135,46 @@ def git_world(tmp_path: Path) -> GitWorld:
         bare=bare,
         symlink=symlink,
         plain=plain,
-        foreign=foreign,
         noremote=noremote,
     )
+
+
+#: The uid/gid `git` must see as "not yours" for `safe.directory` to fire.
+#: `nobody` on both platforms; the numbers are what `os.chown` takes.
+FOREIGN_UID = 65534
+FOREIGN_GID = 65534
+
+
+@pytest.fixture()
+def foreign_owned_repo(git_world: GitWorld) -> Path:
+    """A repo owned by another uid, or an explicit skip — never a silent one.
+
+    `git`'s "dubious ownership" refusal (E15) is the only anomaly in this suite
+    that cannot be built by an ordinary user: producing it needs `os.chown` to a
+    uid that is not ours, and that is `CAP_CHOWN`, i.e. root. This tree was
+    built and verified on a Linux host running as root, where it simply worked,
+    so the `chown` sat in `git_world`, and the first run as a normal user turned
+    every test that reaches `git_world` into a `PermissionError` error. Counted
+    2026-09-20: 26 tests depend on it, and 24 of them have nothing to do with
+    ownership.
+
+    Splitting it out is what keeps those 24 running. The two that genuinely need
+    root — `test_bind_dubious_ownership_is_counted` and
+    `test_discovery_skips_a_repo_it_cannot_read` — skip, loudly, naming the
+    privilege they need. The skip is as narrow as the fact: it fires only when
+    the `chown` itself is refused, so on a host that *can* build the case —
+    every root CI runner, the Linux host this was written on — they run and a
+    regression in dubious-ownership handling still goes red.
+    """
+    foreign = git_world.root / "foreign"
+    foreign.mkdir()
+    git(foreign, "init", "-q", "-b", "main")
+    try:
+        for path in [foreign, *foreign.rglob("*")]:
+            os.chown(path, FOREIGN_UID, FOREIGN_GID)
+    except PermissionError as refused:
+        pytest.skip(
+            "needs root: building git's dubious-ownership case requires chown to "
+            f"uid {FOREIGN_UID}, which this user may not do ({refused})"
+        )
+    return foreign

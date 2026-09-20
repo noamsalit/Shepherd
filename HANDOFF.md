@@ -71,6 +71,21 @@ started with, and the audit records it produced).
 **`MacHost` ships honest-but-unverified** — `verified()` is `False` and says so. You will be the first
 to run it; five named things need capturing on a real Mac, listed at M1's G1.
 
+> **Updated 2026-09-20 — that first run happened.** Three of G1's five closed by measurement on a real
+> Mac (macOS 26.6.2, arm64): the 103-byte `sun_path` budget, the netcat flag set, and the
+> `TMPDIR`-derived runtime dir. `docs/probes/2026-09-20-macos-g1-capture.md` is the capture, and the
+> annotations in `src/shepherd/host/mac.py` now say `VERIFIED (docs/probes/…)` for exactly those three.
+>
+> The headline is that **there is no `timeout` on a stock Mac**, so `hook_dispatch()` could never be
+> available there and the signal engine would have received nothing. It is now
+> `perl -MTime::HiRes=alarm -e 'alarm 0.25; exec @ARGV or exit 0' nc -U <sock> || true` — stock
+> `/usr/bin/perl` and `/usr/bin/nc`, measured delivering both captured frame sizes byte-for-byte and
+> bounding a wedged `sessiond` at 264–324 ms. Do **not** "simplify" it to `nc -U -w 0`: that truncates
+> a 40 KB frame to ~16 KB, silently, 3 runs out of 3.
+>
+> `verified()` is still `False`, and still honestly: `launchctl print gui/<uid>` and
+> `ps -o lstart=` / `LOCAL_PEERCRED` remain uncaptured. Two of five, not none of five.
+
 ## What the QA pass found, and what is still open
 
 The first pass to test the four milestones **composed** rather than each one's own seams found five

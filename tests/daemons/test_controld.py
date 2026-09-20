@@ -107,18 +107,64 @@ class World:
     cwd: Path
 
 
+#: Every environment variable any `HostPlatform` driver reads to place its
+#: directories. All of them are redirected, not just the ones the platform this
+#: was written on happens to read: `LinuxHost` takes `XDG_*`, `MacHost` takes
+#: `HOME` and `TMPDIR`, and a fixture that sets only one family silently hands
+#: the *other* platform the developer's real home. That is not hypothetical —
+#: it is what this fixture did, and `~/Library/Application Support/Shepherd`
+#: had a real `shepherd.db` in it to prove the point.
+HOST_DIR_ENV: tuple[str, ...] = (
+    "XDG_DATA_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_STATE_HOME",
+    "XDG_CACHE_HOME",
+    "XDG_RUNTIME_DIR",
+    "HOME",
+    "TMPDIR",
+)
+
+
 @pytest.fixture()
 def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> World:
-    for name in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
-        monkeypatch.setenv(name, str(tmp_path / name.lower()))
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    """A throwaway host — for **whichever** driver `detect_host()` returns.
+
+    `data_dir` and `runtime_dir` are read back from the seam rather than spelled
+    here, because the two drivers place them differently
+    (`.local/share/shepherd` vs `Library/Application Support/Shepherd`) and a
+    test that spells one platform's layout is asserting about the wrong machine
+    on the other.
+    """
+    targets = {
+        "XDG_DATA_HOME": tmp_path / "xdg_data_home",
+        "XDG_CONFIG_HOME": tmp_path / "xdg_config_home",
+        "XDG_STATE_HOME": tmp_path / "xdg_state_home",
+        "XDG_CACHE_HOME": tmp_path / "xdg_cache_home",
+        "XDG_RUNTIME_DIR": tmp_path / "run",
+        "HOME": tmp_path / "home",
+        "TMPDIR": tmp_path / "run",
+    }
+    # The list and the redirect cannot drift apart: adding a variable to
+    # HOST_DIR_ENV without redirecting it fails here rather than in whichever
+    # test first reads the developer's real home.
+    assert tuple(targets) == HOST_DIR_ENV
+    for name, target in targets.items():
+        monkeypatch.setenv(name, str(target))
+
     engine_config_dir = tmp_path / "engine-config"
     (engine_config_dir / "sessions").mkdir(parents=True)
     work = tmp_path / "work"
     work.mkdir()
+
+    dirs = detect_host().dirs()
+    # Arrival, not trust: the driver really did follow the redirect. Without
+    # this the fixture is happy to hand back the real user's directories.
+    for directory in (dirs.data_dir, dirs.runtime_dir):
+        assert tmp_path in directory.parents, f"{directory} escaped the throwaway host"
+
     return World(
-        data_dir=tmp_path / "xdg_data_home" / "shepherd",
-        runtime_dir=tmp_path / "run" / "shepherd",
+        data_dir=dirs.data_dir,
+        runtime_dir=dirs.runtime_dir,
         engine_config_dir=engine_config_dir,
         cwd=work,
     )
@@ -390,7 +436,10 @@ def test_a_refused_start_leaves_no_database_behind(
     changed the disk and leaked a thread — the opposite of a refusal.
     """
     long_runtime = tmp_path / ("r" * 90) / ("u" * 90)
+    # Both spellings of "where the runtime directory is", so the path is over
+    # budget for whichever driver this platform uses (HOST_DIR_ENV).
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(long_runtime))
+    monkeypatch.setenv("TMPDIR", str(long_runtime))
 
     with pytest.raises(SocketPathTooLong):
         controld.start(host=detect_host(), port=0, engine_config_dir=world.engine_config_dir)

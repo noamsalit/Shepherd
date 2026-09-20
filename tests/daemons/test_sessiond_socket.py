@@ -25,12 +25,14 @@ import pytest
 from shepherd.core.clock import parse_stamp
 from shepherd.core.frames import Frame
 from shepherd.daemons.control_ingest import serve_control_ingest
+from shepherd.daemons.sessiond import INGEST_SOCKET_NAME
 from shepherd.engines.claude_code.ingest_socket import (
     SHUTDOWN_DRAIN_S,
     serve_ingest,
 )
 from shepherd.engines.claude_code.relay import RELAY_BUFFER_MAX, Relay
 from shepherd.host.base import SocketPlan
+from shepherd.host.detect import detect_host
 from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, SOCKET_DIR_MODE, SOCKET_MODE
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 
@@ -270,17 +272,25 @@ def test_shutdown_drains_the_relay_within_the_window(tmp_path: Path) -> None:
     assert not ingest.path.exists(), "the socket outlived the drain"
 
 
-def test_sigterm_unlinks_the_socket(tmp_path: Path) -> None:
+def test_sigterm_unlinks_the_socket(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """F15/E20, in a real process with a real signal: `SIGTERM` exits 0 and
     leaves no socket behind, so the next start binds instead of `EADDRINUSE`.
 
     The runtime directory is `tmp_path` — never the real one: the user's live
-    sessions own `$XDG_RUNTIME_DIR/shepherd/`.
+    sessions own it. "It" is `$XDG_RUNTIME_DIR/shepherd/` on Linux and
+    `$TMPDIR/Shepherd/` on macOS, so **both** variables are redirected and the
+    path this test waits for is read back from the same seam the child will
+    use. Spelling `tmp_path / "shepherd" / "sessiond.sock"` here asserted one
+    platform's layout at a child running the other's, and the wait timed out
+    against a daemon that had bound perfectly well somewhere else.
     """
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    socket_path = detect_host().control_socket(INGEST_SOCKET_NAME).path
+    assert tmp_path in socket_path.parents
+
     env = dict(os.environ)
-    env["XDG_RUNTIME_DIR"] = str(tmp_path)
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2] / "src")
-    socket_path = tmp_path / "shepherd" / "sessiond.sock"
 
     process = subprocess.Popen(
         [

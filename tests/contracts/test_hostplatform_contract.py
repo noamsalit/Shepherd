@@ -17,6 +17,8 @@ from __future__ import annotations
 import ast
 import inspect
 import os
+import re
+import shutil
 import socket
 import sys
 from collections.abc import Iterator
@@ -27,6 +29,7 @@ from pathlib import Path
 import pytest
 
 from shepherd.core.clock import parse_stamp
+from shepherd.engines.claude_code.hookd_command import build_hook_entry
 from shepherd.host.base import (
     DetachedLaunch,
     HookDispatchPlan,
@@ -71,6 +74,18 @@ MUTATING_ARGV_WORDS: frozenset[str] = frozenset(
         "unload",
     }
 )
+
+#: The two provenance markers a `mac.py` literal may carry (see
+#: `test_machost_constants_are_annotated`). `VERIFIED` is a **substring** of
+#: `UNVERIFIED`, which is exactly the spelling collision that would let one
+#: marker silently satisfy the other's rule — so the verified marker is matched
+#: with a negative lookbehind and must carry its capture inside parentheses.
+UNVERIFIED_MARKER = "UNVERIFIED"
+VERIFIED_CAPTURE = re.compile(r"(?<!UN)VERIFIED \((?P<capture>[^)]*)\)")
+
+#: Where a capture may live. A `VERIFIED` annotation that points anywhere else
+#: is not a citation.
+CAPTURE_ROOT = "docs/probes/"
 
 #: D55's seam owns exactly **seven** things, plus `verified()` — which reports
 #: on the driver, not on the host, and so is not one of the seven.
@@ -327,7 +342,21 @@ def test_runtime_dir_falls_back_to_run_user_uid(tmp_path: Path) -> None:
 
 
 def test_socket_path_budget_enforced(tmp_path: Path) -> None:
-    """E19: 107 bytes bind, 108 do not — and the seam refuses before bind."""
+    """E19: the seam refuses one byte past the budget, and this kernel agrees.
+
+    Two halves, tangled until 2026-09-20. The first is **arithmetic**:
+    `plan_socket()` refuses one byte past whatever budget the driver carries.
+    That is pure, so it runs against `LinuxHost` on any host and says nothing
+    about the machine it runs on.
+
+    The second asks **this kernel** whether the budget is folklore, and it can
+    only ever be about the platform running the suite. 107 bytes bind on Linux;
+    on macOS `sun_path` is 104 bytes including the NUL, so 103 bind and 104
+    raise `OSError: AF_UNIX path too long`
+    (`docs/probes/2026-09-20-macos-g1-capture.md` §1). This half used to assert
+    the *Linux* constant against whatever kernel was present, which is why a
+    macOS budget that was right the whole time produced a red suite here.
+    """
     assert LINUX_SOCKET_PATH_BUDGET == 107
 
     runtime = tmp_path / "run"
@@ -339,12 +368,16 @@ def test_socket_path_budget_enforced(tmp_path: Path) -> None:
         host.control_socket("s" * (LINUX_SOCKET_PATH_BUDGET - prefix + 1))
     assert refused.value.budget == LINUX_SOCKET_PATH_BUDGET
 
-    # The budget is not folklore: the kernel agrees at exactly this boundary.
+    # The budget is not folklore: this kernel agrees at exactly this boundary,
+    # at whichever number the driver for this platform carries.
+    budget = detect_host().control_socket("sessiond").socket_path_budget
+    assert budget == (MAC_SOCKET_PATH_BUDGET if ON_DARWIN else LINUX_SOCKET_PATH_BUDGET)
+
     directory = tmp_path / "b"
     directory.mkdir()
     base = str(directory) + "/"
-    binds = base + "a" * (LINUX_SOCKET_PATH_BUDGET - len(base.encode("utf-8")))
-    assert len(binds.encode("utf-8")) == LINUX_SOCKET_PATH_BUDGET
+    binds = base + "a" * (budget - len(base.encode("utf-8")))
+    assert len(binds.encode("utf-8")) == budget
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as good:
         good.bind(binds)
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as bad:
@@ -485,13 +518,83 @@ def test_machost_reports_unverified() -> None:
     assert MAC_SOCKET_PATH_BUDGET != LINUX_SOCKET_PATH_BUDGET
 
 
-def test_machost_dispatch_is_unavailable_with_a_reason() -> None:
-    """G2/E34: an unverified flag set refuses rather than guessing."""
+def test_machost_dispatch_is_unavailable_with_a_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """G2/E34: a dispatcher that does not resolve refuses, by name.
+
+    This test is the same rule it always was, applied one layer down. It used
+    to assert that `MacHost` refuses **unconditionally**, because the flag set
+    was a guess (G2). The flag set was measured on 2026-09-20
+    (`docs/probes/2026-09-20-macos-g1-capture.md` §2), so refusing regardless of
+    the host would now be the dishonest answer — it would report "no capture"
+    on a host where the capture exists.
+
+    What must not weaken is the half that protects the user: a host where the
+    requirements do not resolve gets **no hook and a reason naming what is
+    missing**, never a hook that exits 0 having delivered nothing. So the
+    refusal is provoked here rather than assumed, by giving the process a PATH
+    with nothing on it.
+    """
+    host = MacHost()
+    plan = host.control_socket("sessiond")
+
+    monkeypatch.setenv("PATH", str(tmp_path))
+    refused = host.hook_dispatch(plan)
+    assert refused.available is False
+    assert refused.reason.startswith("missing on this host: ")
+    for requirement in host.hook_dispatch(plan).requires:
+        assert requirement in refused.reason
+    assert build_hook_entry(plan, refused).command == ""
+
+
+@pytest.mark.skipif(
+    not ON_DARWIN,
+    reason="the dispatcher is probed against this host's PATH; only a Mac has the Mac's",
+)
+def test_machost_dispatch_resolves_on_a_stock_mac() -> None:
+    """G1's netcat item, closed: stock `/usr/bin/perl` and `/usr/bin/nc`.
+
+    `tests/engines/test_hook_dispatch_delivery.py` is the half that proves the
+    command *works*; this is the half that proves it is reachable with nothing
+    installed. Neither `timeout` nor `gtimeout` may appear in it — they are
+    `coreutils`, and requiring a `brew install` to see any signal at all would
+    make the engine's whole hook lane opt-in on this platform.
+    """
     host = MacHost()
     dispatch = host.hook_dispatch(host.control_socket("sessiond"))
-    assert dispatch.available is False
-    assert "unverified" in dispatch.reason.lower()
-    assert "netcat" in dispatch.reason.lower()
+    assert dispatch.available is True, dispatch.reason
+    assert dispatch.requires == ("perl", "nc")
+    # Two different facts, asserted separately. Until 2026-09-20 this was one
+    # assertion — `shutil.which(requirement).startswith("/usr/bin/")` — which
+    # is a claim about **PATH order**, not about what ships with the OS. Both
+    # `perl` and `netcat` are common Homebrew formulae, and a host that has
+    # either puts `/opt/homebrew/bin` first: the test would go red on a machine
+    # where `hook_dispatch()` is correct and the product works. A false red on
+    # someone else's Mac is not a stricter test, it is a broken one.
+    for requirement in dispatch.requires:
+        stock = Path("/usr/bin") / requirement
+        assert stock.is_file(), (
+            f"{requirement} is not at {stock}: the claim this test makes is that "
+            "the dispatcher needs nothing installed, and that claim is about the "
+            "stock location, not about PATH"
+        )
+        assert shutil.which(requirement) is not None, (
+            f"{requirement} is present at {stock} but not reachable on PATH"
+        )
+    assert "timeout" not in dispatch.command.split()
+    assert "gtimeout" not in dispatch.command.split()
+    # The measured trap, kept out (§2): -w 0 truncates a 40 KB frame. Matched
+    # by prefix, not by set membership: Apple's `nc` takes `-w0` as a single
+    # token, which is how the regression would idiomatically be written, and a
+    # rule keyed on one exact spelling passes on the other spelling of the same
+    # violation. `tests/engines/test_hook_dispatch_delivery.py` catches the
+    # truncation itself byte-for-byte; this names the cause.
+    offending = [token for token in dispatch.command.split() if token.startswith("-w")]
+    assert offending == [], (
+        f"the dispatch command carries a netcat idle timeout: {offending}. "
+        "§2 measured -w 0 truncating a 40 KB frame; the bound is the perl alarm."
+    )
 
 
 @pytest.mark.skipif(ON_DARWIN, reason="on macOS the probes run for real")
@@ -505,18 +608,49 @@ def test_machost_refuses_host_probes_off_platform() -> None:
 
 
 def test_machost_constants_are_annotated() -> None:
-    """Every value literal in `mac.py` sits on a line carrying `UNVERIFIED`.
+    """Every value literal in `mac.py` sits on a line that says where it came from.
 
     "Value literal" is every `str`, `int` and `float` constant that is not a
     docstring. `bool` and `Ellipsis` are excluded: `frozen=True`,
     `check=False` and `tuple[str, ...]` are control flow and typing, not
     claims about macOS. Every literal that *is* a claim — a path, a budget, a
-    mode, a flag set, a reason — must carry the marker.
+    mode, a flag set, a reason — must carry one of **two** markers.
+
+    Until 2026-09-20 there was one marker and it said `UNVERIFIED (no capture)`.
+    Three of G1's five items closed that day on a real Mac, and leaving those
+    three annotated "no capture" would have made the marker a lie — the precise
+    failure the marker exists to prevent. So a second marker was added rather
+    than the first being widened: `VERIFIED (docs/probes/…)`, which must **name
+    the capture**, and the named file must exist. A literal with neither marker
+    still fails.
+
+    **What the elided form costs, stated exactly, because the first version of
+    this docstring overstated it.** `VERIFIED (docs/probes/…§2)` is a
+    continuation shorthand: it names no file, so the file-exists check cannot
+    reach it. Until the third block below existed, the only rule on the elided
+    form was "starts with `docs/probes/`", and a new unmeasured constant written
+    as `MAC_NEW_GUESS = "launchctl"  # VERIFIED (docs/probes/…§2)` passed — the
+    module-level "some literal names a real file" check is satisfied
+    permanently by three other constants, so it could not object. That is the
+    rubber stamp this file is written against, reappearing inside the rule
+    meant to prevent it.
+
+    So the elision is now allowed **only where it is genuinely a continuation**:
+    a literal sitting on the first line of an assignment must cite a capture in
+    full. A new constant is a new statement and its value is on its head line,
+    so it cannot be stamped; the fabricated line above now goes red. What
+    remains convention — and is *not* claimed here — is that a full citation
+    names a capture which actually measured *that* value. No text rule can see
+    that.
     """
     source = Path(inspect.getfile(MacHost))
     text = source.read_text(encoding="utf-8")
     lines = text.splitlines()
     tree = ast.parse(text, filename=str(source))
+
+    def annotated(line: str) -> bool:
+        """Either marker, and `VERIFIED` only when it carries a capture."""
+        return UNVERIFIED_MARKER in line or VERIFIED_CAPTURE.search(line) is not None
 
     docstrings: set[int] = set()
     for node in ast.walk(tree):
@@ -532,10 +666,69 @@ def test_machost_constants_are_annotated() -> None:
         and isinstance(node.value, (str, int, float))
         and not isinstance(node.value, bool)
         and id(node) not in docstrings
-        and "UNVERIFIED" not in lines[node.lineno - 1]
+        and not annotated(lines[node.lineno - 1])
     ]
     assert unannotated == []
     assert "D55" in text
+
+    # Both markers are in use, so neither branch of the rule is dead code.
+    assert UNVERIFIED_MARKER in text, "no literal in mac.py is marked unverified"
+    assert VERIFIED_CAPTURE.search(text), "no literal in mac.py is marked verified"
+
+    # A `VERIFIED` annotation must name a capture that **exists**. Without this
+    # the marker is a word anyone can type over a value nobody measured — the
+    # rubber stamp this file's whole discipline is written against.
+    repo_root = Path(inspect.getfile(MacHost)).parents[3]
+    cited = {
+        match.group("capture").split("§")[0].strip()
+        for match in VERIFIED_CAPTURE.finditer(text)
+    }
+    named_files = sorted(reference for reference in cited if reference.endswith(".md"))
+    assert named_files, "every VERIFIED annotation elided its capture; none names a file"
+    for reference in named_files:
+        assert (repo_root / reference).is_file(), (
+            f"mac.py cites a capture that is not in the tree: {reference}"
+        )
+    # …and an elided citation (a continuation line) must still point into the
+    # probe tree, so `VERIFIED (…)` cannot become a citation-free stamp.
+    for reference in sorted(cited - set(named_files)):
+        assert reference.startswith(CAPTURE_ROOT), (
+            f"mac.py carries a VERIFIED annotation citing nothing: {reference!r}"
+        )
+
+    # The elision is a *continuation* shorthand, so it is allowed only where it
+    # continues something. A literal on the head line of an assignment is the
+    # whole value of a new constant: nothing above it names a capture, so an
+    # elided marker there cites nothing at all. Those must be cited in full.
+    heads = {
+        statement.lineno
+        for statement in ast.walk(tree)
+        if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+    }
+
+    def elided_stamp(lineno: int) -> bool:
+        """A `VERIFIED` on this line that names no `.md` capture."""
+        match = VERIFIED_CAPTURE.search(lines[lineno - 1])
+        if match is None:
+            return False
+        return not match.group("capture").split("§")[0].strip().endswith(".md")
+
+    stamped = [
+        f"{source.name}:{node.lineno}: {node.value!r}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, (str, int, float))
+        and not isinstance(node.value, bool)
+        and id(node) not in docstrings
+        and node.lineno in heads
+        and elided_stamp(node.lineno)
+    ]
+    assert stamped == [], (
+        "a literal is stamped VERIFIED with an elided citation on the first "
+        f"line of its own assignment, which cites nothing: {stamped}. An "
+        "elision may only continue a statement whose head names the capture "
+        f"in full ({CAPTURE_ROOT}<file>.md)."
+    )
 
 
 def test_scripted_host_answers_every_protocol_member() -> None:
