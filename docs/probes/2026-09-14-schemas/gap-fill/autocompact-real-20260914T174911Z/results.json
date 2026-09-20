@@ -1,0 +1,48 @@
+{
+ "pct1": {
+  "env": [
+   "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=1"
+  ],
+  "events": [
+   "SessionStart[source=startup]",
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "SubagentStop",
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "SubagentStop",
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "SubagentStop"
+  ]
+ },
+ "window100k_pct1": {
+  "env": [
+   "CLAUDE_CODE_AUTO_COMPACT_WINDOW=100000",
+   "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=1"
+  ],
+  "events": [
+   "SessionStart[source=startup]",
+   "UserPromptSubmit",
+   "PreCompact[trigger=auto]",
+   "MessageDisplay",
+   "Stop",
+   "SubagentStop",
+   "UserPromptSubmit",
+   "PreCompact[trigger=auto]",
+   "MessageDisplay",
+   "Stop",
+   "SubagentStop",
+   "UserPromptSubmit",
+   "PreCompact[trigger=auto]",
+   "SubagentStop",
+   "SessionStart[source=compact]",
+   "PostCompact[trigger=auto]",
+   "MessageDisplay",
+   "Stop"
+  ]
+ }
+}

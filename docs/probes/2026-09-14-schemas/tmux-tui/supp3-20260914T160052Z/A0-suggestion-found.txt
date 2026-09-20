@@ -1,0 +1,1 @@
+suggestion ghost text seen: True (after 1 prompts)

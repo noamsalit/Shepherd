@@ -1,0 +1,19 @@
+2026-09-14T15:49:46.276Z versions 2.1.270 (Claude Code) / tmux 3.4
+2026-09-14T15:49:46.345Z 1 spawn probe_a in untrusted dirA (hooks in project settings)
+2026-09-14T15:49:52.390Z 1b spawn probe_b in untrusted dirB (hooks via --settings)
+2026-09-14T15:50:07.421Z hooks before trust: A=0 B=0
+2026-09-14T15:50:13.460Z SessionStart after trust: True
+2026-09-14T15:50:16.478Z 2 send-keys prompt at idle prompt
+2026-09-14T15:50:23.525Z 3 wait for idle_prompt Notification
+2026-09-14T15:51:18.089Z 3b multi-line send-keys -l
+2026-09-14T15:51:23.617Z 4 permission prompt
+2026-09-14T15:51:34.680Z 5 send-keys while running
+2026-09-14T15:51:56.258Z 6 bare Enter at idle prompt with suggestion
+2026-09-14T15:52:40.870Z 7 resize
+2026-09-14T15:52:45.911Z 8 /rename
+2026-09-14T15:52:50.952Z 9 /compact
+2026-09-14T15:53:10.011Z 10 fork via --resume --fork-session in a second tmux session
+2026-09-14T15:53:20.089Z 11 /exit on fork
+2026-09-14T15:53:24.619Z 12 spawn probe_sig in trusted dirA and SIGTERM it
+2026-09-14T15:53:33.661Z 13 kill-session probe_a
+2026-09-14T15:53:39.676Z teardown: tmux -L shepherd-probe kill-server

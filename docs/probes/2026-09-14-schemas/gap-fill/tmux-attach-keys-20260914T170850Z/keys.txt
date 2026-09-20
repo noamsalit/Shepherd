@@ -1,0 +1,66 @@
+## B. raw key delivery into a pane (keydump.py --bracketed)
+$ env -i HOME=/root PATH=/usr/bin:/bin TERM=xterm-256color LANG=C.UTF-8 tmux -L shp-gap-keys new-session -d -s shepherd_k1 -x 120 -y 30 python3 /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/keydump.py /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/tmux-attach-keys-20260914T170850Z/keys-keydump.jsonl --bracketed
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: Escape
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: C-c
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: Up Down Left Right
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: Enter
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: BSpace Tab BTab
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -H 1b 5b 41
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -H 03
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -H e2 9c 93
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -l [A
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -l a
+b
+[rc=0]
+$ tmux -L shp-gap-keys load-buffer -b shpgap /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/tmux-attach-keys-20260914T170850Z/paste.txt
+[rc=0]
+$ tmux -L shp-gap-keys paste-buffer -p -b shpgap -t =shepherd_k1:
+[rc=0]
+$ tmux -L shp-gap-keys paste-buffer -b shpgap -t =shepherd_k1:
+[rc=0]
+$ tmux -L shp-gap-keys send-keys -t =shepherd_k1: -H 1b 5b 32 30 30 7e 68 69 1b 5b 32 30 31 7e
+[rc=0]
+$ printf XYZ > /dev/pts/4
+[rc=0]
+$ tmux -L shp-gap-keys kill-server
+[rc=0]
+## keydump log
+{"start": true, "size": "120x30", "bracketed": true, "isig": false, "t": 1789405744.614}
+{"marker": "send-keys Escape", "t": 1789405745.571}
+{"hex": "1b", "repr": "b'\\x1b'", "t": 1789405745.577}
+{"marker": "send-keys C-c", "t": 1789405746.181}
+{"hex": "03", "repr": "b'\\x03'", "t": 1789405746.188}
+{"marker": "send-keys Up Down Left Right", "t": 1789405746.792}
+{"hex": "1b5b411b5b421b5b441b5b43", "repr": "b'\\x1b[A\\x1b[B\\x1b[D\\x1b[C'", "t": 1789405746.799}
+{"marker": "send-keys Enter", "t": 1789405747.404}
+{"hex": "0d", "repr": "b'\\r'", "t": 1789405747.411}
+{"marker": "send-keys BSpace Tab BTab", "t": 1789405748.016}
+{"hex": "7f091b5b5a", "repr": "b'\\x7f\\t\\x1b[Z'", "t": 1789405748.023}
+{"marker": "send-keys -H 1b 5b 41 (raw ESC [ A)", "t": 1789405748.628}
+{"hex": "1b5b41", "repr": "b'\\x1b[A'", "t": 1789405748.634}
+{"marker": "send-keys -H 03 (raw ETX)", "t": 1789405749.238}
+{"hex": "03", "repr": "b'\\x03'", "t": 1789405749.244}
+{"marker": "send-keys -H e2 9c 93 (UTF-8 check mark)", "t": 1789405749.848}
+{"hex": "e29c93", "repr": "b'\\xe2\\x9c\\x93'", "t": 1789405749.854}
+{"marker": "send-keys -l with literal ESC [ A text", "t": 1789405750.458}
+{"hex": "1b5b41", "repr": "b'\\x1b[A'", "t": 1789405750.466}
+{"marker": "send-keys -l 'a\nb' (literal LF)", "t": 1789405751.071}
+{"hex": "610a62", "repr": "b'a\\nb'", "t": 1789405751.078}
+{"marker": "paste-buffer -p (bracketed, app enabled ?2004h)", "t": 1789405751.689}
+{"hex": "1b5b3230307e6c696e65206f6e650d6c696e652074776f1b5b3230317e", "repr": "b'\\x1b[200~line one\\rline two\\x1b[201~'", "t": 1789405751.695}
+{"marker": "paste-buffer (no -p)", "t": 1789405752.300}
+{"hex": "6c696e65206f6e650d6c696e652074776f", "repr": "b'line one\\rline two'", "t": 1789405752.307}
+{"marker": "send-keys -H with explicit 1b5b3230307e...1b5b3230317e", "t": 1789405752.912}
+{"hex": "1b5b3230307e68691b5b3230317e", "repr": "b'\\x1b[200~hi\\x1b[201~'", "t": 1789405752.919}
+{"marker": "printf XYZ > pane_tty (/dev/pts/4)", "t": 1789405753.529}
+{"marker": "end", "t": 1789405754.335}

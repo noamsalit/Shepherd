@@ -1,0 +1,13 @@
+plan_claim	plan_line	in_repo_evidence	off_repo_evidence	reading_now
+Toolchain row (py/sqlite/pip/node/claude/systemd)	77	none (cites .cc10x/activeContext.md, untracked)	planning transcript ~/.claude/projects/-root-Shepherd/9bc1bf13-...jsonl 2026-09-12T12:24:17Z	env-readings.txt, venv-getpip-mypy-probe.txt: holds
+SQLite features row + GT9 (5 bullets)	78,103-108	none	planner subagent transcript .../9bc1bf13-.../subagents/agent-a15b14b1bf24fea41.jsonl	sqlite_gt9_probe.out.txt: holds
+77 events in 4 runs	83	none	/tmp/claude-0/-root-Shepherd/32df7fce-.../scratchpad/probe/{events,events-run1..3}.jsonl (77); backup has 89 in 5 incl run4	event-counts-32df7fce.txt, event-counts-backup.txt
+18 transcripts	83	none	count = find ~/.claude/projects -name '*.jsonl' | wc -l at 2026-09-12T12:24:20Z (all projects, incl subagents)	origin-of-18-transcripts.txt
+GT1-4 hook fields	85-93	none	same /tmp probe dir + killed-session-backup/probes/m1-hook-payload-probe.md (removed from repo)	prior-probe-field-check.txt, live-hooks-run1.jsonl
+GT5-6 transcript layout/types	94-100	none	~/.claude/projects (live, subject to Claude cleanup)	live-transcript-check.txt, pre-plan-transcripts-title-types.txt
+GT7 --resume keeps id	101	none	ps + ~/.claude/projects/-root-Shepherd/9bc1bf13-...jsonl	ps-claude-processes.txt: holds
+GT8 comm==claude	102	none	ps	ps-claude-processes.txt, live-hooks-run1.jsonl: holds, hook ancestry python3<-sh<-claude
+GT10 settings silently ignored	109	none	claude --help	claude-help-2.1.270.txt L164-173: -p mode only
+GT11 tmux/trust dialog	110-112	docs/probes/2026-09-13-tmux-tui-spike.md (report only, no raw captures)	/tmp/claude-0/-root-Shepherd/9bc1bf13-.../scratchpad/spike-tmux/{snapshot.ans,pty.log}	not re-run (out of scope)
+DV-04 accepted settings shape matcher *	123	none	/tmp/.../32df7fce.../probe/repo/.claude/settings.json; backup probe-hook-registration.json	prior-probe-provenance.txt: 22 matcher:* groups + 2 watchPaths groups
+DV-20 marker key	139	none	none (deferred to T19)	live-hooks-run2marker.jsonl: tolerated at project scope in -p on 2.1.270

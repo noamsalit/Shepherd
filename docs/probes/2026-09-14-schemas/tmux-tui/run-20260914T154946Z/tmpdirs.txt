@@ -1,0 +1,2 @@
+dirA=/tmp/shp-tui-A-4tvrx00n
+dirB=/tmp/shp-tui-B-gs_kiv4r

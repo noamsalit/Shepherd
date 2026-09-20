@@ -1,0 +1,172 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T16:17:40Z
+id: uid=0(root) gid=0(root) groups=0(root)
+
+## systemd --version
+systemd 255 (255.4-1ubuntu8.17)
++PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK -XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified
+
+## this shell: XDG values
+XDG_RUNTIME_DIR=/run/user/0
+XDG_DATA_HOME=<unset>
+XDG_CONFIG_HOME=<unset>
+XDG_STATE_HOME=<unset>
+XDG_CACHE_HOME=<unset>
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus
+XDG_SESSION_ID=10905
+XDG_SESSION_CLASS=user
+shell_is_login: no
+
+## python resolution of the spec's §15 paths (XDG default when unset)
+XDG_DATA_HOME -> /root/.local/share (default)
+XDG_CONFIG_HOME -> /root/.config (default)
+XDG_RUNTIME_DIR -> /run/user/0
+
+## /run/user/<uid>
+drwx------ 8 root root 240 Sep 12 06:29 /run/user/0
+tmpfs  rw,nosuid,nodev,relatime,size=391156k,nr_inodes=97789,mode=700,inode64
+
+## systemctl --user, inherited env
+running
+rc=0
+
+## systemctl --user with XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS removed
+Failed to connect to bus: No medium found
+rc=1
+
+## env -i (cron-like) systemctl --user
+Failed to connect to bus: No medium found
+rc=1
+
+## env -i systemctl --user --machine=root@.host
+Failed to connect to bus: No medium found
+rc=1
+
+## env -i with XDG_RUNTIME_DIR=/run/user/$uid only
+running
+rc=0
+
+## user manager environment (names; XDG_*/DBUS values)
+HOME=<value omitted>
+LANG=<value omitted>
+LOGNAME=<value omitted>
+PATH=<value omitted>
+SHELL=<value omitted>
+USER=<value omitted>
+XDG_RUNTIME_DIR=/run/user/0
+XDG_DATA_DIRS=/usr/local/share/:/usr/share/:/var/lib/snapd/desktop
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus
+GSM_SKIP_SSH_AGENT_WORKAROUND=<value omitted>
+SSH_AUTH_SOCK=<value omitted>
+
+## loginctl
+UID USER LINGER STATE
+  0 root no     active
+
+1 users listed.
+UID=0
+Name=root
+RuntimePath=/run/user/0
+Service=user@0.service
+Slice=user-0.slice
+State=active
+Linger=no
+linger dir: 
+logind KillUserProcesses: #KillUserProcesses=no 
+~/.config/systemd/user exists: no
+
+## ONE transient unit: Restart=always, RestartSec=500ms, body = print XDG, sleep 1, exit 1
+Running as unit: shp-lpg-probe-1789402661.service; invocation ID: bb57f6bcfa4240bfb71dbd9e6930297a
+systemd-run rc=0
+t+01s MainPID=4047993 Result=success NRestarts=0 ExecMainStatus=0 ActiveState=active SubState=running 
+t+02s MainPID=0 Result=exit-code NRestarts=0 ExecMainStatus=1 ActiveState=activating SubState=auto-restart 
+t+03s MainPID=4048010 Result=success NRestarts=1 ExecMainStatus=0 ActiveState=active SubState=running 
+t+04s MainPID=0 Result=exit-code NRestarts=1 ExecMainStatus=1 ActiveState=activating SubState=auto-restart 
+t+05s MainPID=4048057 Result=success NRestarts=2 ExecMainStatus=0 ActiveState=active SubState=running 
+t+06s MainPID=4048071 Result=success NRestarts=3 ExecMainStatus=0 ActiveState=active SubState=running 
+t+07s MainPID=0 Result=exit-code NRestarts=3 ExecMainStatus=1 ActiveState=activating SubState=auto-restart 
+t+08s MainPID=4048086 Result=success NRestarts=4 ExecMainStatus=0 ActiveState=active SubState=running 
+t+09s MainPID=0 Result=exit-code NRestarts=4 ExecMainStatus=1 ActiveState=activating SubState=auto-restart 
+t+10s MainPID=0 Result=exit-code NRestarts=5 ExecMainStatus=1 ActiveState=failed SubState=failed 
+t+11s MainPID=0 Result=exit-code NRestarts=5 ExecMainStatus=1 ActiveState=failed SubState=failed 
+t+12s MainPID=0 Result=exit-code NRestarts=5 ExecMainStatus=1 ActiveState=failed SubState=failed 
+t+13s MainPID=0 Result=exit-code NRestarts=5 ExecMainStatus=1 ActiveState=failed SubState=failed 
+t+14s MainPID=0 Result=exit-code NRestarts=5 ExecMainStatus=1 ActiveState=failed SubState=failed 
+
+## systemctl --user status (after loop)
+× shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway)
+     Loaded: loaded (/run/user/0/systemd/transient/shp-lpg-probe-1789402661.service; transient)
+  Transient: yes
+     Active: failed (Result: exit-code) since Mon 2026-09-14 16:17:49 UTC; 5s ago
+   Duration: 1.009s
+    Process: 4048086 ExecStart=/bin/sh -c echo "start pid=$$ XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR-<unset>} XDG_DATA_HOME=${XDG_DATA_HOME-<unset>} XDG_CONFIG_HOME=${XDG_CONFIG_HOME-<unset>} DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS-<unset>} INVOCATION_ID=${INVOCATION_ID:+<set>} HOME=$HOME PWD=$PWD"; echo "env names: $(env | cut -d= -f1 | sort | tr "\n" " ")"; sleep 1; echo "exiting 1"; exit 1 (code=exited, status=1/FAILURE)
+
+## unit properties of interest
+Restart=always
+RestartUSec=500ms
+ControlGroup=
+FragmentPath=/run/user/0/systemd/transient/shp-lpg-probe-1789402661.service
+Transient=yes
+StartLimitIntervalUSec=10s
+StartLimitBurst=5
+StartLimitAction=none
+
+## journalctl --user -u shp-lpg-probe-1789402661
+2026-09-14T16:17:41+00:00 finops-mitm-lab systemd[1014041]: Started shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+2026-09-14T16:17:41+00:00 finops-mitm-lab (sh)[4047993]: shp-lpg-probe-1789402661.service: Invalid environment variable name evaluates to an empty string: DBUS_SESSION_BUS_ADDRESS-<unset>, XDG_CONFIG_HOME-<unset>, XDG_DATA_HOME-<unset>, XDG_RUNTIME_DIR-<unset>
+2026-09-14T16:17:41+00:00 finops-mitm-lab sh[4047993]: start pid=$ XDG_RUNTIME_DIR= XDG_DATA_HOME= XDG_CONFIG_HOME= DBUS_SESSION_BUS_ADDRESS= INVOCATION_ID=<set> HOME=/root PWD=/root
+2026-09-14T16:17:41+00:00 finops-mitm-lab sh[4047993]: env names: DBUS_SESSION_BUS_ADDRESS GSM_SKIP_SSH_AGENT_WORKAROUND HOME INVOCATION_ID JOURNAL_STREAM LANG LOGNAME MANAGERPID MEMORY_PRESSURE_WATCH MEMORY_PRESSURE_WRITE PATH PWD SHELL SSH_AUTH_SOCK SYSTEMD_EXEC_PID USER XDG_DATA_DIRS XDG_RUNTIME_DIR
+2026-09-14T16:17:42+00:00 finops-mitm-lab sh[4047993]: exiting 1
+2026-09-14T16:17:42+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Main process exited, code=exited, status=1/FAILURE
+2026-09-14T16:17:42+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:42+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Scheduled restart job, restart counter is at 1.
+2026-09-14T16:17:42+00:00 finops-mitm-lab systemd[1014041]: Started shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+2026-09-14T16:17:42+00:00 finops-mitm-lab (sh)[4048010]: shp-lpg-probe-1789402661.service: Invalid environment variable name evaluates to an empty string: DBUS_SESSION_BUS_ADDRESS-<unset>, XDG_CONFIG_HOME-<unset>, XDG_DATA_HOME-<unset>, XDG_RUNTIME_DIR-<unset>
+2026-09-14T16:17:42+00:00 finops-mitm-lab sh[4048010]: start pid=$ XDG_RUNTIME_DIR= XDG_DATA_HOME= XDG_CONFIG_HOME= DBUS_SESSION_BUS_ADDRESS= INVOCATION_ID=<set> HOME=/root PWD=/root
+2026-09-14T16:17:42+00:00 finops-mitm-lab sh[4048010]: env names: DBUS_SESSION_BUS_ADDRESS GSM_SKIP_SSH_AGENT_WORKAROUND HOME INVOCATION_ID JOURNAL_STREAM LANG LOGNAME MANAGERPID MEMORY_PRESSURE_WATCH MEMORY_PRESSURE_WRITE PATH PWD SHELL SSH_AUTH_SOCK SYSTEMD_EXEC_PID USER XDG_DATA_DIRS XDG_RUNTIME_DIR
+2026-09-14T16:17:43+00:00 finops-mitm-lab sh[4048010]: exiting 1
+2026-09-14T16:17:43+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Main process exited, code=exited, status=1/FAILURE
+2026-09-14T16:17:43+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:44+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Scheduled restart job, restart counter is at 2.
+2026-09-14T16:17:44+00:00 finops-mitm-lab systemd[1014041]: Started shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+2026-09-14T16:17:44+00:00 finops-mitm-lab (sh)[4048057]: shp-lpg-probe-1789402661.service: Invalid environment variable name evaluates to an empty string: DBUS_SESSION_BUS_ADDRESS-<unset>, XDG_CONFIG_HOME-<unset>, XDG_DATA_HOME-<unset>, XDG_RUNTIME_DIR-<unset>
+2026-09-14T16:17:44+00:00 finops-mitm-lab sh[4048057]: start pid=$ XDG_RUNTIME_DIR= XDG_DATA_HOME= XDG_CONFIG_HOME= DBUS_SESSION_BUS_ADDRESS= INVOCATION_ID=<set> HOME=/root PWD=/root
+2026-09-14T16:17:44+00:00 finops-mitm-lab sh[4048057]: env names: DBUS_SESSION_BUS_ADDRESS GSM_SKIP_SSH_AGENT_WORKAROUND HOME INVOCATION_ID JOURNAL_STREAM LANG LOGNAME MANAGERPID MEMORY_PRESSURE_WATCH MEMORY_PRESSURE_WRITE PATH PWD SHELL SSH_AUTH_SOCK SYSTEMD_EXEC_PID USER XDG_DATA_DIRS XDG_RUNTIME_DIR
+2026-09-14T16:17:45+00:00 finops-mitm-lab sh[4048057]: exiting 1
+2026-09-14T16:17:45+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Main process exited, code=exited, status=1/FAILURE
+2026-09-14T16:17:45+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:46+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Scheduled restart job, restart counter is at 3.
+2026-09-14T16:17:46+00:00 finops-mitm-lab (sh)[4048071]: shp-lpg-probe-1789402661.service: Invalid environment variable name evaluates to an empty string: DBUS_SESSION_BUS_ADDRESS-<unset>, XDG_CONFIG_HOME-<unset>, XDG_DATA_HOME-<unset>, XDG_RUNTIME_DIR-<unset>
+2026-09-14T16:17:46+00:00 finops-mitm-lab systemd[1014041]: Started shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+2026-09-14T16:17:46+00:00 finops-mitm-lab sh[4048071]: start pid=$ XDG_RUNTIME_DIR= XDG_DATA_HOME= XDG_CONFIG_HOME= DBUS_SESSION_BUS_ADDRESS= INVOCATION_ID=<set> HOME=/root PWD=/root
+2026-09-14T16:17:46+00:00 finops-mitm-lab sh[4048071]: env names: DBUS_SESSION_BUS_ADDRESS GSM_SKIP_SSH_AGENT_WORKAROUND HOME INVOCATION_ID JOURNAL_STREAM LANG LOGNAME MANAGERPID MEMORY_PRESSURE_WATCH MEMORY_PRESSURE_WRITE PATH PWD SHELL SSH_AUTH_SOCK SYSTEMD_EXEC_PID USER XDG_DATA_DIRS XDG_RUNTIME_DIR
+2026-09-14T16:17:47+00:00 finops-mitm-lab sh[4048071]: exiting 1
+2026-09-14T16:17:47+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Main process exited, code=exited, status=1/FAILURE
+2026-09-14T16:17:47+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:47+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Scheduled restart job, restart counter is at 4.
+2026-09-14T16:17:47+00:00 finops-mitm-lab systemd[1014041]: Started shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+2026-09-14T16:17:47+00:00 finops-mitm-lab (sh)[4048086]: shp-lpg-probe-1789402661.service: Invalid environment variable name evaluates to an empty string: DBUS_SESSION_BUS_ADDRESS-<unset>, XDG_CONFIG_HOME-<unset>, XDG_DATA_HOME-<unset>, XDG_RUNTIME_DIR-<unset>
+2026-09-14T16:17:47+00:00 finops-mitm-lab sh[4048086]: start pid=$ XDG_RUNTIME_DIR= XDG_DATA_HOME= XDG_CONFIG_HOME= DBUS_SESSION_BUS_ADDRESS= INVOCATION_ID=<set> HOME=/root PWD=/root
+2026-09-14T16:17:47+00:00 finops-mitm-lab sh[4048086]: env names: DBUS_SESSION_BUS_ADDRESS GSM_SKIP_SSH_AGENT_WORKAROUND HOME INVOCATION_ID JOURNAL_STREAM LANG LOGNAME MANAGERPID MEMORY_PRESSURE_WATCH MEMORY_PRESSURE_WRITE PATH PWD SHELL SSH_AUTH_SOCK SYSTEMD_EXEC_PID USER XDG_DATA_DIRS XDG_RUNTIME_DIR
+2026-09-14T16:17:48+00:00 finops-mitm-lab sh[4048086]: exiting 1
+2026-09-14T16:17:48+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Main process exited, code=exited, status=1/FAILURE
+2026-09-14T16:17:48+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:49+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Scheduled restart job, restart counter is at 5.
+2026-09-14T16:17:49+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Start request repeated too quickly.
+2026-09-14T16:17:49+00:00 finops-mitm-lab systemd[1014041]: shp-lpg-probe-1789402661.service: Failed with result 'exit-code'.
+2026-09-14T16:17:49+00:00 finops-mitm-lab systemd[1014041]: Failed to start shp-lpg-probe-1789402661.service - shepherd schema probe (throwaway).
+
+## journalctl _SYSTEMD_USER_UNIT=shp-lpg-probe-1789402661 (system journal view)
+-- No entries --
+
+## journal storage
+/run/log/journal
+/var/log/journal
+Archived and active journals take up 180.3M in the file system.
+
+## teardown
+stop rc=0
+reset-failed rc=0
+LoadState=not-found
+ActiveState=inactive
+done: 2026-09-14T16:17:55Z

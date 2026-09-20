@@ -1,0 +1,11 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-cfg-extra_keys_group_and_entry-v_57lrhe/.debug-R03_config_extra_keys_group_and_entry.log
+2026-09-14T15:26:54.446Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-nonexistent-model-shp modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T15:26:55.151Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:26:55.468Z [ERROR] API error (attempt 1/11): 404 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-nonexistent-model-shp"},"request_id":"req_011Cf3ZpCjcK3Aoon6uc2L2q"}
+2026-09-14T15:26:55.739Z [ERROR] API error (attempt 1/11): 404 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-nonexistent-model-shp"},"request_id":"req_011Cf3ZpDvJ9CX9Noa9JtfvA"}
+2026-09-14T15:26:55.742Z [ERROR] API error x-client-request-id=ede81618-0955-4bf1-895a-b0daab36dc82 (give this to the API team for server-log lookup)
+2026-09-14T15:26:55.757Z [DEBUG] [engine] turn 1 end (turns=1 usage in=0 out=0 cost=$0.0000 api=0ms stop=stop_sequence resultLen=0)
+2026-09-14T15:26:55.773Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:26:55.776Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:26:55.785Z [DEBUG] StopFailure:model_not_found [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_extra_keys_group_and_entry/events.jsonl] completed with status 0
+2026-09-14T15:26:55.793Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_extra_keys_group_and_entry/events.jsonl] completed with status 0

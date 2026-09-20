@@ -1,0 +1,38 @@
+{
+ "scenario": "S18_agents_tasks",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Step 1: create two tasks with TaskCreate (subjects 'alpha' and 'beta'). Step 2: mark only 'alpha' completed with TaskUpdate. Step 3: use the Agent tool with subagent_type 'shpprobe' and prompt 'reply pong'. Step 4: reply DONE. One tool call at a time.",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-agents-_y7kt13l/.debug-S18_agents_tasks.log",
+  "--agents",
+  "{\"shpprobe\": {\"description\": \"probe agent\", \"prompt\": \"Reply with the word pong.\", \"model\": \"haiku\"}}",
+  "--allowedTools",
+  "Agent",
+  "TaskCreate",
+  "TaskUpdate",
+  "ToolSearch"
+ ],
+ "cwd": "/tmp/shp-hooks-agents-_y7kt13l",
+ "exit_code": 0,
+ "timed_out": false,
+ "started": "2026-09-14T15:23:31Z",
+ "duration_s": 19.84,
+ "session_id_from_stdout": "0ef819b5-ed3a-47e0-a967-651766f112f6",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

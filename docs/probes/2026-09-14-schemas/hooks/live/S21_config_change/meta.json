@@ -1,0 +1,33 @@
+{
+ "scenario": "S21_config_change",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Run these Bash commands one at a time, one tool call each: sleep 5 ; sleep 5 ; sleep 5 ; sleep 3 . Then reply DONE.",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-config-33ijfqat/.debug-S21_config_change.log",
+  "--allowedTools",
+  "Bash(sleep:*)"
+ ],
+ "cwd": "/tmp/shp-hooks-config-33ijfqat",
+ "exit_code": 0,
+ "timed_out": false,
+ "started": "2026-09-14T15:24:44Z",
+ "duration_s": 27.48,
+ "session_id_from_stdout": "ca162c8a-8d5d-48ea-9f1f-bdfcb268cf01",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

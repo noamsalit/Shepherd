@@ -1,0 +1,13 @@
+# R9 whitelists the vendor SDK for the whole master/ package
+| R9 | If `shepherd/master/` exists, it imports only `shepherd.toolsurface.client`, `claude_agent_sdk`, and stdlib (D19). Vacuous in M1. |
+
+# spec wording it copies
+**Module boundary (D19).** Everything in this section lives in a `master/`
+package that imports only `toolsurface.client` and the Agent SDK. It may not
+import `store`, `signals`, `queues`, or `runner`. `test_master_isolation.py`
+
+# M3 preconditions: mention of Runner Protocol / ScriptedRunner / contract suite / ipc frames?
+0
+
+# ProcessProbe driver semantics diverge (T02 allowed scope)
+  - **`LinuxProcessProbe.is_alive`** reads `/proc/<pid>/stat` and compares field 22 (starttime). `DarwinProcessProbe` uses `os.kill(pid, 0)` and ignores starttime.

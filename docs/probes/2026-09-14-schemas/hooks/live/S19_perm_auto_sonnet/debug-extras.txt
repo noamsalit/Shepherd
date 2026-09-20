@@ -1,0 +1,9 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-perm-auto-sonnet-67s6bxy4/.debug-S19_perm_auto_sonnet.log
+2026-09-14T15:20:07.506Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-sonnet-5 modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T15:20:08.259Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:20:18.867Z [DEBUG] [auto-mode] context comparison: mainLoopTokens=[REDACTED] classifierChars=128746 classifierTokensEst=[REDACTED] (sys=128563 tools=49 user=134) transcriptEntries=1 messages=14
+2026-09-14T15:20:18.867Z [DEBUG] [auto-mode] new action being classified: {"Bash":"rm -rf /tmp/shp-hooks-victim-225gyg8_"}
+2026-09-14T15:20:21.171Z [DEBUG] [engine] turn 1 end (turns=2 usage in=936 out=929 cost=$0.0658 api=12083ms stop=end_turn resultLen=4)
+2026-09-14T15:20:21.185Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:20:21.187Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:20:21.204Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S19_perm_auto_sonnet/events.jsonl] completed with status 0

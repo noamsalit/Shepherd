@@ -1,0 +1,15 @@
+# (f) SQLite-shaped signatures used by callers outside store/
+672:1. List `migrations/*.sql` matching `^(\d{4})_([a-z0-9_]+)\.sql$`. Versions must be exactly `1..N`, contiguous; otherwise raise `MigrationSetInvalid`. Checksum is `sha256(file bytes)` hex.
+715:| 17 | `SCHEMA_READY` | control | controld → sessiond | `{"version":int}` |
+829:    data_dir: Path; runtime_dir: Path; db_path: Path; log_dir: Path; bin_dir: Path
+977:def apply_migrations(db_path: Path, migrations_dir: Path | None = None) -> MigrationReport
+980:def read_schema_version(db_path: Path) -> int | None                     # read-only; None if no schema_migration table
+991:    def open(cls, db_path: Path, *, expected_schema_version: int) -> "Store": ...   # never migrates
+1455:  - **`Store.open`** raises `SchemaVersionMismatch` unless `read_schema_version == expected_schema_version`. It never calls `apply_migrations`. It uses thread-local connections (`_conn.py`).
+1700:    - `Store.open(expected_schema_version=SCHEMA_VERSION)` happens **only when the gate first opens**. `SchemaVersionMismatch` keeps it gated and is logged.
+1749:    4. `apply_migrations(paths.db_path)`; `StoreRefusal` → log + `EXIT_SCHEMA_REFUSED`;
+1750:    5. `Store.open`;
+
+## D33 rules adhered (dataclass returns, no query/transaction)
+- **Out-of-Scope Drift:** a public `query()` or `transaction()`; returning `sqlite3.Row`; claim verbs (M5); stop-column verbs (M2).
+  - `tests/integration/test_store_api_surface.py::test_no_public_method_returns_row_or_accepts_sql` (introspects `Store` annotations: return types are dataclasses, lists/tuples of them, primitives, or `JsonValue`)

@@ -1,0 +1,5 @@
+claude_version (at copy time): 2.1.270 (Claude Code)
+copied_at_utc: 2026-09-14T15:27:25Z
+source: ~/.claude/projects/-tmp-shp-hooks-effort-7yb7myuc/5c59934b-3bd1-43ab-9506-a6a16f581034.jsonl
+origin: throwaway session created 2026-09-14T15:19Z by the sibling hooks-surface probe (cwd /tmp/shp-hooks-effort-7yb7myuc, model claude-sonnet-5, effort low); transcript entries carry version 2.1.270
+why copied: this surface is restricted to haiku, and haiku sessions never write top-level effort

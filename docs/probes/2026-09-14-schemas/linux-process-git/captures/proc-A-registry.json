@@ -1,0 +1,25 @@
+{
+    "pid": 4048575,
+    "sessionId": "bf3b6fd8-3e12-42de-b62a-02535a996554",
+    "cwd": "/tmp/shp-lpg-proc.vpBd05/real/repo",
+    "startedAt": 1789402841533,
+    "procStart": "544009686",
+    "version": "2.1.270",
+    "peerProtocol": 1,
+    "peerFeatures": [
+        "notify_idle",
+        "reply_across_default_dirs",
+        "artifact_yield"
+    ],
+    "kind": "interactive",
+    "entrypoint": "sdk-cli",
+    "pidDomain": "linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]",
+    "tmux": "main:@0.%0",
+    "messagingSocketPath": "/run/user/0/cc-socks/4048575.sock",
+    "name": "repo-ce",
+    "nameSource": "derived",
+    "nameSince": 1789402841533,
+    "status": "busy",
+    "updatedAt": 1789402841876,
+    "statusUpdatedAt": 1789402841876
+}

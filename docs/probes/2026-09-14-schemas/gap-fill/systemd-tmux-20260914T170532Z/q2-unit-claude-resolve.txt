@@ -1,0 +1,7 @@
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
+command -v claude -> 
+claude --version -> /bin/sh: 1: claude: not found
+TMUX= CLAUDECODE= TERM=
+claude auth status exit=127
+0::/user.slice/user-0.slice/user@0.service/app.slice/shp-gap-env-check.service
+systemd-run exit=0

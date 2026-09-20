@@ -1,0 +1,2 @@
+(length bucket, endswith U+2026, contains newline): {('len>=200', True, False): 182, ('len<200', False, False): 256, ('len>=200', False, False): 2}
+example tail of a long lastPrompt: ('-tmp-shp-hookprobe-364yiq-work/a2146ff1-cb87-4f09-', 201, "'ith the task t…'")

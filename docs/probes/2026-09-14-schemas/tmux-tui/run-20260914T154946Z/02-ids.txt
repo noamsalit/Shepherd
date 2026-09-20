@@ -1,0 +1,3 @@
+session_id=71757dd1-5375-4801-b467-7898a0bc1194
+transcript_path=/root/.claude/projects/-tmp-shp-tui-A-4tvrx00n/71757dd1-5375-4801-b467-7898a0bc1194.jsonl
+pane_pid=4041880

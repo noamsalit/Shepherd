@@ -1,0 +1,1 @@
+alternate_on=1 pane_title=✳ Claude Code window_name=claude

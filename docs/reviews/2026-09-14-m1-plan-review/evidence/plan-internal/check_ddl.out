@@ -1,0 +1,23 @@
+sqlite 3.45.1
+statements: 9 leftover non-empty: ''
+fk_check rows: []
+tables: ['app_state', 'repo', 'schema_migration', 'session', 'workspace']
+indexes (explicit): ['ix_session_fleet', 'ix_session_item', 'ux_repo_path', 'ux_session_engine_sid']
+indexes (all incl autoindex): ['ix_session_fleet', 'ix_session_item', 'sqlite_autoindex_app_state_1', 'sqlite_autoindex_repo_1', 'sqlite_autoindex_session_1', 'sqlite_autoindex_workspace_1', 'ux_repo_path', 'ux_session_engine_sid']
+session columns: 38
+Session dataclass fields: 38
+  in DDL not dataclass: []
+  in dataclass not DDL: []
+  same order: True
+OK   attached at-prompt insert
+OK   upsert ON CONFLICT partial idx
+   changes (1,)
+OK   upsert dup
+   changes (0,)
+OK   set needs_you with reason
+FAIL SessionStart(compact) on needs_you per contract 1: reason:=None, state unchanged -> IntegrityError CHECK constraint failed: (state = 'needs_you') = (needs_you_reason IS NOT NULL)
+FAIL time GLOB on workspace.created_at bad -> IntegrityError CHECK constraint failed: length(created_at) = 24 AND created_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]Z'
+OK   session.started_at 24 chars non-ISO accepted? (only length checked)
+OK   repo root trailing slash rejected
+FAIL repo root_path '/a/'  -> IntegrityError CHECK constraint failed: substr(root_path, 1, 1) = '/' AND (root_path = '/' OR substr(root_path, -1, 1) <> '/')
+OK   M2 ADD COLUMN with CHECK on STRICT

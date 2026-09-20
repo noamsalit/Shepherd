@@ -1,0 +1,22 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "Stop": "not-a-list",
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptSubmit__from_settings_json /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_stop_not_a_list/events.jsonl"
+     }
+    ]
+   }
+  ]
+ },
+ "env": {
+  "SHP_SETTINGS_JSON_LOADED": "1"
+ }
+}

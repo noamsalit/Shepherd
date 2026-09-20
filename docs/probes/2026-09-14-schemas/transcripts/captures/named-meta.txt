@@ -1,0 +1,5 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:08:08Z
+cwd: /tmp/shp-schemas-tx.blIf90/work
+argv: claude -p Reply\ with\ exactly\ OK. --name shp\ probe\ named --session-id 8b86e691-5e1a-46b3-9bc0-bc7dc694abb3 --model claude-haiku-4-5-20251001 --output-format stream-json --verbose --max-turns 1
+exit: 0

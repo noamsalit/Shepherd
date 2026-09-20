@@ -1,0 +1,22 @@
+python 3.12.3 sqlite 3.45.1
+[PASS] GT9.1 FULL OUTER JOIN :: [(1, None), (2, 2), (None, 3)]
+[PASS] GT9.2 ADD COLUMN CHECK on STRICT w/ rows, enforced :: existing=[(None, '[]')] enum_enforced=True json_enforced=True
+[PASS] extra: ADD COLUMN whose default violates CHECK is refused :: OperationalError('CHECK constraint failed')
+[PASS] GT9.3 DDL rollback :: sqlite_master rows for t after rollback=0
+[PASS] GT9.4 FK->missing table, insert NULL fails :: OperationalError('no such table: main.work_item')
+[PASS] GT9.4 FK->missing table, insert non-NULL fails :: OperationalError('no such table: main.work_item')
+[PASS] control: FK->missing table with foreign_keys=OFF inserts :: ok
+[PASS] GT9.5 executescript implicit COMMIT [isolation_level=None] :: in_tx before=True after=False; 'pre' survives ROLLBACK=True
+[PASS] GT9.5 executescript implicit COMMIT [default isolation_level] :: in_tx before=True after=False; 'pre' survives ROLLBACK=True
+[FAIL] GT9.5 executescript implicit COMMIT [autocommit=False] :: in_tx before=True after=True; 'pre' survives ROLLBACK=False
+[PASS] RC partial unique idx + ON CONFLICT WHERE DO NOTHING :: changes 1 then 0; NULL esid rows allowed=2
+[PASS] extra: ON CONFLICT(esid) without WHERE against partial index is an error :: OperationalError('ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint')
+[PASS] RC STRICT + GLOB ts CHECK + json funcs :: good_ts_ok=True bad_ts_rejected=True strict_rejects_text_in_int=True json=(1, 'array', 0)
+[PASS] S1 0001 DDL via complete_statement splitter in BEGIN IMMEDIATE :: wal=wal statements=9 leftover='' fk_check=[] tables=['app_state', 'repo', 'schema_migration', 'session', 'workspace']
+[PASS] S1 register_attached_session upsert on real DDL :: changes 1,0
+[PASS] S1 needs_you invariant CHECK rejects missing reason :: IntegrityError("CHECK constraint failed: (state = 'needs_you') = (needs_you_reason IS NOT NULL)")
+[PASS] DV-10 M2 ADD COLUMN x6 on real STRICT session table :: fk_check=[] confidence CHECK enforced=True row=('[]',)
+[PASS] DV-11 real DDL + FK to missing work_item: NULL insert fails :: OperationalError('no such table: main.work_item')
+[PASS] T05 SIGKILL mid-DDL transaction leaves no table (WAL) :: child rc=-9 half tables=0
+
+SUMMARY 18 pass / 19

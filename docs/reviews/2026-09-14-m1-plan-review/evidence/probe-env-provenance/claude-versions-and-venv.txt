@@ -1,0 +1,21 @@
+total 983768
+drwxr-xr-x 2 root root      4096 Sep 12 19:59 .
+drwxr-xr-x 3 root root      4096 Jul 27 15:01 ..
+-rwxr-xr-x 1 root root 275012592 Jul 27 15:01 2.1.220
+-rwxr-xr-x 1 root root 288705544 Aug  4 00:36 2.1.221
+-rwxr-xr-x 1 root root 219651568 Sep 12 05:51 2.1.269
+-rwxr-xr-x 1 root root 223981040 Sep 12 19:59 2.1.270
+{"timestamp":"2026-09-12T19:59:25.613Z","path":"native","outcome":"success","status":"success","version_from":"2.1.269","version_to":"2.1.270","error_code":null}
+settings keys: ['enabledPlugins', 'extraKnownMarketplaces', 'theme', 'skipWorkflowUsageWarning']
+False None
+venv --without-pip rc=0
+activate
+activate.csh
+activate.fish
+Activate.ps1
+python
+python3
+python3.12
+Failing command: /tmp/shp-envprobe-uLvZpJ/v2/bin/python3
+
+venv with pip rc=1

@@ -1,0 +1,1 @@
+hook_event_name:R("SessionStart"),source:V(["startup","resume","clear","compact","fork"]),agent_type:o().optional(),model:o().optional(),session_title:o().optional(),seconds_since_last_response:v().optional().describe("resume/fork: seconds since the resumed transcript's last assistant response"),context_tokens:v().optional().descri

@@ -1,0 +1,13 @@
+SessionStart 5 base-missing: [] keys: ['cwd', 'hook_event_name', 'session_id', 'source', 'transcript_path']
+UserPromptSubmit 6 base-missing: [] keys: ['cwd', 'hook_event_name', 'permission_mode', 'prompt', 'prompt_id', 'session_id', 'transcript_path']
+MessageDisplay 9 base-missing: [] keys: ['cwd', 'delta', 'final', 'hook_event_name', 'index', 'message_id', 'prompt_id', 'session_id', 'transcript_path', 'turn_id']
+PreToolUse 25 base-missing: [] keys: ['agent_id', 'agent_type', 'cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path']
+PostToolUse 24 base-missing: [] keys: ['agent_id', 'agent_type', 'cwd', 'duration_ms', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_response', 'tool_use_id', 'transcript_path']
+SubagentStart 1 base-missing: [] keys: ['agent_id', 'agent_type', 'cwd', 'hook_event_name', 'prompt_id', 'session_id', 'transcript_path']
+SubagentStop 1 base-missing: [] keys: ['agent_id', 'agent_transcript_path', 'agent_type', 'background_tasks', 'cwd', 'effort', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+Stop 6 base-missing: [] keys: ['background_tasks', 'cwd', 'effort', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+SessionEnd 5 base-missing: [] keys: ['cwd', 'hook_event_name', 'prompt_id', 'reason', 'session_id', 'transcript_path']
+TaskCreated 3 base-missing: [] keys: ['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+TaskCompleted 3 base-missing: [] keys: ['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+PermissionRequest 1 base-missing: [] keys: ['cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'transcript_path']
+{'SessionStart.source': ['startup'], 'PreToolUse.effort': ['{"level": "high"}'], 'PostToolUse.effort': ['{"level": "high"}'], 'SubagentStop.effort': ['{"level": "high"}'], 'Stop.effort': ['{"level": "high"}'], 'SessionEnd.reason': ['other'], 'PermissionRequest.effort': ['{"level": "high"}']}

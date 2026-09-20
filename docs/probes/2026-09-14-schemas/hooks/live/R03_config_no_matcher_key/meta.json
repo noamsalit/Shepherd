@@ -1,0 +1,31 @@
+{
+ "scenario": "R03_config_no_matcher_key",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "Say hi.",
+  "--model",
+  "claude-nonexistent-model-shp",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-cfg-no_matcher_key-kwlon8s6/.debug-R03_config_no_matcher_key.log"
+ ],
+ "cwd": "/tmp/shp-hooks-cfg-no_matcher_key-kwlon8s6",
+ "exit_code": 1,
+ "timed_out": false,
+ "started": "2026-09-14T15:26:57Z",
+ "duration_s": 2.58,
+ "session_id_from_stdout": "b80b5127-e9bf-4777-b729-d08e3f7d831e",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

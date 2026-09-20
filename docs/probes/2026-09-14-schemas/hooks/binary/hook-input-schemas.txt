@@ -1,0 +1,79 @@
+# claude 2.1.270 (Claude Code); byte offset 187381380. zod minified: u=object o=string v=number H=boolean R=literal V=enum T=array ie=unknown de=record Ne=union .and=intersection
+var we=f(()=>u({session_id:o(),transcript_path:o(),cwd:o(),prompt_id:o().optional().describe("UUID correlating a user prompt with all subsequent events until the next prompt. Same value emitted on OpenTelemetry events as the `prompt.id` attribute, so hook output can be joined to OTel events at prompt grain. Absent until the first user input of the process lifetime."),permission_mode:o().optional(),agent_id:o().optional().describe("Subagent identifier. Present only when the hook fires from within a subagent (e.g., a tool called by an AgentTool worker). Absent for the main thread, even in --agent sessions. Use this field (not agent_type) to distinguish subagent calls from main-thread calls."),agent_type:o().optional().describe('Agent type name (e.g., "general-purpose", "code-reviewer"). Present when the hook fires from within a subagent (alongside agent_id), or on the main thread of a session started with --agent (without agent_id).'),effort:u({level:o().describe('Active effort level for the current turn (e.g., "low", "medium", "high", "xhigh", "max"), after any silent downgrade for the selected model. Also exposed to hook commands and Bash as the CLAUDE_EFFORT env var.')}).optional().describe("Reasoning effort applied to the current turn. Same shape as StatusLineCommandInput.effort. Present for hooks that fire within a tool-use context (PreToolUse, PostToolUse, Stop, SubagentStop, etc.) on a model that supports the effort parameter; absent for session-lifecycle hooks and models without effort support.")}))
+
+ble=f(()=>we().and(u({hook_event_name:R("PreToolUse"),tool_name:o(),tool_input:ie(),tool_use_id:o()})))
+
+Tle=f(()=>we().and(u({hook_event_name:R("PermissionRequest"),tool_name:o(),tool_input:ie(),permission_suggestions:T(Ii()).optional()})))
+
+yle=f(()=>we().and(u({hook_event_name:R("PostToolUse"),tool_name:o(),tool_input:ie(),tool_response:ie(),tool_use_id:o(),duration_ms:v().optional().describe("Tool execution time in milliseconds. Excludes permission-prompt and hook time.")})))
+
+Ale=f(()=>we().and(u({hook_event_name:R("PostToolUseFailure"),tool_name:o(),tool_input:ie(),tool_use_id:o(),error:o(),is_interrupt:H().optional(),duration_ms:v().optional().describe("Tool execution time in milliseconds. Excludes permission-prompt and hook time.")})))
+
+vle=f(()=>u({tool_name:o(),tool_input:ie(),tool_use_id:o(),tool_response:ie().optional()}))
+
+Rle=f(()=>we().and(u({hook_event_name:R("PostToolBatch"),tool_calls:T(vle())})).describe("Hook input for the PostToolBatch event. Fired once after every tool call in a batch has resolved, before the next model request. PostToolUse fires per-tool and may run concurrently for parallel tool calls; PostToolBatch fires exactly once with the full batch."))
+
+Cle=f(()=>we().and(u({hook_event_name:R("PermissionDenied"),tool_name:o(),tool_input:ie(),tool_use_id:o(),reason:o()})))
+
+wle=f(()=>we().and(u({hook_event_name:R("Notification"),message:o(),title:o().optional(),notification_type:o()})))
+
+kle=f(()=>we().and(u({hook_event_name:R("UserPromptSubmit"),prompt:o(),source:V(["user","sdk","system","loop_wakeup","schedule_wakeup","poll_event"]).optional().describe("Who authored/injected the prompt: `user` = submitted from the interactive composer, `sdk` = non-interactive entrypoint (`-p` / Agent SDK), `loop_wakeup` = dynamic /loop wakeup, `schedule_wakeup` = scheduled-task fire (CronCreate/routine), `system` = other machine-injected turns (peer/channel messages, task notifications, auto-continuation), `poll_event` = the poll-event channel enqueue-time pass (the hook fires when the host submits an event, before its delivery ack exists \u2014 a blocking verdict rejects the event). Payloads may omit it while the field rolls out."),session_title:o().optional()})))
+
+Ole=f(()=>we().and(u({hook_event_name:R("UserPromptExpansion"),expansion_type:V(["slash_command","mcp_prompt"]),command_name:o(),command_args:o(),command_source:o().optional(),prompt:o()})))
+
+Ple=f(()=>we().and(u({hook_event_name:R("SessionStart"),source:V(["startup","resume","clear","compact","fork"]),agent_type:o().optional(),model:o().optional(),session_title:o().optional(),seconds_since_last_response:v().optional().describe("resume/fork: seconds since the resumed transcript's last assistant response"),context_tokens:v().optional().describe("resume/fork: the resumed transcript's last response input + cache_read + cache_creation + output tokens (for a server-side tool loop, its last iteration's window, not the summed totals)"),prompt_cache_likely_expired:H().optional().describe("resume/fork: seconds_since_last_response exceeds the prompt-cache TTL, so the first request re-caches context_tokens"),estimated_cache_write_usd:v().optional().describe("resume/fork: estimated cost of re-caching context_tokens on the session model \u2014 the managed modelPricing when set, otherwise list price; excludes the response")})))
+
+Mle=f(()=>we().and(u({hook_event_name:R("Setup"),trigger:V(["init","maintenance"])})))
+
+Xz=f(()=>u({id:o(),type:o().describe("Friendly task-type label (e.g. 'shell', 'subagent', 'monitor', 'workflow'). Falls back to the raw discriminant for unknown types."),status:o(),description:o().describe("Free-text description. Capped at 1000 chars; clipped values append "+'an in-string "\u2026 [+N chars]" marker.'),command:o().optional().describe("Shell command line. Only present for 'shell' tasks. Capped at 1000 "+'chars with the same "\u2026 [+N chars]" marker.'),agent_type:o().optional().describe("Subagent type name. Only present for 'subagent' tasks."),server:o().optional().describe("MCP server name. Only present for 'monitor' / 'MCP task' tasks."),tool:o().optional().describe("MCP tool name. Only present for 'monitor' / 'MCP task' tasks."),name:o().optional().describe("Workflow name. Only present for 'workflow' tasks.")}))
+
+Jz=f(()=>u({id:o(),schedule:o().describe('Cron expression, e.g. "0 9 * * 1-5".'),recurring:H().describe("False for one-shot wakeups whose cron field encodes a single fire time; true for tasks that re-fire on every match."),prompt:o().describe("Prompt text submitted when the cron fires. Capped at 1000 chars; "+'clipped values append an in-string "\u2026 [+N chars]" marker.')}))
+
+xle=f(()=>we().and(u({hook_event_name:R("Stop"),stop_hook_active:H(),last_assistant_message:o().optional().describe("Text content of the last assistant message before stopping. Avoids the need to read and parse the transcript file."),background_tasks:T(Xz()).optional().describe('In-flight background work (running/pending + backgrounded) registered in this session. Lets hooks distinguish "session is done" from "session is paused waiting for background work to wake it". Empty array when nothing is in flight.'),session_crons:T(Jz()).optional().describe("Session-scoped cron tasks (CronCreate, ScheduleWakeup, /loop) that will wake this session later. Empty array when none are scheduled.")})))
+
+Ile=f(()=>we().and(u({hook_event_name:R("StopFailure"),error:o_(),error_details:o().optional(),last_assistant_message:o().optional()})))
+
+Dle=f(()=>we().and(u({hook_event_name:R("SubagentStart"),agent_id:o(),agent_type:o()})))
+
+Nle=f(()=>we().and(u({hook_event_name:R("SubagentStop"),stop_hook_active:H(),agent_id:o(),agent_transcript_path:o(),agent_type:o(),last_assistant_message:o().optional().describe("Text content of the last assistant message before stopping. Avoids the need to read and parse the transcript file."),background_tasks:T(Xz()).optional().describe('In-flight background work (running/pending + backgrounded) registered in this session. Lets hooks distinguish "session is done" from "session is paused waiting for background work to wake it". Empty array when nothing is in flight.'),session_crons:T(Jz()).optional().describe("Session-scoped cron tasks (CronCreate, ScheduleWakeup, /loop) that will wake this session later. Empty array when none are scheduled.")})))
+
+Lle=f(()=>we().and(u({hook_event_name:R("PreCompact"),trigger:V(["manual","auto"]),custom_instructions:o().nullable()})))
+
+Ule=f(()=>we().and(u({hook_event_name:R("PostCompact"),trigger:V(["manual","auto"]),compact_summary:o().describe("The conversation summary produced by compaction")}))),zle={command:"command: /model <name>, the /config Model row, or enabling fast mode when that promotes the model",picker:"picker: an interactive model picker",sdk:"sdk: headless set_model (SDK, Remote Control, IDE)",auto:"auto: automatic fallback or other programmatic change",resume:"resume: model restored while resuming a session"};function Qz(e){return u({from_model:o().describe("Resolved model id the session was running before the switch"),to_model:o().describe("Resolved model id the session runs after the switch"),requested_model:o().nullable().describe('What was asked for (alias such as "opus", a full id, or null for "default")'),source:V(e).describe(e.map((n)=>zle[n]).join("; ")),context_tokens:v().describe("Prompt tokens the next request re-sends: the last main-thread response's input + cache_read + cache_creation + output tokens (0 before the first response; for a server-side tool loop, its last iteration's window, not the summed totals)"),prompt_cache_warm:H().describe("Whether the current model's prompt cache is likely still warm (a switch then forfeits it)"),cache_ttl:V(["5m","1h"]),estimated_cache_write_usd:v().describe("Estimated cost of re-caching context_tokens on to_model at its cache-write rate \u2014 the managed modelPricing when set, otherwise list price; excludes the response"),pricing:V(["configured","catalog","default"]).describe("configured: priced at the managed modelPricing setting; catalog: list price; default: to_model unknown, the default tier was assumed")})}var Fle=f(()=>we().and(u({hook_event_name:R("PreModelSwitch")})).and(Qz(["command","picker","sdk"])))
+
+Ble=f(()=>we().and(u({hook_event_name:R("PostModelSwitch")})).and(Qz(["command","picker","sdk","auto","resume"])))
+
+Hle=f(()=>we().and(u({hook_event_name:R("TeammateIdle"),teammate_name:o(),team_name:o().describe("@deprecated Sessions have a single implicit team; this carries the session-derived team name and will be removed in a future release.")})))
+
+Gle=f(()=>we().and(u({hook_event_name:R("TaskCreated"),task_id:o(),task_subject:o(),task_description:o().optional(),teammate_name:o().optional(),team_name:o().optional().describe("@deprecated Sessions have a single implicit team; this carries the session-derived team name and will be removed in a future release.")})))
+
+Vle=f(()=>we().and(u({hook_event_name:R("TaskCompleted"),task_id:o(),task_subject:o(),task_description:o().optional(),teammate_name:o().optional(),team_name:o().optional().describe("@deprecated Sessions have a single implicit team; this carries the session-derived team name and will be removed in a future release.")})))
+
+Kle=f(()=>we().and(u({hook_event_name:R("Elicitation"),mcp_server_name:o(),message:o(),mode:V(["form","url"]).optional(),url:o().optional(),elicitation_id:o().optional(),requested_schema:de(o(),ie()).optional()})).describe("Hook input for the Elicitation event. Fired when an MCP server requests user input. Hooks can auto-respond (accept/decline) instead of showing the dialog."))
+
+jle=f(()=>we().and(u({hook_event_name:R("ElicitationResult"),mcp_server_name:o(),elicitation_id:o().optional(),mode:V(["form","url"]).optional(),action:V(["accept","decline","cancel"]),content:de(o(),ie()).optional()})).describe("Hook input for the ElicitationResult event. Fired after the user responds to an MCP elicitation. Hooks can observe or override the response before it is sent to the server.")),Wle=["user_settings","project_settings","local_settings","policy_settings","skills"]
+
+$le=f(()=>we().and(u({hook_event_name:R("ConfigChange"),source:V(Wle),file_path:o().optional()}))),Yle=["session_start","nested_traversal","path_glob_match","include","compact"],qle=["User","Project","Local","Managed"]
+
+Xle=f(()=>we().and(u({hook_event_name:R("InstructionsLoaded"),file_path:o(),memory_type:V(qle),load_reason:V(Yle),globs:T(o()).optional(),trigger_file_path:o().optional(),parent_file_path:o().optional()})))
+
+Jle=f(()=>we().and(u({hook_event_name:R("WorktreeCreate"),name:o()})))
+
+Qle=f(()=>we().and(u({hook_event_name:R("WorktreeRemove"),worktree_path:o()})))
+
+Zle=f(()=>we().and(u({hook_event_name:R("CwdChanged"),old_cwd:o(),new_cwd:o()})))
+
+ece=f(()=>we().and(u({hook_event_name:R("FileChanged"),file_path:o(),event:V(["change","add","unlink"])})))
+
+tce=f(()=>we().and(u({hook_event_name:R("DirectoryAdded"),directory:o().describe("Absolute path of the directory that was added."),source:V(["slash_command","register_repo_root"]).describe('How the directory was added: "slash_command" for /add-dir, "register_repo_root" for the SDK control_request.')})))
+
+nce=f(()=>we().and(u({hook_event_name:R("MessageDisplay"),turn_id:o().describe("UUID of the current turn."),message_id:o().describe("UUID of the assistant message being displayed. Stable across "+"every flush of the same message. Not the API msg_\u2026 id."),index:v().int().describe("Zero-based index of this delta within the message. Increments by one per flush."),final:H().describe("True on the message's last flush. Exactly one flush per message has it."),delta:o().describe("The newly completed lines since the prior flush. Always whole lines, except on the final flush which may end mid-line. The delta of the final flush is empty when the message ends on a newline; treat final as the end-of-message signal regardless.")})).describe("Hook input for the MessageDisplay event. Fired with each batch of newly completed lines while an assistant message streams. Display-only: the stored message and what the model sees are untouched.")),rce=["clear","resume","logout","prompt_input_exit","other"]
+
+oce=f(()=>V(rce))
+
+ice=f(()=>we().and(u({hook_event_name:R("SessionEnd"),reason:oce()})))
+
+onn=f(()=>Ne([ble(),yle(),Ale(),Rle(),Cle(),wle(),kle(),Ole(),Ple(),ice(),xle(),Ile(),Dle(),Nle(),Lle(),Ule(),Fle(),Ble(),Tle(),Mle(),Hle(),Gle(),Vle(),Kle(),jle(),$le(),Xle(),Jle(),Qle(),Zle(),ece(),tce(),nce()]))
+
+Di=f(()=>u({
+

@@ -1,0 +1,9 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-perm-auto_mode_delete_outside-51l1d8ik/.debug-S09_perm_auto_mode_delete_outside.log
+2026-09-14T15:19:07.668Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:19:07.668Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:19:07.669Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=auto ctx.prePlanMode=undefined reason=model
+2026-09-14T15:19:08.446Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:19:14.884Z [DEBUG] [engine] turn 1 end (turns=2 usage in=953 out=510 cost=$0.0236 api=7309ms stop=end_turn resultLen=232)
+2026-09-14T15:19:14.898Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:19:14.900Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:19:14.918Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S09_perm_auto_mode_delete_outside/events.jsonl] completed with status 0

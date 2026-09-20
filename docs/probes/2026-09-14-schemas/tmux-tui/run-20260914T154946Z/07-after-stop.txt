@@ -1,0 +1,45 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-tui-A-4tvrx00n
+
+▎ Debug mode enabled · logging to /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/debug-a.log
+
+❯ Reply with only the word PONG
+
+● PONG
+
+✻ Cooked for 1s · done 3:50 PM
+
+❯ Reply with only the word MULTI.
+  - note one
+  - note two
+
+● MULTI
+
+✻ Cogitated for 1s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly this command: touch perm-probe.txt
+
+  Ran 1 shell command
+
+● Done. The file perm-probe.txt has been created.
+
+✻ Sautéed for 3s · done 3:51 PM
+
+❯ Use the Bash tool to run exactly: sleep 12 ; then reply with only DONE-ONE
+
+  Ran 1 shell command
+
+❯ Reply with only the word SECOND
+
+● SECOND
+
+✻ Brewed for 19s · done 3:51 PM
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

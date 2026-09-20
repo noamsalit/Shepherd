@@ -1,0 +1,51 @@
+inspect.signature(ClaudeAgentOptions) = (tools: list[str] | claude_agent_sdk.types.ToolsPreset | None = None, allowed_tools: list[str] = <factory>, system_prompt: str | claude_agent_sdk.types.SystemPromptPreset | claude_agent_sdk.types.SystemPromptFile | None = None, mcp_servers: dict[str, claude_agent_sdk.types.McpStdioServerConfig | claude_agent_sdk.types.McpSSEServerConfig | claude_agent_sdk.types.McpHttpServerConfig | claude_agent_sdk.types.McpSdkServerConfig] | str | pathlib.Path = <factory>, strict_mcp_config: bool = False, permission_mode: Optional[Literal['default', 'acceptEdits', 'plan', 'bypassPermissions', 'dontAsk', 'auto']] = None, continue_conversation: bool = False, resume: str | None = None, session_id: str | None = None, max_turns: int | None = None, max_budget_usd: float | None = None, disallowed_tools: list[str] = <factory>, model: str | None = None, fallback_model: str | None = None, betas: list[typing.Literal['context-1m-2025-08-07']] = <factory>, permission_prompt_tool_name: str | None = None, cwd: str | pathlib.Path | None = None, cli_path: str | pathlib.Path | None = None, settings: str | None = None, add_dirs: list[str | pathlib.Path] = <factory>, env: dict[str, str] = <factory>, extra_args: dict[str, str | None] = <factory>, max_buffer_size: int | None = None, debug_stderr: Any = <_io.TextIOWrapper name='<stderr>' mode='w' encoding='utf-8'>, stderr: collections.abc.Callable[[str], None] | None = None, can_use_tool: collections.abc.Callable[[str, dict[str, typing.Any], claude_agent_sdk.types.ToolPermissionContext], collections.abc.Awaitable[claude_agent_sdk.types.PermissionResultAllow | claude_agent_sdk.types.PermissionResultDeny]] | None = None, hooks: dict[typing.Union[typing.Literal['PreToolUse'], typing.Literal['PostToolUse'], typing.Literal['PostToolUseFailure'], typing.Literal['UserPromptSubmit'], typing.Literal['Stop'], typing.Literal['SubagentStop'], typing.Literal['PreCompact'], typing.Literal['Notification'], typing.Literal['SubagentStart'], typing.Literal['PermissionRequest']], list[claude_agent_sdk.types.HookMatcher]] | None = None, user: str | None = None, include_partial_messages: bool = False, include_hook_events: bool = False, forward_subagent_text: bool = False, fork_session: bool = False, resume_session_at: str | None = None, resume_drops_turn: str | None = None, agents: dict[str, claude_agent_sdk.types.AgentDefinition] | None = None, setting_sources: list[typing.Literal['user', 'project', 'local']] | None = None, skills: Union[list[str], Literal['all'], NoneType] = None, sandbox: claude_agent_sdk.types.SandboxSettings | None = None, plugins: list[claude_agent_sdk.types.SdkPluginConfig] = <factory>, max_thinking_tokens: int | None = None, thinking: claude_agent_sdk.types.ThinkingConfigAdaptive | claude_agent_sdk.types.ThinkingConfigEnabled | claude_agent_sdk.types.ThinkingConfigDisabled | None = None, effort: Optional[Literal['low', 'medium', 'high', 'xhigh', 'max']] = None, output_format: dict[str, typing.Any] | None = None, enable_file_checkpointing: bool = False, session_store: claude_agent_sdk.types.SessionStore | None = None, session_store_flush: Literal['batched', 'eager'] = 'batched', load_timeout_ms: int = 60000, task_budget: claude_agent_sdk.types.TaskBudget | None = None) -> None
+
+dataclasses.fields:
+  tools: list[str] | claude_agent_sdk.types.ToolsPreset | None  = None
+  allowed_tools: list[str]  = 'factory:list'
+  system_prompt: str | claude_agent_sdk.types.SystemPromptPreset | claude_agent_sdk.types.SystemPromptFile | None  = None
+  mcp_servers: dict[str, claude_agent_sdk.types.McpStdioServerConfig | claude_agent_sdk.types.McpSSEServerConfig | claude_agent_sdk.types.McpHttpServerConfig | claude_agent_sdk.types.McpSdkServerConfig] | str | pathlib.Path  = 'factory:dict'
+  strict_mcp_config: <class 'bool'>  = False
+  permission_mode: typing.Optional[typing.Literal['default', 'acceptEdits', 'plan', 'bypassPermissions', 'dontAsk', 'auto']]  = None
+  continue_conversation: <class 'bool'>  = False
+  resume: str | None  = None
+  session_id: str | None  = None
+  max_turns: int | None  = None
+  max_budget_usd: float | None  = None
+  disallowed_tools: list[str]  = 'factory:list'
+  model: str | None  = None
+  fallback_model: str | None  = None
+  betas: list[typing.Literal['context-1m-2025-08-07']]  = 'factory:list'
+  permission_prompt_tool_name: str | None  = None
+  cwd: str | pathlib.Path | None  = None
+  cli_path: str | pathlib.Path | None  = None
+  settings: str | None  = None
+  add_dirs: list[str | pathlib.Path]  = 'factory:list'
+  env: dict[str, str]  = 'factory:dict'
+  extra_args: dict[str, str | None]  = 'factory:dict'
+  max_buffer_size: int | None  = None
+  debug_stderr: typing.Any  = <_io.TextIOWrapper name='<stderr>' mode='w' encoding='utf-8'>
+  stderr: collections.abc.Callable[[str], None] | None  = None
+  can_use_tool: collections.abc.Callable[[str, dict[str, typing.Any], claude_agent_sdk.types.ToolPermissionContext], collections.abc.Awaitable[claude_agent_sdk.types.PermissionResultAllow | claude_agent_sdk.types.PermissionResultDeny]] | None  = None
+  hooks: dict[typing.Union[typing.Literal['PreToolUse'], typing.Literal['PostToolUse'], typing.Literal['PostToolUseFailure'], typing.Literal['UserPromptSubmit'], typing.Literal['Stop'], typing.Literal['SubagentStop'], typing.Literal['PreCompact'], typing.Literal['Notification'], typing.Literal['SubagentStart'], typing.Literal['PermissionRequest']], list[claude_agent_sdk.types.HookMatcher]] | None  = None
+  user: str | None  = None
+  include_partial_messages: <class 'bool'>  = False
+  include_hook_events: <class 'bool'>  = False
+  forward_subagent_text: <class 'bool'>  = False
+  fork_session: <class 'bool'>  = False
+  resume_session_at: str | None  = None
+  resume_drops_turn: str | None  = None
+  agents: dict[str, claude_agent_sdk.types.AgentDefinition] | None  = None
+  setting_sources: list[typing.Literal['user', 'project', 'local']] | None  = None
+  skills: typing.Union[list[str], typing.Literal['all'], NoneType]  = None
+  sandbox: claude_agent_sdk.types.SandboxSettings | None  = None
+  plugins: list[claude_agent_sdk.types.SdkPluginConfig]  = 'factory:list'
+  max_thinking_tokens: int | None  = None
+  thinking: claude_agent_sdk.types.ThinkingConfigAdaptive | claude_agent_sdk.types.ThinkingConfigEnabled | claude_agent_sdk.types.ThinkingConfigDisabled | None  = None
+  effort: typing.Optional[typing.Literal['low', 'medium', 'high', 'xhigh', 'max']]  = None
+  output_format: dict[str, typing.Any] | None  = None
+  enable_file_checkpointing: <class 'bool'>  = False
+  session_store: claude_agent_sdk.types.SessionStore | None  = None
+  session_store_flush: typing.Literal['batched', 'eager']  = 'batched'
+  load_timeout_ms: <class 'int'>  = 60000
+  task_budget: claude_agent_sdk.types.TaskBudget | None  = None

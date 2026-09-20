@@ -1,0 +1,12 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-mock-http402-dshq7nym/.debug-S08_mock_http402.log
+2026-09-14T15:17:45.171Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:17:45.172Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:17:45.172Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:17:45.172Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:17:45.275Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:17:45.324Z [ERROR] API error (attempt 1/1): 400 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."},"request_id":"req_mock"}
+2026-09-14T15:17:45.339Z [DEBUG] [engine] turn 1 end (turns=1 usage in=0 out=0 cost=$0.0000 api=0ms stop=stop_sequence resultLen=0)
+2026-09-14T15:17:45.344Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:17:45.345Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:17:45.354Z [DEBUG] StopFailure:billing_error [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http402/events.jsonl] completed with status 0
+2026-09-14T15:17:45.368Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S08_mock_http402/events.jsonl] completed with status 0

@@ -1,0 +1,29 @@
+# Plan architecture-term counts (grep -c on docs/plans/2026-09-13-m1-foundation-visibility-plan.md, taken 2026-09-14)
+layer                2
+L4                   2
+L5                   4
+toolsurface          1
+consumer boundary    0
+storage boundary     0
+private read         0
+signals/             0
+engines/             0
+providers/           0
+core/                0
+orchestration/       0
+MasterRuntime        0
+ModelProvider        0
+WorkItemProvider     0
+
+## every line containing L4 / L5 / toolsurface / consumer
+136:| DV-17 | D32: HTTP routes are generated from the registry; D22: `add_repo` is `local_destructive` | M1 hand-writes four mutating routes: create workspace, discover, register repo, deactivate repo. The CLI uses them; the UI stays read-only. There is no `authorize()` yet. **M4 replaces these routes with `to_http_routes` and gates `add_repo`.** | M1 has no registry. Widening the repo allowlist in M1 has no consumer, because nothing spawns before M3. Durability: near-term-refactor. |
+149:| DV-31 | §16 M1 slice does not list a credential store | T01 builds the `Credentials` seam (Protocol, `FileCredentials`, unverified `KeychainCredentials`, `ScriptedCredentials`, contract suite) **with no production caller in M1**. | The M1 planning request explicitly requires the platform seam "state dir, service supervision, credential store" with its Linux driver. Its cost is one small module plus a contract suite. M4.5/M5 are the first consumers, and the seam is stable (§6 verbatim). Kept rather than deferred on the requester's instruction; recorded so it does not read as scope creep (fresh-review A13). |
+163:| PD-08 | **Dev/test/QA isolation is a hard rule:** an autouse pytest fixture points `HOME`, `SHEPHERD_HOME`, `XDG_RUNTIME_DIR`, `XDG_CONFIG_HOME` at temp dirs and sets `SHEPHERD_PROFILE=test`. `SHEPHERD_HOME` is `make_short_base_dir()` (`tempfile.mkdtemp(prefix="shp-", dir="/tmp")`), so `<data_dir>/run/*.sock` stays under 108 bytes (DV-03). **No test writes `~/.claude`, enables a systemd unit, or runs tmux.** **Single exemption: `tests/live/`** (T19 only, skipped unless `SHEPHERD_LIVE=1`). The root fixture detects items under `tests/live/` and skips `HOME`/`Path.home` isolation there, because real `claude` needs the user's subscription auth and writes transcripts to the real `~/.claude/projects`. `tests/live/conftest.py` then enforces its own contract: `SHEPHERD_HOME`, `XDG_RUNTIME_DIR` and `XDG_CONFIG_HOME` stay isolated; the real home is used read-only by our code; and a session-scoped guard snapshots (a) the sha256 of `~/.claude/settings.json` (or "absent") and (b) the stdout, stderr and rc of `tmux -L shepherd ls`, then asserts both unchanged at session end. A mismatch fails the run and prints the diff. Because the user may legitimately change either during the run, a failure is resolved at the T19 HITL checkpoint by the user, never by relaxing the assertion. | CLAUDE.md, the §18 incident, and the fact that this host runs the user's live sessions. The live exemption exists because a temp `HOME` makes L5 unpassable (fresh-review B2). |
+389:| R9 | If `shepherd/master/` exists, it imports only `shepherd.toolsurface.client`, `claude_agent_sdk`, and stdlib (D19). Vacuous in M1. |
+556:| L4 live | `SHEPHERD_LIVE=1 .venv/bin/python -m pytest -q -m live tests/live` + the manual checklist | real `claude` on profile `qa`, throwaway project | T19 (HITL) |
+780:**SSE envelope:** `{"seq": int, "at": iso, "type": str, "session_id": str|null, "workspace_id": str|null, "data": object}`. For every `session.*` or `needs_you.*` event, `data = {"card": session_card, "from": str|null, "to": str|null}`. For `workspace.changed` and `repo.changed`, `data = {"workspace": WorkspaceView-without-sessions}`. For `resync`, `data = {"reason": "out_of_window"|"slow_consumer"}`.
+1943:- **Exit Criteria:** L1–L5 and L13 pass; L6 and L14 pass or are recorded as degrades; the checklist is signed off by the user; `scripts/live_m1.sh cleanup` leaves no `shepherd-qa` tmux server, no QA daemons, and `/tmp/shepherd-live` removed.
+1978:  - `Progress path: TaskCreated/TaskCompleted and SubagentStart/Stop update counters` (L4)
+1979:  - `Title path: ai-title from transcript sets title_source=engine` (L5)
+1997:| R09 | Field drift across `claude` versions (2.1.269 → 2.1.270) breaks ingest | med | med | deterministic: `test_events.py::test_wrong_types_become_none`, the property test; live L1–L5, L13 |
+2064:| A13 Credentials without an M1 caller | **not removed; recorded.** The M1 planning request explicitly requires the credential-store seam with a Linux driver; small, stable, first consumer M4.5/M5 | DV-31 |

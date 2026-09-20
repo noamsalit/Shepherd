@@ -1,0 +1,48 @@
+## date
+Mon Sep 14 10:44:11 AM UTC 2026
+## git ls-files
+.gitignore
+docs/methodology/findings.md
+docs/methodology/lane-prompts.md
+docs/methodology/parallel-qa-experiment.md
+docs/specs/orchestrator-platform.md
+## meta.json keys vs layout (toolUseId present, under workflows/, workflowPhase)
+      7 False True Review
+      7 False True Verify
+     11 True False None
+/root/.claude/projects/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a9a68f369dcbb1207.meta.json
+{"agentType":"workflow-subagent","description":"review:plan-vs-architecture","workflowPhase":"Review","spawnDepth":1,"requestShape":"foreground","requestNonInteractive":false}
+/root/.claude/projects/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/subagents/workflows/wf_45a39404-63a/agent-a7ee11a966062ccba.meta.json
+{"agentType":"workflow-subagent","description":"verify:probe-hooks","workflowPhase":"Verify","spawnDepth":1,"requestShape":"foreground","requestNonInteractive":false}
+## Stop/SubagentStop/UserPromptSubmit background_tasks across prior probe (backup, 5 runs)
+events-run1.jsonl UserPromptSubmit 595f0862-d452-4d47-8f58-f122fa23a294 null skip cc10x. Use your todo list with four
+events-run1.jsonl SubagentStop 595f0862-d452-4d47-8f58-f122fa23a294 [] 
+events-run1.jsonl Stop 595f0862-d452-4d47-8f58-f122fa23a294 [] 
+events-run2.jsonl UserPromptSubmit 25ead680-5f9f-4fe4-bbd3-e03302bae49a null skip cc10x. Track this work with your to
+events-run2.jsonl Stop 25ead680-5f9f-4fe4-bbd3-e03302bae49a [] 
+events-run3.jsonl UserPromptSubmit b7bcbf3c-6790-41f4-bf4a-79e70e2228ba null skip cc10x. Write a file watched.txt con
+events-run3.jsonl Stop b7bcbf3c-6790-41f4-bf4a-79e70e2228ba [] 
+events-run4.jsonl UserPromptSubmit dab0b5e0-73ba-4e8c-af85-baf06406c4b9 null skip cc10x. Write a file watched2.txt co
+events-run4.jsonl Stop dab0b5e0-73ba-4e8c-af85-baf06406c4b9 [{"id": "bkz2ei76d", "type": "shell", "status": "running", "description": "Sleep for 4 seconds", "command": "sleep 4 && echo done"}] 
+events-run4.jsonl UserPromptSubmit 34283a21-f5fe-46f8-ad04-7fdc978cc7a1 null <task-notification> <task-id>bkz2ei76d</
+events-run4.jsonl Stop 34283a21-f5fe-46f8-ad04-7fdc978cc7a1 [] 
+events-run5-permission.jsonl UserPromptSubmit 6be59663-f251-4bbe-ada5-50d07003ddc7 null skip cc10x. Run the bash command 'echo h
+events-run5-permission.jsonl Stop 6be59663-f251-4bbe-ada5-50d07003ddc7 [] 
+## 32df7fce probe dir listing (no run4)
+events.jsonl
+events-run1.jsonl
+events-run2.jsonl
+events-run3.jsonl
+hookd_probe.py
+repo
+## /tmp mount and tmpfiles timer
+/dev/sda1       39027964 6983844  30394528  19% /
+NEXT                        LEFT LAST                         PASSED UNIT                         ACTIVATES
+Mon 2026-09-14 17:37:56 UTC   6h Sun 2026-09-13 17:37:56 UTC 17h ago systemd-tmpfiles-clean.timer systemd-tmpfiles-clean.service
+## claude processes exe (read-only /proc)
+3943046 /root/.local/share/claude/versions/2.1.269 cwd=/root claude 
+3971404 /root/.local/share/claude/versions/2.1.270 cwd=/root/Shepherd claude --resume 2fb6befd-2e8e-47f2-986a-e24ed36aab8f --remote-control Shepherd-main 
+3971492 /root/.local/share/claude/versions/2.1.270 cwd=/root/Shepherd claude --resume 9bc1bf13-50fd-438b-ad09-18a9d05de7d6 --remote-control Shepherd-spike 
+3971545 /root/.local/share/claude/versions/2.1.270 cwd=/root/AIVisor claude --resume 35f3f29e-4cf2-43e7-b0cd-45c86da8b44c --remote-control AIVisor 
+## spec Linux/systemd hit count
+0

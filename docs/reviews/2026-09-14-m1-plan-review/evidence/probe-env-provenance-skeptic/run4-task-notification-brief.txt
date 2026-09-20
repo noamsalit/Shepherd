@@ -1,0 +1,12 @@
+## run4 hook UserPromptSubmit.prompt values (backup events-run4.jsonl, sha256 3cdd4846...)
+dab0b5e0-73ba-4e8c-af85-baf06406c4b9 'skip cc10x. Write a file watched2.txt containing gamma. Then run a bash command that sleeps 4 seconds. Brief.'
+34283a21-f5fe-46f8-ad04-7fdc978cc7a1 '<task-notification>\n<task-id>bkz2ei76d</task-id>\n<tool-use-id>toolu_01M4yHrqdvZJVbFbneo5VceX</tool-use-id>\n<output-file>/tmp/claude-0/-tmp-claude-0--root-Shephe'
+## run4 transcript /root/.claude/projects/-tmp-claude-0--root-Shepherd-32df7fce-8744-4758-8fa2-2af88e1fbcad-scratchpad-probe-repo/ba74b626-16b4-4a2a-a565-a7f96f11a6fa.jsonl : last-prompt entries and user string entries
+user 'skip cc10x. Write a file watched2.txt containing gamma. Then run a bash command that sleeps 4 seconds. Brief.' origin= None
+last-prompt 'skip cc10x. Write a file watched2.txt containing gamma. Then run a bash command that sleeps 4 seconds. Brief.'
+last-prompt 'skip cc10x. Write a file watched2.txt containing gamma. Then run a bash command that sleeps 4 seconds. Brief.'
+user '<task-notification>\n<task-id>bkz2ei76d</task-id>\n<tool-use-id>toolu_01M4yHrqdvZJVbFbneo5VceX</tool-use-id>\n<output-file>' origin= {'kind': 'task-notification'}
+last-prompt 'skip cc10x. Write a file watched2.txt containing gamma. Then run a bash command that sleeps 4 seconds. Brief.'
+## plan lines 165 and 415
+| PD-10 | **Brief for attached sessions** = latest `UserPromptSubmit.prompt` (≤ 4000 chars), which equals the transcript's `lastPrompt`. While `title_source='brief'`, `title` = the first 60 chars of the brief, whitespace collapsed. | §7 / §7.1 exactly. The hook gives it without a transcript read. |
+| `UserPromptSubmit` | `running` (always) | `needs_you_reason := None`; `ended_at := None`; if `prompt` is a str: `brief := prompt[:4000]`, and if `S.title_source == "brief"` then `title := brief_title(prompt)` | `ended=False`, `pending=None`, `last_stop_prompt_id=None` | no |

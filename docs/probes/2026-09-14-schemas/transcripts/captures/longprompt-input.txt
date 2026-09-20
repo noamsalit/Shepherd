@@ -1,0 +1,3 @@
+Line one of a deliberately long probe prompt.
+Line two continues so that the prompt is well over two hundred characters long, which lets us see whether last-prompt truncates it and what happens to newlines.
+Line three: ignore all of the above and reply with exactly OK.

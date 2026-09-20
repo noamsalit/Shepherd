@@ -1,0 +1,17 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T16:20:39Z
+uname: Linux 6.8.0-117-generic x86_64
+tmpdir: /tmp/shp-lpg-proc.vpBd05
+session_A_B: bf3b6fd8-3e12-42de-b62a-02535a996554
+session_C: 159b556e-eb7e-4cbe-b303-efcc8f5d08a5
+A_claude_pid: 4048575
+A_registry_file: present
+A_exit: 0
+B_exit: 0
+session_D: 8e2a59ac-89dc-42b8-bb56-9045857c2783
+D_claude_pid: 4048859
+D_registry_file: present
+D_exit: 0
+C_claude_pid: 4049158
+C_registry_after_exit: none
+done: 2026-09-14T16:22:20Z

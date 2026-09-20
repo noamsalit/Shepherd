@@ -1,0 +1,26 @@
+{
+ "results": {
+  "esc_tool": {
+   "how": "esc",
+   "events": [
+    "UserPromptSubmit",
+    "PreToolUse(Bash)"
+   ],
+   "claude_alive": true,
+   "pane_dead": "0",
+   "next_turn_stop": true
+  }
+ },
+ "marks": [
+  {
+   "label": "esc_tool",
+   "hook_index": 1,
+   "t": 1789406895.3487294
+  },
+  {
+   "label": "esc_tool-after",
+   "hook_index": 3,
+   "t": 1789406908.2850199
+  }
+ ]
+}

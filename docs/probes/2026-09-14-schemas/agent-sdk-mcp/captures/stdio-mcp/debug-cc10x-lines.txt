@@ -1,0 +1,17 @@
+2026-09-14T16:14:50.058Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T16:14:50.086Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T16:14:50.114Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T16:14:50.114Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T16:14:50.114Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T16:14:50.115Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T16:14:50.115Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T16:14:50.115Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T16:14:50.116Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T16:14:50.118Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T16:14:50.118Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T16:14:50.185Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T16:14:50.187Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T16:14:50.284Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T16:14:50.288Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T16:14:50.701Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T16:14:50.984Z [DEBUG] installPluginsForHeadless: starting

@@ -1,0 +1,179 @@
+{
+ "hot": {
+  "local_events_right_after_write": [],
+  "local_events_after_turn2": [
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop"
+  ],
+  "user_events_right_after_write": [],
+  "local_events_all": [
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "ConfigChange",
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "SessionEnd"
+  ],
+  "user_events_all": [
+   "UserPromptSubmit",
+   "MessageDisplay",
+   "Stop",
+   "SessionEnd"
+  ],
+  "pane": "dead=1 status=0"
+ },
+ "user": {
+  "run": {
+   "rc": 0,
+   "result": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "OK-MOCK",
+    "permission_denials": []
+   },
+   "stderr": ""
+  },
+  "dup_events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "user_only_events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "project_only_events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop"
+  ],
+  "debug_lines_matching": [
+   "2026-09-14T17:39:39.554Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (GrowthBook is off for this session: a third-party provider, or telemetry opted out)",
+   "2026-09-14T17:39:39.554Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process",
+   "2026-09-14T17:39:39.555Z [DEBUG] Registered 0 hooks from 0 plugins",
+   "2026-09-14T17:39:39.643Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.661Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.662Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.662Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete",
+   "2026-09-14T17:39:39.704Z [DEBUG] Hooks: Found 0 total hooks in registry",
+   "2026-09-14T17:39:39.705Z [DEBUG] Hooks: checkForNewResponses returning 0 responses",
+   "2026-09-14T17:39:39.720Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.722Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.727Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.842Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.843Z [DEBUG] Hook output does not start with {, treating as plain text",
+   "2026-09-14T17:39:39.849Z [DEBUG] Hook output does not start with {, treating as plain text"
+  ],
+  "user_settings_after_run_unchanged": true
+ },
+ "mcp_s1_running_before_add": {
+  "main_requests": 1,
+  "tools_had_mcp_shepherd": [
+   false
+  ]
+ },
+ "mcp_permission_rules_p": {
+  "none": {
+   "allow": [],
+   "rc": 0,
+   "result": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "OK-AFTER-TOOL",
+    "permission_denials": [
+     {
+      "tool_name": "mcp__shepherd__ping",
+      "tool_use_id": "toolu_mock_1789407601045",
+      "tool_input": {}
+     }
+    ]
+   },
+   "stub_tools_call_count": 0
+  },
+  "server": {
+   "allow": [
+    "mcp__shepherd"
+   ],
+   "rc": 0,
+   "result": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "OK-AFTER-TOOL",
+    "permission_denials": [
+     {
+      "tool_name": "mcp__shepherd__ping",
+      "tool_use_id": "toolu_mock_1789407601888",
+      "tool_input": {}
+     }
+    ]
+   },
+   "stub_tools_call_count": 0
+  },
+  "wildcard": {
+   "allow": [
+    "mcp__shepherd__*"
+   ],
+   "rc": 0,
+   "result": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "OK-AFTER-TOOL",
+    "permission_denials": [
+     {
+      "tool_name": "mcp__shepherd__ping",
+      "tool_use_id": "toolu_mock_1789407602656",
+      "tool_input": {}
+     }
+    ]
+   },
+   "stub_tools_call_count": 0
+  },
+  "exact": {
+   "allow": [
+    "mcp__shepherd__ping"
+   ],
+   "rc": 0,
+   "result": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "OK-AFTER-TOOL",
+    "permission_denials": [
+     {
+      "tool_name": "mcp__shepherd__ping",
+      "tool_use_id": "toolu_mock_1789407603426",
+      "tool_input": {}
+     }
+    ]
+   },
+   "stub_tools_call_count": 0
+  }
+ },
+ "mcp_s2_started_after_add": {
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "PreToolUse(mcp__shepherd__ping)",
+   "PermissionRequest(mcp__shepherd__ping)",
+   "Notification[permission_prompt]",
+   "PostToolUse(mcp__shepherd__ping)",
+   "PostToolBatch",
+   "MessageDisplay",
+   "Stop"
+  ]
+ },
+ "mcp_s3_allow_wildcard": {
+  "events": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "PreToolUse(mcp__shepherd__ping)",
+   "PostToolUse(mcp__shepherd__ping)",
+   "PostToolBatch",
+   "MessageDisplay",
+   "Stop"
+  ]
+ }
+}

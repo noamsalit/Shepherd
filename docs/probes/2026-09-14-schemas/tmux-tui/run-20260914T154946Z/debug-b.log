@@ -1,0 +1,60 @@
+2026-09-14T15:49:52.578Z [DEBUG] MDM settings load completed in 0ms
+2026-09-14T15:49:52.623Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:49:52.625Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-B-gs_kiv4r/.claude/settings.json
+2026-09-14T15:49:52.625Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-B-gs_kiv4r/.claude/settings.local.json
+2026-09-14T15:49:52.627Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:49:52.629Z [DEBUG] [init] configureGlobalMTLS starting
+2026-09-14T15:49:52.629Z [DEBUG] [init] configureGlobalMTLS complete
+2026-09-14T15:49:52.629Z [DEBUG] [init] configureGlobalAgents starting
+2026-09-14T15:49:52.629Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-09-14T15:49:52.630Z [DEBUG] CA certs: Loaded 121 bundled root certificates
+2026-09-14T15:49:52.634Z [DEBUG] CA certs: Loaded 121 system CA certificates
+2026-09-14T15:49:52.634Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-09-14T15:49:52.634Z [DEBUG] [init] configureGlobalAgents complete
+2026-09-14T15:49:52.636Z [DEBUG] Git remote URL: null
+2026-09-14T15:49:52.636Z [DEBUG] No git remote URL found
+2026-09-14T15:49:52.638Z [DEBUG] Error log sink initialized
+2026-09-14T15:49:52.647Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-09-14T15:49:52.649Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-09-14T15:49:52.650Z [DEBUG] [STARTUP] Running setup()...
+2026-09-14T15:49:52.658Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/root/.claude/skills, project=[]
+2026-09-14T15:49:52.673Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:49:52.675Z [DEBUG] Failed to stat directory /root/.claude/agents: ENOENT: no such file or directory, stat '/root/.claude/agents'
+2026-09-14T15:49:52.675Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/agents: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/agents'
+2026-09-14T15:49:52.678Z [DEBUG] Failed to stat directory /etc/claude-code/.claude/commands: ENOENT: no such file or directory, stat '/etc/claude-code/.claude/commands'
+2026-09-14T15:49:52.678Z [DEBUG] Failed to stat directory /root/.claude/commands: ENOENT: no such file or directory, stat '/root/.claude/commands'
+2026-09-14T15:49:52.680Z [DEBUG] Loaded 0 unique skills (0 unconditional, 0 conditional, managed: 0, user: 0, project: 0, additional: 0, legacy commands: 0)
+2026-09-14T15:49:52.684Z [DEBUG] [Claude in Chrome] Extension not found in any browser
+2026-09-14T15:49:52.691Z [INFO] [uds-messaging] Listening: /tmp/cc-socks/4041912.sock
+2026-09-14T15:49:52.691Z [INFO] [uds-messaging] Inject messages (auth line optional here): { echo '{"type":"auth","token":"[REDACTED]"$CLAUDE_CODE_MESSAGING_TOKEN"'"}'; echo '{"type":"user","message":{"role":"user","content":"hello"}}'; } | socat - UNIX-CONNECT:/tmp/cc-socks/4041912.sock
+2026-09-14T15:49:52.693Z [INFO] [uds-messaging] Connect when the data is ready (e.g. out=$(cmd); printf '%s\n' "$out" | nc -N -U "$CLAUDE_CODE_MESSAGING_SOCKET" — or the socat form above): a connection that sends no complete line within 30000 ms is closed
+2026-09-14T15:49:52.695Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:49:52.696Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-B-gs_kiv4r/.claude/settings.json
+2026-09-14T15:49:52.697Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-tui-B-gs_kiv4r/.claude/settings.local.json
+2026-09-14T15:49:52.702Z [DEBUG] Error log sink initialized
+2026-09-14T15:49:52.715Z [DEBUG] Cannot acquire lock for 2.1.270 - held by PID 3971404
+2026-09-14T15:49:52.716Z [ERROR] NON-FATAL: Lock acquisition failed for /root/.local/share/claude/versions/2.1.270 (expected in multi-process scenarios): Lock already held by another process
+2026-09-14T15:49:52.721Z [DEBUG] [STARTUP] setup() completed in 71ms
+2026-09-14T15:49:52.724Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-09-14T15:49:52.731Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:49:52.733Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:49:52.733Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:49:52.733Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:49:52.734Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:49:52.734Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:49:52.734Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:49:52.735Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:49:52.735Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:49:52.737Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:49:52.741Z [DEBUG] Artifact input schema built: capabilities=true comments=true db=true assets=true files=true types=false type_catalog=false read_page_data=false room=false verify=false delete=true copy_from=false preview=false open=false endpoints=false pin=true flag_source=disk gb_fresh=false assets_source=disk
+2026-09-14T15:49:52.753Z [DEBUG] [STARTUP] Commands and agents loaded in 29ms
+2026-09-14T15:49:52.757Z [DEBUG] nonBlockingStdout: active
+2026-09-14T15:49:52.759Z [DEBUG] [STARTUP] Running showSetupScreens()...
+2026-09-14T15:49:52.763Z [DEBUG] [keybindings] KeybindingSetup initialized with 226 bindings, 0 warnings
+2026-09-14T15:49:52.784Z [DEBUG] [keybindings] Watching for changes to /root/.claude/keybindings.json
+2026-09-14T15:49:52.791Z [DEBUG] XTVERSION: terminal identified as "tmux 3.4"
+2026-09-14T15:49:52.792Z [DEBUG] Terminal capabilities: extendedKeys=yes (env: terminal=tmux); synchronizedOutput=no (env: TMUX (tmux answers for itself), no answer); kittyKeyboard=no (probe: no reply to CSI ? u); terminal said: no reply to CSI ? u; no reply to DECRQM 2026
+2026-09-14T15:49:52.792Z [DEBUG] DECSTBM: gated (TMUX=set ZELLIJ=unset TERM_PROGRAM=tmux TERM=tmux-256color)
+2026-09-14T15:50:07.437Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:50:07.444Z [DEBUG] Skipping SessionEnd:other hook execution - workspace trust not accepted
+2026-09-14T15:50:07.842Z [WARN] [stderr] [?25h

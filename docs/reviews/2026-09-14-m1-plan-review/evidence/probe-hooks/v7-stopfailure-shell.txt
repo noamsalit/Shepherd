@@ -1,0 +1,3 @@
+started-4014793
+{"session_id":"7323f42a-33a6-4e99-bd2b-75cdcfba23eb","transcript_path":"/root/.claude/projects/-tmp-shp-hookprobe-364yiq-work/7323f42a-33a6-4e99-bd2b-75cdcfba23eb.jsonl","cwd":"/tmp/shp-hookprobe-364yiq/work","prompt_id":"77c80413-4e13-4b87-997c-3910ebb81d1e","effort":{"level":"high"},"hook_event_name":"StopFailure","error":"model_not_found","last_assistant_message":"There's an issue with the selected model (claude-nonexistent-model-xyz). It may not exist or you may not have access to it. Run --model to pick a different model."}
+end

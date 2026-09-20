@@ -1,0 +1,26 @@
+2026-09-17T11:10:48.563+00:00 $ tmux -L shepherd-m3-probe ls -> rc=1 out='' err='no server running on /tmp/tmux-0/shepherd-m3-probe'
+2026-09-17T11:10:48.583+00:00 $ tmux -L shepherd-m3-probe new-session -d -s shepherd_p1 -x 160 -y 45 -c /tmp/shp-m3-p1-o6_i047m/work claude --model claude-haiku-4-5 --settings /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/settings.json --debug-file /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/debug.log -> rc=0 out='' err=''
+2026-09-17T11:10:48.591+00:00 $ tmux -L shepherd-m3-probe set-option -w -t =shepherd_p1: remain-on-exit on -> rc=0 out='' err=''
+2026-09-17T11:10:50.619+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: Down -> rc=0 out='' err=''
+2026-09-17T11:10:51.626+00:00 shepherd_p1: trust selection after Down #1: ' ❯ Yes, I trust this folder'
+2026-09-17T11:10:51.636+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: Enter -> rc=0 out='' err=''
+2026-09-17T11:10:51.636+00:00 shepherd_p1: trust dialog accepted
+2026-09-17T11:10:56.665+00:00 A: C-a C-k against typed text
+2026-09-17T11:10:56.673+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: -l ALPHA BRAVO CHARLIE -> rc=0 out='' err=''
+2026-09-17T11:10:57.688+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-a -> rc=0 out='' err=''
+2026-09-17T11:10:58.312+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-k -> rc=0 out='' err=''
+2026-09-17T11:10:59.332+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-u -> rc=0 out='' err=''
+2026-09-17T11:11:00.144+00:00 B: C-w x3 against three words
+2026-09-17T11:11:00.149+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: -l WORDONE WORDTWO WORDTHREE -> rc=0 out='' err=''
+2026-09-17T11:11:01.167+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-w -> rc=0 out='' err=''
+2026-09-17T11:11:01.984+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-w -> rc=0 out='' err=''
+2026-09-17T11:11:02.803+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-w -> rc=0 out='' err=''
+2026-09-17T11:11:03.626+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-u -> rc=0 out='' err=''
+2026-09-17T11:11:04.441+00:00 C: Esc during streaming, then C-u against the restored prompt
+2026-09-17T11:11:04.447+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: -l ESC-RESTORE-MARKER write a detailed 900-word essay on the history of terminal multiplexers, in full prose, no lists. -> rc=0 out='' err=''
+2026-09-17T11:11:05.052+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: Enter -> rc=0 out='' err=''
+2026-09-17T11:11:05.576+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: Escape -> rc=0 out='' err=''
+2026-09-17T11:11:08.096+00:00 $ tmux -L shepherd-m3-probe send-keys -t =shepherd_p1: C-u -> rc=0 out='' err=''
+2026-09-17T11:11:10.654+00:00 $ tmux -L shepherd-m3-probe kill-server -> rc=0 out='' err=''
+2026-09-17T11:11:10.663+00:00 $ tmux -L shepherd-m3-probe ls -> rc=1 out='' err='no server running on /tmp/tmux-0/shepherd-m3-probe'
+2026-09-17T11:11:10.664+00:00 teardown: after kill-server: tmux -L shepherd-m3-probe ls rc=1 err='no server running on /tmp/tmux-0/shepherd-m3-probe' -> no server running

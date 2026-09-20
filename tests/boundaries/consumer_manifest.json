@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-09-17T21:44:18Z",
+  "generated_by": "step 0b",
+  "gate": "DP1 Gate A / D38 — no file in web/ or cli/ changes while L4 is completed.",
+  "enumeration": "every path under src/shepherd/web/ and src/shepherd/cli/ from rglob('*') that is_file() and whose parts contain no __pycache__, as {posix path relative to src/shepherd: sha256 hex}. Enumerated, never hand-listed (K19).",
+  "ordering_claim": "UNVERIFIABLE IN THIS TREE. That this manifest was frozen BEFORE the registry work is transcript evidence only: `git log -- docs/plans/` is empty, everything is untracked on one baseline commit, and no ordering of edits is recoverable. A VCS baseline would fix it outright and is rejected on a standing instruction, not on merit (plan, Open decisions). M3 clause 16 is the precedent.",
+  "rebase_rule": "`baseline` is the step-0b freeze and is NEVER rewritten. `files` is what Gate A compares the live tree against. T24 is the ONLY task permitted to re-base, exactly once: it updates `files`, sets rebase.regenerated_by to \"T24\" and lists every path it moved in rebase.regenerated_paths. test_a_rebase_declares_every_path_whose_digest_moved asserts moved_paths(baseline, files) == set(regenerated_paths), so a re-base that quietly absorbs an unrelated change is caught rather than blessed.",
+  "rebase": {
+    "regenerated_by": "T24",
+    "regenerated_at": "2026-09-18T09:45:00Z",
+    "regenerated_paths": [
+      "web/routes.py",
+      "web/static/app.css",
+      "web/static/app.js",
+      "web/static/chat.js",
+      "web/static/index.html"
+    ],
+    "why": "DP1: the chat page is a file in web/, so Gate A is re-based exactly once rather than deleted. baseline is untouched, so moved_paths(baseline, files) is still computable and must equal regenerated_paths (test_a_rebase_declares_every_path_whose_digest_moved)."
+  },
+  "baseline": {
+    "cli/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cli/commands.py": "853f44bae46358e10283351c3e15221fe8152c17a5dadaeb7c8dc0d715d5d412",
+    "cli/main.py": "230b0a63816cef83915ad529d38d0e9bd2c64d95c1c30c1ea09262e4adfa4dfd",
+    "cli/replay.py": "549e6338516437491f9cf219d7691122cdc8e0ea381569367f9685e7b49b2165",
+    "web/__init__.py": "36cfe6af65288827e42513d33d10a35bfba014c36146f1eaa7edf22e7b006d08",
+    "web/routes.py": "c9dd8fb85256b86d8b07f1307fbc188447b1d93d39922ef57db32c629b9c1fc3",
+    "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
+    "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
+    "web/static/app.css": "e7641e25db68d89509c138862821020dbe860bff34d8c27f64b46a9a247d3bea",
+    "web/static/app.js": "56180e0676126a715b58f9398409cd6a6e4db00d3104b9035ad88bf56921a8e6",
+    "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
+    "web/static/fleet.js": "6afcc0ff47f56f667393616029e75fd89330d18e6015e180275b3f1fbd8f3f13",
+    "web/static/index.html": "26c5b029f16e7292a60973fe1d7139d3cf1b059ddfaef20d5a7aaf3a29b943a0",
+    "web/static/rail.js": "fe5afbac321dbd0bf32be164e66cfdc8a44d6ca3f4a7df18ba9af2b650a400c5",
+    "web/static/session.js": "11f4b1abb60ac73015ca3309c77eb75559235915ffaa5e86967700aa0017eed3",
+    "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
+    "web/static/terminal.js": "ace78240d2b6255c50506502327062227f98349b0a98fa71244ace6a7be2c90c",
+    "web/static/vendor/LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
+    "web/static/vendor/VERSION.txt": "dfb265b144056ce4e444d6cc84dd362fbc93a0461122f5e0213156d845f31e9e",
+    "web/static/vendor/xterm.css": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6",
+    "web/static/vendor/xterm.js": "b336ec65a086c056d4804b3d4c2347da5663d3f23c3f25be866467bd8857ad59",
+    "web/ws.py": "a54d12cea53d518e1c64d335c42006baa625877515ffa6f7a24d75324ab403e5"
+  },
+  "files": {
+    "cli/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cli/commands.py": "853f44bae46358e10283351c3e15221fe8152c17a5dadaeb7c8dc0d715d5d412",
+    "cli/main.py": "230b0a63816cef83915ad529d38d0e9bd2c64d95c1c30c1ea09262e4adfa4dfd",
+    "cli/replay.py": "549e6338516437491f9cf219d7691122cdc8e0ea381569367f9685e7b49b2165",
+    "web/__init__.py": "36cfe6af65288827e42513d33d10a35bfba014c36146f1eaa7edf22e7b006d08",
+    "web/routes.py": "08e90cc742f00955464bd6cff0e11bf080e9245cde8d9c91230691ed428dcdf3",
+    "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
+    "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
+    "web/static/app.css": "537fe059fc095d2867540a3ad3f76498d77ac65a3c120ef27002f11a6709cb38",
+    "web/static/app.js": "313f0e067e4b9945eff1366022d8e145ca2293eaf4d0f63e7c3f17c78fe5e6e8",
+    "web/static/chat.js": "3357ca452542003120629d8ae99192d6c3c93fa162ad40d363a4ff1cf52f6e71",
+    "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
+    "web/static/fleet.js": "6afcc0ff47f56f667393616029e75fd89330d18e6015e180275b3f1fbd8f3f13",
+    "web/static/index.html": "ec142db28fd641c86fecda04d480346a1b6b8454ac8c76c1d826d791f70fab98",
+    "web/static/rail.js": "73b8a320f6f7f5c1898e810acc466a53fc6b2a81cd605e2d382b6dd3d61b2170",
+    "web/static/session.js": "11f4b1abb60ac73015ca3309c77eb75559235915ffaa5e86967700aa0017eed3",
+    "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
+    "web/static/terminal.js": "ace78240d2b6255c50506502327062227f98349b0a98fa71244ace6a7be2c90c",
+    "web/static/vendor/LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
+    "web/static/vendor/VERSION.txt": "dfb265b144056ce4e444d6cc84dd362fbc93a0461122f5e0213156d845f31e9e",
+    "web/static/vendor/xterm.css": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6",
+    "web/static/vendor/xterm.js": "b336ec65a086c056d4804b3d4c2347da5663d3f23c3f25be866467bd8857ad59",
+    "web/ws.py": "a54d12cea53d518e1c64d335c42006baa625877515ffa6f7a24d75324ab403e5"
+  },
+  "post_milestone": {
+    "rule": "Edits made AFTER M4 closed, which D38 does not govern. D38's sentence is \"if M4 changes a file in web/ or cli/, the placeholder had the wrong shape\" — it is a claim about completing L4, and that milestone is closed and verified. This block is NOT a second re-base: `rebase` stays T24's, spent exactly once, and `baseline` is still never rewritten. Every entry names a path, a date, an agent and a reason; the paths here must be DISJOINT from rebase.regenerated_paths, so this block can never be used to relaunder a path T24 already moved; and moved_paths(baseline, files) must equal regenerated_paths + these paths exactly, so an unrelated change still cannot ride along in silence.",
+    "edits": [
+      {
+        "path": "web/static/rail.js",
+        "at": "2026-09-20T00:00:00Z",
+        "by": "publish scrub (owner instruction)",
+        "why": "One comment quoted a rail row using a repo name carrying a former employer's prefix. The owner's instruction was that the name must not appear anywhere in the repository. Renamed to `payments-api`, matching every other document. Comment text only: no statement, no selector and no behaviour changed."
+      }
+    ]
+  }
+}

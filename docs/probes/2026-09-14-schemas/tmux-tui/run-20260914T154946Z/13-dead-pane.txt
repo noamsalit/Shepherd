@@ -1,0 +1,45 @@
+Resume this session with:
+claude --resume "shp-probe-title-1"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pane is dead (status 0, Mon Sep 14 15:53:21 2026)

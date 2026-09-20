@@ -1,0 +1,12 @@
+2026-09-14T15:23:18.819Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:23:18.869Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:18.879Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-wt-uccy58xp/.claude/settings.local.json
+2026-09-14T15:23:18.880Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:23:18.953Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:23:18.970Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:18.976Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-wt-uccy58xp/.claude/settings.local.json
+2026-09-14T15:23:18.985Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:23:18.987Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:23:18.992Z [DEBUG] WorktreeCreate [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh WorktreeCreate /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S15_worktree/events.jsonl] completed with status 0
+2026-09-14T15:23:18.992Z [DEBUG] WorktreeCreate [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh WorktreeCreate /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S15_worktree/events.jsonl] completed with status 0
+2026-09-14T15:23:18.992Z [DEBUG] Hook output does not start with {, treating as plain text

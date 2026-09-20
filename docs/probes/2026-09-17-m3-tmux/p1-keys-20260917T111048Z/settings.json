@@ -1,0 +1,129 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "remoteControlAtStartup": false,
+ "hooks": {
+  "PreToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PreToolUse /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PostToolUse /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostToolUseFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PostToolUseFailure /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Notification": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SessionStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh Stop /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "StopFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PermissionRequest": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PermissionRequest /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PermissionDenied": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.274 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/capture_hook.sh PermissionDenied /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p1-keys-20260917T111048Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ]
+ }
+}

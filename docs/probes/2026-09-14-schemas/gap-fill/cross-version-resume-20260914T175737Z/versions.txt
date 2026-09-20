@@ -1,0 +1,4 @@
+claude --version: 2.1.270 (Claude Code)
+old binary: /tmp/shp-sdk-9IOKNs/venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude -> 2.1.259 (Claude Code)
+new binary: /root/.local/share/claude/versions/2.1.270 -> 2.1.270 (Claude Code)
+Linux 6.8.0-117-generic

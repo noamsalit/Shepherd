@@ -1,0 +1,42 @@
+{
+ "count": 4,
+ "shapes": [
+  {
+   "pid": "<int>",
+   "cwd": "<redacted str>",
+   "kind": "interactive",
+   "startedAt": "<int>",
+   "sessionId": "<redacted str>",
+   "name": "<redacted str>",
+   "status": "idle"
+  },
+  {
+   "pid": "<int>",
+   "cwd": "<redacted str>",
+   "kind": "interactive",
+   "startedAt": "<int>",
+   "sessionId": "<redacted str>",
+   "name": "<redacted str>",
+   "status": "busy"
+  },
+  {
+   "pid": "<int>",
+   "cwd": "<redacted str>",
+   "kind": "interactive",
+   "startedAt": "<int>",
+   "sessionId": "<redacted str>",
+   "name": "<redacted str>",
+   "status": "waiting",
+   "waitingFor": "<redacted str>"
+  },
+  {
+   "pid": "<int>",
+   "cwd": "<redacted str>",
+   "kind": "interactive",
+   "startedAt": "<int>",
+   "sessionId": "<redacted str>",
+   "name": "<redacted str>",
+   "status": "idle"
+  }
+ ]
+}

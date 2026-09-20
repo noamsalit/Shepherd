@@ -1,0 +1,219 @@
+// §12's page 3, the part that is not the terminal: the header band, the stopped
+// session's buttons, the rename affordance and the `local only` marker.
+//
+// Every value below lands in a slot with `textContent`. There is no HTML sink in
+// this file and no string concatenated into markup: §13's rule has no exception
+// to make on a page whose fields are a title a human typed, a `why` a classifier
+// wrote and a session id.
+//
+// The order is the server's (§16, `fleet_sort_key`) and `next_actions[]` arrives
+// already ordered from `project_action`. Nothing here sorts, and
+// `test_the_page_does_not_re_derive_the_order` is what keeps it that way.
+//
+// `renderSession` is reached from `app.js`, which listens for a click on a fleet
+// row. That edge is the whole reason this module runs at all: for one task
+// nothing imported it, and eight tests asserting its contents all passed against
+// code no browser ever loaded (`test_session_wiring.py`).
+
+import { openTerminal, INPUT_UNAVAILABLE } from "./terminal.js";
+
+// §9, verbatim. An `attached` session has no pty of ours: it was started in the
+// user's own terminal, on the user's own tmux socket. Rendering a live terminal
+// for one would be offering a write path into a pane K6 says we never touch —
+// so the banner is a refusal, not a decoration.
+const READ_ONLY_BANNER =
+  "read-only — this session wasn't started here. Open it in the platform to get a terminal.";
+
+// D29/RD9: exactly §12's words. "local only" is the difference between a
+// degrade and a lie, and the string is what a reviewer greps for when DP1 is
+// decided.
+const LOCAL_ONLY_MARKER = "local only";
+
+// Principle 5, and `fleet.js` says the same word for the same reason: a field
+// the payload did not carry is *shown* as unknown, never rendered as a blank
+// button nobody can read and nobody counted.
+const UNKNOWN = "unknown";
+
+// D29's local rename. The engine write-back (`drive_engine_rename`) ships
+// **disabled** by plan decision DP1 — the ceiling is `can_set_title`, it is
+// `False`, and the decision lives server-side in `orchestration/rename.py`.
+// Nothing here can flip it, and the `local only` marker above is exactly what
+// tells the human which half happened.
+const RENAME_PATH = "/api/sessions/{session_id}/rename";
+const RENAME_FAILED = "rename failed";
+const RENAME_UNREACHABLE = "rename failed: the request did not reach the server";
+
+// D29, and `store/models.py:238` states the same rule on the column itself:
+// `title_synced_at` is stamped only from a read-back of the engine's own
+// `nameSource:"user"`, so a user title with no stamp is a rename that never
+// left this machine. It is a **conjunction**: under `||` the marker would light
+// for every unsynced row, including one the engine itself titled, which is a
+// false claim about where a name came from rather than an honest degrade.
+//
+// Blocker T19-b: `project_session` carries neither field today, so this returns
+// `false` for every row the API currently serves. The rule is written where it
+// belongs rather than guessed at from a field that does not exist — and the
+// rename response *does* carry `local_only`, so `applyRename` below can light
+// the marker for real.
+export function localOnly(row) {
+  return row.title_source === "user" && !row.title_synced_at;
+}
+
+// The terminal currently on the page. A second `renderSession` with the first
+// socket still open would hold a `pipe-pane` alive for the life of the tab,
+// which is the thing `close()` exists to prevent.
+let attached = null;
+
+function slot(id) {
+  return document.getElementById(id);
+}
+
+function fill(id, value) {
+  const element = slot(id);
+  element.textContent = value === null || value === undefined ? "—" : String(value);
+  return element;
+}
+
+function path(template, sessionId) {
+  return template.replace("{session_id}", encodeURIComponent(sessionId));
+}
+
+// `project_action` (`toolsurface/tools_m1.py`) emits exactly `text`, `kind`,
+// `target` and `source`. This page read `action.label` — a field that exists
+// nowhere in the projection layer — so D21's buttons rendered empty and, with
+// no fallback, nothing counted the unknown either. `fleet.js:134` reads the same
+// payload the same way, which is the point: one payload, one reading.
+function actionText(action) {
+  return typeof action.text === "string" && action.text !== "" ? action.text : UNKNOWN;
+}
+
+function actionKind(action) {
+  return typeof action.kind === "string" && action.kind !== "" ? action.kind : UNKNOWN;
+}
+
+function actionButton(action) {
+  const button = document.createElement("button");
+  button.className = "session-action";
+  button.type = "button";
+  button.textContent = actionText(action);
+  button.dataset.kind = actionKind(action);
+  return button;
+}
+
+// D29's marker, after a rename that has been answered. `local_only` is the
+// server's own verdict (`toolsurface/tools_rename.py::project_rename`), not a
+// re-derivation: the page renders the answer it was given.
+function applyRename(data) {
+  fill("session-title", data.title);
+  const marker = slot("session-local-only");
+  marker.textContent = data.local_only ? LOCAL_ONLY_MARKER : "";
+  marker.hidden = !data.local_only;
+}
+
+async function commitRename(row, title) {
+  const status = slot("session-rename-status");
+  status.textContent = "";
+  try {
+    const response = await fetch(path(RENAME_PATH, row.session_id), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ title: title }),
+    });
+    const body = await response.json();
+    if (!body.ok) {
+      status.textContent = `${RENAME_FAILED}: ${body.error} (${body.correlation_id})`;
+      return;
+    }
+    if (!body.data.renamed) {
+      // `project_rename` answers `renamed: false` with a `reason` — a session
+      // that is not there. Principle 5: the reason is shown, not swallowed.
+      status.textContent = `${RENAME_FAILED}: ${body.data.reason}`;
+      return;
+    }
+    applyRename(body.data);
+  } catch (unreachable) {
+    status.textContent = RENAME_UNREACHABLE;
+  }
+}
+
+// D29's click-to-edit. The affordance has been in `index.html` since T19 and
+// nothing wired it; `POST /api/sessions/{id}/rename` has been in the route
+// table since T18.
+function beginRename(row) {
+  const input = document.createElement("input");
+  input.className = "session-rename-input";
+  input.type = "text";
+  input.value = row.title === null || row.title === undefined ? "" : String(row.title);
+  slot("session-title").replaceChildren(input);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      commitRename(row, input.value);
+    }
+    if (event.key === "Escape") {
+      fill("session-title", row.title);
+    }
+  });
+  input.focus();
+}
+
+function closeAttached() {
+  if (attached === null) {
+    return;
+  }
+  const closing = attached;
+  attached = null;
+  closing.then((handle) => handle.close());
+}
+
+// `renderSession(row)` — one session projection in, page 3 out. The row is
+// whatever `/api/sessions/{id}` handed back; this function reads it and never
+// asks a second source, so the page cannot show two different answers.
+export function renderSession(row) {
+  closeAttached();
+
+  // The section ships `hidden` in static markup — an empty terminal frame on
+  // the fleet page would be a pane nobody asked for — so opening the page is
+  // this line, and for one task nothing in the tree contained it.
+  const view = slot("session-view");
+  view.hidden = false;
+
+  fill("session-title", row.title);
+  fill("session-chip", row.bucket);
+  fill("session-state", row.state);
+  fill("session-ownership", row.ownership);
+  fill("session-model", row.model);
+
+  const rename = slot("session-rename");
+  rename.onclick = () => beginRename(row);
+  fill("session-rename-status", "");
+
+  // The stopped band (D21): the bucket, the `why`, and `next_actions[]` as
+  // buttons. `why` is null on a session nobody classified, which renders as the
+  // em dash `fill` uses everywhere — an unknown shown, not hidden (principle 5).
+  fill("session-why", row.why);
+  const actions = slot("session-actions");
+  actions.replaceChildren(...row.next_actions.map(actionButton));
+
+  const marker = slot("session-local-only");
+  marker.textContent = localOnly(row) ? LOCAL_ONLY_MARKER : "";
+  marker.hidden = !localOnly(row);
+
+  const banner = slot("session-banner");
+  const terminal = slot("session-terminal");
+  const note = slot("session-input-note");
+  if (row.ownership === "attached") {
+    banner.textContent = READ_ONLY_BANNER;
+    banner.hidden = false;
+    terminal.replaceChildren();
+    terminal.hidden = true;
+    note.textContent = "";
+    return null;
+  }
+
+  banner.textContent = "";
+  banner.hidden = true;
+  terminal.hidden = false;
+  note.textContent = INPUT_UNAVAILABLE;
+  attached = openTerminal(row.session_id, terminal);
+  return attached;
+}

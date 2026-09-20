@@ -1,0 +1,2 @@
+dir=/tmp/shp-tui-S-0omgx4oc
+requested --session-id=17b1da21-4505-43ae-8958-35764a620384

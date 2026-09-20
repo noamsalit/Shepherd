@@ -1,0 +1,30 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "UserPromptSubmit": [
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "bogus",
+      "command": "true"
+     }
+    ]
+   },
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptSubmit__from_settings_json /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_hook_type/events.jsonl"
+     }
+    ]
+   }
+  ]
+ },
+ "env": {
+  "SHP_SETTINGS_JSON_LOADED": "1"
+ }
+}

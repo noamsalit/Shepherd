@@ -1,0 +1,3 @@
+rc=0
+Added stdio MCP server shepherd with command: /usr/bin/python3 /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/mcp_stub.py /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/elicitation-tui-20260914T174206Z/mcp-stub-messages.jsonl to user config
+File modified: /tmp/shp-gap-elicit-dyevxdym/cfg/.claude.json

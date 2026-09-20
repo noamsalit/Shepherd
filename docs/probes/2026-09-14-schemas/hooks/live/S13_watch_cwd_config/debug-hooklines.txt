@@ -1,0 +1,72 @@
+2026-09-14T15:24:07.354Z [DEBUG] MDM settings load completed in 0ms
+2026-09-14T15:24:07.391Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:24:07.398Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-watch-jnn4_1pq/.claude/settings.local.json
+2026-09-14T15:24:07.399Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:24:07.464Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:24:07.481Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:24:07.488Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-watch-jnn4_1pq/.claude/settings.local.json
+2026-09-14T15:24:07.520Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:24:07.522Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:24:07.523Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:24:07.523Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:24:07.524Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:24:07.524Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:24:07.524Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:24:07.524Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:24:07.525Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:24:07.527Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:24:07.527Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:24:07.548Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:24:07.550Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:24:07.600Z [DEBUG] Hooks: Checking first line for async: {"hookSpecificOutput":{"hookEventName":"SessionStart","watchPaths":["/tmp/shp-hooks-watch-jnn4_1pq/watched.txt"]}}
+2026-09-14T15:24:07.600Z [DEBUG] Hooks: Parsed initial response: {"hookSpecificOutput":{"hookEventName":"SessionStart","watchPaths":["/tmp/shp-hooks-watch-jnn4_1pq/watched.txt"]}}
+2026-09-14T15:24:07.600Z [DEBUG] Hooks: Initial response is not async, continuing normal processing
+2026-09-14T15:24:07.603Z [DEBUG] Successfully parsed and validated hook JSON output
+2026-09-14T15:24:07.604Z [DEBUG] "Hook SessionStart:startup (SessionStart) success:\n{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"watchPaths\":[\"/tmp/shp-hooks-watch-jnn4_1pq/watched.txt\"]}}"
+2026-09-14T15:24:07.604Z [DEBUG] Hook SessionStart (/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/emit_watchpaths.sh) provided 1 watchPaths
+2026-09-14T15:24:07.605Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:24:07.606Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-watch-jnn4_1pq/.claude/settings.json, /tmp/shp-hooks-watch-jnn4_1pq/.claude/settings.local.json...
+2026-09-14T15:24:07.606Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:24:07.639Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:07.640Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:24:07.941Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:24:08.547Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:24:08.558Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:08.559Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:08.578Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:11.081Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:11.723Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:11.829Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:11.845Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:11.849Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:11.849Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:12.411Z [DEBUG] FileChanged: change /tmp/shp-hooks-watch-jnn4_1pq/watched.txt
+2026-09-14T15:24:12.425Z [DEBUG] FileChanged [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh FileChanged /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl] completed with status 0
+2026-09-14T15:24:12.425Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:13.258Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:16.292Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:16.302Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:16.305Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:16.306Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:17.619Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:17.654Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:17.661Z [DEBUG] CwdChanged [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh CwdChanged /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl] completed with status 0
+2026-09-14T15:24:17.661Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:17.670Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:17.674Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:17.675Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:18.924Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:18.958Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:19.010Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:19.015Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:19.016Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:20.842Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:20.860Z [DEBUG] executePermissionRequestHooks called for tool: Bash
+2026-09-14T15:24:20.882Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:20.898Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:20.903Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:24:20.903Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:24:25.657Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:25.700Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:24:25.735Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl] completed with status 0
+2026-09-14T15:24:25.735Z [DEBUG] Hook output does not start with {, treating as plain text

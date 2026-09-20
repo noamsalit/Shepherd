@@ -1,0 +1,4 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-setup-vlo57jke/.debug-S16_setup__init_only.log
+2026-09-14T15:23:25.102Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:23:25.103Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:23:25.126Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S16_setup__init_only/events.jsonl] completed with status 0

@@ -1,0 +1,51 @@
+2026-09-14T17:54:36.765+00:00 MockEnv tapp: root=/tmp/shp-gap-tapp-9bt2bvfx port=46199
+2026-09-14T17:54:36.801+00:00 spawn shepherd_tapp: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:54:38.030+00:00 shepherd_tapp: trust dialog accepted
+2026-09-14T17:54:41.431+00:00 STEP turn_small
+2026-09-14T17:54:41.437+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l hello small turn -> rc=0 out='' err=''
+2026-09-14T17:54:41.843+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:54:46.850+00:00 STEP big_assistant_text
+2026-09-14T17:54:46.857+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l APP-BIGTEXT please -> rc=0 out='' err=''
+2026-09-14T17:54:47.264+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:54:59.272+00:00 STEP big_tool_result
+2026-09-14T17:54:59.278+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l APP-BIGTOOL please -> rc=0 out='' err=''
+2026-09-14T17:54:59.685+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:11.691+00:00 STEP write_tool_1
+2026-09-14T17:55:11.696+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l APP-WRITE1 please -> rc=0 out='' err=''
+2026-09-14T17:55:12.102+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:20.106+00:00 STEP write_tool_2
+2026-09-14T17:55:20.111+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l APP-WRITE2 please -> rc=0 out='' err=''
+2026-09-14T17:55:20.518+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:28.526+00:00 STEP rename
+2026-09-14T17:55:28.534+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l /rename probe-append-title -> rc=0 out='' err=''
+2026-09-14T17:55:28.940+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:33.947+00:00 STEP manual_compact
+2026-09-14T17:55:33.953+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l /compact -> rc=0 out='' err=''
+2026-09-14T17:55:34.359+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:49.367+00:00 STEP after_compact_turn
+2026-09-14T17:55:49.374+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l turn after compact -> rc=0 out='' err=''
+2026-09-14T17:55:49.781+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:55.790+00:00 STEP rewind
+2026-09-14T17:55:55.796+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l /rewind -> rc=0 out='' err=''
+2026-09-14T17:55:56.202+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:55:59.215+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Up -> rc=0 out='' err=''
+2026-09-14T17:56:00.225+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:03.237+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:12.244+00:00 STEP after_rewind_turn
+2026-09-14T17:56:12.250+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l turn after rewind -> rc=0 out='' err=''
+2026-09-14T17:56:12.659+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:18.666+00:00 STEP clear
+2026-09-14T17:56:18.672+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l /clear -> rc=0 out='' err=''
+2026-09-14T17:56:19.078+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:25.088+00:00 STEP after_clear_turn
+2026-09-14T17:56:25.097+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l turn after clear -> rc=0 out='' err=''
+2026-09-14T17:56:25.504+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:31.527+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: -l /exit -> rc=0 out='' err=''
+2026-09-14T17:56:31.934+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:35.946+00:00 spawn shepherd_tapp2: argv=['claude', '--model', 'claude-haiku-4-5-20251001', '--resume', '9242f47e-a0ba-4505-92cf-7e697e964216'] rc=0 err=
+2026-09-14T17:56:44.466+00:00 STEP resume_turn
+2026-09-14T17:56:44.474+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp2: -l turn after resume -> rc=0 out='' err=''
+2026-09-14T17:56:44.880+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp2: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:52.895+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp2: -l /exit -> rc=0 out='' err=''
+2026-09-14T17:56:53.302+00:00 $ tmux -L shp-gap-tapp send-keys -t =shepherd_tapp2: Enter -> rc=0 out='' err=''
+2026-09-14T17:56:57.330+00:00 $ tmux -L shp-gap-tapp kill-server -> rc=0 out='' err=''

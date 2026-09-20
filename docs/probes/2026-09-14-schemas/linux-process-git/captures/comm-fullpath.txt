@@ -1,0 +1,11 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T16:25:43Z
+symlink: /root/.local/bin/claude -> /root/.local/share/claude/versions/2.1.270
+pid: 4050380
+comm: 2.1.270
+status Name: 2.1.270
+stat field 2: 2.1.270
+exe: /root/.local/share/claude/versions/2.1.270
+argv0: /root/.local/share/claude/versions/2.1.270
+registry_file: present
+exit: 0

@@ -1,0 +1,1 @@
+tmux -L shepherd-m3-outer ls -> rc=1 out='' err='error connecting to /tmp/tmux-0/shepherd-m3-outer (No such file or directory)'

@@ -1,0 +1,6 @@
+total 8
+drwx------ 2 root root 4096 Sep 14 16:20 .
+drwx------ 4 root root 4096 Sep 14 16:20 ..
+srw------- 1 root root    0 Sep 14 16:20 hook.sock
+drwx------ 700 directory /tmp/shp-lpg-proc.vpBd05/s
+srw------- 600 socket /tmp/shp-lpg-proc.vpBd05/s/hook.sock

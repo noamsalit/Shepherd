@@ -1,0 +1,7 @@
+venv-ok
+fetched
+get-pip rc=0
+mypy 2.3.1 (compiled: yes)
+pytest 9.1.1
+Success: no issues found in 1 source file
+mypy rc=0

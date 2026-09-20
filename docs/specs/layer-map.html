@@ -1,0 +1,260 @@
+<title>Shepherd Layer Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ground:#F2F3F6;
+    --panel:#FFFFFF;
+    --ink:#171A21;
+    --ink-2:#4A5160;
+    --ink-3:#7C8494;
+    --line:#D8DCE4;
+    --line-2:#EBEEF3;
+    --accent:#0E6E6B;
+    --accent-soft:#D9EBEA;
+    --forbid:#A6362E;
+    --forbid-soft:#F6E0DD;
+    --root-hue:#5B4A86;
+    --shadow:0 1px 2px rgba(23,26,33,.06);
+    --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1218; --panel:#171B23; --ink:#E7EAF0; --ink-2:#A8B0BE; --ink-3:#737C8C;
+      --line:#2A3038; --line-2:#20252D; --accent:#5FC9C2; --accent-soft:#12312F;
+      --forbid:#E38178; --forbid-soft:#341D1B; --root-hue:#A392D6;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1218; --panel:#171B23; --ink:#E7EAF0; --ink-2:#A8B0BE; --ink-3:#737C8C;
+    --line:#2A3038; --line-2:#20252D; --accent:#5FC9C2; --accent-soft:#12312F;
+    --forbid:#E38178; --forbid-soft:#341D1B; --root-hue:#A392D6;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.55;
+       padding-inline:16px;padding-block:32px 64px;margin:0}
+  .wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+  header h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em;text-wrap:balance}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 14px}
+  .lede{color:var(--ink-2);max-width:62ch;margin:0;font-size:16px}
+  .lede strong{color:var(--ink);font-weight:600}
+  h2{font-size:13px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
+     color:var(--ink-3);margin:0 0 14px;font-weight:500}
+
+  .stack{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);
+         border-radius:10px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
+  .layer{display:grid;grid-template-columns:62px 1fr;gap:18px;padding:18px 20px;
+         border-top:1px solid var(--line-2)}
+  .layer:first-child{border-top:none}
+  .lnum{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--ink-3);
+        display:flex;flex-direction:column;gap:3px;padding-top:2px}
+  .lnum b{color:var(--ink);font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .mods{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+  .mod{font-family:var(--mono);font-size:12.5px;background:var(--ground);border:1px solid var(--line);
+       border-radius:5px;padding:2px 7px;color:var(--ink)}
+  .mod.seam{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+  .owns{margin:0;color:var(--ink-2);font-size:14px}
+  .owns em{color:var(--ink);font-style:normal;font-weight:600}
+  .root .lnum b,.root .mod{color:var(--root-hue)}
+  .root .mod{border-color:var(--root-hue)}
+
+  .rule{display:flex;align-items:center;gap:12px;padding:11px 20px;background:var(--forbid-soft);
+        border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+  .rule .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+             color:var(--forbid);font-weight:600;white-space:nowrap}
+  .rule p{margin:0;font-size:13.5px;color:var(--ink-2)}
+  .rule code{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+
+  .arrow{text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink-3);
+         padding:2px 0;letter-spacing:.3em}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  .scroller{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+            box-shadow:var(--shadow)}
+  th,td{text-align:left;padding:11px 14px;border-top:1px solid var(--line-2);vertical-align:top}
+  thead th{border-top:none;font-size:11px;font-family:var(--mono);letter-spacing:.1em;
+           text-transform:uppercase;color:var(--ink-3);font-weight:500;white-space:nowrap}
+  td:first-child{font-family:var(--mono);font-size:13px;white-space:nowrap}
+  td.n{color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:4px;
+        border:1px solid var(--line);color:var(--ink-2)}
+  .pill.no{border-color:var(--forbid);color:var(--forbid)}
+
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+        box-shadow:var(--shadow)}
+  .note h3{margin:0 0 7px;font-size:14.5px;letter-spacing:-.01em}
+  .note p{margin:0;font-size:13.5px;color:var(--ink-2)}
+  .note code{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  footer{border-top:1px solid var(--line);padding-top:18px;font-size:13px;color:var(--ink-3)}
+  footer code{font-family:var(--mono);font-size:12.5px}
+  a{color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Shepherd · D35 · D36 · D37 · enforced</p>
+    <h1>What may import what</h1>
+    <p class="lede">Five layers, a composition root above them, and <strong>seven seams</strong>.
+      Dependencies point <strong>down only</strong>. These are not conventions — the suite under
+      <code>tests/boundaries/</code> checks them as <strong>AST properties, not spellings</strong>,
+      because a rule you can satisfy by renaming an import is not a rule.</p>
+  </header>
+
+  <section>
+    <h2>The stack</h2>
+    <div class="stack">
+
+      <div class="layer root">
+        <div class="lnum"><b>L6</b><span>root</span></div>
+        <div>
+          <p class="mods"><span class="mod">daemons/</span></p>
+          <p class="owns"><em>The composition root.</em> Above everything, imported by nothing. Where
+            the seams get their drivers and the wiring order is decided once.
+            <code>controld.py</code> is 140 lines of 140 — the budget is asserted, because a root
+            that grows logic becomes an undeclared layer.</p>
+        </div>
+      </div>
+
+      <div class="rule">
+        <span class="tag">may not</span>
+        <p>Nothing below L6 imports <code>daemons/</code>. A module that does has inverted the root:
+          it can no longer be constructed without starting a process.</p>
+      </div>
+
+      <div class="layer">
+        <div class="lnum"><b>L5</b><span>consume</span></div>
+        <div>
+          <p class="mods"><span class="mod seam">master/</span><span class="mod">web/</span><span class="mod">cli/</span></p>
+          <p class="owns">Everything a human or the orchestrator agent uses.
+            <em>Three equal consumers, and none of them is special.</em></p>
+        </div>
+      </div>
+
+      <div class="rule">
+        <span class="tag">boundary 1</span>
+        <p><strong>Consumer boundary (D19, D35).</strong> L5 reaches the system <em>only</em> through
+          L4 — never L3, L2 or a store. <code>test_master_isolation.py</code>,
+          <code>test_consumer_boundary.py</code>. It is an <em>allow</em>-list: a deny-list would
+          pass the first import nobody thought to name.</p>
+      </div>
+
+      <div class="layer">
+        <div class="lnum"><b>L4</b><span>gate</span></div>
+        <div>
+          <p class="mods"><span class="mod">toolsurface/</span></p>
+          <p class="owns">The only place an action is authorized. The master, a tier-2 session over
+            MCP, a queue write-back and a UI click all arrive at the same
+            <em><code>authorize()</code></em> (D8, D32).</p>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="lnum"><b>L3</b><span>drive</span></div>
+        <div>
+          <p class="mods"><span class="mod">orchestration/</span></p>
+          <p class="owns">Anything that acts on its own timer: queues, workers, reconcile, and the
+            wake set (D31) — whose <em>single</em> drain site lives here.</p>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="lnum"><b>L2</b><span>observe</span></div>
+        <div>
+          <p class="mods"><span class="mod seam">runner/</span><span class="mod seam">engines/</span><span class="mod seam">host/</span><span class="mod seam">providers/</span><span class="mod">signals/</span></p>
+          <p class="owns">Everything that reads or drives the outside world: engines, ptys, trackers,
+            credentials, and the host itself. <em>Six of the seven seams have their drivers here.</em>
+            Engine-specific vocabulary stays inside its adapter — if swapping the engine would edit
+            <code>signals/</code>, the boundary has leaked.</p>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="lnum"><b>L1</b><span>persist</span></div>
+        <div>
+          <p class="mods"><span class="mod">store/</span><span class="mod">logs/</span><span class="mod seam">core/</span></p>
+          <p class="owns">State, logs, and the shared vocabulary every layer above uses.
+            <em><code>core/</code> is capability-free</em> — it holds types and constants, never a
+            path to the outside world, which is why L5 may import it without a hole in boundary 1.</p>
+        </div>
+      </div>
+
+      <div class="rule">
+        <span class="tag">boundary 2</span>
+        <p><strong>Storage boundary (D37).</strong> Nothing outside <code>store/</code> imports a
+          database driver. One writer, one rule set. <code>test_storage_boundary.py</code>.</p>
+      </div>
+
+    </div>
+    <p class="arrow">↓ ↓ ↓</p>
+    <p class="owns" style="text-align:center;font-size:13px">
+      <code class="mod" style="border:none;background:none;padding:0">testkit/</code> is deliberately
+      absent. It ships with the package but it is not a layer, so it is neither an importer nor a target.
+    </p>
+  </section>
+
+  <section>
+    <h2>The seven seams</h2>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Seam</th><th>Lives in</th><th>Swaps at</th><th>What it abstracts</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Runner</td><td class="n">runner/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>A <strong>terminal</strong>. tmux today: start, attach, snapshot, write key bytes, resize, interrupt — which is not a signal (D43).</td></tr>
+          <tr><td>EngineAdapter</td><td class="n">engines/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>A <strong>CLI harness</strong>. argv, transcript location and parsing, hooks, title. Written against three engines, implemented for one.</td></tr>
+          <tr><td>HostPlatform</td><td class="n">host/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>Linux vs macOS vs container: directories, socket path budget, supervision, liveness, login persistence, detached launch. <strong>Nothing else may branch on the platform.</strong></td></tr>
+          <tr><td>ModelProvider</td><td class="n">providers/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>Model list and effort ladder. <span class="pill no">not built</span> M4.5</td></tr>
+          <tr><td>Credentials</td><td class="n">providers/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>Resolve, store and forget auth material; gates optional features. <span class="pill no">not built</span> M4.5</td></tr>
+          <tr><td>WorkItemProvider</td><td class="n">providers/ · L2</td><td><span class="pill">runtime</span></td>
+              <td>Jira, then Notion. Field mapping is per-source, not per-provider. <span class="pill no">not built</span> M5</td></tr>
+          <tr><td>MasterRuntime</td><td class="n">core/ · L1 → master/ · L5</td><td><span class="pill">runtime</span></td>
+              <td>The orchestrator's own loop. The one seam whose <code>Protocol</code> sits below its drivers, so L3 and L5 can both name it without importing each other.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three rules that decide the shape</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>D36 — seam or module boundary?</h3>
+        <p>A swap that happens at <strong>runtime</strong> gets a <code>Protocol</code>, a scripted
+          double and a contract suite. A swap that happens at <strong>edit time</strong> gets a
+          module boundary and an import test. That one line is why there are seven seams and why
+          <code>store/</code> is not one of them.</p>
+      </div>
+      <div class="note">
+        <h3>D56 — what a seam is <em>for</em></h3>
+        <p><code>Runner</code> is a terminal seam; <code>EngineAdapter</code> is a CLI-harness seam.
+          A harness-less API-loop engine is a <strong>third session class</strong>, not a
+          <code>Runner</code> driver — implementing it there would mean a synthetic handle and a
+          byte stream nobody typed: a driver that satisfies the type and lies about the world.</p>
+      </div>
+      <div class="note">
+        <h3>Why this is tested, not documented</h3>
+        <p>The dominant defect class in this repo is <strong>checks that report success without
+          checking</strong> — and it recurs inside checks written to close earlier instances of it.
+          Every rule on this page has had a violation planted against it as an inert fixture, and
+          went red.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Source: <code>docs/specs/logical-architecture.md</code>, extracted from §5.0 of
+    <code>orchestrator-platform.md</code>. Enforced by <code>tests/boundaries/</code> — 105 rules.
+    Updated 2026-09-20 (seventh seam, L6, D56).
+  </footer>
+</div>

@@ -1,0 +1,1 @@
+Stop epoch=1789401017.949109 Notification(idle_prompt) epoch=1789401077.976117 delta_s=60.027

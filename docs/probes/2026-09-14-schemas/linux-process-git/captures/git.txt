@@ -1,0 +1,446 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SANITISED 2026-09-20 — this file is NOT byte-for-byte what the command printed.
+# One ticket-shaped identifier (a branch/worktree name created under `mktemp -d`)
+# was substituted with a `PROJ-` prefix at the owner's instruction: the original
+# carried a former employer's project prefix. Nothing else was altered — paths,
+# ordering, exit codes and every other byte are as produced. `probe_git.sh` was
+# renamed to match, so re-running the probe reproduces this file.
+# ─────────────────────────────────────────────────────────────────────────────
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T16:21:40Z
+git version 2.43.0
+tmpdir: /tmp/shp-lpg-git.YD7ktR
+
+######## A. read-only: real repos
+$ git -C /root/Shepherd rev-parse --show-toplevel --git-common-dir --git-dir --is-bare-repository --is-inside-work-tree
+/root/Shepherd
+.git
+.git
+false
+true
+[rc=0]
+$ git -C /root/Shepherd rev-parse --path-format=absolute --git-common-dir --git-dir
+/root/Shepherd/.git
+/root/Shepherd/.git
+[rc=0]
+$ git -C /root/Shepherd remote
+[rc=0]
+$ git -C /root/Shepherd remote get-url origin
+error: No such remote 'origin'
+[rc=2]
+$ git -C /root/Shepherd worktree list --porcelain
+worktree /root/Shepherd
+HEAD 22d9ef208080db5c2fa541fd93e735259828936c
+branch refs/heads/main
+
+[rc=0]
+$ git -C /root/Shepherd symbolic-ref -q --short HEAD
+main
+[rc=0]
+$ git -C /root/src/cc10x-qa rev-parse --show-toplevel --git-common-dir --git-dir --is-bare-repository --is-inside-work-tree
+/root/src/cc10x-qa
+.git
+.git
+false
+true
+[rc=0]
+$ git -C /root/src/cc10x-qa rev-parse --path-format=absolute --git-common-dir --git-dir
+/root/src/cc10x-qa/.git
+/root/src/cc10x-qa/.git
+[rc=0]
+$ git -C /root/src/cc10x-qa remote
+origin
+[rc=0]
+$ git -C /root/src/cc10x-qa remote get-url origin
+https://github.com/noamsalit/cc10x.git
+[rc=0]
+$ git -C /root/src/cc10x-qa worktree list --porcelain
+worktree /root/src/cc10x-qa
+HEAD 6ff8ae46f492988d698ed0cea373ec3c1ad3521c
+branch refs/heads/feat/qa-route-clean
+
+[rc=0]
+$ git -C /root/src/cc10x-qa symbolic-ref -q --short HEAD
+feat/qa-route-clean
+[rc=0]
+$ git -C /root/Shepherd/docs/specs rev-parse --show-toplevel --show-prefix --git-common-dir
+/root/Shepherd
+docs/specs/
+../../.git
+[rc=0]
+
+######## B. throwaway main repo + clone with remotes in several URL forms
+$ git clone -q /tmp/shp-lpg-git.YD7ktR/origin-src /tmp/shp-lpg-git.YD7ktR/main
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url origin
+/tmp/shp-lpg-git.YD7ktR/origin-src
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add gh-ssh git@github.com:example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add gh-sshurl ssh://git@github.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add gh-https https://github.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add gl-https-noext https://gitlab.com/example-org/sub-group/example-repo
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add with-cred https://oauth2:FAKE_TOKEN_NOT_REAL@gitlab.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote add rewritten gh:example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main config url.git@github.com:.insteadOf gh:
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url origin
+/tmp/shp-lpg-git.YD7ktR/origin-src
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url gh-ssh
+git@github.com:example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url gh-sshurl
+ssh://git@github.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url gh-https
+https://github.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url gl-https-noext
+https://gitlab.com/example-org/sub-group/example-repo
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url with-cred
+https://oauth2:FAKE_TOKEN_NOT_REAL@gitlab.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url rewritten
+git@github.com:example-org/example-repo.git
+[rc=0]
+(config value vs get-url for the insteadOf remote)
+$ git -C /tmp/shp-lpg-git.YD7ktR/main config --get remote.rewritten.url
+gh:example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url --push gh-https
+https://github.com/example-org/example-repo.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote -v
+gh-https	https://github.com/example-org/example-repo.git (fetch)
+gh-https	https://github.com/example-org/example-repo.git (push)
+gh-ssh	git@github.com:example-org/example-repo.git (fetch)
+gh-ssh	git@github.com:example-org/example-repo.git (push)
+gh-sshurl	ssh://git@github.com/example-org/example-repo.git (fetch)
+gh-sshurl	ssh://git@github.com/example-org/example-repo.git (push)
+gl-https-noext	https://gitlab.com/example-org/sub-group/example-repo (fetch)
+gl-https-noext	https://gitlab.com/example-org/sub-group/example-repo (push)
+origin	/tmp/shp-lpg-git.YD7ktR/origin-src (fetch)
+origin	/tmp/shp-lpg-git.YD7ktR/origin-src (push)
+rewritten	git@github.com:example-org/example-repo.git (fetch)
+rewritten	git@github.com:example-org/example-repo.git (push)
+with-cred	https://oauth2:FAKE_TOKEN_NOT_REAL@gitlab.com/example-org/example-repo.git (fetch)
+with-cred	https://oauth2:FAKE_TOKEN_NOT_REAL@gitlab.com/example-org/example-repo.git (push)
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main remote get-url does-not-exist
+error: No such remote 'does-not-exist'
+[rc=2]
+
+######## C. rev-parse from main tree root, a subdir, and inside .git
+$ (cd /tmp/shp-lpg-git.YD7ktR/main) git rev-parse --show-toplevel --git-common-dir --git-dir
+/tmp/shp-lpg-git.YD7ktR/main
+.git
+.git
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/src/pkg) git rev-parse --show-toplevel --show-prefix --git-common-dir --git-dir
+/tmp/shp-lpg-git.YD7ktR/main
+src/pkg/
+../../.git
+/tmp/shp-lpg-git.YD7ktR/main/.git
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/src/pkg) git rev-parse --path-format=absolute --git-common-dir --git-dir
+/tmp/shp-lpg-git.YD7ktR/main/.git
+/tmp/shp-lpg-git.YD7ktR/main/.git
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/.git) git rev-parse --show-toplevel
+fatal: this operation must be run in a work tree
+[rc=128]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/.git) git rev-parse --is-inside-git-dir --git-dir
+true
+.
+[rc=0]
+
+######## D. linked worktrees: branch, detached, locked, prunable
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree add -q -b feat/PROJ-1 /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree add -q --detach /tmp/shp-lpg-git.YD7ktR/main-wt/detached
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree add -q -b feat/locked /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree lock --reason probe lock reason /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree add -q -b feat/gone /tmp/shp-lpg-git.YD7ktR/main-wt/gone
+[rc=0]
+$ cat /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1/.git
+gitdir: /tmp/shp-lpg-git.YD7ktR/main/.git/worktrees/PROJ-1
+[file type: regular file]
+$ ls /tmp/shp-lpg-git.YD7ktR/main/.git/worktrees
+detached
+gone
+locked
+PROJ-1
+$ cat .git/worktrees/PROJ-1/gitdir
+/tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1/.git
+$ cat .git/worktrees/PROJ-1/commondir
+../..
+$ cat .git/worktrees/PROJ-1/HEAD
+ref: refs/heads/feat/PROJ-1
+$ cat .git/worktrees/locked/locked
+probe lock reason
+
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/main
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/main
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/PROJ-1
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/detached
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+detached
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/gone
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/gone
+prunable gitdir file points to non-existent location
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/locked
+locked probe lock reason
+
+[rc=0]
+(-z output with NUL shown as \0)
+worktree /tmp/shp-lpg-git.YD7ktR/main\0
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a\0
+branch refs/heads/main\0
+\0
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1\0
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a\0
+branch refs/heads/feat/PROJ-1\0
+\0
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree list
+/tmp/shp-lpg-git.YD7ktR/main              03f9ec1 [main]
+/tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1   03f9ec1 [feat/PROJ-1]
+/tmp/shp-lpg-git.YD7ktR/main-wt/detached  03f9ec1 (detached HEAD)
+/tmp/shp-lpg-git.YD7ktR/main-wt/gone      03f9ec1 [feat/gone] prunable
+/tmp/shp-lpg-git.YD7ktR/main-wt/locked    03f9ec1 [feat/locked] locked
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1/src) git rev-parse --show-toplevel --git-common-dir --git-dir
+/tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+/tmp/shp-lpg-git.YD7ktR/main/.git
+/tmp/shp-lpg-git.YD7ktR/main/.git/worktrees/PROJ-1
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1/src) git rev-parse --path-format=absolute --show-toplevel --git-common-dir --git-dir
+/tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+/tmp/shp-lpg-git.YD7ktR/main/.git
+/tmp/shp-lpg-git.YD7ktR/main/.git/worktrees/PROJ-1
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1 worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/main
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/main
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/PROJ-1
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/detached
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+detached
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/gone
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/gone
+prunable gitdir file points to non-existent location
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/locked
+locked probe lock reason
+
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main-wt/detached) git symbolic-ref -q --short HEAD
+[rc=1]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main-wt/detached) git rev-parse --abbrev-ref HEAD
+HEAD
+[rc=0]
+
+######## E. detached HEAD in the MAIN tree
+$ git -C /tmp/shp-lpg-git.YD7ktR/main checkout -q --detach
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/main
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+detached
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/PROJ-1
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/detached
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+detached
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/gone
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/gone
+prunable gitdir file points to non-existent location
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/locked
+locked probe lock reason
+
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main rev-parse --abbrev-ref HEAD
+HEAD
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main checkout -q main
+[rc=0]
+
+######## F. bare repo, and a worktree of a bare repo
+$ git clone -q --bare /tmp/shp-lpg-git.YD7ktR/origin-src /tmp/shp-lpg-git.YD7ktR/bare.git
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git rev-parse --show-toplevel
+fatal: this operation must be run in a work tree
+[rc=128]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git rev-parse --is-bare-repository --git-common-dir --git-dir
+true
+.
+.
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git remote get-url origin
+/tmp/shp-lpg-git.YD7ktR/origin-src
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/bare.git
+bare
+
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git worktree add -q /tmp/shp-lpg-git.YD7ktR/bare-wt/main2 -b main2
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/bare.git worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/bare.git
+bare
+
+worktree /tmp/shp-lpg-git.YD7ktR/bare-wt/main2
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/main2
+
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/bare-wt/main2) git rev-parse --show-toplevel --path-format=absolute --git-common-dir
+/tmp/shp-lpg-git.YD7ktR/bare-wt/main2
+/tmp/shp-lpg-git.YD7ktR/bare.git
+[rc=0]
+
+######## G. no remote, no commits
+$ git -C /tmp/shp-lpg-git.YD7ktR/noremote remote
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/noremote remote get-url origin
+error: No such remote 'origin'
+[rc=2]
+$ git -C /tmp/shp-lpg-git.YD7ktR/noremote rev-parse --show-toplevel
+/tmp/shp-lpg-git.YD7ktR/noremote
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/noremote rev-parse HEAD
+fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+HEAD
+[rc=128]
+$ git -C /tmp/shp-lpg-git.YD7ktR/noremote worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/noremote
+HEAD 0000000000000000000000000000000000000000
+branch refs/heads/main
+
+[rc=0]
+
+######## H. not a repo
+$ git -C /tmp/shp-lpg-git.YD7ktR/plain/dir rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+[rc=128]
+$ GIT_CEILING_DIRECTORIES=/tmp/shp-lpg-git.YD7ktR git -C /tmp/shp-lpg-git.YD7ktR/plain/dir rev-parse --show-toplevel
+fatal: not a git repository (or any of the parent directories): .git
+[rc=128]
+
+######## I. nested repo inside a repo (innermost wins?) and a submodule
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/vendor/inner/deep) git rev-parse --show-toplevel --show-superproject-working-tree
+/tmp/shp-lpg-git.YD7ktR/main/vendor/inner
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main status --porcelain
+?? vendor/
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main -c protocol.file.allow=always submodule add -q /tmp/shp-lpg-git.YD7ktR/origin-src mods/sub
+[rc=0]
+$ cat /tmp/shp-lpg-git.YD7ktR/main/mods/sub/.git
+gitdir: ../../.git/modules/mods/sub
+[rc=0]
+$ (cd /tmp/shp-lpg-git.YD7ktR/main/mods/sub) git rev-parse --show-toplevel --show-superproject-working-tree --path-format=absolute --git-common-dir
+/tmp/shp-lpg-git.YD7ktR/main/mods/sub
+/tmp/shp-lpg-git.YD7ktR/main
+/tmp/shp-lpg-git.YD7ktR/main/.git/modules/mods/sub
+[rc=0]
+
+######## J. symlinked path
+$ (cd /tmp/shp-lpg-git.YD7ktR/link-to-main/src) git rev-parse --show-toplevel --show-cdup
+/tmp/shp-lpg-git.YD7ktR/main
+../
+[rc=0]
+$ realpath /tmp/shp-lpg-git.YD7ktR/link-to-main/src
+/tmp/shp-lpg-git.YD7ktR/main/src
+
+######## K. repo owned by another uid (safe.directory)
+$ git clone -q /tmp/shp-lpg-git.YD7ktR/origin-src /tmp/shp-lpg-git.YD7ktR/foreign
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/foreign rev-parse --show-toplevel
+fatal: detected dubious ownership in repository at '/tmp/shp-lpg-git.YD7ktR/foreign'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /tmp/shp-lpg-git.YD7ktR/foreign
+[rc=128]
+$ git -C /tmp/shp-lpg-git.YD7ktR/foreign remote get-url origin
+fatal: detected dubious ownership in repository at '/tmp/shp-lpg-git.YD7ktR/foreign'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /tmp/shp-lpg-git.YD7ktR/foreign
+[rc=128]
+$ git -c safe.directory=/tmp/shp-lpg-git.YD7ktR/foreign -C /tmp/shp-lpg-git.YD7ktR/foreign rev-parse --show-toplevel
+/tmp/shp-lpg-git.YD7ktR/foreign
+[rc=0]
+
+######## L. worktree remove / prune
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree prune --dry-run -v
+Removing worktrees/gone: gitdir file points to non-existent location
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree remove /tmp/shp-lpg-git.YD7ktR/main-wt/detached
+[rc=0]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree remove /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+fatal: cannot remove a locked working tree, lock reason: probe lock reason
+use 'remove -f -f' to override or unlock first
+[rc=128]
+$ git -C /tmp/shp-lpg-git.YD7ktR/main worktree list --porcelain
+worktree /tmp/shp-lpg-git.YD7ktR/main
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/main
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/PROJ-1
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/PROJ-1
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/gone
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/gone
+prunable gitdir file points to non-existent location
+
+worktree /tmp/shp-lpg-git.YD7ktR/main-wt/locked
+HEAD 03f9ec10bdc1ab0f9b790e3ea489e6eb5ac20f9a
+branch refs/heads/feat/locked
+locked probe lock reason
+
+[rc=0]
+cleaned: /tmp/shp-lpg-git.YD7ktR
+done: 2026-09-14T16:21:40Z

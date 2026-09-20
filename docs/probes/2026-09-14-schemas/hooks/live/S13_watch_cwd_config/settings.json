@@ -1,0 +1,446 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "PreToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PreToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PostToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PostToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PostToolUseFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PostToolUseFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PostToolBatch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PostToolBatch /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "Notification": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "UserPromptExpansion": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh UserPromptExpansion /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "SessionStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   },
+   {
+    "matcher": "*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/emit_watchpaths.sh",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Stop /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "StopFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "SubagentStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SubagentStart /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "SubagentStop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SubagentStop /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PreCompact": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PreCompact /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PostCompact": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PostCompact /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PreModelSwitch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PreModelSwitch /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PostModelSwitch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PostModelSwitch /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PermissionRequest": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PermissionRequest /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "PermissionDenied": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh PermissionDenied /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "Setup": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Setup /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "TeammateIdle": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh TeammateIdle /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "TaskCreated": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh TaskCreated /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "TaskCompleted": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh TaskCompleted /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "Elicitation": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh Elicitation /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "ElicitationResult": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh ElicitationResult /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "ConfigChange": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh ConfigChange /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "WorktreeCreate": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh WorktreeCreate /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "WorktreeRemove": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh WorktreeRemove /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "InstructionsLoaded": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh InstructionsLoaded /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "CwdChanged": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh CwdChanged /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "FileChanged": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh FileChanged /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "DirectoryAdded": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh DirectoryAdded /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ],
+  "MessageDisplay": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh MessageDisplay /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S13_watch_cwd_config/events.jsonl",
+      "timeout": 15,
+      "_shepherd_managed": true
+     }
+    ],
+    "matcher": "*"
+   }
+  ]
+ }
+}

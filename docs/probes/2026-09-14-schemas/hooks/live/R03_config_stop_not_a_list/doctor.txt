@@ -1,0 +1,3 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-stop_not_a_list-hw_5z0an; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-stop_not_a_list-hw_5z0an/.claude/settings.json › hooks.Stop: Hook event "Stop" must be an array of matchers; received string. This entry was ignored.

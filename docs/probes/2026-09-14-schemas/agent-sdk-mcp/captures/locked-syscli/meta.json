@@ -1,0 +1,65 @@
+{
+  "scenario": "locked",
+  "sdk_version": "0.2.152",
+  "model": "claude-haiku-4-5-20251001",
+  "scrubbed_env_names": [
+    "AI_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_BRIDGE_SESSION_ID",
+    "CLAUDE_CODE_CHILD_SESSION",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_EXECPATH",
+    "CLAUDE_CODE_MESSAGING_SOCKET",
+    "CLAUDE_CODE_MESSAGING_TOKEN",
+    "CLAUDE_CODE_SESSION_ATTENDED",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_EFFORT",
+    "CLAUDE_PID"
+  ],
+  "cwd_process": "/tmp/shp-sdk-9IOKNs/work-locked",
+  "started_at": "2026-09-14T16:12:58.103Z",
+  "argv": [
+    [
+      "/root/.local/bin/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary,mcp__shepherd__spawn_session,mcp__shepherd__fail_tool,mcp__shepherd__raise_tool",
+      "--max-turns",
+      "14",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5-20251001",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-sdk-9IOKNs/flag-settings.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ]
+  ],
+  "cli_path": "/root/.local/bin/claude",
+  "claude_version": "2.1.270 (Claude Code)",
+  "turns": [
+    {
+      "label": "turn1",
+      "wall_s": 14.58,
+      "session_id": "07807786-6bb9-4192-8893-e0de4b96c977"
+    }
+  ],
+  "status": "ok",
+  "warnings": [
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary, mcp__shepherd__spawn_session, mcp__shepherd__fail_tool, mcp__shepherd__raise_tool. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here."
+  ],
+  "finished_at": "2026-09-14T16:13:14.077Z"
+}

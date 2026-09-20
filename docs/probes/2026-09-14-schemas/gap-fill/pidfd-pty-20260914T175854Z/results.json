@@ -1,0 +1,135 @@
+{
+ "kernel": "6.8.0-117-generic",
+ "pidfd_exit_via_trust_refusal": {
+  "pid": 4063896,
+  "ppid": 4063895,
+  "comm": "claude",
+  "starttime": 544599077,
+  "is_our_child": false,
+  "parent_comm": "tmux: server",
+  "pidfd_send_signal_0": "ok",
+  "poll_before": [],
+  "poll_after_ms": 38.5,
+  "poll_events": [
+   [
+    4,
+    1
+   ]
+  ],
+  "waitid_P_PIDFD": "ChildProcessError: errno=10 [Errno 10] No child processes",
+  "pidfd_send_signal_0_after": "ok",
+  "proc_exists_after": true,
+  "tmux_pane_after": "dead=1 status=1 signal="
+ },
+ "pidfd_tmux_kill_session": {
+  "pid": 4063916,
+  "ppid": 4063895,
+  "comm": "claude",
+  "starttime": 544599234,
+  "is_our_child": false,
+  "parent_comm": "tmux: server",
+  "pidfd_send_signal_0": "ok",
+  "poll_before": [],
+  "poll_after_ms": 36.9,
+  "poll_events": [
+   [
+    4,
+    1
+   ]
+  ],
+  "waitid_P_PIDFD": "ChildProcessError: errno=10 [Errno 10] No child processes",
+  "pidfd_send_signal_0_after": "ProcessLookupError: errno=3",
+  "proc_exists_after": false,
+  "tmux_session_after": "can't find session: shepherd_pidfd_tmux_kill_sess"
+ },
+ "pidfd_setsid_sleep_sigterm": {
+  "pid": 4063936,
+  "ppid": 1,
+  "comm": "sleep",
+  "starttime": 544599291,
+  "is_our_child": false,
+  "parent_comm": "systemd",
+  "pidfd_send_signal_0": "ok",
+  "poll_before": [],
+  "poll_after_ms": 0.4,
+  "poll_events": [
+   [
+    4,
+    1
+   ]
+  ],
+  "waitid_P_PIDFD": "ChildProcessError: errno=10 [Errno 10] No child processes",
+  "pidfd_send_signal_0_after": "ok",
+  "proc_exists_after": true
+ },
+ "pty_turn_and_exit": {
+  "initial_bytes": 1323,
+  "trust_dialog": "timeout",
+  "bytes_after_resize_100x30": 1445,
+  "after_trust": "found",
+  "turn": "found",
+  "exit": {
+   "read_end": "EIO",
+   "waitpid_status": 0,
+   "exitstatus": 0
+  },
+  "dec_private_modes_seen": {
+   "1000": [
+    "h",
+    "l"
+   ],
+   "1002": [
+    "h",
+    "l"
+   ],
+   "1003": [
+    "h",
+    "l"
+   ],
+   "1004": [
+    "h",
+    "l"
+   ],
+   "1006": [
+    "h",
+    "l"
+   ],
+   "1049": [
+    "h",
+    "l"
+   ],
+   "2004": [
+    "h",
+    "l"
+   ],
+   "2031": [
+    "h",
+    "l"
+   ],
+   "25": [
+    "h",
+    "l"
+   ]
+  },
+  "total_bytes": 5992,
+  "hooks": [
+   "SessionStart",
+   "UserPromptSubmit",
+   "Stop",
+   "SessionEnd[prompt_input_exit]"
+  ]
+ },
+ "pty_master_closed": {
+  "ready": "found",
+  "waitpid": [
+   4063992,
+   0
+  ],
+  "decoded": "exitcode=0",
+  "seconds": 0.1,
+  "hooks": [
+   "SessionStart",
+   "SessionEnd[other]"
+  ]
+ }
+}

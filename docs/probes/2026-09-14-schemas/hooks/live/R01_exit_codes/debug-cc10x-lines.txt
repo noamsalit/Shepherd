@@ -1,0 +1,3 @@
+2026-09-14T15:25:47.631Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:25:47.714Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:25:47.717Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type

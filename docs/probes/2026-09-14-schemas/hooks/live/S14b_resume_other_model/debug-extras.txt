@@ -1,0 +1,7 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-base-dwqg6d95/.debug-S14b_resume_other_model.log
+2026-09-14T15:23:14.564Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-sonnet-5 modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T15:23:15.142Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:23:16.576Z [DEBUG] [engine] turn 1 end (turns=1 usage in=2 out=5 cost=$0.0523 api=1374ms stop=end_turn resultLen=3)
+2026-09-14T15:23:16.591Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:23:16.593Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:23:16.606Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S14b_resume_other_model/events.jsonl] completed with status 0

@@ -1,0 +1,12 @@
+# Virtualenv — 337 MB of installed packages, rebuilt with `pip install -e .`
+.venv/
+
+# Builder scratch: mutation drivers, per-task shadow trees, frozen tree snapshots.
+# ~290 MB of working residue, and shadow trees are whole copies of src/ and tests/.
+# The artefacts worth keeping were copied into docs/evidence/ and are cited by HANDOFF.md.
+scratchpad/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/

@@ -1,0 +1,5 @@
+date: 2026-09-14T16:15:25Z
+PATH claude --version: 2.1.270 (Claude Code)
+~/.claude/.credentials.json exists: yes
+ANTHROPIC_* env names in the calling shell: 
+(master_probe.py additionally deletes every CLAUDE*/ANTHROPIC*/AI_AGENT var before spawning the CLI)

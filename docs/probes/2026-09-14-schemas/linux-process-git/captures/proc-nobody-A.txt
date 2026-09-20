@@ -1,0 +1,8 @@
+cmdline: rc=0 readable
+comm: rc=0 readable
+stat: rc=0 readable
+status: rc=0 readable
+environ: rc=1 cat: /proc/<pid>/environ: Permission denied
+cwd: rc=1 readlink: /proc/<pid>/cwd: Permission denied
+exe: rc=1 readlink: /proc/<pid>/exe: Permission denied
+fd: rc=2 ls: cannot open directory '/proc/<pid>/fd': Permission denied

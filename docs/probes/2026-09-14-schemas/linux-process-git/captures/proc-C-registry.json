@@ -1,0 +1,26 @@
+{
+    "pid": 4049158,
+    "sessionId": "159b556e-eb7e-4cbe-b303-efcc8f5d08a5",
+    "cwd": "/tmp/shp-lpg-proc.vpBd05/real/repo",
+    "startedAt": 1789402898892,
+    "procStart": "544014506",
+    "version": "2.1.270",
+    "peerProtocol": 1,
+    "peerFeatures": [
+        "notify_idle",
+        "reply_across_default_dirs",
+        "artifact_yield"
+    ],
+    "kind": "interactive",
+    "entrypoint": "cli",
+    "pidDomain": "linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]",
+    "tmux": "lpgprobe:@0.%0",
+    "messagingSocketPath": "/run/user/0/cc-socks/4049158.sock",
+    "name": "shp lpg probe",
+    "nameSource": "user",
+    "nameSince": 1789402898895,
+    "updatedAt": 1789402905423,
+    "status": "busy",
+    "statusUpdatedAt": 1789402905423,
+    "bridgeSessionId": "session_01Rf9cL3ZxRexRz3YutwwdnB"
+}

@@ -1,0 +1,20 @@
+2026-09-14T17:49:11.680+00:00 spawn shepherd_acr0: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:49:12.905+00:00 shepherd_acr0: trust dialog accepted
+2026-09-14T17:49:16.715+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: -l Reply with only the word ONE -> rc=0 out='' err=''
+2026-09-14T17:49:17.121+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: Enter -> rc=0 out='' err=''
+2026-09-14T17:49:25.938+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: -l Reply with only the word TWO -> rc=0 out='' err=''
+2026-09-14T17:49:26.344+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: Enter -> rc=0 out='' err=''
+2026-09-14T17:49:34.767+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: -l Reply with only the word THREE -> rc=0 out='' err=''
+2026-09-14T17:49:35.173+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr0: Enter -> rc=0 out='' err=''
+2026-09-14T17:49:43.592+00:00 pct1: {"env": ["CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=1"], "events": ["SessionStart[source=startup]", "UserPromptSubmit", "MessageDisplay", "Stop", "SubagentStop", "UserPromptSubmit", "MessageDisplay", "Stop", "SubagentStop", "UserPromptSubmit", "MessageDisplay", "Stop", "SubagentStop"]}
+2026-09-14T17:49:43.598+00:00 $ tmux -L shp-gap-acr kill-session -t =shepherd_acr0 -> rc=0 out='' err=''
+2026-09-14T17:49:46.624+00:00 spawn shepherd_acr1: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:49:50.546+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: -l Reply with only the word ONE -> rc=0 out='' err=''
+2026-09-14T17:49:50.953+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: Enter -> rc=0 out='' err=''
+2026-09-14T17:49:59.383+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: -l Reply with only the word TWO -> rc=0 out='' err=''
+2026-09-14T17:49:59.791+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: Enter -> rc=0 out='' err=''
+2026-09-14T17:50:08.220+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: -l Reply with only the word THREE -> rc=0 out='' err=''
+2026-09-14T17:50:08.625+00:00 $ tmux -L shp-gap-acr send-keys -t =shepherd_acr1: Enter -> rc=0 out='' err=''
+2026-09-14T17:50:16.251+00:00 window100k_pct1: {"env": ["CLAUDE_CODE_AUTO_COMPACT_WINDOW=100000", "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=1"], "events": ["SessionStart[source=startup]", "UserPromptSubmit", "PreCompact[trigger=auto]", "MessageDisplay", "Stop", "SubagentStop", "UserPromptSubmit", "PreCompact[trigger=auto]", "MessageDisplay", "Stop", "SubagentStop", "UserPromptSubmit", "PreCompact[trigger=auto]", "SubagentStop", "SessionStart[source=compact]", "PostCompact[trigger=auto]", "MessageDisplay", "Stop"]}
+2026-09-14T17:50:16.261+00:00 $ tmux -L shp-gap-acr kill-session -t =shepherd_acr1 -> rc=0 out='' err=''
+2026-09-14T17:50:19.266+00:00 $ tmux -L shp-gap-acr kill-server -> rc=1 out='' err='no server running on /tmp/tmux-0/shp-gap-acr'

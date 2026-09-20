@@ -1,0 +1,12 @@
+{
+ "websockets": "ModuleNotFoundError: No module named 'websockets'",
+ "wsproto": "ModuleNotFoundError: No module named 'wsproto'",
+ "aiohttp": "ModuleNotFoundError: No module named 'aiohttp'",
+ "tornado": "ModuleNotFoundError: No module named 'tornado'",
+ "simple_websocket": "ModuleNotFoundError: No module named 'simple_websocket'",
+ "http.server": "ok 0.6",
+ "asyncio": "ok ",
+ "ssl": "ok ",
+ "_python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+ "_pip": "/usr/bin/python3: No module named pip"
+}

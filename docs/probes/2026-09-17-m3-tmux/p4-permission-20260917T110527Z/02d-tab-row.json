@@ -1,0 +1,69 @@
+{
+ "key": "Tab",
+ "send_keys_argv": "send-keys -t =shepherd_p4: Tab",
+ "permission_request_hook": true,
+ "tool_name": "Bash",
+ "dialog_lines": [
+  "  \u259d\u259d \u259d\u259d    /tmp/shp-m3-p4-vh9n71hn/work",
+  "\u258e Debug mode enabled \u00b7 logging to /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p4-permission-20260917T110527Z/debug.log",
+  "\u276f Use the Bash tool to run exactly this command: touch perm-tab.txt",
+  "  Creating an empty file named perm-tab.txt",
+  "  \u23bf  $ touch perm-tab.txt",
+  "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+  " Bash command",
+  "   touch perm-tab.txt",
+  "   Create an empty file named perm-tab.txt",
+  " Do you want to proceed?",
+  " \u276f 1. Yes",
+  "   2. Yes, and always allow access to /tmp/shp-m3-p4-vh9n71hn/work from this project",
+  "   3. No",
+  " Esc to cancel \u00b7 Tab to amend"
+ ],
+ "dialog_seen": true,
+ "screen_after_lines": [
+  "  \u259d\u259d \u259d\u259d    /tmp/shp-m3-p4-vh9n71hn/work",
+  "\u258e Debug mode enabled \u00b7 logging to /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p4-permission-20260917T110527Z/debug.log",
+  "\u276f Use the Bash tool to run exactly this command: touch perm-tab.txt",
+  "\u25cf Creating an empty file named perm-tab.txt",
+  "  \u23bf  $ touch perm-tab.txt",
+  "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+  " Bash command",
+  "   touch perm-tab.txt",
+  "   Create an empty file named perm-tab.txt",
+  " Do you want to proceed?",
+  " \u276f 1. Yes, and tell Claude what to do next",
+  "   2. Yes, and always allow access to /tmp/shp-m3-p4-vh9n71hn/work from this project",
+  "   3. No",
+  " Esc to cancel"
+ ],
+ "dialog_still_up": true,
+ "hooks_after_key": [
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PermissionRequest"
+ ],
+ "screen_settled_lines": [
+  "  \u259d\u259d \u259d\u259d    /tmp/shp-m3-p4-vh9n71hn/work",
+  "\u258e Debug mode enabled \u00b7 logging to /root/Shepherd/docs/probes/2026-09-17-m3-tmux/p4-permission-20260917T110527Z/debug.log",
+  "\u276f Use the Bash tool to run exactly this command: touch perm-tab.txt",
+  "  Creating an empty file named perm-tab.txt",
+  "  \u23bf  $ touch perm-tab.txt",
+  "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+  " Bash command",
+  "   touch perm-tab.txt",
+  "   Create an empty file named perm-tab.txt",
+  " Do you want to proceed?",
+  " \u276f 1. Yes, and tell Claude what to do next",
+  "   2. Yes, and always allow access to /tmp/shp-m3-p4-vh9n71hn/work from this project",
+  "   3. No",
+  " Esc to cancel"
+ ],
+ "hooks_total": [
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PermissionRequest",
+  "Notification"
+ ],
+ "tool_ran": false,
+ "file": "perm-tab.txt"
+}

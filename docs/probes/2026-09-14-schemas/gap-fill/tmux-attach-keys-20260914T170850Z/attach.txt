@@ -1,0 +1,86 @@
+## A. second client vs Runner.resize
+$ tmux -L shp-gap-att-inner ls
+error connecting to /tmp/tmux-0/shp-gap-att-inner (No such file or directory)
+[rc=1]
+$ tmux -L shp-gap-att-outer ls
+error connecting to /tmp/tmux-0/shp-gap-att-outer (No such file or directory)
+[rc=1]
+$ env -i HOME=/root PATH=/usr/bin:/bin TERM=xterm-256color LANG=C.UTF-8 tmux -L shp-gap-att-inner new-session -d -s shepherd_t1 -x 160 -y 45 python3 /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/keydump.py /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/tmux-attach-keys-20260914T170850Z/inner-keydump.jsonl
+[rc=0]
+## state: A0 created -x 160 -y 45, no client
+inner window=160x45 pane=160x45 session_attached=0
+inner window-size option:  (global: latest) aggressive-resize: off
+inner list-clients: 
+keydump SIGWINCH/start lines so far: 1; last: {"start": true, "size": "160x45", "bracketed": false, "isig": false, "t": 1789405731.022}
+$ tmux -L shp-gap-att-inner resize-window -t =shepherd_t1: -x 120 -y 40
+[rc=0]
+## state: A1 Runner.resize (resize-window -x 120 -y 40), no client
+inner window=120x40 pane=120x40 session_attached=0
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: 
+keydump SIGWINCH/start lines so far: 2; last: {"sigwinch": "120x40", "t": 1789405732.038}
+$ env -i HOME=/root PATH=/usr/bin:/bin TERM=xterm-256color LANG=C.UTF-8 tmux -L shp-gap-att-outer new-session -d -s outer1 -x 100 -y 30 env -u TMUX tmux -L shp-gap-att-inner attach -t =shepherd_t1
+[rc=0]
+## state: A2 second client attached from a 100x30 terminal (plain attach)
+inner window=120x40 pane=120x40 session_attached=1
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 100x30 flags=attached,focused,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 2; last: {"sigwinch": "120x40", "t": 1789405732.038}
+$ tmux -L shp-gap-att-inner resize-window -t =shepherd_t1: -x 150 -y 50
+[rc=0]
+## state: A3 Runner.resize (-x 150 -y 50) while the 100x30 client is attached
+inner window=150x50 pane=150x50 session_attached=1
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 100x30 flags=attached,focused,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 3; last: {"sigwinch": "150x50", "t": 1789405735.158}
+$ tmux -L shp-gap-att-outer resize-window -t =outer1: -x 90 -y 25
+[rc=0]
+## state: A4 attached client's terminal resized to 90x25
+inner window=150x50 pane=150x50 session_attached=1
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 90x25 flags=attached,focused,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 3; last: {"sigwinch": "150x50", "t": 1789405735.158}
+$ tmux -L shp-gap-att-inner set-option -w -t =shepherd_t1: window-size latest
+[rc=0]
+## state: A5 window-size set back to latest (the default) with the 90x25 client attached
+inner window=90x24 pane=90x24 session_attached=1
+inner window-size option: latest (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 90x25 flags=attached,focused,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 4; last: {"sigwinch": "90x24", "t": 1789405737.263}
+$ tmux -L shp-gap-att-inner resize-window -t =shepherd_t1: -x 150 -y 50
+[rc=0]
+## state: A6 Runner.resize (-x 150 -y 50) again after A5
+inner window=150x50 pane=150x50 session_attached=1
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 90x25 flags=attached,focused,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 5; last: {"sigwinch": "150x50", "t": 1789405738.317}
+$ tmux -L shp-gap-att-outer kill-session -t =outer1
+[rc=0]
+## state: A7 the second client detached (its terminal closed)
+inner window=150x50 pane=150x50 session_attached=0
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: 
+keydump SIGWINCH/start lines so far: 5; last: {"sigwinch": "150x50", "t": 1789405738.317}
+$ tmux -L shp-gap-att-inner set-option -w -t =shepherd_t1: window-size latest
+[rc=0]
+$ env -i HOME=/root PATH=/usr/bin:/bin TERM=xterm-256color LANG=C.UTF-8 tmux -L shp-gap-att-outer new-session -d -s outer2 -x 100 -y 30 env -u TMUX tmux -L shp-gap-att-inner attach -f ignore-size,read-only -t =shepherd_t1
+[rc=0]
+## state: A8 client attached with -f ignore-size,read-only from 100x30, window-size=latest
+inner window=100x29 pane=100x29 session_attached=1
+inner window-size option: latest (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 100x30 flags=attached,focused,ignore-size,read-only,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 6; last: {"sigwinch": "100x29", "t": 1789405740.438}
+$ tmux -L shp-gap-att-inner resize-window -t =shepherd_t1: -x 130 -y 35
+[rc=0]
+## state: A9 Runner.resize (-x 130 -y 35) with the ignore-size client attached
+inner window=130x35 pane=130x35 session_attached=1
+inner window-size option: manual (global: latest) aggressive-resize: off
+inner list-clients: /dev/pts/5 100x30 flags=attached,focused,ignore-size,read-only,UTF-8 session=shepherd_t1;
+keydump SIGWINCH/start lines so far: 7; last: {"sigwinch": "130x35", "t": 1789405742.479}
+$ tmux -L shp-gap-att-outer send-keys -t =outer2: -l RO
+[rc=0]
+## A10 typed 'RO' into the read-only client; keydump lines with hex: 0
+$ tmux -L shp-gap-att-outer kill-server
+[rc=0]
+$ tmux -L shp-gap-att-inner kill-server
+[rc=0]

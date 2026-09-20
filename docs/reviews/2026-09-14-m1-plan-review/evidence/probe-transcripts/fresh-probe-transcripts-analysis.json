@@ -1,0 +1,406 @@
+{
+ "files": 3,
+ "malformed": 0,
+ "types": [
+  [
+   "attachment",
+   33
+  ],
+  [
+   "assistant",
+   10
+  ],
+  [
+   "last-prompt",
+   7
+  ],
+  [
+   "queue-operation",
+   6
+  ],
+  [
+   "atis-latch",
+   6
+  ],
+  [
+   "user",
+   5
+  ],
+  [
+   "custom-title",
+   3
+  ],
+  [
+   "agent-name",
+   3
+  ],
+  [
+   "system",
+   3
+  ],
+  [
+   "ai-title",
+   2
+  ],
+  [
+   "mode",
+   1
+  ]
+ ],
+ "subtypes": [
+  [
+   "attachment:prompt_snapshot",
+   6
+  ],
+  [
+   "attachment:total_tokens_reminder",
+   4
+  ],
+  [
+   "attachment:environment",
+   3
+  ],
+  [
+   "attachment:model",
+   3
+  ],
+  [
+   "attachment:deferred_tools_delta",
+   3
+  ],
+  [
+   "attachment:skill_listing",
+   3
+  ],
+  [
+   "attachment:session_context",
+   3
+  ],
+  [
+   "attachment:date",
+   3
+  ],
+  [
+   "attachment:remote_session_change",
+   3
+  ],
+  [
+   "system:stop_hook_summary",
+   3
+  ],
+  [
+   "attachment:agent_listing_delta",
+   2
+  ]
+ ],
+ "fields_per_type": {
+  "custom-title": {
+   "type": 3,
+   "customTitle": 3,
+   "sessionId": 3
+  },
+  "agent-name": {
+   "type": 3,
+   "agentName": 3,
+   "sessionId": 3
+  },
+  "queue-operation": {
+   "type": 6,
+   "operation": 6,
+   "timestamp": 6,
+   "sessionId": 6,
+   "content": 3
+  },
+  "user": {
+   "parentUuid": 5,
+   "isSidechain": 5,
+   "promptId": 5,
+   "type": 5,
+   "message": 5,
+   "uuid": 5,
+   "timestamp": 5,
+   "permissionMode": 3,
+   "promptSource": 3,
+   "userType": 5,
+   "entrypoint": 5,
+   "cwd": 5,
+   "sessionId": 5,
+   "version": 5,
+   "gitBranch": 5,
+   "toolUseResult": 1,
+   "sourceToolAssistantUUID": 1,
+   "agentId": 1
+  },
+  "attachment": {
+   "parentUuid": 33,
+   "isSidechain": 33,
+   "attachment": 33,
+   "type": 33,
+   "uuid": 33,
+   "timestamp": 33,
+   "rendered": 27,
+   "userType": 33,
+   "entrypoint": 33,
+   "cwd": 33,
+   "sessionId": 33,
+   "version": 33,
+   "gitBranch": 33,
+   "agentId": 9
+  },
+  "atis-latch": {
+   "type": 6,
+   "atis": 6,
+   "sessionId": 6
+  },
+  "last-prompt": {
+   "type": 7,
+   "lastPrompt": 7,
+   "leafUuid": 7,
+   "sessionId": 7
+  },
+  "assistant": {
+   "parentUuid": 10,
+   "isSidechain": 10,
+   "message": 10,
+   "apiBlockIndex": 10,
+   "requestId": 10,
+   "type": 10,
+   "uuid": 10,
+   "timestamp": 10,
+   "perTurnEffort": 10,
+   "userType": 10,
+   "entrypoint": 10,
+   "cwd": 10,
+   "sessionId": 10,
+   "version": 10,
+   "gitBranch": 10,
+   "wireToolInputs": 1,
+   "agentId": 2,
+   "attributionAgent": 2
+  },
+  "assistant.message": {
+   "model": 10,
+   "id": 10,
+   "type": 10,
+   "role": 10,
+   "content": 10,
+   "container": 10,
+   "stop_reason": 10,
+   "stop_sequence": 10,
+   "stop_details": 10,
+   "usage": 10,
+   "diagnostics": 10,
+   "context_management": 10
+  },
+  "system": {
+   "parentUuid": 3,
+   "isSidechain": 3,
+   "type": 3,
+   "subtype": 3,
+   "hookCount": 3,
+   "hookInfos": 3,
+   "hookErrors": 3,
+   "hookAdditionalContext": 3,
+   "preventedContinuation": 3,
+   "stopReason": 3,
+   "hasOutput": 3,
+   "level": 3,
+   "timestamp": 3,
+   "uuid": 3,
+   "toolUseID": 3,
+   "userType": 3,
+   "entrypoint": 3,
+   "cwd": 3,
+   "sessionId": 3,
+   "version": 3,
+   "gitBranch": 3
+  },
+  "mode": {
+   "type": 1,
+   "mode": 1,
+   "sessionId": 1
+  },
+  "ai-title": {
+   "type": 2,
+   "aiTitle": 2,
+   "sessionId": 2
+  }
+ },
+ "title_positions": [
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "custom-title",
+   0.0,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "agent-name",
+   0.001,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "last-prompt",
+   0.331,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "custom-title",
+   0.333,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "agent-name",
+   0.333,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "last-prompt",
+   0.94,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "custom-title",
+   0.942,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "agent-name",
+   0.943,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "last-prompt",
+   0.966,
+   181059
+  ],
+  [
+   "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl",
+   "last-prompt",
+   0.999,
+   181059
+  ],
+  [
+   "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl",
+   "last-prompt",
+   0.353,
+   168583
+  ],
+  [
+   "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl",
+   "ai-title",
+   0.355,
+   168583
+  ],
+  [
+   "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl",
+   "last-prompt",
+   0.992,
+   168583
+  ],
+  [
+   "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl",
+   "ai-title",
+   0.993,
+   168583
+  ],
+  [
+   "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl",
+   "last-prompt",
+   0.999,
+   168583
+  ]
+ ],
+ "assistant_effort": [
+  [
+   "NoneType:None",
+   10
+  ]
+ ],
+ "assistant_models": [
+  [
+   "claude-haiku-4-5-20251001",
+   10
+  ]
+ ],
+ "isSidechain": [
+  [
+   [
+    "main",
+    false
+   ],
+   39
+  ],
+  [
+   [
+    "agent-afed49b3",
+    true
+   ],
+   12
+  ]
+ ],
+ "user_content_types": [
+  [
+   "user:str",
+   4
+  ],
+  [
+   "user:tool_result",
+   1
+  ]
+ ],
+ "per_file": {
+  "0d0074ba-a47f-4628-b08b-31d5bacf777f.jsonl": [
+   181059,
+   {
+    "custom-title": 3,
+    "agent-name": 3,
+    "queue-operation": 4,
+    "user": 3,
+    "attachment": 13,
+    "atis-latch": 3,
+    "last-prompt": 4,
+    "assistant": 6,
+    "system": 2,
+    "mode": 1
+   },
+   {
+    "0d0074ba-a47f-4628-b08b-31d5bacf777f": 42
+   }
+  ],
+  "0d0074ba-a47f-4628-b08b-31d5bacf777f/subagents/agent-afed49b329c21bc5e.jsonl": [
+   92895,
+   {
+    "user": 1,
+    "attachment": 9,
+    "assistant": 2
+   },
+   {
+    "0d0074ba-a47f-4628-b08b-31d5bacf777f": 12
+   }
+  ],
+  "774fa375-ebfa-445a-b411-7d7c6855e276.jsonl": [
+   168583,
+   {
+    "queue-operation": 2,
+    "user": 1,
+    "attachment": 11,
+    "atis-latch": 3,
+    "last-prompt": 3,
+    "ai-title": 2,
+    "assistant": 2,
+    "system": 1
+   },
+   {
+    "774fa375-ebfa-445a-b411-7d7c6855e276": 25
+   }
+  ]
+ }
+}

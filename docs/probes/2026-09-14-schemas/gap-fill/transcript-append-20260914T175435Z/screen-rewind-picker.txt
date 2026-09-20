@@ -1,0 +1,40 @@
+      1 -version one
+      1 +version two
+
+● OK-AFTER-TOOL
+
+✻ Brewed for 0s · done 5:55 PM
+
+❯ /rename probe-append-title
+  ⎿  Session renamed to: probe-append-title
+
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+     PreCompact [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh
+     PreCompact /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl] completed
+     successfully
+     PostCompact [SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh
+     PostCompact /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/transcript-append-20260914T175435Z/hooks.jsonl] completed
+     successfully
+  ⎿  Read edited.txt (2 lines)
+
+❯ turn after compact
+
+● OK-MOCK
+
+✻ Cooked for 0s · done 5:55 PM
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   Rewind
+
+   Restore the code and/or conversation to the point before…
+
+    ↑ 6 more above
+
+     turn after compact
+     No code changes
+
+   ❯ (current)
+
+
+
+   Enter to continue · Esc to cancel

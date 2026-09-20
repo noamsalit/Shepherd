@@ -1,0 +1,5 @@
+transcript=/root/.claude/projects/-tmp-shp-gap-xver-QFo7Fh/96f23b30-2d25-4979-a875-7b461721ebcb.jsonl
+session_id=96f23b30-2d25-4979-a875-7b461721ebcb
+size_before_resume=164824 sha256_before=086a7f8fb131f7064b3ee27accaf6e18d08190d8b9ee187ae42d6812260fa4ea
+resume exit=0
+size_after_resume=274374 prefix_unchanged=086a7f8fb131f7064b3ee27accaf6e18d08190d8b9ee187ae42d6812260fa4ea

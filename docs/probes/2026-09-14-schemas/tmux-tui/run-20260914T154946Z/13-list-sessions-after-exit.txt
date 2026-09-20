@@ -1,0 +1,5 @@
+# format: #{session_name}|#{pane_pid}|#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}|#{alternate_on}|#{pane_width}x#{pane_height}|#{pane_title}
+# rc=0 stderr=
+probe_a|4041880|0|||1|160x45|✳ shp-probe-title-1
+probe_b|4041912|1|1||0|160x45|
+probe_fork|4042432|1|0||0|160x45|

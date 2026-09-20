@@ -1,0 +1,161 @@
+Logical architecture · v1 
+Orchestrator Layer Map 
+Five layers, dependencies pointing  down only . The spec's process split says where
+code runs; this says what may import what — and the four boundaries that are enforced by a
+failing build rather than a review comment.
+docs/specs/orchestrator-platform.md 
+2,129 lines 
+31 decisions 
+6 seams 
+7 milestones 
+Figure 1 — module layers 
+What may import what 
+Two horizontal lines carry the whole design. Above the first, three consumers reach the
+system only through one tool surface. Below the second, one module owns every SQL statement.
+<svg viewBox="0 0 960 712" role="img"
+aria-label="Five module layers stacked top to bottom: consumers (master, web, cli), the tool surface with authorize and audit, orchestration, observation and runtime (signals, runner, providers, engines), and persistence (store, logs, core). Arrows point downward only. A consumer boundary sits between layers five and four; a storage boundary sits between layers two and one.">
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+L5 
+CONSUME 
+master/ 
+orchestrator agent 
+AgentSDKMaster · D30 
+web/ 
+HTTP + SSE · no polling 
+vanilla TS · xterm.js 
+cli/ 
+status · replay 
+recompute · uninstall 
+L4 -->
+consumer boundary 
+master/ may import nothing else · D19 
+L4 
+GATE 
+toolsurface/ 
+registry of ToolDefs · invoke() · authorize() · audit log 
+exporters → SDK MCP · stdio MCP · HTTP · CLI 
+MCP is an output format, never an input type · D32 
+L3 
+DRIVE 
+orchestration/ 
+queues · workers · reconcile · claims · mailbox · channels · wake set 
+L2 -->
+L2 
+OBSERVE 
+signals/ 
+ingest → fold → classify 
+verdict + next_actions[] 
+the differentiator 
+runner/ 
+seam: Runner 
+tmux · pty · snapshot 
+owned vs attached 
+providers/ 
+seams: WorkItem·Creds 
+jira · notion · keychain 
+connector catalogue 
+engines/ 
+seam: EngineAdapter 
+claude_code · hookd 
+transcript · 32 hooks 
+L1 -->
+storage boundary 
+L1 
+PERSIST 
+store/ 
+6 tables · SQLite WAL 
+the only DB importer · D26 
+logs/ 
+stops · audit · replay 
+rotating JSONL · D25 
+core/ 
+types · enums · ulid 
+the 7-bucket palette 
+arrows are imports · a band may use any band below it · never the reverse 
+Fig. 1  — The two heavy lines are the boundaries a test can fail on. Everything else is
+convention. L4 is filled because it is the only place an action is ever authorized: the master,
+a tier-2 session over MCP, a queue write-back and a UI click all arrive at the same
+authorize() . Each capability is declared once as a  ToolDef ; the
+vendor-shaped formats are exporters hanging off that one registry.
+The four invariants 
+Each one enforced by a build, not a reviewer 
+store/ owns all SQL 
+Nothing outside  store/  imports a database driver, so SQLite stays a packaging
+choice that the multi-user path can reopen without a rewrite.  D26 
+enforced by test_import_boundary.py 
+master/ is a consumer 
+The orchestrator runs inside  controld  but imports only
+toolsurface.client . That seam is what makes extracting a
+masterd  later a packaging change.  D19 
+enforced by test_master_isolation.py 
+one chokepoint 
+There is one  authorize()  and one audit log. Level 2 asks before anything leaves
+the machine; level 3 auto-approves — never unlogged.  D8 
+enforced by single writer to action log 
+one suite per seam 
+Every seam ships one contract suite that all implementations pass, a  Fake 
+included. A new provider is done when it passes the suite that already exists.
+enforced by contract suites · §14.2 
+Figure 2 — why L4 exists 
+One read path, not one per consumer 
+The spec is explicit that it is drawn against a failure it watched happen: a prior tool grew
+349 endpoints, each with its own read logic, until its architecture document no longer
+described the system. The layer map's job is to make that shape impossible to reach by accident.
+<svg viewBox="0 0 960 268" role="img"
+aria-label="Left: five consumers each drawing their own line into the store, a tangle. Right: the same five consumers converging on one tool surface, which makes a single call into the store.">
+<marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5"
+markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+the failure mode 
+every consumer keeps a private read path 
+ui 
+chat 
+worker 
+cli 
+hooks 
+store/ 
+5 read paths · 5 places to fix a bug 
+the layer map 
+everyone is a consumer of one surface 
+ui 
+chat 
+worker 
+cli 
+hooks 
+toolsurface/ · authorize() · audit 
+store/ 
+1 read path · 1 audit entry per action 
+Fig. 2  — The difference is one bar. On the right every action is also auditable and
+gateable for free, because there is nowhere else for it to go.
+Figure 3 — process split 
+The module map folds into two daemons 
+Layers are an import rule; processes are a restart rule. The split exists for one reason: if the
+control plane owns the ptys, upgrading it kills your agents.
+<svg viewBox="0 0 960 216" role="img"
+aria-label="controld holds layers one through five and can be restarted freely. It talks to sessiond over a Unix socket. sessiond is long-lived and owns every tmux session running a claude process.">
+<marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5"
+markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+controld 
+L1 – L5 · runs migrations 
+serves the UI · drives the queues 
+restart · upgrade · crash freely 
+Runner 
+UDS 0600 
+sessiond 
+pty supervisor · hook ingest 
+never migrates the schema 
+long-lived · outlives controld 
+owns 
+tmux · claude 
+tmux · claude 
+tmux · claude 
+principle 4 — a dead daemon degrades visibility, never agents 
+Fig. 3  — One Unix socket buys a control plane you can restart at will. The hook
+dispatcher writes to this socket with a 250 ms timeout and always exits 0, so nothing the
+platform installs can block Claude Code.
+One thing to watch 
+master/ ,  web/  and  cli/  sitting as equals at L5 is the
+invariant most likely to erode under implementation pressure. The first time the fleet page
+wants a query that is not in the tool surface, the honest move is to add it there — not to
+let  web/  reach down one layer "just this once". That is the exact edge Fig. 2 is
+about.

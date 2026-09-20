@@ -1,0 +1,41 @@
+2026-09-14T15:18:53.205Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:18:53.244Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:18:53.251Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-perm-prompts_none_write_outside-tfwy81tq/.claude/settings.local.json
+2026-09-14T15:18:53.252Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:18:53.310Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:18:53.324Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:18:53.331Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-perm-prompts_none_write_outside-tfwy81tq/.claude/settings.local.json
+2026-09-14T15:18:53.379Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:18:53.382Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:18:53.383Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:18:53.383Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:18:53.384Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:18:53.384Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:18:53.384Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:18:53.385Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:18:53.386Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:18:53.388Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:18:53.389Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:18:53.412Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:18:53.414Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:18:53.459Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:18:53.460Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-perm-prompts_none_write_outside-tfwy81tq/.claude/settings.json, /tmp/shp-hooks-perm-prompts_none_write_outside-tfwy81tq/.claude/settings.local.json...
+2026-09-14T15:18:53.460Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:18:53.492Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:18:53.493Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:18:53.658Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:18:54.261Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:18:54.272Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:18:54.272Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:18:54.284Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:02.520Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:02.537Z [DEBUG] "Permission suggestions for Write: [\n  {\n    \"type\": \"setMode\",\n    \"mode\": \"acceptEdits\",\n    \"destination\": \"session\"\n  },\n  {\n    \"type\": \"addDirectories\",\n    \"directories\": [\n      \"/tmp/shp-hooks-victim-v7crf13_\"\n    ],\n    \"destination\": \"session\"\n  }\n]"
+2026-09-14T15:19:02.538Z [DEBUG] executePermissionRequestHooks called for tool: Write
+2026-09-14T15:19:02.563Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:02.585Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:02.592Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:19:02.592Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:19:04.945Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:05.008Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:19:05.038Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S09_perm_prompts_none_write_outside/events.jsonl] completed with status 0
+2026-09-14T15:19:05.038Z [DEBUG] Hook output does not start with {, treating as plain text

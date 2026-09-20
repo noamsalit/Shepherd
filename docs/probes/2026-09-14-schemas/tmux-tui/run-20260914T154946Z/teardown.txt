@@ -1,0 +1,1 @@
+after kill-server: tmux -L shepherd-probe ls rc=1 err=no server running on /tmp/tmux-0/shepherd-probe

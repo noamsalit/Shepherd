@@ -1,0 +1,2 @@
+{"_ts": "2026-09-14T16:08:38.734Z", "phase": "entered", "tool_name": "mcp__shepherd__kill_session", "tool_input": {"id": "ses_slow"}}
+{"_ts": "2026-09-14T16:08:45.152Z", "phase": "cancelled", "exc": "CancelledError: "}

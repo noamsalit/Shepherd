@@ -1,0 +1,24 @@
+{
+    "pid": 4048859,
+    "sessionId": "8e2a59ac-89dc-42b8-bb56-9045857c2783",
+    "cwd": "/tmp/shp-lpg-proc.vpBd05/real/repo",
+    "startedAt": 1789402873085,
+    "procStart": "544012837",
+    "version": "2.1.270",
+    "peerProtocol": 1,
+    "peerFeatures": [
+        "notify_idle",
+        "reply_across_default_dirs",
+        "artifact_yield"
+    ],
+    "kind": "interactive",
+    "entrypoint": "sdk-cli",
+    "pidDomain": "linux:64835ff781b0486f95b67b152a8cf404:pid:[4026531836]",
+    "messagingSocketPath": "/run/user/0/cc-socks/4048859.sock",
+    "name": "repo-fd",
+    "nameSource": "derived",
+    "nameSince": 1789402873085,
+    "status": "busy",
+    "updatedAt": 1789402873471,
+    "statusUpdatedAt": 1789402873471
+}

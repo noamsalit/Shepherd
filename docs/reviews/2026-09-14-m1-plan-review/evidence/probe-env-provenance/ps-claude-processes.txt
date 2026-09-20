@@ -1,0 +1,25 @@
+## ps claude-ish (read-only)
+    PID    PPID COMMAND         ELAPSED COMMAND
+3943046 3942872 claude           189001 claude
+3971404 3971392 claude           101707 claude --resume 2fb6befd-2e8e-47f2-986a-e24ed36aab8f --remote-control Shepherd-main
+3971492 3971480 claude           101681 claude --resume 9bc1bf13-50fd-438b-ad09-18a9d05de7d6 --remote-control Shepherd-spike
+3971545 3971494 claude           101680 claude --resume 35f3f29e-4cf2-43e7-b0cd-45c86da8b44c --remote-control AIVisor
+4015581 4015578 tee                   0 tee /root/Shepherd/docs/reviews/2026-09-14-m1-plan-review/evidence/probe-env-provenance/ps-claude-processes.txt
+
+## comm values
+      4 claude
+      1 tmux: server
+
+## this shell ancestry
+4015578 3971404 bash            /bin/bash -c source /root/.claude/shell-snapshots/snapshot-bash-1789377276399-je0f6p.sh 2>/dev/null || true && shopt -u extglob 2>/dev/null || true && { \builtin unalia
+3971404 3971392 claude          claude --resume 2fb6befd-2e8e-47f2-986a-e24ed36aab8f --remote-control Shepherd-main
+3971392 3971391 bash            -bash
+3971391       1 tmux: server    tmux -L shepherd new-session -d -s main -c /root/Shepherd
+## /proc/<pid>/comm of claude pids
+3943046 comm=claude exe=/root/.local/share/claude/versions/2.1.269
+3971404 comm=claude exe=/root/.local/share/claude/versions/2.1.270
+3971492 comm=claude exe=/root/.local/share/claude/versions/2.1.270
+3971545 comm=claude exe=/root/.local/share/claude/versions/2.1.270
+4015578 comm=bash exe=/usr/bin/bash
+4015580 comm=bash exe=/usr/bin/bash
+4015581 comm=tee exe=/usr/bin/tee

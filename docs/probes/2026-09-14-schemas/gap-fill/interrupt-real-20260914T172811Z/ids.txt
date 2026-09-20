@@ -1,0 +1,3 @@
+pane_pid=4058801
+claude_pid=4058801
+transcript=/root/.claude/projects/-tmp-shp-gap-int-real-f66waktz/0e3a0484-d58e-4629-917f-08cb18696c51.jsonl

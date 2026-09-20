@@ -1,0 +1,39 @@
+{
+  "locked": {
+    "system/init.tools": [
+      "mcp__shepherd__fail_tool",
+      "mcp__shepherd__fleet_summary",
+      "mcp__shepherd__raise_tool",
+      "mcp__shepherd__shadow_tool",
+      "mcp__shepherd__spawn_session"
+    ],
+    "equals_probe_tools_exactly": true,
+    "unexpected_tools": [],
+    "system/init.mcp_servers": [
+      {
+        "name": "shepherd",
+        "status": "connected"
+      }
+    ],
+    "only_shepherd_server": true
+  },
+  "locked-syscli": {
+    "system/init.tools": [
+      "mcp__shepherd__fail_tool",
+      "mcp__shepherd__fleet_summary",
+      "mcp__shepherd__raise_tool",
+      "mcp__shepherd__shadow_tool",
+      "mcp__shepherd__spawn_session"
+    ],
+    "equals_probe_tools_exactly": true,
+    "unexpected_tools": [],
+    "system/init.mcp_servers": [
+      {
+        "name": "shepherd",
+        "status": "connected",
+        "source": "sdk"
+      }
+    ],
+    "only_shepherd_server": true
+  }
+}

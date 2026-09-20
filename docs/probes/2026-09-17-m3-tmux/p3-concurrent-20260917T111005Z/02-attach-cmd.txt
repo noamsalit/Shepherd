@@ -1,0 +1,3 @@
+env -u TMUX tmux -L shepherd-m3-inner attach -t =shepherd_p3:
+rc=0
+err=

@@ -1,0 +1,44 @@
+{
+ "compact_a_auto": [
+  "UserPromptSubmit@f78d612e",
+  "PreCompact[trigger=auto]@f78d612e",
+  "Stop@f78d612e",
+  "MessageDisplay@f78d612e",
+  "UserPromptSubmit@f78d612e",
+  "PreCompact[trigger=auto]@f78d612e",
+  "SubagentStop@f78d612e",
+  "SessionStart[source=compact]@f78d612e",
+  "PostCompact[trigger=auto]@f78d612e",
+  "Stop@f78d612e",
+  "MessageDisplay@f78d612e"
+ ],
+ "compact_b_killed_mid_compaction": {
+  "events": [
+   "UserPromptSubmit@f78d612e",
+   "MessageDisplay@f78d612e",
+   "Stop@f78d612e",
+   "UserPromptSubmit@f78d612e",
+   "PreCompact[trigger=auto]@f78d612e",
+   "SessionEnd[reason=other]@f78d612e"
+  ],
+  "claude_alive_after_kill": false
+ },
+ "resume": {
+  "other_session_id": "4734f21d-7203-4a04-b398-2fd12e081d26",
+  "events": [
+   "SessionStart[source=startup]@30fce1e3",
+   "UserPromptSubmit@30fce1e3",
+   "Stop@30fce1e3",
+   "MessageDisplay@30fce1e3",
+   "SessionEnd[reason=resume]@30fce1e3",
+   "SessionStart[source=resume]@4734f21d"
+  ]
+ },
+ "logout": {
+  "events": [
+   "SessionStart[source=startup]@ceec3e0f",
+   "SessionEnd[reason=logout]@ceec3e0f"
+  ],
+  "pane": "dead=1 status="
+ }
+}

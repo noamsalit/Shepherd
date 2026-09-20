@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-kc-1ndx5bv_/w
+
+
+❯ FIRST-PROMPT-FOR-HISTORY
+
+● OK-MOCK
+
+✻ Sautéed for 0s · done 6:01 PM
+
+❯ PASTE-LINE-ONE
+  PASTE-LINE-TWO
+
+● OK-MOCK
+
+✻ Baked for 0s · done 6:01 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         tmux detected · scroll with PgUp/PgDn · or add 'set -g mouse on' to ~/.tmux.conf for wheel scroll
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ TYPED-THEN-ESC
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on

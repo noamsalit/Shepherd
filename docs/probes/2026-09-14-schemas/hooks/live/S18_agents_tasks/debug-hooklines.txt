@@ -1,0 +1,79 @@
+2026-09-14T15:23:31.364Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:23:31.404Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:31.411Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-agents-_y7kt13l/.claude/settings.local.json
+2026-09-14T15:23:31.412Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:23:31.479Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:23:31.499Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:23:31.506Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /tmp/shp-hooks-agents-_y7kt13l/.claude/settings.local.json
+2026-09-14T15:23:31.562Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:23:31.567Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:23:31.569Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:23:31.569Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:23:31.570Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:23:31.570Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:23:31.570Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:23:31.571Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:23:31.573Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:23:31.577Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:23:31.577Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:23:31.607Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:23:31.609Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:23:31.661Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:31.663Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:23:31.665Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:23:31.672Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-agents-_y7kt13l/.claude/settings.json, /tmp/shp-hooks-agents-_y7kt13l/.claude/settings.local.json...
+2026-09-14T15:23:31.672Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:23:31.848Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:23:32.614Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-09-14T15:23:32.754Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:23:32.770Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:32.771Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:32.783Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:35.268Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:35.717Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:35.741Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:35.760Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:35.767Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:35.767Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:37.076Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:37.439Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:37.459Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:37.475Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:37.488Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:37.494Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:37.494Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:38.607Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:38.921Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:38.934Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:38.953Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:38.966Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:38.972Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:38.972Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:40.310Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:40.712Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:40.735Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:40.744Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:40.748Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:40.748Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:42.062Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:42.430Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:42.449Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:42.469Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:42.482Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:42.485Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:42.485Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:44.134Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:44.754Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:44.791Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:44.800Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:44.830Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:44.836Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:23:44.836Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:23:45.836Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:49.299Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:49.341Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:49.368Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:50.620Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:50.651Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:23:50.711Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S18_agents_tasks/events.jsonl] completed with status 0
+2026-09-14T15:23:50.711Z [DEBUG] Hook output does not start with {, treating as plain text

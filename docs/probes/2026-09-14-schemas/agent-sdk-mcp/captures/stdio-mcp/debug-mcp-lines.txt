@@ -1,0 +1,30 @@
+2026-09-14T16:14:50.192Z [DEBUG] MCP server "probe": Starting connection with timeout of 30000ms
+2026-09-14T16:14:50.262Z [DEBUG] MCP server "probe": Successfully connected (transport: stdio) in 72ms
+2026-09-14T16:14:50.263Z [DEBUG] MCP server "probe": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":false,"hasResourceSubscribe":false,"serverVersion":{"name":"probe-logger","version":"0.0.1"},"protocolEra":"legacy","negotiatedProtocolVersion":"2025-11-25"}
+2026-09-14T16:14:50.264Z [DEBUG] [MCP] Server "probe" connected with subscribe=false
+2026-09-14T16:14:53.365Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__echo_note toolUseId=toolu_013516j4ARBNwtSPj9RWtTxG permissionDecisionMs=1
+2026-09-14T16:14:53.367Z [DEBUG] MCP server "probe": Calling MCP tool: echo_note
+2026-09-14T16:14:53.372Z [DEBUG] MCP server "probe": Tool 'echo_note' completed successfully in 5ms
+2026-09-14T16:14:53.373Z [INFO] [Stall] tool_dispatch_end tool=mcp__probe__echo_note toolUseId=toolu_013516j4ARBNwtSPj9RWtTxG outcome=ok durationMs=8
+2026-09-14T16:14:54.740Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__fail_note toolUseId=toolu_01FsXNbwyhCiEBnL8GQh2JZG permissionDecisionMs=1
+2026-09-14T16:14:54.741Z [DEBUG] MCP server "probe": Calling MCP tool: fail_note
+2026-09-14T16:14:54.744Z [ERROR] MCP server "probe" max_session_depth=3 reached; refusing
+2026-09-14T16:14:54.744Z [DEBUG] MCP server "probe": Tool 'fail_note' failed after 0s: max_session_depth=3 reached; refusing
+2026-09-14T16:14:54.744Z [WARN] [Stall] tool_dispatch_end tool=mcp__probe__fail_note toolUseId=toolu_01FsXNbwyhCiEBnL8GQh2JZG outcome=error durationMs=4
+2026-09-14T16:14:54.745Z [DEBUG] mcp__probe__fail_note tool error (4ms): max_session_depth=3 reached; refusing
+2026-09-14T16:14:56.323Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__rpc_error_note toolUseId=toolu_01Ad55LkgJbpQSZDx13o2E7w permissionDecisionMs=1
+2026-09-14T16:14:56.324Z [DEBUG] MCP server "probe": Calling MCP tool: rpc_error_note
+2026-09-14T16:14:56.328Z [DEBUG] MCP server "probe": Tool 'rpc_error_note' failed after 0s: probe internal error
+2026-09-14T16:14:56.329Z [WARN] [Stall] tool_dispatch_end tool=mcp__probe__rpc_error_note toolUseId=toolu_01Ad55LkgJbpQSZDx13o2E7w outcome=error durationMs=6
+2026-09-14T16:14:56.329Z [DEBUG] mcp__probe__rpc_error_note tool error (6ms): probe internal error
+2026-09-14T16:14:58.082Z [DEBUG] "Permission suggestions for mcp__probe__danger_note: [\n  {\n    \"type\": \"addRules\",\n    \"rules\": [\n      {\n        \"toolName\": \"mcp__probe__danger_note\"\n      }\n    ],\n    \"behavior\": \"allow\",\n    \"destination\": \"localSettings\"\n  }\n]"
+2026-09-14T16:14:58.082Z [DEBUG] executePermissionRequestHooks called for tool: mcp__probe__danger_note
+2026-09-14T16:14:58.162Z [DEBUG] mcp__probe__danger_note tool permission denied
+2026-09-14T16:15:00.130Z [INFO] [Stall] tool_dispatch_start tool=mcp__probe__echo_note toolUseId=toolu_01LTSw8eSCWywBV57sUW38kn permissionDecisionMs=0
+2026-09-14T16:15:00.131Z [DEBUG] MCP server "probe": Calling MCP tool: echo_note
+2026-09-14T16:15:00.135Z [DEBUG] MCP server "probe": Tool 'echo_note' completed successfully in 4ms
+2026-09-14T16:15:00.136Z [INFO] [Stall] tool_dispatch_end tool=mcp__probe__echo_note toolUseId=toolu_01LTSw8eSCWywBV57sUW38kn outcome=ok durationMs=6
+2026-09-14T16:15:03.311Z [DEBUG] MCP server "probe": Sending SIGINT to MCP server process
+2026-09-14T16:15:03.317Z [DEBUG] MCP server "probe": STDIO connection closed after 13s (cleanly)
+2026-09-14T16:15:03.318Z [DEBUG] MCP server "probe": Cleared connection cache for reconnection
+2026-09-14T16:15:03.362Z [DEBUG] MCP server "probe": MCP server process exited cleanly

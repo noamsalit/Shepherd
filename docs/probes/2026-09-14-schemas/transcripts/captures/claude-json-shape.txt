@@ -1,0 +1,105 @@
+claude_version: 2.1.270 (Claude Code)
+## top-level keys (name: type)
+  additionalModelCostsCache: object(0 keys)
+  additionalModelOptionsAnsweredAt: number
+  additionalModelOptionsCache: array(1)
+  announcementImpressions: object(2 keys)
+  autoCompactWindowsCache: null
+  autoModeEnvSetup: object(1 keys)
+  autoUpdates: bool
+  autoUpdatesProtectedForNative: bool
+  cachedArtifactRoster: object(5 keys)
+  cachedExperimentData: object(11 keys)
+  cachedExperimentFeatures: array(11)
+  cachedExtraUsageDisabledReason: string
+  cachedGrowthBookFeatures: object(635 keys)
+  cachedGrowthBookFeaturesAt: number
+  changelogLastFetched: number
+  claudeAiMcpEverConnected: array(6)
+  claudeCodeFirstTokenDate: string
+  clientDataCacheSlots: object(8 keys)
+  closedIssuesLastChecked: number
+  firstStartTime: string
+  githubRepoPaths: object(1 keys)
+  groveConfigCache: object(1 keys)
+  hasCompletedOnboarding: bool
+  hasResetAutoModeOptInForDefaultOffer: bool
+  hasSeenAutoDefaultNotice: bool
+  hasSeenAutoModeEntryWarning: bool
+  hasUsedRemoteControl: bool
+  hasVisitedPasses: bool
+  installMethod: string
+  lastClawdEntranceVersion: string
+  lastOnboardingVersion: string
+  lastReleaseNotesSeen: string
+  machineID: string
+  metricsStatusCache: object(2 keys)
+  migrationVersion: number
+  modelAccessCache: array(0)
+  numStartups: number
+  oauthAccount: object(20 keys)
+  officialMarketplaceAutoInstallAttempted: bool
+  officialMarketplaceAutoInstalled: bool
+  opusProMigrationComplete: bool
+  orgModelDefaultCache: null
+  passesEligibilityCache: object(1 keys)
+  passesLastSeenRemaining: number
+  passesUpsellSeenCount: number
+  pluginUsage: object(1 keys)
+  projects: object(11 keys)
+  promptQueueUseCount: number
+  pushNotifUpsellSeenCount: number
+  rcLongTurnNudgeSeenCount: number
+  rcLongTurnNudgeSeenKey: string
+  remoteControlReadyPushCount: number
+  remoteControlReadyPushKey: string
+  remoteControlSurfacesSeen: array(2)
+  replBridgePlaceholders: object(4 keys)
+  routineFiredWatermark: string
+  seenNotifications: object(2 keys)
+  skillUsage: object(9 keys)
+  sonnet1m45MigrationComplete: bool
+  tipLifetimeShownCounts: object(31 keys)
+  tipsHistory: object(31 keys)
+  userID: string
+
+## projects: object keyed by absolute cwd path; 11 entries
+## per-project fields (name: types, present in N of 11 entries)
+  allowedTools: array  11
+  disabledMcpjsonServers: array  11
+  enabledMcpjsonServers: array  11
+  exampleFiles: array  2
+  exampleFilesGeneratedAt: number  1
+  hasClaudeMdExternalIncludesApproved: bool  11
+  hasClaudeMdExternalIncludesWarningShown: bool  11
+  hasTrustDialogAccepted: bool  11
+  hasUnseenTeamArtifacts: bool  2
+  lastAPIDuration: number  9
+  lastAPIDurationWithoutRetries: number  9
+  lastCost: number  9
+  lastDuration: number  9
+  lastFpsAverage: number  8
+  lastFpsLow1Pct: number  8
+  lastGracefulShutdown: bool  11
+  lastLinesAdded: number  9
+  lastLinesRemoved: number  9
+  lastModelUsage: object  9
+  lastSessionId: string  9
+  lastSessionMetrics: object  4
+  lastStartTime: number  9
+  lastToolDuration: number  9
+  lastTotalCacheCreationInputTokens: number  9
+  lastTotalCacheReadInputTokens: number  9
+  lastTotalInputTokens: number  9
+  lastTotalOutputTokens: number  9
+  lastTotalWebSearchRequests: number  9
+  lastVersionBase: string  11
+  mcpContextUris: array  11
+  mcpServers: object  11
+
+## hasTrustDialogAccepted value counts: {(True,): 9, (False,): 2}
+
+## entries for throwaway probe dirs (/tmp/shp-schemas-*), scalar values shown (our own sessions), arrays/objects typed only
+  "/tmp/shp-schemas-regint.KD6xG3/work" {"allowedTools": "array(0)", "mcpContextUris": "array(0)", "mcpServers": "object(0 keys)", "enabledMcpjsonServers": "array(0)", "disabledMcpjsonServers": "array(0)", "hasTrustDialogAccepted": true, "hasClaudeMdExternalIncludesApproved": false, "hasClaudeMdExternalIncludesWarningShown": false, "lastGracefulShutdown": true, "lastVersionBase": "2.1.270", "lastCost": 0.031924600000000004, "lastAPIDuration": 7914, "lastAPIDurationWithoutRetries": 7896, "lastToolDuration": 20106, "lastDuration": 50401, "lastStartTime": 1789398960924, "lastLinesAdded": 0, "lastLinesRemoved": 0, "lastTotalInputTokens": 368, "lastTotalOutputTokens": 516, "lastTotalCacheCreationInputTokens": 9149, "lastTotalCacheReadInputTokens": 106786, "lastTotalWebSearchRequests": 0, "lastFpsAverage": 5.93, "lastFpsLow1Pct": 174.41, "lastModelUsage": "object(1 keys)", "lastSessionId": "2efd1f5f-1b93-481a-8469-0f589a48d7ae"}
+  "/tmp/shp-schemas-fork.dz1dGx/work" {"allowedTools": "array(0)", "mcpContextUris": "array(0)", "mcpServers": "object(0 keys)", "enabledMcpjsonServers": "array(0)", "disabledMcpjsonServers": "array(0)", "hasTrustDialogAccepted": true, "hasClaudeMdExternalIncludesApproved": false, "hasClaudeMdExternalIncludesWarningShown": false, "lastGracefulShutdown": true, "lastVersionBase": "2.1.270", "lastCost": 0.04598119999999999, "lastAPIDuration": 16646, "lastAPIDurationWithoutRetries": 16546, "lastToolDuration": 0, "lastDuration": 93852, "lastStartTime": 1789399189235, "lastLinesAdded": 0, "lastLinesRemoved": 0, "lastTotalInputTokens": 2550, "lastTotalOutputTokens": 1186, "lastTotalCacheCreationInputTokens": 9541, "lastTotalCacheReadInputTokens": 184192, "lastTotalWebSearchRequests": 0, "lastFpsAverage": 1.29, "lastFpsLow1Pct": 109.62, "lastModelUsage": "object(1 keys)", "lastSessionId": "25d98c92-e0d7-4b71-92e1-0e91e5398157"}
+  "/tmp/shp-schemas-fork.RgNHRN/work" {"allowedTools": "array(0)", "mcpContextUris": "array(0)", "mcpServers": "object(0 keys)", "enabledMcpjsonServers": "array(0)", "disabledMcpjsonServers": "array(0)", "hasTrustDialogAccepted": true, "hasClaudeMdExternalIncludesApproved": false, "hasClaudeMdExternalIncludesWarningShown": false, "lastGracefulShutdown": true, "lastVersionBase": "2.1.270", "lastCost": 0.0445479, "lastAPIDuration": 15528, "lastAPIDurationWithoutRetries": 15457, "lastToolDuration": 45116, "lastDuration": 94034, "lastStartTime": 1789399317481, "lastLinesAdded": 0, "lastLinesRemoved": 0, "lastTotalInputTokens": 2550, "lastTotalOutputTokens": 973, "lastTotalCacheCreationInputTokens": 9355, "lastTotalCacheReadInputTokens": 184229, "lastTotalWebSearchRequests": 0, "lastFpsAverage": 6.52, "lastFpsLow1Pct": 221.62, "lastModelUsage": "object(1 keys)", "lastSessionId": "de7c8ce7-f01c-4dcb-8219-b3d3d8b46178"}

@@ -1,0 +1,12 @@
+2026-09-14T17:28:11.321+00:00 spawn shepherd_int: argv=['claude', '--model', 'claude-haiku-4-5-20251001'] rc=0 err=
+2026-09-14T17:28:12.543+00:00 shepherd_int: trust dialog accepted
+2026-09-14T17:28:15.348+00:00 MARK esc_tool hook_index=1
+2026-09-14T17:28:15.354+00:00 $ tmux -L shp-gap-int send-keys -t =shepherd_int: -l Use the Bash tool (foreground, run_in_background false) to run exactly this command: python3 -c 'import time; time.sleep(40)'   Then reply DONE. -> rc=0 out='' err=''
+2026-09-14T17:28:15.760+00:00 $ tmux -L shp-gap-int send-keys -t =shepherd_int: Enter -> rc=0 out='' err=''
+2026-09-14T17:28:20.274+00:00 $ tmux -L shp-gap-int send-keys -t =shepherd_int: Escape -> rc=0 out='' err=''
+2026-09-14T17:28:20.275+00:00 esc_tool: interrupt sent via esc; PreToolUse seen=True
+2026-09-14T17:28:28.284+00:00 esc_tool: {'how': 'esc', 'events': ['UserPromptSubmit', 'PreToolUse(Bash)'], 'claude_alive': True, 'pane_dead': '0'}
+2026-09-14T17:28:28.285+00:00 MARK esc_tool-after hook_index=3
+2026-09-14T17:28:28.288+00:00 $ tmux -L shp-gap-int send-keys -t =shepherd_int: -l Reply with only the word AFTER -> rc=0 out='' err=''
+2026-09-14T17:28:28.692+00:00 $ tmux -L shp-gap-int send-keys -t =shepherd_int: Enter -> rc=0 out='' err=''
+2026-09-14T17:28:31.301+00:00 $ tmux -L shp-gap-int kill-server -> rc=0 out='' err=''

@@ -1,0 +1,179 @@
+== type=assistant subtype=None  n=135  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   message                          dict           always             
+   parent_tool_use_id               NoneType       always             <varies>
+   request_id                       str            always             <varies>
+   session_id                       str            always             <varies>
+   timestamp                        str            always             <varies>
+   type                             str            always             "assistant"
+   uuid                             str            always             <varies>
+   tool_use_meta                    list           sometimes 32/135   
+   wire_tool_inputs                 dict           sometimes 11/135   
+   aborted                          bool           sometimes 1/135    true
+== type=assistant.content[] subtype=text  n=49  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   text                             str            always             <varies>
+   type                             str            always             "text"
+== type=assistant.content[] subtype=thinking  n=52  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   signature                        str            always             <varies>
+   thinking                         str            always             <varies>
+   type                             str            always             "thinking"
+== type=assistant.content[] subtype=tool_use  n=34  sources=['basic', 'deny', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   caller                           dict           always             
+   id                               str            always             <varies>
+   input                            dict           always             
+   name                             str            always             "Bash", "ToolSearch", "mcp__probe__danger_note", "mcp__probe__echo_note", "mcp__probe__fail_note", "mcp__probe__rpc_error_note"
+   type                             str            always             "tool_use"
+== type=assistant.message subtype=None  n=135  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   container                        NoneType       always             null
+   content                          list           always             
+   context_management               NoneType       always             null
+   diagnostics                      NoneType       always             null
+   id                               str            always             <varies>
+   model                            str            always             "claude-haiku-4-5-20251001"
+   role                             str            always             "assistant"
+   stop_details                     NoneType       always             null
+   stop_reason                      NoneType       always             null
+   stop_sequence                    NoneType       always             null
+   type                             str            always             "message"
+   usage                            dict           always             
+== type=control_cancel_request subtype=None  n=1  sources=['interrupt_pending_approval']
+   request_id                       str            always             <varies>
+   type                             str            always             "control_cancel_request"
+== type=control_request subtype=can_use_tool  n=7  sources=['basic', 'deny', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'tools_empty']
+   request                          dict           always             
+   request_id                       str            always             <varies>
+   type                             str            always             "control_request"
+== type=control_request subtype=hook_callback  n=56  sources=['basic', 'deny', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'tools_empty']
+   request                          dict           always             
+   request_id                       str            always             <varies>
+   type                             str            always             "control_request"
+== type=control_request subtype=mcp_message  n=73  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'tools_empty']
+   request                          dict           always             
+   request_id                       str            always             <varies>
+   type                             str            always             "control_request"
+== type=control_response subtype=(response)  n=19  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'tools_empty']
+   response                         dict           always             
+   type                             str            always             "control_response"
+== type=rate_limit_event subtype=None  n=18  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   rate_limit_info                  dict           always             
+   session_id                       str            always             <varies>
+   type                             str            always             "rate_limit_event"
+   uuid                             str            always             <varies>
+== type=result subtype=error_during_execution  n=2  sources=['interrupt', 'interrupt_pending_approval']
+   duration_api_ms                  int            always             2255, 751
+   duration_ms                      int            always             7121, 7933
+   errors                           list           always             
+   fast_mode_disabled_reason        str            always             "sdk_opt_in_required"
+   fast_mode_state                  str            always             "off"
+   is_error                         bool           always             true
+   modelUsage                       dict           always             
+   num_turns                        int            always             2, 3
+   permission_denials               list           always             
+   queued_turn_count                int            always             0
+   session_id                       str            always             <varies>
+   stop_reason                      NoneType|str   always             "tool_use", null
+   subagent_stats                   dict           always             
+   subtype                          str            always             "error_during_execution"
+   terminal_reason                  str            always             "aborted_streaming", "aborted_tools"
+   total_cost_usd                   float          always             0.000988, 0.0029430000000000003
+   type                             str            always             "result"
+   usage                            dict           always             
+   uuid                             str            always             <varies>
+== type=result subtype=success  n=17  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   api_error_status                 NoneType       always             null
+   duration_api_ms                  int            always             11614, 1189, 12152, 1246, 12598, 1284
+   duration_ms                      int            always             10746, 1108, 11191, 12626, 1304, 1311
+   fast_mode_disabled_reason        str            always             "sdk_opt_in_required"
+   fast_mode_state                  str            always             "off"
+   is_error                         bool           always             false
+   modelUsage                       dict           always             
+   num_turns                        int            always             1, 2, 6, 7, 9
+   permission_denials               list           always             
+   queued_turn_count                int            always             0
+   result                           str            always             <varies>
+   session_id                       str            always             <varies>
+   stop_reason                      str            always             "end_turn"
+   subagent_stats                   dict           always             
+   subtype                          str            always             "success"
+   terminal_reason                  str            always             "completed"
+   time_to_request_ms               int            always             134, 23, 28, 30, 33, 36
+   total_cost_usd                   float          always             0.001673, 0.001808, 0.0018761000000000001, 0.001965, 0.0028508000000000006, 0.0045394
+   ttft_ms                          int            always             1009, 1083, 1202, 1240, 1251, 1255
+   ttft_stream_ms                   int            always             1038, 1099, 2327, 577, 593, 602
+   type                             str            always             "result"
+   usage                            dict           always             
+   uuid                             str            always             <varies>
+   first_content_frame_ms           int            sometimes 2/17     779, 923
+   result_index                     int            sometimes 2/17     0
+== type=stream_event subtype=None  n=35  sources=['interrupt']
+   event                            dict           always             
+   parent_tool_use_id               NoneType       always             <varies>
+   session_id                       str            always             <varies>
+   type                             str            always             "stream_event"
+   uuid                             str            always             <varies>
+   ttft_ms                          int            sometimes 2/35     616, 698
+== type=system subtype=init  n=19  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   agents                           list           always             
+   analytics_disabled               bool           always             false
+   apiKeySource                     str            always             "none"
+   capabilities                     list           always             
+   claude_code_version              str            always             "2.1.259", "2.1.270"
+   cwd                              str            always             <varies>
+   fast_mode_disabled_reason        str            always             "sdk_opt_in_required"
+   fast_mode_state                  str            always             "off"
+   mcp_servers                      list           always             
+   memory_paths                     dict           always             
+   messaging_socket_path            str            always             "/run/user/0/cc-socks/4044884.sock", "/run/user/0/cc-socks/4045086.sock", "/run/user/0/cc-socks/4045135.sock", "/run/user/0/cc-socks/4045219.sock", "/run/user/0/cc-socks/4045251.sock", "/run/user/0/cc-socks/4045284.sock"
+   model                            str            always             "claude-haiku-4-5-20251001"
+   output_style                     str            always             "default"
+   permissionMode                   str            always             "default"
+   plugins                          list           always             
+   product_feedback_disabled        bool           always             false
+   session_id                       str            always             <varies>
+   skills                           list           always             
+   slash_commands                   list           always             
+   subtype                          str            always             "init"
+   terminal_slash_commands          list           always             
+   tools                            list           always             
+   type                             str            always             "system"
+   uuid                             str            always             <varies>
+== type=system subtype=permission_denied  n=1  sources=['stdio-mcp(cli -p)']
+   message                          str            always             <varies>
+   session_id                       str            always             <varies>
+   subtype                          str            always             "permission_denied"
+   tool_name                        str            always             "mcp__probe__danger_note"
+   tool_use_id                      str            always             <varies>
+   type                             str            always             "system"
+   uuid                             str            always             <varies>
+== type=system subtype=status  n=2  sources=['interrupt']
+   session_id                       str            always             <varies>
+   status                           str            always             "requesting"
+   subtype                          str            always             "status"
+   type                             str            always             "system"
+   uuid                             str            always             <varies>
+== type=system subtype=thinking_tokens  n=65  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'isolation', 'locked', 'locked-syscli', 'resume', 'resume_other_cwd', 'stdio-mcp(cli -p)', 'tools_empty']
+   estimated_tokens                 int            always             1043, 107, 115, 119, 120, 121
+   estimated_tokens_delta           int            always             100, 106, 107, 112, 128, 133
+   session_id                       str            always             <varies>
+   subtype                          str            always             "thinking_tokens"
+   type                             str            always             "system"
+   uuid                             str            always             <varies>
+== type=user subtype=None  n=36  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   message                          dict           always             
+   parent_tool_use_id               NoneType       always             <varies>
+   session_id                       str            always             <varies>
+   timestamp                        str            always             <varies>
+   type                             str            always             "user"
+   uuid                             str            always             <varies>
+   tool_use_result                  dict|list|str  sometimes 34/36    "Error: handler exploded on purpose", "Error: probe internal error", "Error: you declined this", "User rejected tool use", <varies>
+   tool_result_meta                 list           sometimes 3/36     
+== type=user.content[] subtype=text  n=2  sources=['interrupt', 'interrupt_pending_approval']
+   text                             str            always             <varies>
+   type                             str            always             "text"
+== type=user.content[] subtype=tool_result  n=34  sources=['basic', 'deny', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   content                          list|str       always             <varies>
+   tool_use_id                      str            always             <varies>
+   type                             str            always             "tool_result"
+   is_error                         bool           sometimes 18/34    false, true
+== type=user.message subtype=None  n=36  sources=['basic', 'deny', 'interrupt', 'interrupt_pending_approval', 'locked', 'locked-syscli', 'slow_approval', 'stdio-mcp(cli -p)', 'tools_empty']
+   content                          list           always             
+   role                             str            always             "user"

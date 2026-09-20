@@ -1,0 +1,7 @@
+probe: p2-fork
+claude --version: 2.1.274 (Claude Code)
+tmux -V: tmux 3.4
+python: 3.12.3
+uname: Linux 6.8.0-117-generic
+model: claude-haiku-4-5
+run: p2-fork-20260917T110431Z

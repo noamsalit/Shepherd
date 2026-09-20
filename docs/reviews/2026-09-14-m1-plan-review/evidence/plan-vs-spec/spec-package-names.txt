@@ -1,0 +1,29 @@
+106:| D3 | **Layered stop verdicts**: heuristics always, LLM on suspicion or on demand. **All raw signals persisted append-only** with a `replay` comm
+110:| D7 | **Fresh session per work item** + a `build_brief()` seam + per-attempt outcome logging. **Memory layer deferred**, to be derived from those
+128:| D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript 
+130:| D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switch
+137:| D33 | **`store/` exposes domain verbs returning dataclasses, with transaction scope kept inside.** No caller may pass SQL, receive a driver row,
+138:| D34 | **The LLM verdict lane is deferred past M2.** Mechanical stop reasons ship as specified; `end_turn` resolves on heuristics alone, `decided
+260:No build server, no bundler beyond `tsc`. The frontend is the layer that changes
+413:decision, not an architectural one: all SQL lives in `store/`, nothing else
+422:### 7.0 What `store/` may expose (D33)
+435:   `store/` converts at its own boundary and hands back `Session`, `WorkItem`,
+436:   `Repo`. This is §13's "never return a raw DB row" rule, applied one layer
+676:### Logs — the other half of the data layer (D25)
+696:Forward-only numbered SQL files in `store/migrations/`, applied in one
+866:> call has exactly **one named call site**, `signals/verdict.py::classify_end_turn()`,
+1038:addressing layer; the mailbox is the transport.
+1268:| `web/` | a human clicking |
+1269:| `cli/` | a human typing |
+1285:So MCP is **an output format, not an input type**. Four layers, and only the last
+1329:to_http_routes(tools)         # web/
+1330:to_cli_commands(tools)        # cli/
+1333:Adding a vendor is a new exporter beside the others. Nothing above layer ④ moves.
+1344:3. **Principle 1 becomes structural.** Generate `web/`'s routes and `cli/`'s
+1392:**Module boundary (D19).** Everything in this section lives in a `master/`
+1393:package that imports only `toolsurface.client` and the Agent SDK. It may not
+1992:`testkit/` and ship with the package, not only with the tests.
+2039:   boundary (the `master/` package imports nothing but `toolsurface.client` and
+2100:- **Memory layer** — deferred by D7; derived later from past sessions per work
+2122:  `signals/verdict.py`. No seam until it is built.
+2218:| **`Scripted*`** | a real implementation of a seam that answers from a fixture instead of the outside world (`ScriptedMaster`, `ScriptedRunner`,

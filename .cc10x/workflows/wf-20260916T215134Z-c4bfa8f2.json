@@ -1,0 +1,522 @@
+{
+  "workflow_uuid": "wf-20260916T215134Z-c4bfa8f2",
+  "workflow_id": "wf-20260916T215134Z-c4bfa8f2",
+  "workflow_type": "BUILD",
+  "state_root": ".cc10x",
+  "user_request": "Implement Shepherd M1 per docs/plans/2026-09-16-m1-foundation-visibility-plan.md (revision 5, 20 tasks, four tracks). Read-only, attached sessions only.",
+  "plan_file": "docs/plans/2026-09-16-m1-foundation-visibility-plan.md",
+  "design_file": "docs/specs/orchestrator-platform.md",
+  "research_files": [],
+  "approved_decisions": [
+    "D55 amended: HostPlatform owns SIX members (the sixth is the hook-side dispatch command).",
+    "D38.1: install/uninstall/inspect-hooks are registered ToolDefs (local_destructive, audiences={HUMAN}) reached through invoke(); cli/ never imports engines/ directly.",
+    "Never touch the real ~/.claude/settings.json. Never use the user's 'shepherd' tmux socket. No bare tmux kill-server.",
+    "Live claude runs allowed in /tmp throwaways; isolation via cwd + --settings, NOT CLAUDE_CONFIG_DIR (no credentials there).",
+    "Toolchain: /root/Shepherd/.venv (pytest 9.1.1, mypy 2.3.1, claude-agent-sdk 0.2.153)."
+  ],
+  "plan_mode": "execution_plan",
+  "build_scope": "full",
+  "worktree": null,
+  "execution_mode": "subagent_dispatch",
+  "inline_fallback_reason": null,
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": "Ship M1: hookless + hook-fed visibility of attached Claude Code sessions, read-only, Linux and macOS from one build",
+    "non_goals": [
+      "M2 signals/palette",
+      "M3 owned sessions/tmux",
+      "M4 orchestrator",
+      "work_item and queue tables",
+      "the LLM verdict lane"
+    ],
+    "constraints": [
+      "no data shape without a real capture",
+      "55 decisions are law; re-decide out loud",
+      "mypy --strict, no Any",
+      "hooks always exit 0",
+      "file past ~600 lines is doing too much",
+      "no shell=True"
+    ],
+    "acceptance_criteria": [
+      "boundary tests fail the build on a real violation",
+      "golden corpus replay deterministic across 50 sessions",
+      "fleet page renders real sessions with no hooks installed",
+      "hookd cannot harm Claude Code"
+    ],
+    "open_decisions": []
+  },
+  "normalized_phases": [
+    "build-implement",
+    "build-review",
+    "build-hunt",
+    "build-verify",
+    "build-doc-sync",
+    "memory-finalize"
+  ],
+  "phase_cursor": "build-implement",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": null,
+    "planning_review_pass1": null,
+    "planner_replan": null,
+    "planning_review_pass2": null,
+    "memory_finalize": null
+  },
+  "phase_status": {
+    "build-implement": "partial_T1_T7_done",
+    "build-review": "pending",
+    "build-hunt": "pending",
+    "build-verify": "pending",
+    "build-doc-sync": "pending",
+    "memory-finalize": "pending"
+  },
+  "deferred_findings": [],
+  "results": {
+    "git_preflight": null,
+    "baseline": null,
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": {
+      "status": "PASS",
+      "batch": "T1+T2",
+      "confidence": 92,
+      "tests": 16,
+      "boundary_tests": 13,
+      "fixtures": 23,
+      "proof": "planted real violations in src/ in two rounds: 8 then 5 = 13/13 boundary tests fired; removed and re-verified green",
+      "drift_check": "GREEN on 2.1.273 - 33/33 names, 4 enums byte-identical"
+    },
+    "investigator": null,
+    "reviewer": {
+      "status": "CHANGES_REQUESTED",
+      "critical": 2,
+      "high": [
+        "H3 PLATFORM_IDENTIFIERS defeated by any import alias (import sys as s)",
+        "H4 raw_kind rule defeated by a local alias or a method call"
+      ],
+      "medium": [
+        "M5 string scans read docstrings; /proc matches /procedure; Stop/Setup/Notification are ordinary English in web/ and cli/",
+        "M6 new_ulid(now=...) silently discards the injected clock - module-global _last_ms wins, so it is NOT deterministic (T12 golden lane depends on this)",
+        "M7 evidence exclusion gated on callee NAME not identity - o.FoldRule(), a shadowing local, or an aliased import all widen it",
+        "M8 core purity test escape root=='shepherd' admits core->store (which owns sqlite3); relative imports skipped entirely; LAYER_OF puts core and store both at 1 so direction check allows it"
+      ],
+      "critical_detail": [
+        "C1 test_signals_reads_only_neutral_field_keys sees only literal [...] subscripts, so fields.get()/alias/in/unpack all pass - the boundary is near-vacuous and every key is optional so .get() is THE idiom T11 will use",
+        "C2 test_hookd_imports_nothing_from_shepherd fires on T8's own prescribed imports (SocketPlan/HookDispatchPlan from shepherd.host) and on its own docstring - the F4 failure mode again"
+      ],
+      "plan_defects_routed_to_planner": [
+        "plan:1414 fields subscript",
+        "plan:1447 fixed dotted platform spellings",
+        "plan:1418 raw_kind comparison-only"
+      ],
+      "sound": "import-based half could not be defeated: module_imports normalises aliases and relative imports; consumer/storage/daemons/layer-direction tests all alias-proof; LAYER_OF encodes ADR-1 exactly; core/ FLEET_STATE_ORDER totality, frozenness (runtime AND ast), SIGNAL_FIELD_KEYS pinned member-by-member",
+      "independently_reproduced": "pytest 16/16 exit 0; mypy --strict src/ exit 0, 0 Any, max file 99 lines; drift_check exit 0"
+    },
+    "hunter": {
+      "status": "ISSUES_FOUND",
+      "critical": 0,
+      "high": 7,
+      "medium": 6,
+      "low": 1,
+      "audited": 62,
+      "method": "11 violations planted in real src/, ~45 AST evasion probes, 5 mutants of ids.py, 4 bad-file probes, 3 cwd variations",
+      "new_not_found_by_reviewer": [
+        "HIGH-1 FIVE negative self-checks are TAUTOLOGIES: detector early-returns on its exempt package and the self-check passes that exact package, so they return [] even for a nonexistent path. Emptying host_mac_dispatch.py to 'X = 1' keeps the test green.",
+        "HIGH-2 TWO tests are permanent no-ops behind 'if MODULE.exists():' and survive a rename: a genuinely leaking hookd_command.py failed correctly, but renaming it to hookd_cmd.py returned the suite to green. This is the rule protecting principle 4.",
+        "MED core purity glob is non-recursive (core/_tmpsub/leak.py with an unfrozen dataclass AND import requests passed both checks)",
+        "MED bytes literals invisible to EVERY literal rule (b'/proc/self/stat', b'-q0', b'python -m shepherd.hookd' all clean) - and Frame.payload is bytes, so the transport layer is exactly where they appear",
+        "MED ids.py mutex is load-bearing and unasserted: replacing 'with _lock' by 'if True' leaves tests green; 8 threads x 20000 calls = 34 duplicate ULIDs on the fleet's join key",
+        "MED six further negative fixtures pass when emptied - fixture() asserts existence, nothing asserts content",
+        "MED Signal.fields Mapping on a frozen dataclass is a shallow freeze (the one outlier; fold_types correctly uses tuple/frozenset)"
+      ],
+      "cross_confirmed_with_reviewer": [
+        "fields.get() blind spot",
+        "platform alias evasion",
+        "raw_kind indirection",
+        "core relative-import exemption",
+        "new_ulid discards injected now",
+        "FoldRule exclusion keyed on name"
+      ],
+      "verified_good": [
+        "no swallowed parse errors and no skip path - fail-loud on syntax error, latin-1, symlink escape, dangling symlink",
+        "walk is cwd-independent (passes from /, from /tmp, from tests/boundaries)",
+        "11 of 13 boundary rules provably bite against violations planted in REAL src/",
+        "doctor-capture parse is fail-loud and count-guarded",
+        "ids.py killed 4 of 5 mutants; backwards-clock clamp genuinely correct at 160k ids",
+        "FLEET_STATE_ORDER totality is a real check, not an input echo"
+      ],
+      "note": "full pytest currently red at collection on tests/contracts/test_hostplatform_contract.py (track A in flight, out of batch)"
+    },
+    "verifier": {
+      "status": "FAIL",
+      "scenarios_total": 15,
+      "passed": 14,
+      "failed": 1,
+      "reason": "one test-only defect: the flaky thread-ident assertion made `pytest tests` red ~1 run in 6, so a green-suite exit criterion was not deterministically reproducible. Product code proven correct.",
+      "independently_reproduced": [
+        "54/54 fixture mutation sweep",
+        "12/12 scans raise on a nonexistent path (tautologies gone)",
+        "ULID byte-identical across 6 processes including wall-clock-first (the old bug's exact ordering)",
+        "ULID mutex mutant: 30 duplicates in 160k, assertion fails",
+        "ADR-7: 1 writer ident, 8 distinct reader conns under a barrier, close drains 12/12 then refuses",
+        "D48: same repo_id from worktree, root and .git",
+        "D50: token absent from db, -wal AND -shm",
+        "drift check: 33/33 names, 4/4 enums",
+        "MacHost refuses (UnverifiedHostCapability), skip is real, xfail is strict=True with its recommendation demonstrably unapplied"
+      ],
+      "all_15_remediated_findings": "validated true - none hallucinated, none stale",
+      "blocker_doc_judgement": "protocol working - no entry papers over unfinished work",
+      "findings_for_router": [
+        "HIGH test-only: flaky thread-ident assertion",
+        "MEDIUM: drift_check.py had no assert/raise/sys.exit so it always exited 0 - its output was evidence, its exit code proved nothing",
+        "LOW: blockers doc said four callers, there are three"
+      ]
+    },
+    "planner": null,
+    "planning_reviewer": null,
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    },
+    "builder_trackA": {
+      "status": "PASS",
+      "tasks": "T3+T4",
+      "confidence": 92,
+      "tests": "19 passed, 1 skipped (MacHost real-host cases skipped, never faked)",
+      "full_suite_at_the_time": "61 passed, 1 skipped, 1 xfailed; mypy --strict 28 files clean",
+      "highlights": [
+        "socket budget proven by actually binding 107-byte (ok) and 108-byte (OSError) paths, not by trusting the number",
+        "-q0 enforced by test; MacHost reports available=False with a reason rather than guessing",
+        "every unverified MacHost constant carries '# UNVERIFIED (no capture) - D55', enforced by a static test over every non-docstring literal",
+        "liveness is (pid, start_token) via /proc/<pid>/stat field 22 parsed with rindex(')'); mismatch returns alive=False with the observed token - the pid-reuse guard T7b needs",
+        "detect_host(): a Linux container is still LinuxHost and reports supervision kind 'foreground' (D55's third deployment shape)"
+      ],
+      "blocker_logged": "G1 macOS evidence gap, naming the five captures that would close it"
+    },
+    "planner_r6": {
+      "status": "AMENDED",
+      "revision": 6,
+      "scope": "T2 rule text only",
+      "change": "three rules restated as PROPERTIES not syntax (any read of the mapping by any means incl. alias; identifiers resolved to origin before matching; raw_kind aliases and method calls forbidden); rule 4 restated as a property of the GENERATED COMMAND STRING with an explicit 'this is NOT about the generating module's imports'; docstring exemption + word-bounding stated once for every literal scan",
+      "added_beyond_findings": "each rule's positive-fixture set must now include the evasions named in its own bullet - the two planting rounds failed 13/13 and still missed these, because the planted violations used the canonical form each rule named"
+    },
+    "builder_trackB": {
+      "status": "PASS",
+      "tasks": "T5+T6+T7",
+      "tests": "46 across store+signals",
+      "highlights": [
+        "one writer thread + threading.local readers under WAL, verified under 20 threads x 50 writes",
+        "submodule correction found live: worktree list --porcelain's first record is the GIT DIR not the checkout, contradicting the plan's root_path rule; falls back to --show-toplevel, pinned by a test",
+        "repo.git_common_dir widening flagged in the migration comment and blockers file, not added silently",
+        "token stripped before storage: https://oauth2:FAKE@... -> gitlab.com/example-org/example-repo"
+      ],
+      "blocker_logged": "BLOCKER-T6-1 (SessionSnapshot.observed_at + fold identity sets), recommendation written not applied"
+    },
+    "remfix_batch1": {
+      "status": "PASS",
+      "confidence": 93,
+      "red_proof": "replayed r5 rule bodies against the new evasion fixtures -> 22 defeats/false-positives reproduced before any fix",
+      "fixtures": "54 (24 new, one per evasion named in every r6 bullet)",
+      "mutation_sweep": "emptied each of 54 fixtures in turn; suite must fail for every one. Previously 6 survived (incl. the ADR-6 exclusion pin); now 54/54 killed",
+      "structural_fixes": [
+        "read the artifact BEFORE applying any package exemption, so a missing file raises instead of returning []",
+        "discover targets by what a module DECLARES, never by filename - a renamed leaking hookd module is still caught (git mv evasion closed)",
+        "taint-following through local aliases to a fixpoint, fail-closed on computed keys",
+        "bytes folded into string_literals at one seam so all four literal rules gain coverage",
+        "docstring exemption + word-boundary declared once"
+      ],
+      "product_fixes": [
+        "new_ulid: injected and wall-clock lanes separated, so new_ulid(fixed) is byte-identical run to run (what T12 needs)",
+        "mutex now mutation-tested: 'with _lock' -> 'if True' yields 37 duplicates and fails",
+        "core/ purity resolves relative imports and scans recursively - both planted leaks now caught",
+        "Signal.fields wrapped in MappingProxyType (frozen=True is a shallow freeze)"
+      ],
+      "no_exemptions_added": true,
+      "final": "85 passed, 1 skipped, 1 xfailed; mypy --strict 30 files clean"
+    },
+    "builder_T8_T9": {
+      "status": "PASS",
+      "tests": "117 passed, 1 skipped, 1 xfailed",
+      "mypy": "clean, 33 files",
+      "q0_mutation": "2.3ms with -q0 vs 252.8ms without, BOTH delivering - only the EOF clock detects it",
+      "k3_guard": "session-scoped fixture records the real settings.json sha256 AND sibling listing; verified untouched (259 bytes, Sep 14 09:52)",
+      "found_preexisting": "BLOCKER-T6-2 - tests/store/test_verbs.py keys by threading.get_ident(), which CPython recycles; correctly scoped as outside its surface and not fixed there"
+    },
+    "router_fixes": {
+      "flaky_test": "fixed - keyed by caller-supplied index + threading.Barrier so workers genuinely coexist; 10/10 green (was ~1 in 6 red)",
+      "drift_check": "rewritten to gate: discovers the engine version instead of hard-coding it, exits 1 on drift, 2 when it cannot check, 0 clean; PROVEN by planting a renamed event name -> exit 1, restored -> exit 0; now states plainly that per-event field shapes are NOT covered",
+      "blockers_doc": "caller count corrected"
+    },
+    "builder_daemons": {
+      "status": "PASS",
+      "tasks": "T10+T10b",
+      "tests": "32 in tests/daemons; 194 selected suite-wide",
+      "mypy": "clean, 44 files",
+      "line_caps": "sessiond.py 96, control_ingest.py 58 (ADR-1 cap 150)",
+      "highlights": [
+        "sessiond's import closure is DB-free BY CONSTRUCTION - schema version arrives on argv, so \u00a77 rule 3 (sessiond never migrates) is structural not conventional",
+        "handshake: a version mismatch is counted, buffered, never relayed, never migrated",
+        "0600-in-0700 proven with a real runuser -u nobody -> EACCES 13",
+        "two deliberate framings: ingest = one connection per frame read to EOF (the hook contract); relay hop = one long-lived NDJSON connection with base64 payload, binary-safe because hook payloads contain newlines and Frame.payload is bytes",
+        "isolation rule discovers its target by PROPERTY (a module importing ingest_socket.serve_ingest IS a sessiond), so git mv cannot switch it off - and it asserts the rule HAS a target so it cannot go vacuous",
+        "buffer overflow refuses the newest frame and counts it, preserving the order of what is held"
+      ],
+      "decision_gap_logged": "SO_PEERCRED's home - serve_ingest takes an injected peer_credentials callable; with nothing injected Frame.peer_pid is None (an honest unknown). Recommendation (c) written, NOT applied."
+    },
+    "builder_registry": {
+      "status": "PASS",
+      "tasks": "T7b+T13",
+      "tests": "39 + 12",
+      "suite": "300 passed, 1 skipped, 1 xfailed",
+      "mypy": "clean, 45 files",
+      "headline": "HOOKLESS LANE PROVEN ON THE USER'S REAL MACHINE: 3 live sessions discovered with 0 hooks installed, correct states, no writes under ~/.claude. Router independently reproduced it.",
+      "router_independent_check": "needs_you(/root/Shepherd, idle>60s), running(/root/Shepherd), needs_you(/root/AIVisor); settings.json sha256 unchanged",
+      "gap_router_observed": "titles render (untitled) - the ratchet is a tested pure function but has no carrier in FoldDelta/store (BLOCKER T7b-3). The builder's own proof printed the DERIVED title, masking this; the router's independent run showed the STORED value. Real gap for T16's fleet page.",
+      "decisions": [
+        "engine-sourced reason strings live in engines/, not signals/ - enforced by the concurrently-landed tests/signals/test_normalise.py",
+        "agents --json entries carry UNKNOWN_FIELD for entrypoint/procStart so they are skipped-and-counted, never registered: registering a session whose liveness can never be checked would violate DP7",
+        "timestamp ordering is numeric via fromisoformat, never lexical - ':56Z' sorts after ':56.789Z' as text and would invert the recency rule"
+      ],
+      "blockers_logged": 7
+    },
+    "builder_toolsurface": {
+      "status": "PASS",
+      "task": "T14",
+      "tests": "33 in tests/toolsurface; 342 suite-wide",
+      "mypy": "clean, 51 files",
+      "note": "declined to silently widen the plan's 'exactly five ToolDefs' for D38.1's installer trio - logged T14-2 for a plan amendment instead"
+    },
+    "remfix_crosscut": {
+      "status": "PASS",
+      "confidence": 92,
+      "title_carrier": "CLOSED - D29's ratchet now has a carrier end to end (core/states.py owns TitleSource + TITLE_SOURCE_RANK; FoldDelta carries the pair; DELTA_COLUMNS persists). Live proof, router-reproduced: 3 real sessions render shepherd-0b / shepherd-c8 / aivisor-29, 0 untitled.",
+      "anomaly_members": "CLOSED - 4 new AnomalyKind members; the two subagent unknowns are now named apart instead of both reusing MALFORMED_PAYLOAD; the refusal counter is live over the 40 captured PostToolBatch payloads (1 hook_block / 7 permission / 32 none)",
+      "identity_sets": "CLOSED - 4 fold-state columns persisted, so subagent pairing and task counts survive a controld restart (D37 says it restarts freely) and RD8's recency rule is live at runtime rather than only at the pure seam. A strict xfail was converted to a pass, not relaxed.",
+      "ulid": "CLOSED - register_session mints from an injected clock",
+      "judgement_calls": [
+        "T11-3 cross-repo repos_touched: deliberately NOT applied - the recommended store verb cannot close it because fold() is pure; the real path is T18's composition root. Entry left open with what would change it.",
+        "T11-5 and T12-1 judged CORRECT AS BUILT; entries updated with why, not reworded away"
+      ],
+      "suite": "311 passed (from 301), mypy clean on 41 files, 13/13 boundary rules green with none exempted"
+    },
+    "builder_T18": {
+      "status": "PASS",
+      "task": "T18",
+      "suite": "443 passed + 7 live e2e (two real claude -p runs)",
+      "mypy": "clean, 61 files",
+      "live_proof": "controld composes store->tools->freeze->ingest->discovery->HTTP+SSE; renders 3 real sessions with real titles, ordered, zero hooks; D37 restart drains in order; both sockets unlinked on teardown"
+    },
+    "verifier_m1_final": {
+      "status": "FAIL",
+      "scenarios": "18 total, 15 passed, 3 failed",
+      "blocking": [
+        "B1 ordering.py:24 _STAMP matches NO production writer. discovery lane writes millis (\u202630.138Z), hook lane writes micros+offset (\u202648.078878+00:00), _STAMP expects neither. parse_stamp swallows ValueError -> is_live ALWAYS False -> every running session demoted to starting at age 0ms. \u00a716's middle state value is UNREACHABLE. The suite is green because every fixture hand-writes the parser's own format - the tests prove the parser agrees with the tests. This is the project's first rule (no shape without a real example) broken for our OWN last_event_at.",
+        "B2 server.py:65 allow_reuse_address=False, undocumented and untested -> same-port restart fails for the TIME_WAIT window whenever the page was open (the NORMAL path, since the page holds a permanent SSE connection), and fails as a raw traceback. D37's other half broken.",
+        "B3 (non-blocking) cli/main.py has no __main__ guard -> python -m shepherd.cli.main doctor prints nothing and EXITS 0. A silent success."
+      ],
+      "ledger_corrections": [
+        "T17-3 overstates: claims a real run of `shepherd doctor` on this host; shepherd is not on PATH and nothing is installed. The test asserts importability, not installedness.",
+        "T11-3 code is RIGHT (accumulation verified A -> A,B) but miscites C9 as its authority; C9 only says FileChanged is the wrong SOURCE and makes no ruling about which repos get marked. No test covers the two-repo accumulation the spec's own example shows."
+      ],
+      "praise": [
+        "the boundary suite is the best thing here: each rule reads the file BEFORE consulting the exemption, and each ships a self-check asserting it fires outside its exempt package. All 3 violations planted in shipped code failed the build with the right rule each time.",
+        "zero mock objects in 444 tests - real sockets, real git repos, real subprocesses",
+        "doctor is a model of principle 5; the drift check gates in both directions"
+      ],
+      "human_must_check": [
+        "the page's RENDERED behaviour (no browser on this host): rows render/group/titles, needs_you visibly floats, row updates IN PLACE with no reload or scroll jump",
+        "EventSource reconnect + Last-Event-ID replay with no duplicate rows (use a different port or wait ~60s until B2 is fixed)",
+        "escaping holds visually with a title containing <script> or an emoji",
+        "re-run the whole audit on a real macOS host - MacHost is honest about being unverified, but honest-and-unverified is still unverified"
+      ]
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": "wf-20260916T201507Z-e0118b89",
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "pending"
+  },
+  "planning_review_runs": 0,
+  "planning_review_findings": [],
+  "planning_review_status": "not_started",
+  "plan_revision": 0,
+  "last_reviewed_revision": 0,
+  "memory_notes": [],
+  "pending_gate": null,
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-16T21:51:34Z",
+      "phase": "build-implement"
+    },
+    {
+      "event": "task_primitive_unavailable",
+      "ts": "2026-09-16T21:51:34Z",
+      "phase": "build-implement",
+      "detail": "No TaskCreate/TaskList in this harness; the 20-task graph is tracked here. Batches follow the plan's four tracks; parallel builders only on provably disjoint file surfaces."
+    },
+    {
+      "event": "review_findings",
+      "ts": "2026-09-16T22:12:56Z",
+      "phase": "build-review",
+      "detail": "2 critical, 2 high, 4 medium; 3 routed to planner as plan defects (rules specified as literal syntactic forms)"
+    },
+    {
+      "event": "hunt_findings",
+      "ts": "2026-09-16T22:13:41Z",
+      "phase": "build-hunt",
+      "detail": "0 critical, 7 high, 6 medium; 6 findings cross-confirmed with the reviewer (confidence promoted); 2 new structural classes: tautological self-checks and .exists()-guarded no-ops"
+    },
+    {
+      "event": "plan_r6_rule_widening",
+      "ts": "2026-09-16T22:16:42Z",
+      "phase": "build-review",
+      "detail": "three defeated rules restated as properties; fixture sets must now include named evasions"
+    },
+    {
+      "event": "remediation_complete",
+      "ts": "2026-09-16T22:42:05Z",
+      "phase": "build-implement",
+      "detail": "15 findings remediated; 22 rule defeats reproduced as RED first; fixture mutation sweep 54/54; no exemptions added"
+    },
+    {
+      "event": "verification_fail_then_fixed",
+      "ts": "2026-09-16T23:02:26Z",
+      "phase": "build-verify",
+      "detail": "14/15; the one failure was a test-only flake, now fixed and proven 10/10; drift_check upgraded from report to gate"
+    },
+    {
+      "event": "trackD_complete",
+      "ts": "2026-09-16T23:12:36Z",
+      "phase": "build-implement",
+      "detail": "T10+T10b green; 4 behavioral RED cycles"
+    },
+    {
+      "event": "hookless_lane_proven",
+      "ts": "2026-09-16T23:20:24Z",
+      "phase": "build-implement",
+      "detail": "M1's headline claim verified live on the user's own machine and independently reproduced by the router"
+    },
+    {
+      "event": "crosscut_remediation_complete",
+      "ts": "2026-09-16T23:54:03Z",
+      "phase": "build-implement",
+      "detail": "title carrier + anomaly members + identity-set persistence closed; blocker ledger dispositioned explicitly"
+    },
+    {
+      "event": "m1_final_verification_FAIL",
+      "ts": "2026-09-17T01:08:21Z",
+      "phase": "build-verify",
+      "detail": "15/18; is_live() always False so \u00a716's running bucket is unreachable - missed by 444 tests because every fixture supplied the parser's own format"
+    }
+  ],
+  "remediation_history": [],
+  "created_at": "2026-09-16T21:51:34Z",
+  "updated_at": "2026-09-17T01:08:21Z"
+}

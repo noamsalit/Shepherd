@@ -1,0 +1,50 @@
+{
+ "top_level_keys": [
+  "changelogLastFetched",
+  "closedIssuesLastChecked",
+  "customApiKeyResponses",
+  "firstStartTime",
+  "firstStartVersion",
+  "fullscreenBootPending",
+  "hasCompletedOnboarding",
+  "hasResetAutoModeOptInForDefaultOffer",
+  "lastClawdEntranceVersion",
+  "lastReleaseNotesSeen",
+  "machineID",
+  "mcpServers",
+  "migrationVersion",
+  "numStartups",
+  "officialMarketplaceAutoInstallAttempted",
+  "officialMarketplaceAutoInstalled",
+  "opusProMigrationComplete",
+  "projects",
+  "seenNotifications",
+  "sonnet1m45MigrationComplete",
+  "userID"
+ ],
+ "mcpServers": {
+  "shepherd": {
+   "type": "stdio",
+   "command": "/usr/bin/python3",
+   "args": [
+    "/root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/mcp_stub.py",
+    "/root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/config-scopes-20260914T173908Z/mcp-stub-messages.jsonl"
+   ],
+   "env": {}
+  }
+ },
+ "projects_keys": {
+  "/tmp/shp-gap-mcp-rc4d_try/w": [
+   "allowedTools",
+   "disabledMcpjsonServers",
+   "enabledMcpjsonServers",
+   "hasClaudeMdExternalIncludesApproved",
+   "hasClaudeMdExternalIncludesWarningShown",
+   "hasTrustDialogAccepted",
+   "lastGracefulShutdown",
+   "lastVersionBase",
+   "mcpContextUris",
+   "mcpServers"
+  ]
+ }
+}

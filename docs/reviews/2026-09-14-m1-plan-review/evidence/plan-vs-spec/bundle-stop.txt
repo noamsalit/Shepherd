@@ -1,0 +1,1 @@
+hook_event_name:R("Stop"),stop_hook_active:H(),last_assistant_message:o().optional().describe("Text content of the last assistant message before stopping. Avoids the need to read and parse the transcript file."),background_tasks:T(Xz()).optional().describe('In-flight background work (running/pending + backgrounded) register

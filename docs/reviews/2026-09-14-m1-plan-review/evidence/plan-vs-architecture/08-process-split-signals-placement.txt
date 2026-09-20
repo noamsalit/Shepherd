@@ -1,0 +1,53 @@
+# (d) Process split: where signals/fold and DB writes run
+## spec §5 topology: Signals + Verdicts and SQLite drawn inside controld; sessiond = tmux + hook ingest UDS
+┌───────────────▼──────────────────────────────┐
+│  controld — control plane (restartable)      │
+│                                              │
+│  ┌────────────┐ ┌──────────┐ ╔════════════╗  │
+│  │ Signals    │ │ Queues   │ ║Orchestrator║  │
+│  │ + Verdicts │ │ + Workers│ ║(Agent SDK) ║  │
+│  └────────────┘ └──────────┘ ║+ connectors║  │
+│                              ╚═════╤══════╝  │
+│         no direct import ──────────┘         │
+│  ┌────────────────────────────────────────┐  │
+│  │ authorize()   ·   audit log            │  │
+│  └────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────┐  │
+│  │ Tool registry · invoke() · exporters   │  │
+│  └────────────────────────────────────────┘  │
+│                   SQLite (WAL)               │
+└───────────────┬──────────────────────────────┘
+                │  Runner interface / UDS
+┌───────────────▼──────────────────────────────┐
+│  sessiond — pty supervisor (long-lived)      │
+│  owns every tmux session + hook ingest UDS   │
+└───────────────┬──────────────────────────────┘
+                │
+     claude(tmux)   claude(tmux)   claude(tmux)
+```
+
+**The double border around Orchestrator is D19.** It runs in `controld`'s
+process but may import nothing from Signals, Queues, Runner, or storage — it
+calls the same tool-surface client a tier-2 session calls over MCP. An import
+test asserts the boundary; violating it is a failing build, not a review
+comment. That is also what lets the master move into its own `masterd` process
+later (§17) without touching a line of its logic.
+
+## plan container table: sessiond runs ingest+fold and writes session rows
+| Container | Responsibility | Writes | Restart semantics |
+|---|---|---|---|
+| `hookd.py` | Forward one hook payload. Never harm Claude. | nothing | per event, one short process |
+| `sessiond` | Ingest, fold, liveness sweep, title/model refresh from transcripts | inserts attached `session` rows; `session` live and title columns; `workspace.last_activity_at` (coalesced) | long-lived. Loses in-memory fold memory (pending permission, last stop prompt id, pid, transcript offsets), all recoverable from later events. |
+| `controld` | Migrate; serve API, SSE, UI; handle registration | `workspace` (except `last_activity_at`), `repo`, rebind columns, `app_state` | restartable freely. Clients get `resync`. |
+
+## plan PD-02 (two writers)
+| PD-02 | **sessiond inserts attached `session` rows (`register_attached_session`), is the only writer of `session` live/title columns, and bumps `workspace.last_activity_at` (coalesced, inside `apply_live_patch`). controld is the only writer of the rest of `workspace`, of `repo`, of the rebind columns (`session.workspace_id`/`repo_id` on rows with `repo_id IS NULL`), and of `app_state`.** Registr
+
+## T09 durability: M2 adds a stop-trigger output to the fold that runs in sessiond
+- **Durability:** stable (the fold contract); near-term-refactor (M2 adds a stop-trigger output)
+
+## any M2 precondition naming the process for classify? (grep 'controld' in M2 block lines 187-194)
+0
+
+## any DV row about moving signals/fold out of controld? (grep DV rows for 'fold' or 'Signals')
+none

@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shepherd"
+version = "0.1.0"
+description = "Shepherd — orchestrator platform for Claude Code sessions"
+requires-python = ">=3.12"
+# T2 (M4): the master track reads the Agent SDK's shapes on every line and the
+# manifest said this package had no dependencies at all. The floor is the
+# version measured on this host (G-M4-1); the ceiling is the next minor, which
+# is the honest range — an exact pin would be a fiction the first time the SDK
+# moves, and a lower floor would claim a version nobody ran.
+dependencies = ["claude-agent-sdk>=0.2.153,<0.3", "anyio>=4.15"]
+
+# T17-3 / T18: the three processes this build is, on `PATH`. `run()` in each
+# module is the body; `main(argv)` stays importable so the tests drive it
+# without a subprocess.
+[project.scripts]
+shepherd = "shepherd.cli.main:run"
+shepherd-controld = "shepherd.daemons.controld:run"
+shepherd-sessiond = "shepherd.daemons.sessiond:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# T16-2: `packages.find` ships `.py` files only. The fleet page is served from
+# the package by path, so without this table an installed wheel answers `/`
+# with a 404 — the one thing M1 exists to show.
+#
+# T19: the glob is **single-level**. `static/*` ships `index.html` and the ES
+# modules and silently ships nothing from `static/vendor/`, where the one
+# runtime dependency (xterm.js, K8/D51) lives — M1's defect returning one
+# directory down. Note that no fnmatch-based check can see this: fnmatch's `*`
+# matches `/`, so `static/*` "matches" `static/vendor/xterm.js` on paper while
+# setuptools ships nothing. Only
+# `tests/test_packaging.py::test_the_vendor_file_ships_in_a_built_wheel`, which
+# builds the wheel through this very backend and lists it, catches it.
+[tool.setuptools.package-data]
+"shepherd.web" = ["static/*", "static/vendor/*"]
+"shepherd.store" = ["migrations/*.sql"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+disallow_any_explicit = true
+warn_unreachable = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q -m 'not live'"
+# T18's lane starts real `claude` processes on this host, so it is excluded from
+# the default run. The exclusion is in `addopts`, not only in this comment:
+# declaring a marker does NOT deselect it, and for three milestones it did not.
+# A plain `pytest` was starting real `claude` subprocesses and reading the user's
+# real `~/.claude.json` (T10 review finding 8; T10-R1 is what that cost).
+# Run the live lane deliberately with `pytest -m live`.
+markers = [
+    "live: starts or reads real processes on this host (excluded from the default run)",
+]

@@ -1,0 +1,16 @@
+{
+ "request": "GET /sessions/shepherd_t1/pty HTTP/1.1\r\nHost: 127.0.0.1:36909\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: NLjxD6tDK+vi4Z7g4r9Dig==\r\nSec-WebSocket-Version: 13\r\n\r\n",
+ "response_head": "HTTP/1.1 101 Switching Protocols\r\nServer: BaseHTTP/0.6 Python/3.12.3\r\nDate: Mon, 14 Sep 2026 17:16:10 GMT\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: e1dFrKT8fv/yzhkYZ+5wPsDLWK4=\r\n\r\n",
+ "expected_accept": "e1dFrKT8fv/yzhkYZ+5wPsDLWK4=",
+ "accept_matches": true,
+ "client_frame_hex": "8183b10402d1aa5f43",
+ "server_frame_header_hex": "8108",
+ "server_payload": "echo:\u001b[A",
+ "server_side": [
+  {
+   "server_received_frame_header_hex": "8183",
+   "mask_hex": "b10402d1",
+   "unmasked_payload": "\u001b[A"
+  }
+ ]
+}

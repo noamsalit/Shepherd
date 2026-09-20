@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-gap-acr-vsugifz1
+
+
+❯ Reply with only the word ONE
+
+● ONE
+
+✻ Cogitated for 1s · done 5:49 PM
+
+❯ Reply with only the word TWO
+
+● TWO
+
+✻ Cogitated for 0s · done 5:50 PM
+
+❯ Reply with only the word THREE
+
+● THREE
+
+✻ Worked for 5s · done 5:50 PM
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                      auto mode unavailable for this model
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

@@ -1,0 +1,39 @@
+{
+ "scenario": "S01_startup_tools",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cmd": [
+  "claude",
+  "-p",
+  "This is a hook test. Do these steps in order, exactly one tool call per step, do not skip any step even if one fails, and do not run steps in parallel:\n1. Bash: echo hello\n2. Bash: false\n3. Read the file ./does-not-exist.txt\n4. Create a task with TaskCreate, subject 'probe task'. Then mark it completed with TaskUpdate.\n5. Write the text 'x' to the file /tmp/shp-outside-shp-hooks-base-dwqg6d95.txt\n6. Use the Agent tool (subagent_type general-purpose) with the prompt: 'Run the Bash command: echo sub. Then reply done.' and wait for it.\n7. Reply with the single word FINISHED.",
+  "--model",
+  "claude-haiku-4-5-20251001",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--include-hook-events",
+  "--debug-file",
+  "/tmp/shp-hooks-base-dwqg6d95/.debug-S01_startup_tools.log",
+  "--allowedTools",
+  "Bash(echo:*)",
+  "Bash(false)",
+  "Read",
+  "Agent",
+  "TaskCreate",
+  "TaskUpdate",
+  "ToolSearch"
+ ],
+ "cwd": "/tmp/shp-hooks-base-dwqg6d95",
+ "exit_code": 0,
+ "timed_out": false,
+ "started": "2026-09-14T15:15:21Z",
+ "duration_s": 27.31,
+ "session_id_from_stdout": "8bbcceab-0b3e-4e24-98c9-ec146b1ca8c6",
+ "env_extra": {},
+ "env_scrubbed_prefixes": [
+  "CLAUDE*",
+  "CLAUDECODE"
+ ],
+ "user_settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "user_settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+ "cc10x_mentions_in_debug": 3
+}

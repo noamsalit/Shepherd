@@ -1,0 +1,376 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "remoteControlAtStartup": false,
+ "hooks": {
+  "PreToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PreToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PostToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostToolUseFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PostToolUseFailure /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostToolBatch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PostToolBatch /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Notification": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Notification /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "UserPromptExpansion": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh UserPromptExpansion /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SessionStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Stop /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "StopFailure": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SubagentStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SubagentStart /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "SubagentStop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh SubagentStop /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PreCompact": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PreCompact /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostCompact": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PostCompact /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PreModelSwitch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PreModelSwitch /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PostModelSwitch": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PostModelSwitch /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PermissionRequest": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PermissionRequest /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "PermissionDenied": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh PermissionDenied /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Setup": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Setup /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "TeammateIdle": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh TeammateIdle /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "TaskCreated": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh TaskCreated /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "TaskCompleted": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh TaskCompleted /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "Elicitation": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh Elicitation /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "ElicitationResult": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh ElicitationResult /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "ConfigChange": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh ConfigChange /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "WorktreeCreate": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh WorktreeCreate /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "WorktreeRemove": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh WorktreeRemove /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "InstructionsLoaded": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh InstructionsLoaded /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "CwdChanged": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh CwdChanged /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "FileChanged": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh FileChanged /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "DirectoryAdded": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh DirectoryAdded /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ],
+  "MessageDisplay": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/capture_hook.sh MessageDisplay /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/interrupt-20260914T172251Z/hooks.jsonl",
+      "timeout": 10
+     }
+    ]
+   }
+  ]
+ },
+ "permissions": {
+  "allow": [
+   "Bash(sleep:*)"
+  ]
+ }
+}

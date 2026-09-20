@@ -1,0 +1,32 @@
+# (e) Protocols declared by the plan and their contract suites (grep, 2026-09-14)
+
+## every 'Protocol' class in Spec S4
+808:class Credentials(Protocol):
+834:class ProcessProbe(Protocol):
+843:class ServiceSupervisor(Protocol):
+1025:class ByteReader(Protocol):
+1123:class EngineAdapter(Protocol):
+
+## contract suites named anywhere in the plan
+1295:tests/contract/test_credentials_contract.py
+1651:tests/contract/test_engine_adapter_contract.py
+1358:tests/contract/test_supervisor_contract.py
+
+## ProcessProbe checks in T02 (Linux integration only; no contract suite over Linux/Darwin/Scripted)
+  - `test_process_probe.py::test_self_alive_with_correct_starttime`, `::test_wrong_starttime_is_dead`, `::test_nonexistent_pid_dead`
+
+## spec §6 declares six seams (Runner, EngineAdapter, MasterRuntime, ModelProvider, Credentials, WorkItemProvider)
+272:class Runner(Protocol):
+282:class EngineAdapter(Protocol):
+293:class MasterRuntime(Protocol):                                     # D30, revised by D32
+301:class ModelProvider(Protocol):
+306:class Credentials(Protocol):
+314:class WorkItemProvider(Protocol):
+
+## spec §6 intro
+268:Everything pluggable goes through exactly one interface. No module has a second
+
+## plan's 'platform seam' framing
+121:| DV-02 | D2 / §13 / §15: macOS `.pkg`, launchd, Keychain | Every host concern sits behind the platform seam. **Linux drivers are live and QA'd** (systemd `--user` unit files, a 0600 file creden
+149:| DV-31 | §16 M1 slice does not list a credential store | T01 builds the `Credentials` seam (Protocol, `FileCredentials`, unverified `KeychainCredentials`, `ScriptedCredentials`, contract suite) 
+311:Dependency classes: Claude Code is **Wrapped** (`EngineAdapter`). SQLite is **Infra wrapped by `store/`** (D26). systemd, launchd, Keychain and `/proc` are **Wrapped** (platform seam).

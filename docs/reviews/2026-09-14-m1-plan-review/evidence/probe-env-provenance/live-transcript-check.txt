@@ -1,0 +1,8 @@
+run1 session_id e9ee62f4-2d99-4a94-bd5d-2ba7ce536492 cwd /tmp/shp-envprov-V8Zaeg/work
+  transcript_path /root/.claude/projects/-tmp-shp-envprov-V8Zaeg-work/e9ee62f4-2d99-4a94-bd5d-2ba7ce536492.jsonl
+  expected via slug rule /root/.claude/projects/-tmp-shp-envprov-V8Zaeg-work/e9ee62f4-2d99-4a94-bd5d-2ba7ce536492.jsonl match= True
+  entry types {'queue-operation': 2, 'user': 2, 'attachment': 12, 'atis-latch': 3, 'last-prompt': 3, 'ai-title': 2, 'assistant': 4, 'system': 1} versions {'2.1.270'} assistant.effort {'None'}
+run2marker session_id ef9b2ddc-21b1-4867-b3a2-0f108ac23e22 cwd /tmp/shp-envprov-V8Zaeg/work
+  transcript_path /root/.claude/projects/-tmp-shp-envprov-V8Zaeg-work/ef9b2ddc-21b1-4867-b3a2-0f108ac23e22.jsonl
+  expected via slug rule /root/.claude/projects/-tmp-shp-envprov-V8Zaeg-work/ef9b2ddc-21b1-4867-b3a2-0f108ac23e22.jsonl match= True
+  entry types {'queue-operation': 2, 'user': 1, 'attachment': 11, 'atis-latch': 3, 'last-prompt': 2, 'ai-title': 2, 'assistant': 2, 'system': 1} versions {'2.1.270'} assistant.effort {'None'}

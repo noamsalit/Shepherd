@@ -1,0 +1,21 @@
+source dir: /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/ (events*.jsonl)
+total events 77
+SessionStart 4 ['cwd', 'hook_event_name', 'session_id', 'source', 'transcript_path']
+UserPromptSubmit 4 ['cwd', 'hook_event_name', 'permission_mode', 'prompt', 'prompt_id', 'session_id', 'transcript_path']
+MessageDisplay 7 ['cwd', 'delta', 'final', 'hook_event_name', 'index', 'message_id', 'prompt_id', 'session_id', 'transcript_path', 'turn_id']
+PreToolUse 23 ['agent_id', 'agent_type', 'cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path']
+PostToolUse 22 ['agent_id', 'agent_type', 'cwd', 'duration_ms', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'tool_response', 'tool_use_id', 'transcript_path']
+SubagentStart 1 ['agent_id', 'agent_type', 'cwd', 'hook_event_name', 'prompt_id', 'session_id', 'transcript_path']
+SubagentStop 1 ['agent_id', 'agent_transcript_path', 'agent_type', 'background_tasks', 'cwd', 'effort', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+Stop 4 ['background_tasks', 'cwd', 'effort', 'hook_event_name', 'last_assistant_message', 'permission_mode', 'prompt_id', 'session_crons', 'session_id', 'stop_hook_active', 'transcript_path']
+SessionEnd 4 ['cwd', 'hook_event_name', 'prompt_id', 'reason', 'session_id', 'transcript_path']
+TaskCreated 3 ['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+TaskCompleted 3 ['cwd', 'hook_event_name', 'prompt_id', 'session_id', 'task_description', 'task_id', 'task_subject', 'transcript_path']
+PermissionRequest 1 ['cwd', 'effort', 'hook_event_name', 'permission_mode', 'prompt_id', 'session_id', 'tool_input', 'tool_name', 'transcript_path']
+('SessionStart', 'source') {'startup': 4}
+('PreToolUse', 'effort_type') {'dict': 23}
+('PostToolUse', 'effort_type') {'dict': 22}
+('SubagentStop', 'effort_type') {'dict': 1}
+('Stop', 'effort_type') {'dict': 4}
+('SessionEnd', 'reason') {'other': 4}
+('PermissionRequest', 'effort_type') {'dict': 1}

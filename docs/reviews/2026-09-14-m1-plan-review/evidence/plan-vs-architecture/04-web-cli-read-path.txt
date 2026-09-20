@@ -1,0 +1,35 @@
+# (c) How web/ and cli/ read data in M1 (plan grep, 2026-09-14)
+
+## HTTP server lives in controld/ and holds Store + EngineAdapter directly
+367:src/shepherd/controld/{security,projections,http}.py            T15
+1215:class HttpDeps: store: Store; hub: EventHub; link: SessiondLink; engine: EngineAdapter; config: ShepherdConfig; boot_id: str; stop: threading.Event
+
+## read routes (Spec S3) served straight from store/engine
+| GET | `/api/fleet` | `fleet_view` | `{seq, generated_at, liveness_window_s, workspaces:[WorkspaceView], hidden_idle:int, unknown:{unassigned_sessions:int, cou
+| GET | `/api/sessions/{id}` | `{"session": session_card, "brief": str\|null, "cwd": str}` | 404 if missing |
+| GET | `/api/sessions/{id}/subagents` | `{"session_id": str, "subagents": [subagent_view]}` | on-demand transcript read (PD-09) |
+| GET | `/api/workspaces` | `{"workspaces":[{id,name,root_path,repos:[RepoView]}]}` | used by the CLI |
+| GET | `/api/health` | `health_view` | `{controld:{schema_version, boot_id, runtime_dir}, sessiond:{connected, gated\|null, counters\|null}}` |
+| GET | `/api/events` | SSE (S2 contract 2) | `Last-Event-ID` header or `?last_event_id=` |
+
+## subagents route calls the engine from the HTTP handler
+1788:  - The subagents route calls `engine.list_subagents(session.engine_session_id, parent_live=state != 'stopped')`, returning `[]` if `engine_session_id` is None.
+
+## CLI reads via those same hand-written routes
+1857:  | `repo add PATH --workspace ID_OR_NAME [--name N]`, `repo deactivate ID` | names resolve through `GET /api/workspaces`; ambiguous → exit 64 |
+1862:  `ControldClient` uses `urllib.request` to `http://127.0.0.1:<port>` with `Content-Type: application/json` and no Origin. It maps error JSON to `ControldError`. The `shepherd` script entry point
+
+## DV-17: the only recorded D32 deviation covers MUTATING routes only
+| DV-17 | D32: HTTP routes are generated from the registry; D22: `add_repo` is `local_destructive` | M1 hand-writes four mutating routes: create workspace, discover, register repo, deactivate repo. The CLI uses them; the UI stays read-only. There is no `authorize()` yet. **M4 replaces these routes with `to_http_routes` and gates `add_repo`.** | M1 has no registry. Widening the repo allowlist in M1 has no consumer, because nothing spawns before M3. Durability: near-term-refactor. |
+
+## T15 durability marks the read API as stable
+1804:- **Durability:** stable (read API); near-term-refactor (mutating routes → M4 registry, DV-17)
+
+## M4 precondition list (only mutating routes are sent back to the registry)
+**M4 plan must:**
+- Add an `approval` table migration (DV-15).
+- Replace M1's hand-written mutating routes with registry exporters and gate `add_repo` as `local_destructive` (DV-17).
+- Note that `test_repo_rules.py` already carries the D19 `shepherd.master` import rule, which passes vacuously in M1.
+
+## CLI imports daemons and the concrete engine directly (T17 Consumes)
+- **Consumes:** `resolve_profile`, `current_platform`, `load_config`, `Platform`, `ServiceSpec`, `run_controld`, `run_sessiond`, `ClaudeCodeEngine`, `HookTarget`, `HookInstallReport`, `EXIT_CONFIG`, `EXIT_UNAVAILABLE`, `JsonObject`

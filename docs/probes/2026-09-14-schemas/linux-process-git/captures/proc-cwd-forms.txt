@@ -1,0 +1,3 @@
+logical_cwd: /tmp/shp-lpg-proc.vpBd05/link/repo
+realpath: /tmp/shp-lpg-proc.vpBd05/real/repo
+rev-parse --show-toplevel (from logical cwd): /tmp/shp-lpg-proc.vpBd05/real/repo

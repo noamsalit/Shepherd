@@ -1,0 +1,10 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-perm-deny_rule_bash_rm-ldxzdbc6/.debug-S09_perm_deny_rule_bash_rm.log
+2026-09-14T15:18:22.382Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:18:22.382Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:18:22.382Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:18:22.382Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:18:23.126Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:18:29.559Z [DEBUG] [engine] turn 1 end (turns=2 usage in=937 out=496 cost=$0.0234 api=7127ms stop=end_turn resultLen=140)
+2026-09-14T15:18:29.568Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:18:29.570Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:18:29.586Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/S09_perm_deny_rule_bash_rm/events.jsonl] completed with status 0

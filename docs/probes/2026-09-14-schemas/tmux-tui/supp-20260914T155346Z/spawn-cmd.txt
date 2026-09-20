@@ -1,0 +1,1 @@
+claude --model claude-haiku-4-5-20251001 --name shp-spawn-name --session-id 17b1da21-4505-43ae-8958-35764a620384 --debug-file /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/supp-20260914T155346Z/debug-s.log

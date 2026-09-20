@@ -1,0 +1,29 @@
+{"start": true, "size": "120x30", "bracketed": true, "isig": false, "t": 1789405744.614}
+{"marker": "send-keys Escape", "t": 1789405745.571}
+{"hex": "1b", "repr": "b'\\x1b'", "t": 1789405745.577}
+{"marker": "send-keys C-c", "t": 1789405746.181}
+{"hex": "03", "repr": "b'\\x03'", "t": 1789405746.188}
+{"marker": "send-keys Up Down Left Right", "t": 1789405746.792}
+{"hex": "1b5b411b5b421b5b441b5b43", "repr": "b'\\x1b[A\\x1b[B\\x1b[D\\x1b[C'", "t": 1789405746.799}
+{"marker": "send-keys Enter", "t": 1789405747.404}
+{"hex": "0d", "repr": "b'\\r'", "t": 1789405747.411}
+{"marker": "send-keys BSpace Tab BTab", "t": 1789405748.016}
+{"hex": "7f091b5b5a", "repr": "b'\\x7f\\t\\x1b[Z'", "t": 1789405748.023}
+{"marker": "send-keys -H 1b 5b 41 (raw ESC [ A)", "t": 1789405748.628}
+{"hex": "1b5b41", "repr": "b'\\x1b[A'", "t": 1789405748.634}
+{"marker": "send-keys -H 03 (raw ETX)", "t": 1789405749.238}
+{"hex": "03", "repr": "b'\\x03'", "t": 1789405749.244}
+{"marker": "send-keys -H e2 9c 93 (UTF-8 check mark)", "t": 1789405749.848}
+{"hex": "e29c93", "repr": "b'\\xe2\\x9c\\x93'", "t": 1789405749.854}
+{"marker": "send-keys -l with literal ESC [ A text", "t": 1789405750.458}
+{"hex": "1b5b41", "repr": "b'\\x1b[A'", "t": 1789405750.466}
+{"marker": "send-keys -l 'a\nb' (literal LF)", "t": 1789405751.071}
+{"hex": "610a62", "repr": "b'a\\nb'", "t": 1789405751.078}
+{"marker": "paste-buffer -p (bracketed, app enabled ?2004h)", "t": 1789405751.689}
+{"hex": "1b5b3230307e6c696e65206f6e650d6c696e652074776f1b5b3230317e", "repr": "b'\\x1b[200~line one\\rline two\\x1b[201~'", "t": 1789405751.695}
+{"marker": "paste-buffer (no -p)", "t": 1789405752.300}
+{"hex": "6c696e65206f6e650d6c696e652074776f", "repr": "b'line one\\rline two'", "t": 1789405752.307}
+{"marker": "send-keys -H with explicit 1b5b3230307e...1b5b3230317e", "t": 1789405752.912}
+{"hex": "1b5b3230307e68691b5b3230317e", "repr": "b'\\x1b[200~hi\\x1b[201~'", "t": 1789405752.919}
+{"marker": "printf XYZ > pane_tty (/dev/pts/4)", "t": 1789405753.529}
+{"marker": "end", "t": 1789405754.335}

@@ -1,0 +1,4 @@
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 110962, "mode": "autocompact"}
+{"autocompact_call": true, "n_messages": 1, "first": true}
+{"method": "POST", "path": "/v1/messages?beta=true", "body_len": 111647, "mode": "autocompact"}
+{"autocompact_call": true, "n_messages": 3, "first": false}

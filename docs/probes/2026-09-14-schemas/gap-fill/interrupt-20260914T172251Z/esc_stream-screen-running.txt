@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-int-gzmuah9x/w
+
+
+❯ INT-ESC-TOOL
+
+  Ran 1 shell command
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ Reply with only the word AFTER
+
+● OK-AFTER-TOOL
+
+✻ Sautéed for 0s · done 5:23 PM
+
+❯ INT-CC-TOOL
+
+  Ran 1 shell command
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ Reply with only the word AFTER
+
+● OK-AFTER-TOOL
+
+✻ Churned for 0s · done 5:23 PM
+
+❯ INT-ESC-STREAM
+
+
+
+
+✶ Befuddling…
+  ⎿  Tip: Use /theme to change the color theme
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

@@ -1,0 +1,73 @@
+{
+ "enabledPlugins": {
+  "cc10x@cc10x": false
+ },
+ "hooks": {
+  "SessionStart": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py SessionStart /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ],
+  "UserPromptSubmit": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py UserPromptSubmit /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ],
+  "PreToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py PreToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ],
+  "PostToolUse": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py PostToolUse /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ],
+  "Stop": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py Stop /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ],
+  "SessionEnd": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "timeout": 10,
+      "command": "SHP_CLAUDE_VERSION='2.1.270 (Claude Code)' python3 /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/hook_capture.py SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/linux-process-git/captures/proc-hooks.jsonl /tmp/shp-lpg-proc.vpBd05/s/hook.sock"
+     }
+    ]
+   }
+  ]
+ }
+}

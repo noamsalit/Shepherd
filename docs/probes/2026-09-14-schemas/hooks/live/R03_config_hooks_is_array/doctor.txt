@@ -1,0 +1,5 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-hooks_is_array-pgu16w0j; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-hooks_is_array-pgu16w0j/.claude/settings.json › hooks: "hooks" must be an object mapping event names to matcher arrays; received array — a PreToolUse/PermissionRequest hook that cannot be loaded may be what guards the permissions declared beside it, so nothing it sits in is applied until the entry is fixed or removed.
+- /tmp/shp-hooks-cfg-hooks_is_array-pgu16w0j/.claude/settings.json › hooks: Expected record, but received undefined
+  Suggested fix: Hooks use a matcher + hooks array. The matcher is a string: a tool name ("Bash"), pipe-separated list ("Edit|Write"), or empty to match all. Example: {"PostToolUse": [{"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "echo Done"}]}]}

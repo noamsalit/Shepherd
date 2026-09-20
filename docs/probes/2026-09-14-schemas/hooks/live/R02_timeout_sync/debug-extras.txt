@@ -1,0 +1,10 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-timeout-ya1_epwl/.debug-R02_timeout_sync.log
+2026-09-14T15:25:57.421Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:25:57.421Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:25:57.421Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:25:57.421Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:25:58.179Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:26:05.673Z [DEBUG] [engine] turn 1 end (turns=2 usage in=926 out=178 cost=$0.0213 api=3108ms stop=end_turn resultLen=4)
+2026-09-14T15:26:05.682Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:26:05.683Z [DEBUG] LSP server manager shut down successfully
+2026-09-14T15:26:05.712Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R02_timeout_sync/events.jsonl] completed with status 0

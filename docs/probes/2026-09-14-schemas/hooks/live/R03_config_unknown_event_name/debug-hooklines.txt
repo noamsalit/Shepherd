@@ -1,0 +1,34 @@
+2026-09-14T15:26:37.899Z [DEBUG] MDM settings load completed in 1ms
+2026-09-14T15:26:37.940Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:26:37.944Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-09-14T15:26:38.031Z [DEBUG] Loaded 1 installed plugins from /root/.claude/plugins/installed_plugins.json
+2026-09-14T15:26:38.047Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-09-14T15:26:38.080Z [DEBUG] Read hooks.json for plugin cc10x (enabled=false; will NOT register, plugin is disabled): /root/src/cc10x-qa/plugins/cc10x/hooks/hooks.json
+2026-09-14T15:26:38.082Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-09-14T15:26:38.083Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-09-14T15:26:38.083Z [DEBUG] Total plugin workflows loaded: 0
+2026-09-14T15:26:38.084Z [DEBUG] hooks modules not loaded: rollout flag (tengu_plugin_hooks_modules) is off, from the default (a cold GrowthBook cache, no payload yet)
+2026-09-14T15:26:38.084Z [DEBUG] sec-default@builtin not seated: hooks modules are off in this process
+2026-09-14T15:26:38.084Z [DEBUG] Total plugin commands loaded: 0
+2026-09-14T15:26:38.084Z [DEBUG] Total plugin agents loaded: 0
+2026-09-14T15:26:38.085Z [DEBUG] Total plugin skills loaded: 0 (0 duplicate/user-owned entries skipped)
+2026-09-14T15:26:38.087Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-09-14T15:26:38.087Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 40 bundled skills, 0 builtin plugin skills
+2026-09-14T15:26:38.116Z [DEBUG] All plugins already exist, skipping migration
+2026-09-14T15:26:38.118Z [DEBUG] Initialized versioned plugins system with 1 plugins
+2026-09-14T15:26:38.162Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:26:38.162Z [DEBUG] Watching for changes in setting files /root/.claude/settings.json, /tmp/shp-hooks-cfg-unknown_event_name-ebwjyh7d/.claude/settings.json, /tmp/shp-hooks-cfg-unknown_event_name-ebwjyh7d/.claude/settings.local.json...
+2026-09-14T15:26:38.163Z [DEBUG] Keeping /root/.claude/plugins/cache/cc10x: it still holds a directory, a symlink, a versioned archive or an entry of unknown type
+2026-09-14T15:26:38.169Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:26:38.170Z [WARN] [3P telemetry] Event dropped (no event logger initialized): hook_execution_complete
+2026-09-14T15:26:38.376Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-nonexistent-model-shp modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-09-14T15:26:39.048Z [DEBUG] Total plugin output styles loaded: 0
+2026-09-14T15:26:39.071Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-09-14T15:26:39.072Z [WARN] Skill listing over budget: 13 skills, 6181 chars > 6000 budget — descriptions will be truncated. Run /skills to disable some, or raise skillListingBudgetFraction in settings.
+2026-09-14T15:26:39.072Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-09-14T15:26:39.086Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:26:39.089Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:26:39.679Z [DEBUG] StopFailure:model_not_found [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh StopFailure /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl] completed with status 0
+2026-09-14T15:26:39.679Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-09-14T15:26:39.701Z [DEBUG] SessionEnd:other [/root/Shepherd/docs/probes/2026-09-14-schemas/hooks/capture_hook.sh SessionEnd /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/R03_config_unknown_event_name/events.jsonl] completed with status 0
+2026-09-14T15:26:39.701Z [DEBUG] Hook output does not start with {, treating as plain text

@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-life-nwq17um0/w
+
+
+❯ FILL-1 please
+
+● FILLED
+
+✻ Cooked for 0s · done 5:52 PM
+
+❯ NEXT-1 after the big turn
+
+● OK-MOCK
+
+✻ Cooked for 0s · done 5:52 PM
+
+❯ FILL-2 please
+
+● FILLED-2
+
+✻ Worked for 0s · done 5:52 PM
+
+❯ NEXT-2 after the second big turn
+
+
+
+
+
+
+
+* Compacting conversation…
+  ▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 5%
+  ⎿  Tip: Use /memory to view and manage Claude memory
+                                                                                                                     0% until auto-compact
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

@@ -1,0 +1,353 @@
+# built from /root/Shepherd/docs/probes/2026-09-14-schemas/hooks/live/*/events.jsonl; unparseable lines: 0
+
+== ConfigChange  n=1  runs=['S21_config_change']
+   cwd                              str        always             
+   file_path                        str        always             
+   hook_event_name                  str        always             {'"ConfigChange"': 1}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   source                           str        always             {'"local_settings"': 1}
+   transcript_path                  str        always             
+
+== CwdChanged  n=1  runs=['S13_watch_cwd_config']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"CwdChanged"': 1}
+   new_cwd                          str        always             
+   old_cwd                          str        always             
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== DirectoryAdded  n=1  runs=['I01_interactive']
+   cwd                              str        always             
+   directory                        str        always             
+   hook_event_name                  str        always             {'"DirectoryAdded"': 1}
+   prompt_id                        str        always             
+   scratchpad_dir                   str        always             
+   session_id                       str        always             
+   source                           str        always             {'"slash_command"': 1}
+   transcript_path                  str        always             
+
+== Elicitation  n=1  runs=['S17_elicitation']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"Elicitation"': 1}
+   mcp_server_name                  str        always             
+   message                          str        always             
+   mode                             str        always             {'"form"': 1}
+   prompt_id                        str        always             
+   requested_schema                 dict       always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== ElicitationResult  n=1  runs=['S17_elicitation']
+   action                           str        always             {'"cancel"': 1}
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"ElicitationResult"': 1}
+   mcp_server_name                  str        always             
+   mode                             str        always             {'"form"': 1}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== FileChanged  n=2  runs=['S13_watch_cwd_config', 'S21_config_change']
+   cwd                              str        always             
+   event                            str        always             {'"change"': 1, '"unlink"': 1}
+   file_path                        str        always             
+   hook_event_name                  str        always             {'"FileChanged"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== InstructionsLoaded  n=16  runs=['S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S05_compact', 'S06_clear', 'S12_slash_command', 'S14_model_switch', 'S14b_resume_other_model']
+   cwd                              str        always             
+   file_path                        str        always             
+   hook_event_name                  str        always             {'"InstructionsLoaded"': 16}
+   load_reason                      str        always             {'"session_start"': 16}
+   memory_type                      str        always             {'"Project"': 16}
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== MessageDisplay  n=51  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S07_bad_model', 'S08_mock_http400', 'S08_mock_http401', 'S08_mock_http402', 'S08_mock_http403', 'S08_mock_http404', 'S08_mock_http429', 'S08_mock_http500', 'S08_mock_http529', 'S08_mock_max_tokens', 'S08_mock_prompt_too_long', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_plan_mode', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S12_slash_command', 'S13_watch_cwd_config', 'S14b_resume_other_model', 'S16_setup__init', 'S16_setup__maintenance', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   cwd                              str        always             
+   delta                            str        always             
+   final                            bool       always             {'true': 51}
+   hook_event_name                  str        always             {'"MessageDisplay"': 51}
+   index                            int        always             {'0': 51}
+   message_id                       str        always             
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 1/51     
+   session_id                       str        always             
+   transcript_path                  str        always             
+   turn_id                          str        always             
+
+== Notification  n=3  runs=['I01_interactive', 'S17_elicitation']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"Notification"': 3}
+   message                          str        always             
+   notification_type                str        always             {'"permission_prompt"': 1, '"idle_prompt"': 1, '"elicitation_response"': 1}
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 2/3      
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== PermissionDenied  n=1  runs=['S20_perm_auto_deny']
+   cwd                              str        always             
+   effort                           dict       always             {'{"level": "high"}': 1}
+   hook_event_name                  str        always             {'"PermissionDenied"': 1}
+   permission_mode                  str        always             {'"auto"': 1}
+   prompt_id                        str        always             
+   reason                           str        always             {'"[Data Exfiltration]"': 1}
+   session_id                       str        always             
+   tool_input                       dict       always             
+   tool_name                        str        always             {'"Bash"': 1}
+   tool_use_id                      str        always             
+   transcript_path                  str        always             
+
+== PermissionRequest  n=6  runs=['I01_interactive', 'S01_startup_tools', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_prompts_none_write_outside', 'S13_watch_cwd_config']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"PermissionRequest"': 6}
+   permission_mode                  str        always             {'"default"': 6}
+   permission_suggestions           list       always             
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 1/6      
+   session_id                       str        always             
+   tool_input                       dict       always             
+   tool_name                        str        always             {'"Write"': 4, '"Bash"': 2}
+   transcript_path                  str        always             
+
+== PostCompact  n=1  runs=['S05_compact']
+   compact_summary                  str        always             
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"PostCompact"': 1}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+   trigger                          str        always             {'"manual"': 1}
+
+== PostModelSwitch  n=1  runs=['S14_model_switch']
+   cache_ttl                        str        always             {'"1h"': 1}
+   context_tokens                   int        always             
+   cwd                              str        always             
+   estimated_cache_write_usd        float      always             
+   from_model                       str        always             {'"claude-haiku-4-5-20251001"': 1}
+   hook_event_name                  str        always             {'"PostModelSwitch"': 1}
+   pricing                          str        always             {'"catalog"': 1}
+   prompt_cache_warm                bool       always             {'false': 1}
+   prompt_id                        str        always             
+   requested_model                  str        always             {'"sonnet"': 1}
+   session_id                       str        always             
+   source                           str        always             {'"command"': 1}
+   to_model                         str        always             {'"claude-sonnet-5"': 1}
+   transcript_path                  str        always             
+
+== PostToolBatch  n=40  runs=['R01_exit_codes', 'R02_timeout_sync', 'S01_startup_tools', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S13_watch_cwd_config', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   agent_id                         str        sometimes 1/40     
+   agent_type                       str        sometimes 1/40     {'"general-purpose"': 1}
+   cwd                              str        always             
+   effort                           dict       sometimes 3/40     {'{"level": "low"}': 1, '{"level": "high"}': 2}
+   hook_event_name                  str        always             {'"PostToolBatch"': 40}
+   permission_mode                  str        always             {'"default"': 36, '"acceptEdits"': 1, '"dontAsk"': 1, '"auto"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   tool_calls                       list       always             
+   transcript_path                  str        always             
+
+== PostToolUse  n=30  runs=['R02_timeout_sync', 'S01_startup_tools', 'S09_perm_acceptEdits_write_inside', 'S10_effort_sonnet', 'S11_background_task', 'S13_watch_cwd_config', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   agent_id                         str        sometimes 1/30     
+   agent_type                       str        sometimes 1/30     {'"general-purpose"': 1}
+   cwd                              str        always             
+   duration_ms                      int        always             
+   effort                           dict       sometimes 3/30     {'{"level": "low"}': 1, '{"level": "high"}': 2}
+   hook_event_name                  str        always             {'"PostToolUse"': 30}
+   permission_mode                  str        always             {'"default"': 27, '"acceptEdits"': 1, '"auto"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   tool_input                       dict       always             
+   tool_name                        str        always             {'"Bash"': 16, '"ToolSearch"': 5, '"TaskCreate"': 3, '"TaskUpdate"': 2, '"Agent"': 2, '"Write"': 1, '"mcp__shpelicit__ask_name"': 1}
+   tool_response                    dict/list  always             
+   tool_use_id                      str        always             
+   transcript_path                  str        always             
+
+== PostToolUseFailure  n=2  runs=['S01_startup_tools']
+   cwd                              str        always             
+   duration_ms                      int        always             
+   error                            str        always             {'"Exit code 1"': 1, '"File does not exist. Note: your current working directory is /tmp/shp-hooks-bas': 1}
+   hook_event_name                  str        always             {'"PostToolUseFailure"': 2}
+   is_interrupt                     bool       always             {'false': 2}
+   permission_mode                  str        always             {'"default"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   tool_input                       dict       always             
+   tool_name                        str        always             {'"Bash"': 1, '"Read"': 1}
+   tool_use_id                      str        always             
+   transcript_path                  str        always             
+
+== PreCompact  n=1  runs=['S05_compact']
+   custom_instructions              NoneType   always             {'null': 1}
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"PreCompact"': 1}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+   trigger                          str        always             {'"manual"': 1}
+
+== PreModelSwitch  n=1  runs=['S14_model_switch']
+   cache_ttl                        str        always             {'"1h"': 1}
+   context_tokens                   int        always             
+   cwd                              str        always             
+   estimated_cache_write_usd        float      always             
+   from_model                       str        always             {'"claude-haiku-4-5-20251001"': 1}
+   hook_event_name                  str        always             {'"PreModelSwitch"': 1}
+   pricing                          str        always             {'"catalog"': 1}
+   prompt_cache_warm                bool       always             {'false': 1}
+   prompt_id                        str        always             
+   requested_model                  str        always             {'"sonnet"': 1}
+   session_id                       str        always             
+   source                           str        always             {'"command"': 1}
+   to_model                         str        always             {'"claude-sonnet-5"': 1}
+   transcript_path                  str        always             
+
+== PreToolUse  n=42  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'S01_startup_tools', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S13_watch_cwd_config', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   agent_id                         str        sometimes 1/42     
+   agent_type                       str        sometimes 1/42     {'"general-purpose"': 1}
+   cwd                              str        always             
+   effort                           dict       sometimes 4/42     {'{"level": "low"}': 1, '{"level": "high"}': 3}
+   hook_event_name                  str        always             {'"PreToolUse"': 42}
+   permission_mode                  str        always             {'"default"': 37, '"acceptEdits"': 1, '"dontAsk"': 1, '"auto"': 3}
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 1/42     
+   session_id                       str        always             
+   tool_input                       dict       always             
+   tool_name                        str        always             {'"Write"': 6, '"Bash"': 22, '"Read"': 1, '"ToolSearch"': 5, '"TaskCreate"': 3, '"TaskUpdate"': 2, '"Agent"': 2, '"mcp__shpelicit__ask_name"': 1}
+   tool_use_id                      str        always             
+   transcript_path                  str        always             
+
+== SessionEnd  n=50  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'R03_config_extra_keys_group_and_entry', 'R03_config_hooks_is_array', 'R03_config_invalid_json_file', 'R03_config_negative_timeout', 'R03_config_no_matcher_key', 'R03_config_pretooluse_broken', 'R03_config_stop_not_a_list', 'R03_config_unknown_event_name', 'R03_config_unknown_hook_type', 'S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S05_compact', 'S06_clear', 'S08_mock_http400', 'S08_mock_http401', 'S08_mock_http402', 'S08_mock_http403', 'S08_mock_http404', 'S08_mock_http500', 'S08_mock_http529', 'S08_mock_max_tokens', 'S08_mock_prompt_too_long', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_plan_mode', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S12_slash_command', 'S13_watch_cwd_config', 'S14_model_switch', 'S14b_resume_other_model', 'S16_setup__init', 'S16_setup__init_only', 'S16_setup__maintenance', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"SessionEnd"': 50}
+   prompt_id                        str        sometimes 48/50    
+   reason                           str        always             {'"clear"': 2, '"prompt_input_exit"': 1, '"other"': 47}
+   scratchpad_dir                   str        sometimes 2/50     
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== SessionStart  n=55  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'R03_config_extra_keys_group_and_entry', 'R03_config_hooks_is_array', 'R03_config_invalid_json_file', 'R03_config_negative_timeout', 'R03_config_no_matcher_key', 'R03_config_pretooluse_broken', 'R03_config_stop_not_a_list', 'R03_config_unknown_event_name', 'R03_config_unknown_hook_type', 'R04_settings_flag', 'S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S05_compact', 'S06_clear', 'S07_bad_model', 'S08_mock_http400', 'S08_mock_http401', 'S08_mock_http402', 'S08_mock_http403', 'S08_mock_http404', 'S08_mock_http429', 'S08_mock_http500', 'S08_mock_http529', 'S08_mock_max_tokens', 'S08_mock_prompt_too_long', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_plan_mode', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S12_slash_command', 'S13_watch_cwd_config', 'S14_model_switch', 'S14b_resume_other_model', 'S16_setup__init', 'S16_setup__init_only', 'S16_setup__maintenance', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   context_tokens                   int        sometimes 7/55     
+   cwd                              str        always             
+   estimated_cache_write_usd        float      sometimes 7/55     
+   hook_event_name                  str        always             {'"SessionStart"': 55}
+   model                            str        sometimes 2/55     {'"claude-haiku-4-5-20251001"': 2}
+   prompt_cache_likely_expired      bool       sometimes 7/55     {'false': 4, 'true': 3}
+   prompt_id                        str        sometimes 1/55     
+   scratchpad_dir                   str        sometimes 2/55     
+   seconds_since_last_response      int        sometimes 7/55     
+   session_id                       str        always             
+   source                           str        always             {'"startup"': 45, '"clear"': 2, '"resume"': 6, '"fork"': 1, '"compact"': 1}
+   transcript_path                  str        always             
+
+== Setup  n=3  runs=['S16_setup__init', 'S16_setup__init_only', 'S16_setup__maintenance']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"Setup"': 3}
+   session_id                       str        always             
+   transcript_path                  str        always             
+   trigger                          str        always             {'"init"': 2, '"maintenance"': 1}
+
+== Stop  n=26  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_plan_mode', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S12_slash_command', 'S13_watch_cwd_config', 'S14b_resume_other_model', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   background_tasks                 list       always             
+   cwd                              str        always             
+   effort                           dict       sometimes 4/26     {'{"level": "low"}': 1, '{"level": "high"}': 3}
+   hook_event_name                  str        always             {'"Stop"': 26}
+   last_assistant_message           str        always             
+   permission_mode                  str        always             {'"default"': 21, '"acceptEdits"': 1, '"dontAsk"': 1, '"plan"': 1, '"auto"': 2}
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 1/26     
+   session_crons                    list       always             
+   session_id                       str        always             
+   stop_hook_active                 bool       always             {'false': 26}
+   transcript_path                  str        always             
+
+== StopFailure  n=23  runs=['R03_config_extra_keys_group_and_entry', 'R03_config_hooks_is_array', 'R03_config_invalid_json_file', 'R03_config_negative_timeout', 'R03_config_no_matcher_key', 'R03_config_pretooluse_broken', 'R03_config_stop_not_a_list', 'R03_config_unknown_event_name', 'R03_config_unknown_hook_type', 'R04_settings_flag', 'S07_bad_model', 'S08_mock_http400', 'S08_mock_http401', 'S08_mock_http402', 'S08_mock_http403', 'S08_mock_http404', 'S08_mock_http429', 'S08_mock_http500', 'S08_mock_http529', 'S08_mock_max_tokens', 'S08_mock_prompt_too_long', 'S16_setup__init', 'S16_setup__maintenance']
+   cwd                              str        always             
+   effort                           dict       sometimes 13/23    {'{"level": "high"}': 13}
+   error                            str        always             {'"model_not_found"': 14, '"unknown"': 1, '"authentication_failed"': 2, '"billing_error"': 1, '"rate_limit"': 1, '"server_error"': 2, '"max_output_tokens"': 1, '"invalid_request"': 1}
+   error_details                    str        sometimes 1/23     
+   hook_event_name                  str        always             {'"StopFailure"': 23}
+   last_assistant_message           str        always             
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== SubagentStart  n=2  runs=['S01_startup_tools', 'S18_agents_tasks']
+   agent_id                         str        always             
+   agent_type                       str        always             {'"general-purpose"': 1, '"shpprobe"': 1}
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"SubagentStart"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== SubagentStop  n=4  runs=['I01_interactive', 'S01_startup_tools', 'S05_compact', 'S18_agents_tasks']
+   agent_id                         str        always             
+   agent_transcript_path            str        always             
+   agent_type                       str        always             {'""': 2, '"general-purpose"': 1, '"shpprobe"': 1}
+   background_tasks                 list       always             
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"SubagentStop"': 4}
+   last_assistant_message           str        sometimes 3/4      
+   permission_mode                  str        always             {'"default"': 4}
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 1/4      
+   session_crons                    list       always             
+   session_id                       str        always             
+   stop_hook_active                 bool       always             {'false': 4}
+   transcript_path                  str        always             
+
+== TaskCompleted  n=2  runs=['S01_startup_tools', 'S18_agents_tasks']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"TaskCompleted"': 2}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   task_description                 str        always             
+   task_id                          str        always             
+   task_subject                     str        always             
+   transcript_path                  str        always             
+
+== TaskCreated  n=3  runs=['S01_startup_tools', 'S18_agents_tasks']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"TaskCreated"': 3}
+   prompt_id                        str        always             
+   session_id                       str        always             
+   task_description                 str        always             
+   task_id                          str        always             
+   task_subject                     str        always             
+   transcript_path                  str        always             
+
+== UserPromptExpansion  n=1  runs=['S12_slash_command']
+   command_args                     str        always             
+   command_name                     str        always             {'"shpecho"': 1}
+   command_source                   str        always             
+   cwd                              str        always             
+   expansion_type                   str        always             {'"slash_command"': 1}
+   hook_event_name                  str        always             {'"UserPromptExpansion"': 1}
+   permission_mode                  str        always             {'"default"': 1}
+   prompt                           str        always             
+   prompt_id                        str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== UserPromptSubmit  n=57  runs=['I01_interactive', 'R01_exit_codes', 'R02_timeout_sync', 'R03_config_extra_keys_group_and_entry', 'R03_config_hooks_is_array', 'R03_config_invalid_json_file', 'R03_config_negative_timeout', 'R03_config_no_matcher_key', 'R03_config_pretooluse_broken', 'R03_config_stop_not_a_list', 'R03_config_unknown_event_name', 'R03_config_unknown_hook_type', 'R04_settings_flag', 'S01_startup_tools', 'S02_resume', 'S03_continue', 'S04_fork', 'S07_bad_model', 'S08_mock_http400', 'S08_mock_http401', 'S08_mock_http402', 'S08_mock_http403', 'S08_mock_http404', 'S08_mock_http429', 'S08_mock_http500', 'S08_mock_http529', 'S08_mock_max_tokens', 'S08_mock_prompt_too_long', 'S09_perm_acceptEdits_write_inside', 'S09_perm_auto_mode_delete_outside', 'S09_perm_default_write_outside', 'S09_perm_deny_rule_bash_rm', 'S09_perm_dontAsk_write_outside', 'S09_perm_plan_mode', 'S09_perm_prompts_none_write_outside', 'S10_effort_sonnet', 'S11_background_task', 'S12_slash_command', 'S13_watch_cwd_config', 'S14b_resume_other_model', 'S16_setup__init', 'S16_setup__maintenance', 'S17_elicitation', 'S18_agents_tasks', 'S19_perm_auto_sonnet', 'S20_perm_auto_deny', 'S21_config_change', 'S22_mock_autocompact']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"UserPromptSubmit"': 57}
+   permission_mode                  str        always             {'"default"': 52, '"acceptEdits"': 1, '"dontAsk"': 1, '"plan"': 1, '"auto"': 2}
+   prompt                           str        always             
+   prompt_id                        str        always             
+   scratchpad_dir                   str        sometimes 2/57     
+   session_id                       str        always             
+   transcript_path                  str        always             
+
+== WorktreeCreate  n=1  runs=['S15_worktree']
+   cwd                              str        always             
+   hook_event_name                  str        always             {'"WorktreeCreate"': 1}
+   name                             str        always             
+   session_id                       str        always             
+   transcript_path                  str        always             

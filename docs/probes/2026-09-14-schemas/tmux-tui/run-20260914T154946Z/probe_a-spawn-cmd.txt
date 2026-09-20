@@ -1,0 +1,2 @@
+tmux -L shepherd-probe new-session -d -s probe_a -x 160 -y 45 -c /tmp/shp-tui-A-4tvrx00n 'claude --model claude-haiku-4-5-20251001 --debug-file /root/Shepherd/docs/probes/2026-09-14-schemas/tmux-tui/run-20260914T154946Z/debug-a.log'
+rc=0

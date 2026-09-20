@@ -1,0 +1,10 @@
+# claude 2.1.270 (Claude Code); source /tmp/shp-hooks-bg-0dhnzsgh/.debug-S11_background_task.log
+2026-09-14T15:19:50.293Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=claude-haiku-4-5-20251001 modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-09-14T15:19:50.293Z [WARN] auto mode disabled: model claude-haiku-4-5-20251001 does not support auto mode
+2026-09-14T15:19:50.294Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=model
+2026-09-14T15:19:50.294Z [DEBUG] [auto-mode] verifyAutoModeGateAccess setAvailable: true -> false
+2026-09-14T15:19:51.041Z [DEBUG] [engine] turn 1 start
+2026-09-14T15:19:54.938Z [DEBUG] [engine] turn 1 end (turns=2 usage in=959 out=280 cost=$0.0222 api=4596ms stop=end_turn resultLen=7)
+2026-09-14T15:19:59.996Z [DEBUG] print wind-down: killing background shell bx4s43qvk ("Background sleep and echo command") after 5000ms grace
+2026-09-14T15:20:00.008Z [DEBUG] [uds-messaging] Shutting down
+2026-09-14T15:20:00.011Z [DEBUG] LSP server manager shut down successfully

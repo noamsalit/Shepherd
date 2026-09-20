@@ -1,0 +1,20 @@
+## cc10x confound check
+0
+hook_started per event run1:
+{'SessionStart:startup': 1, 'UserPromptSubmit': 1, 'PreToolUse:Bash': 1, 'PostToolUse:Bash': 1, 'MessageDisplay': 1, 'Stop': 1}
+init plugins [] slash_commands_with_cc10x []
+## sha256 of prior-probe raw files
+437cd44212dca5b0da9cedbb707344d7f99ecf25c244bdff7db1253ab9995182  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run1.jsonl
+3b37c504e009b6479822b56c61d2cf89b6144a004347b801b6bf0a36278f9074  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run2.jsonl
+8431e46f40777892bbd30a0b35b3d4deb44ff80655986943e8986b1b1352c11f  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run3.jsonl
+3cdd48466b40f3c98a33730b73a084240c579f68b125fe8d9b2848bdf86f9393  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run4.jsonl
+e2c8cdf8c29979e4a43f436b0c0f609937de8307b4efcce3f559f3f9e174a2b0  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/events-run5-permission.jsonl
+e4f14315d0964ca55f93be0c9c96dd64e3524c72c8a3a26b96c0bb6e1b205373  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/hookd_probe.py
+cd798db8d92671c78278650b58fd186cf9433f1e316c6606eb238f945e4c87cf  /tmp/claude-0/-root-Shepherd/2fb6befd-2e8e-47f2-986a-e24ed36aab8f/scratchpad/killed-session-backup/probes/evidence/probe-hook-registration.json
+e2c8cdf8c29979e4a43f436b0c0f609937de8307b4efcce3f559f3f9e174a2b0  /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events.jsonl
+437cd44212dca5b0da9cedbb707344d7f99ecf25c244bdff7db1253ab9995182  /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run1.jsonl
+3b37c504e009b6479822b56c61d2cf89b6144a004347b801b6bf0a36278f9074  /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run2.jsonl
+8431e46f40777892bbd30a0b35b3d4deb44ff80655986943e8986b1b1352c11f  /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/events-run3.jsonl
+e3def1ed08ca1032864d147e5b6fd90051ba2d4c80e3116d4c5a0877e6f4870c  /tmp/claude-0/-root-Shepherd/32df7fce-8744-4758-8fa2-2af88e1fbcad/scratchpad/probe/repo/.claude/settings.json
+## /tmp cleanup policy
+D /tmp 1777 root root 30d

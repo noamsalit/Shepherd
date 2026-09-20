@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-argv-4yoboerg/c_single_string_shlex
+
+
+❯ ARGV-BRIEF $(echo EXPANDED) echo BACKTICK ; echo SEMI && 'single' "double" \back $HOME *
+  second line   TAB ✓ end
+
+● OK-MOCK
+
+✻ Sautéed for 0s · done 5:31 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      tmux focus-events off · add 'set -g focus-events on' to ~/.tmux.conf and reattach for focus tracking
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

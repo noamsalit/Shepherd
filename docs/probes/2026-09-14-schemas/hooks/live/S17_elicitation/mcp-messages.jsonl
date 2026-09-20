@@ -1,0 +1,9 @@
+{"dir": "in", "msg": {"method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {"roots": {"listChanged": true}, "elicitation": {}}, "clientInfo": {"name": "claude-code", "title": "Claude Code", "version": "2.1.270", "description": "Anthropic's agentic coding tool", "websiteUrl": "https://claude.com/claude-code"}}, "jsonrpc": "2.0", "id": 0}}
+{"dir": "out", "msg": {"jsonrpc": "2.0", "id": 0, "result": {"protocolVersion": "2025-11-25", "capabilities": {"tools": {}}, "serverInfo": {"name": "shpelicit", "version": "0.1"}}}}
+{"dir": "in", "msg": {"jsonrpc": "2.0", "method": "notifications/initialized"}}
+{"dir": "in", "msg": {"method": "tools/list", "jsonrpc": "2.0", "id": 1}}
+{"dir": "out", "msg": {"jsonrpc": "2.0", "id": 1, "result": {"tools": [{"name": "ask_name", "description": "Asks the user for a name via elicitation.", "inputSchema": {"type": "object", "properties": {}}}]}}}
+{"dir": "in", "msg": {"method": "tools/call", "params": {"name": "ask_name", "arguments": {}, "_meta": {"claudecode/toolUseId": "toolu_01EsGpL7uuSqWTHnAZeYDYz3", "progressToken": 2}}, "jsonrpc": "2.0", "id": 2}}
+{"dir": "out", "msg": {"jsonrpc": "2.0", "id": "elicit-1", "method": "elicitation/create", "params": {"message": "What name should the probe use?", "requestedSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}}}}
+{"dir": "in", "msg": {"result": {"action": "cancel"}, "jsonrpc": "2.0", "id": "elicit-1"}}
+{"dir": "out", "msg": {"jsonrpc": "2.0", "id": 2, "result": {"content": [{"type": "text", "text": "elicitation response: {\"action\": \"cancel\"}"}]}}}

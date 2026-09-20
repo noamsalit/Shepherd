@@ -1,0 +1,3 @@
+Engine-owned directories this probe caused Claude Code to create.
+Recorded, not deleted (K3: the probe removes only what it created itself).
+/root/.claude/projects/-tmp-shp-m4-rrudh0kz-work-p3

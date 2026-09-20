@@ -1,0 +1,16 @@
+{
+ "rules": [
+  {
+   "match": "MCP-PING",
+   "match_body": "mcp__shepherd__ping",
+   "require_tools": true,
+   "not_tool_result": true,
+   "tool_use": {
+    "name": "mcp__shepherd__ping",
+    "input": {}
+   }
+  }
+ ],
+ "default_text": "OK-MOCK",
+ "default_after_tool": "OK-AFTER-TOOL"
+}

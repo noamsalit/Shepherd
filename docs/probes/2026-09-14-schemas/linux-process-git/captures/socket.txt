@@ -1,0 +1,47 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T16:18:51Z
+python: 3.12.3 umask_now: 0o22
+tmpdir: /tmp/shp-lpg-sock.mvu8empc
+
+## 1. file modes (stat)
+srwxr-xr-x 755 socket root:root /tmp/shp-lpg-sock.mvu8empc/plain.sock
+srw------- 600 socket root:root /tmp/shp-lpg-sock.mvu8empc/sessiond.sock
+drwx------ 700 directory root:root /tmp/shp-lpg-sock.mvu8empc/shepherd
+srw------- 600 socket root:root /tmp/shp-lpg-sock.mvu8empc/shepherd/sessiond.sock
+ls -la:
+/tmp/shp-lpg-sock.mvu8empc:
+total 20
+drwxr-xr-x   3 root root  4096 Sep 14 16:18 .
+drwxrwxrwt 107 root root 12288 Sep 14 16:18 ..
+srwxr-xr-x   1 root root     0 Sep 14 16:18 plain.sock
+srw-------   1 root root     0 Sep 14 16:18 sessiond.sock
+drwx------   2 root root  4096 Sep 14 16:18 shepherd
+
+/tmp/shp-lpg-sock.mvu8empc/shepherd:
+total 8
+drwx------ 2 root root 4096 Sep 14 16:18 .
+drwxr-xr-x 3 root root 4096 Sep 14 16:18 ..
+srw------- 1 root root    0 Sep 14 16:18 sessiond.sock
+
+## 2. SO_PEERCRED
+getsockopt raw bytes: a3c53d000000000000000000 len 12
+peer (pid, uid, gid): (4048291, 0, 0) | Popen child pid: 4048291 | match: True
+socket.SO_PEERCRED constant: 17 | hasattr(socket,'SCM_CREDENTIALS'): True
+peer exited BEFORE accept(): SO_PEERCRED pid = 4048292 | child pid: 4048292 | /proc/<pid> exists now: False
+
+## 3. connect as uid nobody (runuser -u nobody)
+plain.sock (umask 022 default): PermissionError [Errno 13] Permission denied
+sessiond.sock (0600): PermissionError [Errno 13] Permission denied
+0600 sock inside 0700 dir: PermissionError [Errno 13] Permission denied
+
+## 4. sun_path length limit
+path len 107 bytes: bind ok
+path len 108 bytes: OSError: AF_UNIX path too long
+
+## 5. abstract namespace socket
+bound abstract name; filesystem entry: none; /proc/net/unix line: ['ffff8dd14b505400: 00000002 00000000 00010000 0001 01 86427223 @shp-lpg-probe-4048287']
+connect as nobody to abstract name: connected
+
+## 6. stale socket file after listener close
+connect to stale path: ConnectionRefusedError: [Errno 111] Connection refused
+re-bind same path without unlink: OSError: [Errno 98] Address already in use

@@ -1,0 +1,10 @@
+inside pane: TMUX=/tmp/tmux-0/shp-gap-name-a,4055044,3
+--- bare 'tmux display-message -p #{socket_path}|#{session_name}' (no -L):
+/tmp/tmux-0/shp-gap-name-a|shepherd_ok-1
+--- bare 'tmux list-sessions -F #{session_name}' (no -L):
+shepherd
+shepherd_dot1
+shepherd_ok-1
+shepherd_spike1
+--- 'tmux -L shp-gap-name-b list-sessions' (explicit -L):
+/tmp/tmux-0/shp-gap-name-b|shepherd_other

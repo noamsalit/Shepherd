@@ -1,0 +1,1 @@
+{"_ts": "2026-09-17T21:44:09.539Z", "tool_name": "mcp__shepherd__shadow_tool", "tool_input": {"id": "ses_x"}, "returned": {"behavior": "deny", "message": "you declined this", "interrupt": false}}

@@ -1,0 +1,5 @@
+# claude 2.1.270 (Claude Code); cwd=/tmp/shp-hooks-cfg-pretooluse_broken-dr33pv68; exit=0
+Invalid settings
+- /tmp/shp-hooks-cfg-pretooluse_broken-dr33pv68/.claude/settings.json › hooks.PreToolUse.0.hooks.0: Invalid command hook (command: Invalid input) — a PreToolUse/PermissionRequest hook that cannot be loaded may be what guards the permissions declared beside it, so nothing it sits in is applied until the entry is fixed or removed.
+- /tmp/shp-hooks-cfg-pretooluse_broken-dr33pv68/.claude/settings.json › hooks.PreToolUse.0.hooks.0.command: Expected string, but received undefined
+  Suggested fix: Command hooks require command. For exec form (no shell), set command to the executable and args to its arguments: {"type": "command", "command": "echo", "args": ["hi"]}. For shell form, set command to the full shell string: {"type": "command", "command": "echo hi"}.

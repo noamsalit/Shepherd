@@ -1,0 +1,27 @@
+{
+ "scenario": "I01_interactive",
+ "claude_version": "2.1.270 (Claude Code)",
+ "cwd": "/tmp/shp-hooks-tui-1tlg88mq",
+ "extra_dir": "/tmp/shp-hooks-tui-extra-ye47wasb",
+ "victim_dir": "/tmp/shp-hooks-tui-victim-sw6miufg",
+ "victim_outside_exists": false,
+ "duration_s": 132.5,
+ "events": [
+  "SessionStart",
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PermissionRequest",
+  "Notification",
+  "UserPromptSubmit",
+  "MessageDisplay",
+  "Stop",
+  "SubagentStop",
+  "Notification",
+  "DirectoryAdded",
+  "SessionEnd",
+  "SessionStart",
+  "SessionEnd"
+ ],
+ "driver": "python pty.fork (no tmux)",
+ "user_settings_sha256": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac"
+}

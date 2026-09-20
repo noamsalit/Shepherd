@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · Claude Max
+  ▝▝ ▝▝    /tmp/shp-gap-acr-vsugifz1
+
+
+❯ Reply with only the word ONE
+
+● ONE
+
+✻ Crunched for 1s · done 5:49 PM
+
+❯ Reply with only the word TWO
+
+● TWO
+
+✻ Crunched for 1s · done 5:49 PM
+
+❯ Reply with only the word THREE
+
+● THREE
+
+✻ Brewed for 1s · done 5:49 PM
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                          21% context used
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Reply with only the word FOUR
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

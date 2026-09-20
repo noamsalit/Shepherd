@@ -1,0 +1,43 @@
+claude_version: 2.1.270 (Claude Code)
+date_utc: 2026-09-14T15:24:34Z
+# find ~/.claude/projects/-tmp-shp-schemas-tx-blIf90-work (throwaway probe project dir)
+d     4096 .
+d     4096 ./0141fab3-8bf8-4b69-be1f-89552ccfce5d
+f   211715 ./0141fab3-8bf8-4b69-be1f-89552ccfce5d.jsonl
+d     4096 ./0141fab3-8bf8-4b69-be1f-89552ccfce5d/subagents
+f    87274 ./0141fab3-8bf8-4b69-be1f-89552ccfce5d/subagents/agent-a4388d337bf8a9397.jsonl
+f      176 ./0141fab3-8bf8-4b69-be1f-89552ccfce5d/subagents/agent-a4388d337bf8a9397.meta.json
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c
+f   184724 ./518c280f-3791-4571-ae9a-f002c8f3b33c.jsonl
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents/workflows
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents/workflows/wf_edb19b07-a69
+f    75012 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents/workflows/wf_edb19b07-a69/agent-aff491fda998b3fe0.jsonl
+f      149 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents/workflows/wf_edb19b07-a69/agent-aff491fda998b3fe0.meta.json
+f      315 ./518c280f-3791-4571-ae9a-f002c8f3b33c/subagents/workflows/wf_edb19b07-a69/journal.jsonl
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c/workflows
+d     4096 ./518c280f-3791-4571-ae9a-f002c8f3b33c/workflows/scripts
+f      205 ./518c280f-3791-4571-ae9a-f002c8f3b33c/workflows/scripts/shp-probe-wf-wf_edb19b07-a69.js
+f     1211 ./518c280f-3791-4571-ae9a-f002c8f3b33c/workflows/wf_edb19b07-a69.json
+f   167318 ./667257d2-9430-4714-a8b1-fb07a95ae0bf.jsonl
+f   169525 ./6fcb72cd-b6f3-4acd-a43d-6c7e3e89bd28.jsonl
+d     4096 ./7515f181-14c5-4540-9107-4f1d1267cf83
+f   182747 ./7515f181-14c5-4540-9107-4f1d1267cf83.jsonl
+d     4096 ./7515f181-14c5-4540-9107-4f1d1267cf83/subagents
+f    87264 ./7515f181-14c5-4540-9107-4f1d1267cf83/subagents/agent-a1a6271c8023a6c65.jsonl
+f      179 ./7515f181-14c5-4540-9107-4f1d1267cf83/subagents/agent-a1a6271c8023a6c65.meta.json
+f   193646 ./7c27bb7f-5390-48b0-8b2e-cf4004113d09.jsonl
+f    37918 ./89b8683f-b2ea-4874-934a-9cadbb6cb276.jsonl
+f   167771 ./8b86e691-5e1a-46b3-9bc0-bc7dc694abb3.jsonl
+d     4096 ./memory
+# find /tmp/claude-0/-tmp-shp-schemas-tx-blIf90-work (per-session task output dir)
+d . -> 
+d ./0141fab3-8bf8-4b69-be1f-89552ccfce5d -> 
+d ./0141fab3-8bf8-4b69-be1f-89552ccfce5d/tasks -> 
+l ./0141fab3-8bf8-4b69-be1f-89552ccfce5d/tasks/a4388d337bf8a9397.output -> /root/.claude/projects/-tmp-shp-schemas-tx-blIf90-work/0141fab3-8bf8-4b69-be1f-89552ccfce5d/subagents/agent-a4388d337bf8a9397.jsonl
+d ./518c280f-3791-4571-ae9a-f002c8f3b33c -> 
+d ./518c280f-3791-4571-ae9a-f002c8f3b33c/tasks -> 
+f ./518c280f-3791-4571-ae9a-f002c8f3b33c/tasks/w1x94eiqe.output -> 
+d ./7515f181-14c5-4540-9107-4f1d1267cf83 -> 
+d ./7515f181-14c5-4540-9107-4f1d1267cf83/tasks -> 
+l ./7515f181-14c5-4540-9107-4f1d1267cf83/tasks/a1a6271c8023a6c65.output -> /root/.claude/projects/-tmp-shp-schemas-tx-blIf90-work/7515f181-14c5-4540-9107-4f1d1267cf83/subagents/agent-a1a6271c8023a6c65.jsonl

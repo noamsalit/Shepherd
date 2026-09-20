@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.270
+▝▜██████▀  Haiku 4.5 · API Usage Billing
+  ▝▝ ▝▝    /tmp/shp-gap-elicit-dyevxdym/w
+
+
+❯ ELICIT-FORM ask me
+
+  Called shepherd
+
+● OK-AFTER-TOOL
+
+✻ Churned for 0s · done 5:42 PM
+
+❯ ELICIT-URL ask me
+
+  Called shepherd
+
+● OK-AFTER-TOOL
+
+✻ Cooked for 0s · done 5:42 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

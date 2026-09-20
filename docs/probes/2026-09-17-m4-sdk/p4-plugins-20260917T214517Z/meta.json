@@ -1,0 +1,135 @@
+{
+  "probe": "p4",
+  "run": "p4-plugins-20260917T214517Z",
+  "model_requested": "claude-haiku-4-5",
+  "sdk_version": "0.2.153",
+  "bundled_cli_version": "2.1.273",
+  "scrubbed_env_names": [
+    "AI_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_BRIDGE_SESSION_ID",
+    "CLAUDE_CODE_CHILD_SESSION",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_EXECPATH",
+    "CLAUDE_CODE_MESSAGING_SOCKET",
+    "CLAUDE_CODE_MESSAGING_TOKEN",
+    "CLAUDE_CODE_SESSION_ATTENDED",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_EFFORT",
+    "CLAUDE_PID"
+  ],
+  "tmpdir": "/tmp/shp-m4-7_jt0lsy",
+  "argv": [
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary",
+      "--max-turns",
+      "2",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-m4-7_jt0lsy/flag-settings-setting-sources-empty.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--setting-sources=",
+      "--input-format",
+      "stream-json"
+    ],
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--system-prompt",
+      "You are a probe orchestrator. Follow the user's instructions literally and briefly.",
+      "--tools",
+      "",
+      "--allowedTools",
+      "mcp__shepherd__fleet_summary",
+      "--max-turns",
+      "2",
+      "--disallowedTools",
+      "Agent,Task",
+      "--model",
+      "claude-haiku-4-5",
+      "--permission-prompt-tool",
+      "stdio",
+      "--settings",
+      "/tmp/shp-m4-7_jt0lsy/flag-settings-setting-sources-none.json",
+      "--mcp-config",
+      "{\"mcpServers\": {\"shepherd\": {\"type\": \"sdk\", \"name\": \"shepherd\"}}}",
+      "--strict-mcp-config",
+      "--input-format",
+      "stream-json"
+    ]
+  ],
+  "settings_sha256_before": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+  "started_at": "2026-09-17T21:45:18.441Z",
+  "cli_path": "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+  "cli_versions_spawned": [
+    [
+      "/root/Shepherd/.venv/lib/python3.12/site-packages/claude_agent_sdk/_bundled/claude",
+      "2.1.273 (Claude Code)"
+    ]
+  ],
+  "turns": [
+    {
+      "label": "setting-sources-empty",
+      "wall_s": 1.59,
+      "session_id": "332441dc-ff6f-42d7-8c54-cf7e30d73f3b",
+      "subtype": "success",
+      "terminal_reason": "completed"
+    },
+    {
+      "label": "setting-sources-none",
+      "wall_s": 1.7,
+      "session_id": "c62b6059-5721-4ae9-b059-47f68df71941",
+      "subtype": "success",
+      "terminal_reason": "completed"
+    }
+  ],
+  "p4": {
+    "setting-sources-empty": {
+      "plugins": [],
+      "skills_count": 18
+    },
+    "setting-sources-none": {
+      "plugins": [
+        {
+          "name": "cc10x",
+          "path": "/root/src/cc10x-qa/plugins/cc10x",
+          "source": "cc10x@cc10x",
+          "version": "12.8.2"
+        }
+      ],
+      "skills_count": 32
+    }
+  },
+  "status": "ok",
+  "warnings": [
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here.",
+    "CanUseToolShadowedWarning: can_use_tool will not be invoked for: mcp__shepherd__fleet_summary. An allowed_tools entry that allows a whole tool auto-approves it before the callback is consulted. To gate every tool call, use a PreToolUse hook; or narrow the entry so calls fall through to can_use_tool. Allow rules from settings files can also shadow the callback but are not visible here."
+  ],
+  "finished_at": "2026-09-17T21:45:24.845Z",
+  "settings_sha256_after": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+  "user_settings_unchanged": true,
+  "claude_pids_before_count": 2,
+  "claude_pids_after_count": 2,
+  "claude_pids_new_after": [],
+  "engine_owned_residue": [
+    "/root/.claude/projects/-tmp-shp-m4-7-jt0lsy-work-p4"
+  ]
+}

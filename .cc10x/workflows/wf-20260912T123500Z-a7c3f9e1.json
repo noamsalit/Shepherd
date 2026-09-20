@@ -1,0 +1,527 @@
+{
+  "workflow_uuid": "wf-20260912T123500Z-a7c3f9e1",
+  "workflow_id": "wf-20260912T123500Z-a7c3f9e1",
+  "workflow_type": "PLAN",
+  "state_root": ".cc10x",
+  "user_request": "Implement the Shepherd orchestrator platform from docs/specs/orchestrator-platform.md end to end, scoped to milestones M1-M4. Full cc10x flow: planner -> builder -> review -> QA route. Ignore the parallel-QA experiment docs. Be as autonomous as possible. End goal: a ready product after the first full end-to-end QA.",
+  "plan_file": "docs/plans/2026-09-13-m1-foundation-visibility-plan.md",
+  "design_file": "docs/specs/orchestrator-platform.md",
+  "research_files": [],
+  "approved_decisions": [
+    "Scope = M1-M4 (foundation+visibility, signals, owned sessions, orchestrator). M4.5/M5/M6 out of scope.",
+    "Cross-platform behind the D2 seam; Linux is the live, QA'd path. macOS drivers written but unverified. .pkg deferred.",
+    "Jira/Notion credentials deferred by the user; moot for M1-M4.",
+    "Parallel-QA experiment (docs/methodology/*) is OFF. QA runs once, after build and review.",
+    "LLM verdict lane stays deferred per spec D34.",
+    "Per spec section 0, each milestone gets its own plan -> implementation cycle. This PLAN is scoped to M1 only."
+  ],
+  "plan_mode": "execution_plan",
+  "build_scope": null,
+  "worktree": null,
+  "execution_mode": "subagent_dispatch",
+  "inline_fallback_reason": null,
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": "Ship M1 of Shepherd: foundation + visibility. Both daemons (controld, sessiond), the hookd dispatcher, hook ingest folding into session columns (D24), four tables (workspace, repo, session, app_state) with forward-only migrations, workspace/repo discovery and cwd->repo longest-prefix binding (D22), the workspace->session->subagent tree, the fleet page, and SSE. Read-only, attached sessions only.",
+    "non_goals": [
+      "Owned sessions, tmux runner, spawn, terminal I/O, mailbox, ask() (M3).",
+      "The 7-bucket outcome palette, stop-reason classification, next_actions[], replay (M2).",
+      "Tool registry, MasterRuntime, authorize(), approvals, audit, chat page (M4).",
+      "work_item and queue tables, providers, reconcile, workers, matrix view (M5).",
+      "Connectors (M4.5). Notion, channels, .pkg, notarization (M6).",
+      "The LLM verdict lane (D34)."
+    ],
+    "constraints": [
+      "Python 3.12, mypy --strict, no Any (principle 6). Files past ~600 lines signal over-scope.",
+      "Principle 4: hooks time out, swallow all exceptions, always exit 0. Never harm Claude Code.",
+      "Principle 1: one direction, one store. No consumer gets a private read path into engine state.",
+      "D24: no event store. Fold hook events into session columns on arrival, then discard.",
+      "D25: evidence/audit/replay go to rotating JSONL logs, never the database. Readers skip malformed trailing lines.",
+      "D26/D33: all SQL lives in store/. store/ exposes domain verbs returning dataclasses; no caller passes SQL, receives a driver row, or opens a transaction.",
+      "Two processes: controld (restartable) and sessiond (long-lived). sessiond never migrates; it waits for controld to report the schema version over the UDS.",
+      "Section 13: loopback only, Origin-checked mutations, UDS at mode 0600 plus a per-boot token, no shell=True, never return a raw DB row, escape every innerHTML interpolation.",
+      "Host is Linux and there is no node/npm/tsc. The frontend must be plain ES modules served as-is.",
+      "Platform-dependent paths (state dir, credential store, service supervision) go behind a seam with a Linux driver as the live path.",
+      "Principle 5: unknown is first-class, counted and displayed."
+    ],
+    "acceptance_criteria": [
+      "controld and sessiond both start on Linux, controld applies migrations in one transaction, and sessiond refuses to migrate.",
+      "A migration checksum mismatch refuses to start; a DB version newer than the binary refuses to start.",
+      "hookd.py writes a hook payload to sessiond's UDS with a 250ms timeout and exits 0 even when the socket is absent, the payload is malformed, or the write blocks.",
+      "A real hand-launched claude session registers itself as an attached session on SessionStart, binding cwd to the innermost registered repo by longest-prefix match.",
+      "Arriving hook events fold into session columns: last_event_at, state, needs_you_reason, tasks_done/tasks_total, active_subagents. No event row is stored.",
+      "Absent hook fields degrade their column to null rather than raising; the UI hides the corresponding chip.",
+      "The fleet page renders workspace -> session -> subagent, ordered needs_you -> running -> stopped -> idle, with no polling.",
+      "GET /api/events streams SSE with a monotonic seq; a client reconnecting with Last-Event-ID gets the gap replayed.",
+      "Hook write volume under concurrent sessions is measured and recorded (section 18 probe).",
+      "mypy --strict passes on the whole package and the test suite is green."
+    ],
+    "open_decisions": []
+  },
+  "normalized_phases": [
+    "plan-create",
+    "plan-review-gap-1",
+    "re-plan",
+    "plan-review-gap-2",
+    "memory-finalize"
+  ],
+  "phase_cursor": "plan-review-gap-2",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": "a15b14b1bf24fea41",
+    "planning_review_pass1": "ade845ee8181dc016",
+    "planner_replan": "a15b14b1bf24fea41",
+    "planning_review_pass2": "ad3763d204bac8b98",
+    "memory_finalize": null
+  },
+  "phase_status": {
+    "plan-create": "completed",
+    "plan-review-gap-1": "completed",
+    "re-plan": "completed",
+    "plan-review-gap-2": "completed"
+  },
+  "deferred_findings": [],
+  "results": {
+    "git_preflight": null,
+    "baseline": null,
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "planner": {
+      "status": "PLAN_CREATED",
+      "plan_mode": "execution_plan",
+      "verification_rigor": "critical_path",
+      "confidence": 75,
+      "plan_file": "docs/plans/2026-09-13-m1-foundation-visibility-plan.md",
+      "phases": 21,
+      "risks_identified": 25,
+      "open_decisions": [],
+      "gate_passed": true,
+      "differences_from_agreement": [
+        "Stop-group columns deferred to M2 migration (DV-10)",
+        "session.work_item_id has no FK in M1 (DV-11)",
+        "ux_session_engine_sid partial unique index + seeded wsp_unassigned (DV-12, DV-13)",
+        "EngineAdapter M1 subset (DV-14)",
+        "Both 0600 sockets owned by sessiond; controld has no UDS in M1 (DV-22)",
+        "SSE envelope uses workspace_id + resync event (DV-16)",
+        "Four hand-written mutating HTTP routes replaced by M4 registry (DV-17)"
+      ],
+      "hitl_required": [
+        "T19 live probe against real claude on tmux -L shepherd-qa (uses subscription)",
+        "T19 visual fleet check via ssh -L 7421:127.0.0.1:7421"
+      ],
+      "revision": 2,
+      "dispositions": {
+        "B1": "fixed DV-30",
+        "B2": "fixed live fingerprint guard",
+        "A3": "fixed",
+        "A4": "fixed 14 consumed events",
+        "A5": "fixed",
+        "A6": "fixed",
+        "A7": "fixed",
+        "A8": "fixed",
+        "A9": "fixed",
+        "A10": "fixed runtime dir <data_dir>/run",
+        "A11": "fixed",
+        "A12": "fixed",
+        "A13": "not fixed DV-31",
+        "A14": "fixed"
+      }
+    },
+    "planning_reviewer": {
+      "pass": 2,
+      "status": "FINDINGS",
+      "blocking_findings_count": 2,
+      "replan_needed": true,
+      "router_verified_blockers": [
+        "P2-B1",
+        "P2-B2"
+      ]
+    },
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": null,
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "needs_iteration"
+  },
+  "planning_review_runs": 2,
+  "planning_review_findings": [
+    {
+      "id": "B1",
+      "severity": "blocking",
+      "summary": "SessionStart always sets running; idle/resumed/cleared sessions show running up to 3h; unrecorded departure from spec \u00a78",
+      "pass": 1
+    },
+    {
+      "id": "B2",
+      "severity": "blocking",
+      "summary": "PD-08 autouse HOME isolation also applies to tests/live; real claude cannot authenticate; no safe live-lane contract",
+      "pass": 1
+    },
+    {
+      "id": "A3",
+      "severity": "advisory",
+      "summary": "needs_you clearing only proven in -p mode; TUI deny/Esc may strand needs_you; PostToolUseFailure ignored",
+      "pass": 1
+    },
+    {
+      "id": "A4",
+      "severity": "advisory",
+      "summary": "generated hook settings shape (bare FileChanged/CwdChanged without watchPaths) never validated; L1 runs before L2",
+      "pass": 1
+    },
+    {
+      "id": "A5",
+      "severity": "advisory",
+      "summary": "transcript read bound: PD-11 says last 8 MiB, T10 reads forward from 0; tail-seek partial line",
+      "pass": 1
+    },
+    {
+      "id": "A6",
+      "severity": "advisory",
+      "summary": "event counts inconsistent (11 vs 12 observed; 23+PermissionRequest vs 24)",
+      "pass": 1
+    },
+    {
+      "id": "A7",
+      "severity": "advisory",
+      "summary": "EventHub empty ring_first undefined -> resync loop; concurrent publishers unlocked/untested",
+      "pass": 1
+    },
+    {
+      "id": "A8",
+      "severity": "advisory",
+      "summary": "PermissionRequest row sets needs_you_reason unconditionally, violating CHECK when late",
+      "pass": 1
+    },
+    {
+      "id": "A9",
+      "severity": "advisory",
+      "summary": "writer thread blocks on stalled controld send; no timeout/outbound queue",
+      "pass": 1
+    },
+    {
+      "id": "A10",
+      "severity": "advisory",
+      "summary": "hook command bakes runtime dir; XDG mismatch silently drops events",
+      "pass": 1
+    },
+    {
+      "id": "A11",
+      "severity": "advisory",
+      "summary": "T02 isolation test uses ~/.claude mtimes; flaky while builder claude runs",
+      "pass": 1
+    },
+    {
+      "id": "A12",
+      "severity": "advisory",
+      "summary": "T19 trust-dialog keys unspecified; Yes writes trust entry into real Claude config",
+      "pass": 1
+    },
+    {
+      "id": "A13",
+      "severity": "advisory",
+      "summary": "Credentials (T01) beyond \u00a716 M1 scope, no consumer",
+      "pass": 1
+    },
+    {
+      "id": "A14",
+      "severity": "advisory",
+      "summary": "sessiond imports claude_code transcript path check directly, bypassing EngineAdapter",
+      "pass": 1
+    },
+    {
+      "id": "P2-B1",
+      "severity": "blocking",
+      "summary": "sweep rule 1 covers at-prompt rows but T13 iterates list_live_sessions (starting|running|needs_you only); dead at-prompt sessions never exit (router-verified plan:438 vs :1002/:1722)",
+      "pass": 2
+    },
+    {
+      "id": "P2-B2",
+      "severity": "blocking",
+      "summary": "engine_proc is in-memory only; after sessiond restart/reboot dead sessions never close and dead needs_you stays at top forever; plan:299 claims recoverable (router-verified)",
+      "pass": 2
+    },
+    {
+      "id": "P2-F3",
+      "severity": "advisory",
+      "summary": "compact SessionStart on needs_you clears reason -> CHECK violation",
+      "pass": 2
+    },
+    {
+      "id": "P2-F4",
+      "severity": "advisory",
+      "summary": "SSE seq restart boundary R-1 collision skips resync",
+      "pass": 2
+    },
+    {
+      "id": "P2-F5",
+      "severity": "advisory",
+      "summary": "needs_you lingers through an approved long tool call (PreToolUse precedes PermissionRequest); unrecorded degrade",
+      "pass": 2
+    },
+    {
+      "id": "P2-F6",
+      "severity": "advisory",
+      "summary": "control socket STATUS/ERROR replies and sender thread may interleave frames",
+      "pass": 2
+    },
+    {
+      "id": "P2-F7",
+      "severity": "advisory",
+      "summary": "ThreadingUnixStreamServer request_queue_size=5 vs 20 concurrent hookd; uncounted drops",
+      "pass": 2
+    },
+    {
+      "id": "P2-F8",
+      "severity": "advisory",
+      "summary": "/proc/<pid>/stat field indexing unstated; no real-probe test",
+      "pass": 2
+    },
+    {
+      "id": "P2-F9",
+      "severity": "advisory",
+      "summary": "test_blocked_socket_deadline may not block after truncation",
+      "pass": 2
+    },
+    {
+      "id": "P2-F10",
+      "severity": "advisory",
+      "summary": "user's global cc10x plugin hooks fire inside live QA sessions; ~/.claude.json writes beyond trust entry; L3 needs permissions.ask Bash",
+      "pass": 2
+    },
+    {
+      "id": "P2-F11",
+      "severity": "advisory",
+      "summary": "metadata cap wording; O_EXCL vs replace; daemon log path",
+      "pass": 2
+    },
+    {
+      "id": "P2-F12",
+      "severity": "advisory",
+      "summary": "POST without Origin allowed; unrecorded \u00a713 deviation",
+      "pass": 2
+    }
+  ],
+  "planning_review_status": "findings",
+  "plan_revision": 2,
+  "last_reviewed_revision": 2,
+  "memory_notes": [
+    {
+      "agent": "planner",
+      "phase": "plan-create",
+      "notes": {
+        "learnings": [
+          "SQLite 3.45.1: an FK to a missing table fails inserts even with NULL; ADD COLUMN with CHECK works on STRICT tables",
+          "Hook payload effort is an object {level}; transcript effort is a string; subagent transcripts live at <slug>/<sid>/subagents/agent-<id>.jsonl",
+          "Settings files failing validation are silently ignored by claude, so hook-install marker keys must be live-probed"
+        ],
+        "patterns": [
+          "Pure core + IO shell enforced by AST repo-rules tests",
+          "Profiles default/test/qa isolate state dir, sockets, port, tmux socket"
+        ]
+      }
+    },
+    {
+      "agent": "plan-gap-reviewer",
+      "phase": "plan-review-gap-1",
+      "notes": [
+        "Probe: prompt_id on nearly all events except SessionStart; effort is {level}; PermissionRequest has no tool_use_id",
+        "Probe settings used watchPaths on FileChanged/CwdChanged and were accepted",
+        "Unverified in any probe (all -p): SessionStart at TUI launch, Stop skipped on user interrupt, PostToolUseFailure/PermissionDenied on TUI deny",
+        "Live lane needs real HOME read-only for claude auth, with Shepherd/XDG state isolated and ~/.claude/settings.json hash asserted unchanged"
+      ]
+    },
+    {
+      "agent": "planner",
+      "phase": "re-plan",
+      "notes": [
+        "Generated hook settings must stay a subset of the probe-accepted shape (matcher '*')",
+        "SessionStart is not a liveness signal",
+        "Hook command baking --runtime-dir must not depend on XDG_RUNTIME_DIR; use <data_dir>/run",
+        "Live tests isolate via fingerprint guard, not temp HOME"
+      ]
+    },
+    {
+      "agent": "plan-gap-reviewer",
+      "phase": "plan-review-gap-2",
+      "notes": [
+        "Attached-session liveness via in-memory engine_proc needs an explicit restart/reboot reconciliation rule",
+        "Sweep candidates must include stopped rows with ended_at IS NULL",
+        "SSE seq starting at stored reservation R can collide with old boot's R-1",
+        "cc10x plugin is enabled globally; its hooks fire in any live claude run on this host"
+      ]
+    }
+  ],
+  "pending_gate": "plan_review_cap_reached",
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-12T12:33:26Z",
+      "phase": "plan-create"
+    },
+    {
+      "event": "harness_degrade",
+      "ts": "2026-09-12T12:33:26Z",
+      "phase": "plan-create",
+      "note": "TaskCreate/TaskList/TaskGet/TaskUpdate are absent from this harness. Agent() dispatch IS available, so per-phase subagent isolation is preserved and this artifact plus its events log is the task graph of record. All gates kept fail-closed."
+    },
+    {
+      "event": "exploration_satisfied_by_existing_design",
+      "ts": "2026-09-12T12:33:26Z",
+      "phase": "plan-create",
+      "note": "PLAN prep step 2 mandates brainstorming. Its output already exists: docs/specs/orchestrator-platform.md is an approved design (34 decisions) and the three remaining open questions (scope, platform, credentials) were resolved with the user this session. The reality deltas discovered by probing (hook gaps, Linux, no node) are carried into the planner brief as explicit constraints rather than re-derived."
+    },
+    {
+      "event": "session_lost",
+      "ts": "2026-09-13T06:07:42Z",
+      "phase": "plan-create",
+      "note": "Router tmux spike ran `tmux kill-server`; this session runs inside tmux, so the session and the background planner died before a plan was saved. Planner resumed via SendMessage."
+    },
+    {
+      "event": "result_persisted",
+      "ts": "2026-09-13T07:02:53Z",
+      "phase": "plan-create",
+      "agent": "planner",
+      "decision": "PLAN_CREATED"
+    },
+    {
+      "event": "result_persisted",
+      "ts": "2026-09-13T07:13:14Z",
+      "phase": "plan-review-gap-1",
+      "agent": "plan-gap-reviewer",
+      "decision": "FINDINGS",
+      "blocking": 2
+    },
+    {
+      "event": "result_persisted",
+      "ts": "2026-09-13T07:21:17Z",
+      "phase": "re-plan",
+      "agent": "planner",
+      "decision": "PLAN_CREATED rev 2"
+    },
+    {
+      "event": "escalated_to_human",
+      "ts": "2026-09-13T07:30:50Z",
+      "phase": "plan-review-gap-2",
+      "reason": "fresh-review cap (2) reached with 2 blocking findings"
+    }
+  ],
+  "remediation_history": [],
+  "created_at": "2026-09-12T12:33:26Z",
+  "updated_at": "2026-09-13T07:30:50Z"
+}

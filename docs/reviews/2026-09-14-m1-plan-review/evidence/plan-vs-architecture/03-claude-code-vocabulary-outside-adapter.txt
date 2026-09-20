@@ -1,0 +1,97 @@
+# Claude-Code-specific vocabulary placed OUTSIDE engine/ (grep of plan, 2026-09-14)
+
+## ingest/events.py (S4 T09)
+3:KNOWN_EVENTS: Final[frozenset[str]]      # exactly the 24 §8 subscription names (PermissionRequest included)
+4:PATH_TOOLS: Final = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit"})
+6:class HookEvent:
+7:    name: str; session_id: str | None; cwd: str | None; transcript_path: str | None; prompt_id: str | None
+8:    agent_id: str | None; agent_type: str | None; tool_name: str | None; tool_input: JsonObject | None
+9:    effort_level: str | None; source: str | None; reason: str | None; prompt: str | None
+10:    background_tasks: tuple[JsonValue, ...] | None; task_id: str | None
+12:class HookEnvelope: observed_at: float; ancestry: tuple[ProcAncestor, ...]; event: HookEvent | None; malformed_reason: str | None
+
+## ingest/fold.py (S4 T09): CONSUMED_EVENTS owned by the fold, adapter must equal it
+1067:CONSUMED_EVENTS: Final[frozenset[str]]   # the 14 names with fold rules (DV-04); ClaudeCodeEngine.hook_events() must equal this set
+1585:- **Produces:** `KNOWN_EVENTS`, `PATH_TOOLS`, `HookEvent`, `HookEnvelope`, `parse_envelope`, `LATE_EVENT_GRACE_S`, `MAX_REPOS_TOUCHED`, `CONSUMED_EVENTS`, `FoldMemory`, `FoldInput`, `FoldOutcome`, `fold_event`, `apply_signals`, `permission_reason`, `sweep_decision`, `changes_between`, `hook_payload`, `envelope_bytes`
+1652:- **Dependencies:** T04, T09 (`CONSUMED_EVENTS`), T10, T11
+1656:    - `hook_events()` = the 14 names of DV-04, in a fixed order; a test asserts `set(hook_events()) == CONSUMED_EVENTS`.
+1681:- **Consumes:** `Signal`, `SubagentInfo`, `read_jsonl_delta`, `parse_signals`, `locate_transcript_in`, `is_transcript_path_allowed`, `list_subagents_in`, `hook_command`, `install_into`, `uninstall_from`, `CONSUMED_EVENTS`
+1921:      3. Still none → rerun with only the 12 observed events (drop `PostToolUseFailure` and `PermissionDenied`). If hooks fire, narrow `hook_events()` and `CONSUMED_EVENTS` and record it on DV-04.
+2057:| A6 event counts wrong | **fixed.** 12 observed; §8 has 24 names incl. `PermissionRequest`; `KNOWN_EVENTS` = 24; `CONSUMED_EVENTS` = 14 | DV-04, S4 T09, T12 |
+
+## fold rules keyed on Claude Code event names and tool names (Behavior contract 1)
+| `e.name` | State effect | Other column effects | Memory effect | `refresh_transcript` |
+|---|---|---|---|---|
+| `SessionStart` | `source == "compact"` → revive (running). Any other `source` (`startu
+| `UserPromptSubmit` | `running` (always) | `needs_you_reason := None`; `ended_at := None`
+| `PermissionRequest` | if late: **no effect at all** (no state, reason, or pending change
+| `PostToolUse` | if not late: if `S.state == "needs_you"` and (`M.pending is None` or `M.
+| `PostToolUseFailure`, `PermissionDenied` | handled exactly like `PostToolUse` for the pe
+| `PreToolUse`, `MessageDisplay` | revive (`needs_you` unchanged) | none | none | no |
+| `TaskCreated` | revive | `tasks_total += 1` | none | no |
+| `TaskCompleted` | revive | `tasks_done += 1`; `tasks_total := max(tasks_total, tasks_don
+| `SubagentStart` | revive | `active_subagents += 1` | none | no |
+| `SubagentStop` | none | `active_subagents := max(0, active_subagents - 1)` | none | no |
+| `Stop` | if not `M.ended`: `stopped` | `needs_you_reason := None`; if `background_tasks 
+| `SessionEnd` | `stopped` | `ended_at := iso(t)`; `active_subagents := 0`; `needs_you_rea
+| any other name | none | none (only `last_event_at`) | none | no; the service counts `unk
+`permission_reason`:
+
+| Tool | Reason |
+|---|---|
+| `Bash` | `permission: Bash(<command, first line, ≤80 chars>)` |
+| `Edit`/`Write`/`MultiEdit`/`Read`/`NotebookEdit` | `permission: <Tool>(<path relative to cwd if under it, else basename>)` |
+| `WebFetch` | `permission: WebFetch(<hostname>)` |
+| other, with `tool_name` | `permission: <tool_name>` |
+| `tool_name` absent | `permission: (unknown tool)` |
+
+## hookd.py is top-level shepherd/hookd.py, not engine/claude_code; knows CC payload fields
+137:| DV-18 | §8 hookd sketch forwards stdin raw | hookd parses the payload, **drops `tool_response`**, truncates strings longer than 8 KiB (recursion depth ≤ 6), and wraps the result in an envelope with `observed_at`
+162:| PD-07 | **hookd is a single stdlib-only file**, `src/shepherd/hookd.py`, that imports nothing from `shepherd`. `shepherd hooks install` copies it to `<data_dir>/bin/hookd.py` and bakes `shlex.join([<python3 realpat
+351:src/shepherd/hookd.py                            T08  standalone, stdlib only
+713:| 1 | `HOOK_EVENT` | hook | hookd → sessiond | envelope `{"v":1,"observed_at":float,"ancestry":[[pid:int,comm:str,starttime:int],…],"payload":object}` or `{"v":1,"observed_at":…,"ancestry":…,"unparsed_len":in
+731:**hookd algorithm** (`src/shepherd/hookd.py`, stdlib only, entire `main` body in `try/except BaseException: pass`, then `os._exit(0)`):
+735:4. Try `json.loads`. On success, if it is a dict: drop `tool_response`, truncate strings > 8192 chars (depth ≤ 6). If it is not a dict or fails to parse: `unparsed_len`.
+1045:# shepherd/hookd.py
+1516:  - `src/shepherd/ipc/__init__.py`, `src/shepherd/ipc/frames.py`, `src/shepherd/ipc/messages.py`, `src/shepherd/hookd.py`
+1550:    - `hook_event_name` missing → `event=None`, `malformed_reason="no_event_name"`;
+
+## config.py carries a Claude Code path
+493:| E24 | `transcript_path` outside `claude_projects_dir` (e.g. `/etc/passwd`) | ignored, counted | T13 |
+855:    claude_projects_dir: Path; discovery_max_depth: int
+1332:    - Defaults: `http_port` = 7420 (default profile), 7421 (`qa`), 0 (`test`, meaning ephemeral). `tmux_socket` = `shepherd`, `shepherd-qa`, `shepherd-test` for those profiles, `shepherd-<p>` oth
+
+## cli/ hard-codes Claude Code settings paths
+133:| DV-14 | §6 `EngineAdapter` Protocol | M1's Protocol is a **subset plus three additions**. **Omitted until M3**, where `SessionSpec`/`RunnerHandle` exist: `spawn_argv`, `set_title`. **Added:** `engine_id() -> str`, `process_names() -> frozenset[str]`, `l
+1854:  | `hooks install (--project DIR \| --user --confirm-user-scope)` | copies `hookd.py` to `paths.bin_dir/hookd.py` (0644); `--project` targets `DIR/.claude/settings.local.json`; `--user` targets `~/.claude/settings.json` and **requires** `--confirm-user-s
+
+## EngineAdapter hook methods take a settings-file target (Claude-Code-shaped Protocol)
+47:- **Re-decided out loud (visible for review, not silent):** DV-07 (`needs_you` source), DV-09 (liveness rule for attached sessions), DV-10 (stop-group columns deferred to M2), DV-11 (no FK on `work_item_id`), DV-13 (unassigned workspace + null-binding rebin
+133:| DV-14 | §6 `EngineAdapter` Protocol | M1's Protocol is a **subset plus three additions**. **Omitted until M3**, where `SessionSpec`/`RunnerHandle` exist: `spawn_argv`, `set_title`. **Added:** `engine_id() -> str`, `process_names() -> frozenset[str]`, `l
+203:7. Extend `EngineAdapter` with `spawn_argv`/`set_title`, and `ScriptedEngine` alongside it (DV-14).
+1121:@dataclass(frozen=True) class HookTarget: settings_path: Path
+1132:    def install_hooks(self, dispatcher: Path, target: HookTarget) -> HookInstallReport: ...
+1133:    def uninstall_hooks(self, target: HookTarget) -> HookInstallReport: ...
+1650:- **Objective:** The M1 `EngineAdapter` Protocol (DV-14) with its real implementation and its `Scripted*` peer, both passing one contract suite (§14 lane 2).
+
+## domain/signals.py mirrors CC transcript entry types ai-title/custom-title
+948:@dataclass(frozen=True) class TitleSignal: kind: Literal["ai", "custom"]; text: str
+
+## T12 adapter consumes ingest's CONSUMED_EVENTS (engine -> ingest dependency)
+- **Consumes:** `Signal`, `SubagentInfo`, `read_jsonl_delta`, `parse_signals`, `locate_transcript_in`, `is_transcript_path_allowed`, `list_subagents_in`, `hook_command`, `install_into`, `uninstall_from`, `CONSUMED_EVENTS`
+
+## Plan's own claim
+Dependency classes: Claude Code is **Wrapped** (`EngineAdapter`). SQLite is **Infra wrapped by `store/`** (D26). systemd, launchd, Keychain and `/proc` are **Wrapped** (platform seam).
+
+## EngineAdapter (S4) has no method that turns a hook payload into engine-neutral signals
+class EngineAdapter(Protocol):
+    def engine_id(self) -> str: ...
+    def capabilities(self) -> EngineCapabilities: ...
+    def process_names(self) -> frozenset[str]: ...
+    def locate_transcript(self, engine_session_id: str) -> Path | None: ...
+    def parse_transcript_delta(self, path: Path, offset: int) -> tuple[list[Signal], int]: ...
+    def list_subagents(self, engine_session_id: str, parent_live: bool) -> list[SubagentInfo]: ...
+    def accept_transcript_path(self, candidate: str) -> Path | None: ...   # engine-owned path validation (fresh-review A14)
+    def hook_events(self) -> list[str]: ...
+    def install_hooks(self, dispatcher: Path, target: HookTarget) -> HookInstallReport: ...
+    def uninstall_hooks(self, target: HookTarget) -> HookInstallReport: ...

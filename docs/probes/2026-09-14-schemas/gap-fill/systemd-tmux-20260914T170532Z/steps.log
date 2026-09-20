@@ -1,0 +1,10 @@
+17:05:32.213 Q2 show-environment
+17:05:32.223 Q2 transient oneshot: command -v claude; claude --version; claude auth status
+17:05:32.248 Q2b same oneshot with -p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+17:05:32.499 Q2c transient oneshot: one haiku -p turn from inside a unit, PATH set (auth works?)
+17:05:35.712 Q1 variant=nopath socket=shp-gap-sysd-n props=[] how=direct action=stop
+17:05:46.901 Q1 variant=cgstop socket=shp-gap-sysd-a props=[-p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin] how=direct action=stop
+17:05:58.118 Q1 variant=cgrestart socket=shp-gap-sysd-b props=[-p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin] how=direct action=restart
+17:06:09.348 Q1 variant=procstop socket=shp-gap-sysd-c props=[-p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin -p KillMode=process] how=direct action=stop
+17:06:20.581 Q1 variant=scopestop socket=shp-gap-sysd-d props=[-p Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin] how=scope action=stop
+17:06:31.754 done -> /root/Shepherd/docs/probes/2026-09-14-schemas/gap-fill/systemd-tmux-20260914T170532Z
