@@ -2,16 +2,38 @@
 
 ## Current Focus
 
-**2026-09-21 — UI redesign, design phase.** Dark-only redesign of the web UI:
-a collapsible side pane (Shepherd / Flock / Queues / Projects / Kanban / Settings),
-the Shepherd conversation page, and the three-pane Flock page. **Design only** — it
-lives in a published artifact, and nothing under `src/shepherd/web/` has been edited.
-Implementation waits on the owner finishing the publish/identity cleanup. Note that
-`web/static/` is byte-frozen by `tests/boundaries/consumer_manifest.json`, so every
-real edit there costs a `post_milestone` declaration.
+**2026-09-21 — BUILD in flight: the projects backend, then the UI redesign.**
+Workflow `wf-20260921T212808Z-9172ed6b`, cc10x PLAN → BUILD → QA, `execution_plan` at
+`critical_path` rigor. Plan: `docs/plans/2026-09-21-projects-and-ui-plan.md` — 11 phases,
+29 tasks, 24 acceptance clauses. Design: `docs/plans/2026-09-21-projects-and-ui-design.md`.
+Measurements the plan is built on: `docs/plans/recon/2026-09-21-backend-and-frontend-recon.md`.
+
+The owner's instruction was to run the whole thing autonomously and to stop only when done
+or fully blocked — see `## Session Settings`, reaffirmed today.
+
+**Four assumptions were replaced with measurements before planning, and three were wrong:**
+
+1. **`web/static/chat.js` cannot be renamed or deleted**, only edited. It is the one static
+   file created after the step-0b baseline and claimed by T24's rebase; deleting it makes
+   `moved_paths` report it un-moved while `regenerated_paths` still declares it, and there
+   is no repair. Found by simulating the gate against the real manifest.
+2. **`DROP COLUMN` succeeds on an FK-referencing column** (SQLite 3.45.1), so migration 004
+   never rebuilds `session`. The whole migration was rehearsed against real 001–003 with
+   real rows: clean, `foreign_key_check` empty, both delete paths working.
+3. **The shipped page scrolls sideways by 7px at 390×844.** One element:
+   `BUTTON#chat-autonomy-next`. That is the autonomy toggle — the control D65 already
+   deletes. Nobody had opened this page at phone width since M4.
+4. **The trust dialog and the permission dialog disagree about Enter.** One numbers its
+   choices and selects `Yes`; the other numbers nothing and selects `No, exit`. Written up
+   in `docs/design/decision-card-shapes.md` before the parser exists.
+
+**And one freeze nobody had documented:** `tests/boundaries/collected_node_ids.txt` pins
+1482 test node ids; deleting or renaming a frozen test needs a `RETIRED_NODE_IDS` entry
+carrying a reason and the authorising decision. This work retires fifteen.
 
 **UI vocabulary changed (labels only, bucket values untouched):** Herd → **Flock**,
 `unfinished` → **stranded**, `paused` → **limit exceeded**, `unclassified` → **unknown**.
+The renames land in `core.stops.PALETTE`, never in a UI-side table.
 
 Prior focus, complete:
 
@@ -290,10 +312,24 @@ None blocking. Known gaps to resolve in the milestone that needs them, not to st
 ## Session Settings
 
 - AUTO_PROCEED: true
-- Rationale: the owner asked to "be as autonomous as possible" and to run the full flow end to end.
-- **Dated 2026-09-17, during the M1–M4 build. It has not been reaffirmed since, and the project now
-  carries many open decisions** (see the 2026-09-21 backlog). Treat it as a grant for mechanical
-  work, not as permission to settle an open design decision without asking.
+- **Reaffirmed 2026-09-21, explicitly and in stronger terms than the original grant.** The owner:
+  *"you can do this fully autonomously. Making decisions where needed. I mostly trust you… And if
+  there's a real blocker, not a decision blocker, like a real blocker, something is missing,
+  something that you can't reach, that you can't install, etc., then go work on another part of
+  this effort and only stop when you're done or fully blocked… Be as autonomous as possible."*
+- **What this grant does and does not cover.** It covers settling design decisions that arise
+  during the work — the 2026-09-21 run used it for seven, each recorded in the workflow artifact's
+  `approved_decisions` with its rejected alternative. It does **not** cover reversing a numbered
+  row in spec §3: those get a new numbered row and their reasoning written down (D66 is the
+  worked example), per §0.
+- **A "real blocker" is something missing or unreachable, not a decision.** On one, the standing
+  instruction is to move to another part of the effort rather than stop.
+- DIFF_DRIVEN_DOCS: per-phase for the backend phases (1–4), where the diff changes documented
+  behaviour; deferred to one consolidated pass for the UI phases (5–9), whose documentation is
+  `docs/design/ui-decisions.md` and is already written. Spec rows caused by a task are written
+  **in that task**, never deferred — that is what "recorded is not applied" cost twice in M4.
+- Superseded note, kept for the record: this block previously read "dated 2026-09-17… has not been
+  reaffirmed since… treat it as a grant for mechanical work". That caveat is now discharged.
 
 ## Last Updated
 

@@ -1,1 +1,1 @@
-{"ts": "2026-09-20T12:45:23.726008+00:00", "workflow_uuid": "wf-20260920T063421Z-c6df8bbd", "workflow_type": "DEBUG", "phase_cursor": "memory-finalize", "phase_status": {}, "plan_file": null, "source": "stop"}
+{"ts": "2026-09-21T21:59:37.660826+00:00", "workflow_uuid": "wf-20260921T212808Z-9172ed6b", "workflow_type": "PLAN", "phase_cursor": "plan-review-gap-1", "phase_status": {"plan-create": "completed"}, "plan_file": "docs/plans/2026-09-21-projects-and-ui-plan.md", "source": "stop"}

@@ -25,7 +25,11 @@
     "Design: removing the rail from the shell gets a numbered decision row (D66).",
     "RD-1 APPROVED: upsert_workspace is deleted, not aliased. Once binding stops creating projects it has no caller in src/, and an alias would keep the match-on-name defect reachable.",
     "RD-2 APPROVED: signals/discovery.py and its test file are deleted. discover_repos() has no caller in src/ and its sole documented justification (workspace.root_path) is removed by 004. It can return as an add_repo directory scanner when something needs it.",
-    "RD-3 APPROVED: workspace.last_activity_at is derived at read time from MAX(session.last_event_at), not written. Correct by construction, no new write path, and it stops a column that is always NULL being projected to the UI."
+    "RD-3 APPROVED: workspace.last_activity_at is derived at read time from MAX(session.last_event_at), not written. Correct by construction, no new write path, and it stops a column that is always NULL being projected to the UI.",
+    "D67 (new spec row): the session view relocates into the Flock's third pane rather than being deleted. session.js, terminal.js and vendor/xterm.js are RETAINED and reachable from that pane. Section 12's Page 3 is rewritten as a pane, not a page. Reason: the owner asked for a three-pane Flock whose third pane is shaped like the Shepherd page; they never asked to lose the live pty view, and removing xterm would be a silent capability regression plus 16 retirements bought for nothing.",
+    "The stop-summary strip (#stop-summary, #unknown-rate, #low-confidence) is KEPT, in the Flock page header beside the legend. Reason: principle 5 - the unknown rate is counted and displayed, never hidden - and it is the headline metric section 12 puts on the fleet page. Preserves three frozen palette ids rather than retiring them.",
+    "D21's next_actions list relocates from the session CARD to the session PANE. U7's four-item card stands; section 12 already says the same list renders in the session view header. Capability preserved, U7 honoured, and most of test_fleet_page.py's assertions become body rewrites pointing at the new location rather than retirements.",
+    "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right."
   ],
   "plan_mode": "execution_plan",
   "build_scope": null,
@@ -81,7 +85,7 @@
     "open_decisions": []
   },
   "normalized_phases": [],
-  "phase_cursor": "plan-review-gap-1",
+  "phase_cursor": "re-plan",
   "capabilities": {
     "brightdata_available": "unknown",
     "octocode_available": "unknown",
@@ -109,7 +113,8 @@
     "memory_finalize": null
   },
   "phase_status": {
-    "plan-create": "completed"
+    "plan-create": "completed",
+    "plan-review-gap-1": "completed"
   },
   "deferred_findings": [
     {
@@ -153,7 +158,13 @@
       "acceptance_clauses": 24,
       "gate": "SPEC_GATE_PASS"
     },
-    "planning_reviewer": null,
+    "planning_reviewer": {
+      "pass": 1,
+      "status": "FINDINGS",
+      "blocking": 7,
+      "major": 6,
+      "mode": "fresh"
+    },
     "qa_researchers": [],
     "qa_plan": null,
     "qa_harness_builder": null,
@@ -245,11 +256,20 @@
     "research_quality": "none",
     "convergence_state": "pending"
   },
-  "planning_review_runs": 0,
-  "planning_review_findings": [],
-  "planning_review_status": "in_progress",
+  "planning_review_runs": 1,
+  "planning_review_findings": [
+    "B1 blocking: Phase 1's boundary cannot be green - binding.py and admission.py break in Phase 1 and are repaired in Phase 2.",
+    "B2 blocking: test_fleet_page.py's 17 frozen ids assert fleet.js internals (stoppedRow, sessionRow, expansion, ACTION_MILESTONE, LIVE_KINDS, empty-state) the redesign does not contain; zero retirements budgeted.",
+    "B3 blocking: test_palette.py binds index.html to #stop-summary / #unknown-rate / #low-confidence, which the prototype does not draw.",
+    "B4 blocking: section 12 Page 3 (session terminal, session.js + terminal.js + vendor/xterm.js) has no home in the six-page shell and no decision row; test_session_page.py's 16 frozen ids unaccounted.",
+    "B5 blocking: every planned retirement cites a decision string the gate rejects - it asserts 'RD-' in decision or 'section-sign' in decision.",
+    "B6 blocking: test_routes_m3.py:237 asserts len(BODY_ARGS) == 10, a second hard-coded count outside T4.2's declared scope.",
+    "B7 blocking: E15's deciding test test_app_css_carries_the_hidden_reset is named three times and built by no task - the exact M4 failure shape.",
+    "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry."
+  ],
+  "planning_review_status": "findings",
   "plan_revision": 1,
-  "last_reviewed_revision": 0,
+  "last_reviewed_revision": 1,
   "memory_notes": [],
   "pending_gate": null,
   "status_history": [
@@ -267,9 +287,14 @@
       "event": "plan_saved",
       "ts": "2026-09-21T21:56:25Z",
       "phase": "plan-create"
+    },
+    {
+      "event": "planning_review_pass1_findings",
+      "ts": "2026-09-21T22:06:12Z",
+      "phase": "plan-review-gap-1"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-21T21:56:25Z"
+  "updated_at": "2026-09-21T22:06:12Z"
 }
