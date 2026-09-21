@@ -158,6 +158,55 @@ Nothing is gating the implementation.
   precedence rule adopted. `spawn_session`'s `model` argument is the only lever
   and `engine="claude_code"` stays a literal in `orchestration/spawn.py`.
 
+## U17 — the decision card needs a projection that does not exist yet
+
+**Decided 2026-09-21: build it.** U11 says a `needs you` session shows the
+engine's own prompt with its numbered choices, verbatim. Nothing projects that
+today:
+
+* `SidecarState` reports three values — `WAITING`, `NOT_WAITING`, `ABSENT`. A
+  state, not a prompt.
+* `answer_permission` sends keystrokes and returns `DialogAnswer(decision,
+  reason, keys_sent)`. It answers a dialog; it never describes one.
+
+So the prompt text and its options have to be **read off the pane** and turned
+into `{text, choices[]}`. `docs/probes/2026-09-14-schemas/tmux-tui/` has the
+captures to build it against, and §12's own mockups are drawn from them.
+
+Three things that will bite, all already known to the tree:
+
+1. **Attached sessions have no pty of ours.** The card must render read-only for
+   them and say so, rather than showing three buttons that go nowhere.
+2. **The choices are the engine's, and they move with its version.** A parser
+   pinned to one wording breaks on an update. Whatever it cannot parse degrades
+   to the ask plus approve/reject, never to a guess — the same rule `unknown`
+   follows everywhere else.
+3. **C15's trust dialog** leaves a session neither `starting` nor `needs_you`,
+   and a blind Enter answers *"No, exit"*. Any prompt parser meets it eventually.
+
+## U18 — the pages depend on a reset that `web/static/` does not have
+
+Found on 2026-09-21 the first time the prototype was opened in a real browser:
+**every "hidden" page was rendering underneath the visible one.**
+
+Each page sets `display` from a class — `.scroll`, `.herd`, `.panes2` — and an
+author class rule beats the browser's own `[hidden] { display: none }`. The
+prototype only looked correct because the artifact wrapper injects
+`[hidden] { display: none !important }`. `web/static/index.html` has no such
+reset, so porting this design without that one line puts every page on screen at
+once.
+
+The rule is now in the prototype's own stylesheet, commented, so it travels with
+the design instead of being rediscovered.
+
+**And the general point, which is the reusable part:** three bugs reached this
+prototype that reading could not catch — CSS pasted into the `<script>`, a click
+handler never inserted, a temporal dead zone — plus this one, which no amount of
+reading would ever have found because it was a rule the page did not contain.
+A page is not verified until a browser has run it. `scratchpad/ui/render_check.py`
+is that check: it opens every page at phone and desktop width, fails on any
+console error, and asserts nothing scrolls sideways.
+
 ## Working notes for whoever implements this
 
 - The prototype's JavaScript is a faithful transcription of `fleet.js`,
