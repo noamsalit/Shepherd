@@ -31,7 +31,7 @@ reading before planning.
 You have everything you need. Do this, in order:
 
 1. Read §1–§4. §3 (Decision log) is the most important section in the document —
-   **56 decisions** (D1–D56, plus D38.1, an amendment) with their reasoning. If
+   **64 decisions** (D1–D64, plus D38.1, an amendment) with their reasoning. If
    implementation pressure pushes against one, say so and re-decide out loud; do
    not quietly reverse it.
 2. Note §2 — the product name (`shepherd`) and repo location are settled.
@@ -82,15 +82,15 @@ Subagents are implementation details of a plan a tier-2 session is executing.
 
 ### Non-goals for v1
 
-Not a Claude Code replacement. Not a CI system. Not a work iteming system. Not
+Not a Claude Code replacement. Not a CI system. Not a ticketing system. Not
 multi-user. Not multi-engine. See §17 for the full deferred list.
 
 ---
 
 ## 2. Naming and placement (resolved)
 
-**Both resolved 2026-09-12.** Recorded here rather than deleted, so a reader
-who finds a stale `shepherd` knows it is a leftover, not a second name.
+**Both resolved 2026-09-12.** Recorded here rather than deleted, so the reasoning
+survives.
 
 | Item | Resolved to | Notes |
 |---|---|---|
@@ -98,10 +98,10 @@ who finds a stale `shepherd` knows it is a leftover, not a second name.
 | Daemon names | `controld`, `sessiond` | unchanged — generic on purpose, they are not user-facing |
 | Repo location | `/root/Shepherd/` | this spec lives at `docs/specs/` within it; `git init` done, baseline commit on `main` |
 
-`shepherd` remains as a placeholder in prose written before this was settled. It is
-the same product. Treat `shepherd` as authoritative and correct `shepherd` on sight
-in any file you are already editing — a sweeping rename commit is not worth the
-diff noise.
+*(A paragraph here once told the reader how to recognise the project's older working
+name. The 2026-09-20 identifier scrub substituted both sides of that sentence, leaving
+it saying nothing; it is removed rather than left standing as a self-referential
+instruction. Nothing in the tree uses an older name.)*
 
 ---
 
@@ -139,7 +139,7 @@ re-decide.
 | D24 | **No event store.** Hook events are folded into `session` columns as they arrive and then discarded. Stop analysis reads the **transcript Claude Code already writes to disk** plus the stop event's own metadata: mechanical reasons resolve with certainty and cost nothing; a cheap model runs **only** when `stop_reason = end_turn`. | The firehose was 200 MB–1.2 GB/day to serve three jobs, two of which only need the last 90 seconds. Liveness, registration, and the counters are all "update a field when the event arrives" — the event has no value once folded in. The evidence for the third job already exists on disk in `~/.claude/projects/<slug>/<session_id>.jsonl`, so storing it again was duplication. Mechanical reasons (`rate_limit`, `crashed`, `auth_failed`, exit codes) are never in the text and never need a model; `end_turn` is the one genuinely ambiguous case. **Revises D3** — raw signals are no longer persisted; `replay` now runs over the stop-evidence log (D25), which is kilobytes per session rather than gigabytes per day. **Revises D7** — `worker_run` is dropped: attempt history is `SELECT … FROM session WHERE work_item_id = ?`, and the future memory layer derives from that plus the stop log. |
 | D25 | **Evidence, audit, and replay diffs go to rotating JSONL logs, never the database.** Daily files, gzip on rotation, size cap as a second trigger, 90-day retention (14 for daemon logs). **Nothing the UI renders may read a log** — the audit view is the single exception, because it is a literal tail. | These are append-only, human-read, and offline-analysed: `grep` and `jq` territory, not queries. Keeping them out of the database is what lets the database stay six small tables. The rule about UI reads is the guardrail — the moment a page wants "every derailed session last month", that fact belongs in a column instead. A reader must skip malformed trailing lines, since a daemon killed mid-write leaves one. |
 | D26 | **SQLite is a delivery choice, not an architectural one.** All SQL lives in `store/`; nothing outside it imports a database driver. Switching engines must be a contained change. | Today's constraint is a single-user local install with no server to babysit (D39), which rules out Postgres and MongoDB on packaging grounds — not on data-model grounds. MongoDB in particular is a good fit for the *shape* of this data and a bad fit for shipping a desktop app (a third daemon, ~100 MB bundled, WiredTiger claiming half the RAM of the machine running the fleet). When the remote/multi-user path in D2 arrives, that decision genuinely reopens, and it must not be a rewrite. No `Store` Protocol — a storage interface written against one implementation is the D9 mistake, and SQL leaks through it anyway. The boundary is an import rule, enforced by the same test as D19. |
-| D27 | **The fleet page gets a third view: a cross-tab of work-item status × session outcome**, with a `(no work item)` column and a `(no session)` row. | The two chips of D17 are the two axes of one grid. The `finished × in_review|in_qa` cell is the "stuck between my desk and prod" question the spec already wanted a filter for; the `(no session)` row is the backlog in the same view; the `(no work item)` column is where hand-launched sessions live, which is most of a real day. Lands with M5, not M2 — the columns are work-item status, which does not exist before the mirror. |
+| D27 | **The fleet page gets a third view: a cross-tab of work-item status × session outcome**, with a `(no work item)` column and a `(no session)` row. | The two chips of D17 are the two axes of one grid. The `finished × in_review\|in_qa` cell is the "stuck between my desk and prod" question the spec already wanted a filter for; the `(no session)` row is the backlog in the same view; the `(no work item)` column is where hand-launched sessions live, which is most of a real day. Lands with M5, not M2 — the columns are work-item status, which does not exist before the mirror. |
 | D31 | **Wake queue.** A session that stops is routed by whoever owns it: queue-spawned → the worker loop (unchanged); **master-spawned → a wake set the master drains**. At level 2 it drains at the start of your next turn as a summary; at level 3 it wakes the master immediately. Capped at **2 master-initiated attempts per lineage**, and narrow by construction — only `unfinished` and `error` outcomes on master-owned sessions wake anything. | The worker loop runs forever, so it notices a stop at 3am; the master only runs while you are typing, so it does not. That inverts the two halves: the component holding the context to decide is asleep, and the component that is awake has no context. Nothing is *lost* — the conclusion and its action items are already written — so this is latency, not data loss, which is why level 2 stays a summary rather than silent autonomy. The retry cap mirrors the worker's `attempt < 2`; without it "stops → retry → stops → retry" runs until morning. `needs_you` deliberately does **not** wake the master: that is the human's rail, and handing it to an agent would hide the one thing you asked to be shown. |
 | D30 | **`MasterRuntime` is the sixth seam**, with `AgentSDKMaster` (subscription, Anthropic) in v1 and `ApiLoopMaster` (`api_key` + `base_url`, any vendor) defined but unbuilt. **LangChain/LangGraph rejected.** | Seat and API are two transports, not two settings: a claude.ai seat is reachable only through the Claude Code harness, never over an API. A framework that speaks only to APIs therefore *removes* the zero-marginal-cost path for the chattiest component in the system, rather than adding choice. Between a plain tool-call loop and LangGraph the loop wins on merit — the master is forbidden from dispatching subagents (D10), so its graph is one node; LangGraph's branching-state machinery earns nothing here and costs a dependency tree in a stack whose stated ethos is stdlib HTTP and no frontend framework. Tool restriction is **not** a tiebreaker: both implementations consume the same MCP tool surface (§11), so the allowlist is ours either way. |
 | D29 | **Session title is one field with a `title_source` ratchet** (`user` > `engine` > `brief`), and pushing a user rename back into the harness is an **engine capability** (`can_set_title`), not an assumption. Until verified it is local-only, and the UI says `local only` rather than implying a sync that did not happen. | You want to name a session and have the name mean something everywhere. But writing into a transcript the engine owns runs at design principle 4, and no engine other than Claude Code is even a candidate yet. One field plus a precedence rule keeps the display logic identical no matter which source won; adding an engine that can rename flips a capability flag instead of changing the schema. A visible `local only` marker is the difference between a degrade and a lie. |
@@ -167,9 +167,17 @@ re-decide.
 | D51 | **The browser terminal uses a hand-rolled stdlib WebSocket (RFC 6455), and the frontend ships as plain ES modules with no build step.** | The stack line promised stdlib plus one runtime dependency, then specified a WebSocket. The host's Python has **no** WebSocket library and no pip, and there is no node, npm or `tsc` — so "vanilla TypeScript" needed a toolchain that does not exist, and the terminal needed a dependency the stack forbids. A stdlib handshake and frame round-trip was verified to work, so the honest choice is to own ~200 lines of framing rather than pretend the dependency is free or that a build step is absent. Evidence: `data-schemas.md` §Linux/process/git. |
 | D52 | **`ModelProvider.models()` returns only what the engine exposes: id, display name and effort support. Context window and cost live in a curated table in `core/`, marked as curated.** | The seam claimed the engine would hand over context window, cost and release date. The real `initialize` payload has `value`, `resolvedModel`, `displayName`, `description`, `supportsEffort`, `supportedEffortLevels` and the fast/auto/adaptive flags — and none of the three. An interface that returns fields no implementation can fill forces every driver to invent them, which is how a UI ends up displaying a confident wrong price. Curated data that says it is curated is honest and still useful. Evidence: `data-schemas.md` §Agent SDK. |
 | D53 | **Every `ToolDef.input_schema` is validated at registration, and exporter argument-handling parity is a contract test.** | `create_sdk_mcp_server` passes a schema through unchanged only when it has a string `type` **and** a `properties` key; any other dict it treats as a `{param: python_type}` map with every key required — so a plain, valid `{"type": "object"}` schema is silently mangled into a different tool. D32's whole claim is that one declaration feeds every exporter, which holds only if each exporter is checked against the same declaration. Validating at registration turns a malformed schema into a startup failure instead of a tool that misbehaves in one binding and works in another. Evidence: `data-schemas.md` §Agent SDK. |
-| D55 | **The product targets Linux *and* macOS from one build. Revises D39.** Host-dependent behaviour moves behind a seventh seam, `HostPlatform`, with `LinuxHost` (the verified driver) and `MacHost` (written, and marked unverified until it runs on a Mac). The seam owns exactly seven things: state/config/runtime **directory resolution**, the control **socket directory and its path-length budget**, **service supervision** (systemd user units vs launchd agents), **process liveness and exit observation** (`/proc` + pidfd vs `ps` + kqueue), **login persistence** (`loginctl enable-linger` vs a `RunAtLoad` agent), **the hook-side dispatch command** (the shell one-liner a non-Python hook client uses to reach the control socket), and **detached launch** (wrapping an argv so the process it starts escapes the caller's supervision cgroup). Nothing else may branch on the platform. **Six, raised from five on 2026-09-16:** the dispatch command's `nc` flag set is not portable — `-q0` exists on OpenBSD netcat and not on macOS's — and omitting it costs **250 ms on every hook invocation while still delivering the payload** (`docs/probes/2026-09-16-hookd-latency.md` Result 1b: 3.2 ms with the flag, 253.6 ms without). That is a platform branch, so by this decision's own rule it belongs here. **Amended 2026-09-20, on the first macOS run (the sixth clause's rationale only — the clause stands).** The sentence above describes the macOS failure as a *slow but complete* delivery, on the strength of a Linux-only measurement. Measured on a real Mac it is not: Apple's `nc -U -w 0` bounds a hung peer at 27 ms and delivers small frames 10/10, and **silently truncates a 40 KB frame to 16 KB**, 3/3 (`docs/probes/2026-09-20-macos-g1-capture.md` §2, Result 2). Truncation is a different and worse mode than 250 ms of latency — a lost flag costs time, a truncated frame loses data and fails no assertion about exit status — and no netcat flag on this platform fixes it, because the writer blocks inside `write()` where no netcat timeout reaches. So the macOS driver bounds the command from *outside*: `MAC_DISPATCH_REQUIREMENTS` is `('perl', 'nc')`, not `('timeout', 'nc')` — macOS ships no `timeout`, and requiring a `brew install` would make the hook lane opt-in on this platform — and the command carries a `Time::HiRes` `alarm`, measured at 0.266 s against a genuinely held-open connection. The re-decision is recorded identically in `src/shepherd/host/mac.py`'s module docstring, `HANDOFF.md`, and the probe; this entry is amended rather than rewritten so that the original Linux-only rationale, and the fact that it did not generalise, both stay readable (§0). **Seven, raised from six on 2026-09-17 (M3 plan DP5):** a tmux server first started *inside* a systemd user unit stays in that unit's cgroup, and the default `KillMode=control-group` then kills the server **and every owned pane** on `stop` *and* on `restart` — which would make D14's whole reason for choosing tmux false. Verified both ways in `docs/probes/2026-09-14-schemas/gap-fill/systemd-tmux-20260914T170532Z/`: under the default (`q1-cgstop.txt`) the capture reads `tmux-server 4054473: dead`, `pane-claude 4054474: dead`, `no server running`; started through `systemd-run --user --scope` (`q1-scopestop.txt`) the same stop leaves `tmux-server 4054726: alive(tmux: server)`, `pane-claude 4054727: alive(claude)` and both sessions still listed. Which wrapper is correct is a *host* question — systemd user manager, launchd, or a container with no systemd at all — i.e. exactly the three-way `SupervisionKind` this decision already declares, so it is the seam's kind of question. It is a **member** rather than a widening of `supervision()` for the same reason the sixth was: the count clause is an anti-growth clause, and absorbing a new concern into an existing member would keep its letter, defeat its purpose, and hide the change from every diff. It was raised as a **member** rather than folded into the socket member because "exactly five" is an anti-growth clause about *count*: absorbing a new concern into an existing member would keep the clause's letter, defeat its purpose, and hide the change from every diff. | D39 chose Linux alone on the evidence that "the machine this runs on is Linux, and the fleet is driven from a phone" (2026-09-16: the owner needs the daemons themselves to start on a Mac, so that premise no longer holds; recorded rather than reversed silently, per §0). Under D36's swap rule this is a **runtime** swap, not an edit-time one — the same build must start on either host and pick its driver by detection — so it earns a `Protocol`, a `ScriptedHost` double and a contract suite rather than the import rule `store/` gets. Drawing it at **M1** rather than at packaging time is the whole point: three call sites now, against every module that would otherwise grow its own platform branch. Two probed facts make it a real seam and not a path alias: macOS has no `/run/user/<uid>` for the 0600 sockets §13 requires, and its `sun_path` budget is 103 bytes against Linux's 107 (data-schemas.md §Unix domain socket) — a socket path that binds here can fail there. `SO_PEERCRED` is Linux-only for the same reason (`LOCAL_PEERCRED`/`getpeereid` on macOS). **The macOS driver ships unverified and says so**, exactly as `can_set_title` does (D29): principle 5, not a claim we cannot back. Packaging for either host is still M6; what M1 owes is the seam and the Linux driver behind it. **Three deployment shapes, not two** (2026-09-16): a macOS package installed locally, a Linux host under the systemd user manager, and a **Linux container on a remote server**. The container is why *supervision* is a seam member rather than a packaging detail — inside one there is no systemd user manager, no `loginctl`, and often no D-Bus, so the third driver is simply "run in the foreground and let the container runtime restart us", and `sessiond` outliving `controld` becomes the container's problem (one process per container, or one container with a supervisor). **This does not reopen §13's network posture.** The server case is served by binding loopback *inside* the container and reaching it through an SSH tunnel or a port-forward, which keeps "127.0.0.1 only, no knob to bind wider" literally true. Exposing the UI on an interface is a different decision — it needs the auth seam §13 defers and the multi-user path of D2 — and must be taken explicitly, never as a side effect of shipping a Dockerfile. |
+| D55 | **The product targets Linux *and* macOS from one build. Revises D39.** Host-dependent behaviour moves behind a seventh seam, `HostPlatform`, with `LinuxHost` (the verified driver) and `MacHost` (written, and marked unverified until it runs on a Mac). The seam owns exactly seven things: state/config/runtime **directory resolution**, the control **socket directory and its path-length budget**, **service supervision** (systemd user units vs launchd agents), **process liveness and exit observation** (`/proc` + pidfd vs `ps` + kqueue), **login persistence** (`loginctl enable-linger` vs a `RunAtLoad` agent), **the hook-side dispatch command** (the shell one-liner a non-Python hook client uses to reach the control socket), and **detached launch** (wrapping an argv so the process it starts escapes the caller's supervision cgroup). Nothing else may branch on the platform. **Six, raised from five on 2026-09-16:** the dispatch command's `nc` flag set is not portable — `-q0` exists on OpenBSD netcat and not on macOS's — and omitting it costs **250 ms on every hook invocation while still delivering the payload** (`docs/probes/2026-09-16-hookd-latency.md` Result 1b: 3.2 ms with the flag, 253.6 ms without). That is a platform branch, so by this decision's own rule it belongs here. **Seven, raised from six on 2026-09-17 (M3 plan DP5):** a tmux server first started *inside* a systemd user unit stays in that unit's cgroup, and the default `KillMode=control-group` then kills the server **and every owned pane** on `stop` *and* on `restart` — which would make D14's whole reason for choosing tmux false. Verified both ways in `docs/probes/2026-09-14-schemas/gap-fill/systemd-tmux-20260914T170532Z/`: under the default (`q1-cgstop.txt`) the capture reads `tmux-server 4054473: dead`, `pane-claude 4054474: dead`, `no server running`; started through `systemd-run --user --scope` (`q1-scopestop.txt`) the same stop leaves `tmux-server 4054726: alive(tmux: server)`, `pane-claude 4054727: alive(claude)` and both sessions still listed. Which wrapper is correct is a *host* question — systemd user manager, launchd, or a container with no systemd at all — i.e. exactly the three-way `SupervisionKind` this decision already declares, so it is the seam's kind of question. It is a **member** rather than a widening of `supervision()` for the same reason the sixth was: the count clause is an anti-growth clause, and absorbing a new concern into an existing member would keep its letter, defeat its purpose, and hide the change from every diff. It was raised as a **member** rather than folded into the socket member because "exactly five" is an anti-growth clause about *count*: absorbing a new concern into an existing member would keep the clause's letter, defeat its purpose, and hide the change from every diff. | D39 chose Linux alone on the evidence that "the machine this runs on is Linux, and the fleet is driven from a phone" (2026-09-16: the owner needs the daemons themselves to start on a Mac, so that premise no longer holds; recorded rather than reversed silently, per §0). Under D36's swap rule this is a **runtime** swap, not an edit-time one — the same build must start on either host and pick its driver by detection — so it earns a `Protocol`, a `ScriptedHost` double and a contract suite rather than the import rule `store/` gets. Drawing it at **M1** rather than at packaging time is the whole point: three call sites now, against every module that would otherwise grow its own platform branch. Two probed facts make it a real seam and not a path alias: macOS has no `/run/user/<uid>` for the 0600 sockets §13 requires, and its `sun_path` budget is 103 bytes against Linux's 107 (data-schemas.md §Unix domain socket) — a socket path that binds here can fail there. `SO_PEERCRED` is Linux-only for the same reason (`LOCAL_PEERCRED`/`getpeereid` on macOS). **The macOS driver ships unverified and says so**, exactly as `can_set_title` does (D29): principle 5, not a claim we cannot back. Packaging for either host is still M6; what M1 owes is the seam and the Linux driver behind it. **Three deployment shapes, not two** (2026-09-16): a macOS package installed locally, a Linux host under the systemd user manager, and a **Linux container on a remote server**. The container is why *supervision* is a seam member rather than a packaging detail — inside one there is no systemd user manager, no `loginctl`, and often no D-Bus, so the third driver is simply "run in the foreground and let the container runtime restart us", and `sessiond` outliving `controld` becomes the container's problem (one process per container, or one container with a supervisor). **This does not reopen §13's network posture.** The server case is served by binding loopback *inside* the container and reaching it through an SSH tunnel or a port-forward, which keeps "127.0.0.1 only, no knob to bind wider" literally true. Exposing the UI on an interface is a different decision — it needs the auth seam §13 defers and the multi-user path of D2 — and must be taken explicitly, never as a side effect of shipping a Dockerfile. |
 | D54 | **`authorize()` has a withdrawal path.** A pending approval can be cancelled, and a cancelled approval is denied and audited as `withdrawn`, never left pending. | Approval blocks the turn — verified at 75 s and again at 630 s — and `interrupt()` while one is pending makes the CLI send `control_cancel_request`, which raises `CancelledError` in the callback and leaves the tool result marked as an error. The spec had no state for this, so an approval card could outlive the request it belonged to and a later click would authorise an action nobody was still waiting for. One chokepoint (D8) means one place to record the outcome, including the outcome "nobody is listening any more". Evidence: `data-schemas.md` §Agent SDK. |
-| D56 | **`Runner` is a *terminal* seam and `EngineAdapter` is a *CLI-harness* seam, by design and not by accident. A harness-less engine — an API loop we drive ourselves, with no child process and no pty — is a **third `session.ownership` value**, not a `Runner` driver.** Both seams are written in the vocabulary of a terminal: `RunnerHandle`, `attach() -> ByteStream`, `snapshot(lines)`, `write(key bytes)`, `resize(cols, rows)`, `interrupt()` that is *not* a signal (D43). `EngineAdapter` is written in the vocabulary of a CLI harness: `spawn_argv()`, `locate_transcript()`, `install_hooks()`, `set_title()`. An API-loop session has none of these: there is no argv, no transcript file on disk, no hook dispatcher, and no screen to snapshot. Implementing one behind `Runner` means returning a synthetic handle, a `ByteStream` of rendered text nobody typed, and a `resize()` that does nothing — **a driver that satisfies the type and lies about the world**, which is the failure D9 warns about one level down. The correct shape is a third value on `session.ownership` (`owned` / `attached` / a harness-less third) whose rows carry `handle_less = 1`, already a column `store/sessions.py` reads. | Both seams were validated against three engines — Claude Code, Codex, Antigravity — and **all three are CLI-shaped**. That is a real validation and a narrow one: it proves the seams fit terminal harnesses, and says nothing about anything else. D9 makes exactly this argument about the engine matrix (*"written to constrain the interface"*); D56 makes it about the two seams D9's matrix is measured through. The cost of writing it down now is one row. The cost of not writing it down is that the first person to add an API-loop engine reads `Runner`, sees a `Protocol`, and implements it — because a `Protocol` with no stated domain looks like an invitation. **Nothing changes today.** No code moves, no member is added, no driver is written; `ApiLoopMaster` (§17) is the *master* side of the same question and stays deferred. This decision only fixes which seam a future engine class is allowed to arrive through. |
+| D56 | **`Runner` is a *terminal* seam and `EngineAdapter` is a *CLI-harness* seam, by design and not by accident. A harness-less engine — an API loop we drive ourselves, with no child process and no pty — is a **third `session.ownership` value**, not a `Runner` driver.** Both seams are written in the vocabulary of a terminal: `RunnerHandle`, `attach() -> ByteStream`, `snapshot(lines)`, `write(key bytes)`, `resize(cols, rows)`, `interrupt()` that is *not* a signal (D43). `EngineAdapter` is written in the vocabulary of a CLI harness: `spawn_argv()`, `locate_transcript()`, `install_hooks()`, `set_title()`. An API-loop session has none of these: there is no argv, no transcript file on disk, no hook dispatcher, and no screen to snapshot. Implementing one behind `Runner` means returning a synthetic handle, a `ByteStream` of rendered text nobody typed, and a `resize()` that does nothing — **a driver that satisfies the type and lies about the world**, which is the failure D9 warns about one level down. The correct shape is a third value on `session.ownership` (`owned` / `attached` / a harness-less third) whose rows have `runner_handle IS NULL` — the condition `store/sessions.py` already aggregates under the alias `handle_less`. (It is a `SUM(CASE …)` count, not a per-row column; an earlier wording of this row called it one.) | Both seams were validated against three engines — Claude Code, Codex, Antigravity — and **all three are CLI-shaped**. That is a real validation and a narrow one: it proves the seams fit terminal harnesses, and says nothing about anything else. D9 makes exactly this argument about the engine matrix (*"written to constrain the interface"*); D56 makes it about the two seams D9's matrix is measured through. The cost of writing it down now is one row. The cost of not writing it down is that the first person to add an API-loop engine reads `Runner`, sees a `Protocol`, and implements it — because a `Protocol` with no stated domain looks like an invitation. **Nothing changes today.** No code moves, no member is added, no driver is written; `ApiLoopMaster` (§17) is the *master* side of the same question and stays deferred. This decision only fixes which seam a future engine class is allowed to arrive through. |
+| D57 | **A project is defined by its repo paths and nothing else. `workspace.root_path` is removed. Revises D22.** A project is a *name, a description and a set of repo paths*; §13's allowlist becomes exactly those paths. Identity is `workspace.id`; **`upsert_workspace`'s match-on-name goes with it**, and two projects may share a name. `workspace` gains `description TEXT` (migration 004). | `root_path` was never a root — `admission.py` already documents it as *"only where `discover_repos` starts looking; repos may live anywhere (D22)"*, and reading it as a permitted root caused blocker T11-1. Keeping a column whose name contradicts its meaning is how the next reader repeats that. Removing it also closes a live defect: `upsert_workspace` matches `WHERE name = ?`, so `/work/api` and `/personal/api` collapse into **one** project and the second silently overwrites the first's path. Invisible while nothing rendered projects; a Projects page makes it the first thing you see. Once a project is declared rather than inferred, the name is a label and the id is the identity, which is what removes the collision rather than patching it. |
+| D58 | **Projects have a full lifecycle — `create_project`, `delete_project`, `rename_project`, `add_repo`, `remove_repo` — and the human and the master exercise the *same* verbs.** They are registered `ToolDef`s; `web/routes.py` maps a path to a tool name, so the HTTP API is a route and not a second implementation. `create_project`, `add_repo` and `delete_project` are `blast_class=local_destructive`; the reads are not. | D19's boundary already makes this nearly free: the master reaches everything through the tool surface, and the web layer is a path→tool table. Building these as verbs once yields both callers; building them as HTTP handlers would yield one and put a second write path around L4 — the exact shortcut D38.1 refused for the hook installer. The blast class is about the **master**, not the human: a person creating a project in the UI *is* the approval, while the master creating one is deciding for itself where agents get started. That is worth one card. **It is not containment** — see §17: §13 is admission control at spawn time and nothing confines a running session — so this is a routing decision, and the row says so rather than implying a sandbox that does not exist. |
+| D59 | **Every session binds to a project, always. Work that matches no declared project lands in a reserved `Unassigned` project.** A binding failure is never a dropped session. | Principle 5, applied to the thing the fleet page is for. The alternatives both lose: refusing to bind means the session cannot render at all, and auto-creating a project from `Path(cwd).name` — today's behaviour — mixes inferred projects into a list the user believes they declared. `Unassigned` keeps every session visible and gives the Projects page a natural verb: *claim this into a project*. The policy lives in **`bind_cwd_to_repo`**, the single function both the scan lane and the hook lane already call, so it is one decision at one chokepoint rather than a branch per lane. |
+| D60 | **A repo path may belong to more than one project.** `repo.workspace_id` (a single FK) becomes a join table. Binding resolves `cwd` to a repo by `git rev-parse --git-common-dir` as before (**D48** — not by longest prefix; D22's original wording was superseded there); where that repo sits in several projects, the session's project is chosen explicitly at spawn and defaults to `Unassigned` for a discovered session that cannot be attributed. | A shared library is genuinely part of two products, and forcing it to pick makes one project's view of its own work wrong. The cost is a join table and one new ambiguity — *which project did this session belong to?* — which is answered at spawn, where the caller knows, rather than guessed at read time. A discovered session cannot be asked, so it degrades to `Unassigned` (D59) rather than being attributed to whichever project the join returns first. |
+| D61 | **`delete_project` forgets: the project and its sessions are deleted.** Deleting a project with **running** sessions is refused into a choice — kill them, orphan them into `Unassigned`, or cancel — never taken silently. | Chosen over archiving because the owner wants delete to mean delete, and it is cheap to reverse later: D25's stop log is a separate file on disk that `replay` reads, kept 90 days, so deleted sessions remain recoverable for a quarter without the schema knowing anything about archival. That is the escape hatch, and it means "forget" can become "archive" by changing one verb rather than a migration. The running-session refusal is the same rule as everywhere else in this system: silently killing work is forgiven once. |
+| D62 | **Discovery is built to be switchable at three independent points, even though all three ship on.** (1) `discovery_pass` inside `run_discovery_loop` — *not* the thread, which also owns the liveness sweep and M3's mailbox pass; (2) D47's accept-the-first-event-of-any-kind, which is what makes the hook lane a second discovery source; (3) `bind_cwd_to_repo`'s auto-create, which is D59's policy. | Asked for directly: the owner wants to be able to stop auto-discovering sessions they did not start. Writing the three switches down now costs nothing and prevents the obvious mistake, which is killing the scan thread and silently losing the liveness demotion that keeps a wedged session from claiming to be `running`. The three are genuinely different questions — *do we look*, *do we accept an announcement*, *what do we do with what we accepted* — and collapsing them would make the first person to need one of them disable all three. **One question is deliberately left open:** with (2) off, a hook event from an unregistered session must either be dropped, losing the stop reason for a session the scan is showing, or accepted without registering, which means holding state for a session we decided not to track. Neither is free and neither is needed until a switch is. |
+| D63 | **A project's work source is configured on the project, not in Settings. Revises §12 Page 4.** `queue` already carries `workspace_id TEXT NOT NULL` — *"a queue belongs to exactly one workspace"* — so this is a placement decision, not a model change. The Projects page owns provider choice, the filter, and the credential reference; **Settings keeps only health**: `last_sync_at`, `last_sync_error`, and the per-queue drain state. A project may hold **more than one** queue (Jira for features, an issue tracker for bugs); the UI shows one and is written so a second is a list, not a rewrite. Configuring a source does **not** start workers pulling: `queue.enabled` stays `FALSE` by default, and *"connected but paused"* is a normal state the page renders plainly rather than as a warning. | Configuration belongs where the thing it configures lives. §12 put queues in Settings when Settings was *"connectors, autonomy, queues"* and the Projects page did not exist; now that a project is a first-class object with a lifecycle (D57–D61), a work source is one of its fields, like its repo paths. Splitting them costs a round trip on every change and makes the Settings page a second place a project is partly defined. The separate `enabled` switch is kept rather than folded into "configure it" because the two questions are genuinely different — *where does work come from* and *may the fleet act on it unattended* — and the second one is the one that spends money and touches repositories. |
+| D64 | **Filters are declared by the provider and rendered by the UI; the UI never learns a provider's query language.** `WorkItemCapabilities` gains a filter declaration — per field: a key, a human label, a kind (`single_select` \| `multi_select` \| `text`), and how its options are fetched. Jira declares *project*, *labels*, *assignee*, *status category*; Notion declares its database and that database's select properties. The rendered choices are stored in `queue.provider_config` beside the maps already there. A **raw provider query stays available as an explicit "Advanced" field** for filters the declaration cannot express, and a project uses one or the other, never both silently merged. **Saving a filter validates it and reports the match count** (*"matches 23 items"*). | The alternative already in §10 is a raw `jql` string, and it fails in the specific way this product exists to prevent: a typo returns zero items, which is **indistinguishable from a correct filter over an empty backlog**. Neither is an error, nobody is told, and the queue quietly does nothing — the silent-success failure principle 5 names. Declaring the filters moves the provider-specific knowledge into the provider, which is where `status_model`, `legal_statuses` and `child_kind_raw` already live; the page renders a declaration exactly as the fleet page renders a bucket it was handed. It is also the only shape that works from a phone, which is the primary client. The escape hatch is kept because a declaration will always lag a real query language, and removing power to gain friendliness is how a tool becomes unusable for the person who needed it most. The match count is the cheap half of the decision and the half that makes a wrong filter *visible* rather than merely present. |
 
 ---
 
@@ -223,7 +231,7 @@ not as demanding.
 
 **Moved, 2026-09-20 (F3): [`logical-architecture.md`](logical-architecture.md).**
 Five layers plus the composition root, downward-only imports, two enforced boundaries (the consumer
-boundary D19/D35, and the storage boundary D37), and the seam-vs-module-boundary
+boundary D19/D35, and the storage boundary D26/D33), and the seam-vs-module-boundary
 rule of D36. It is the one rule every task in every milestone has to satisfy, and
 it was buried at line 218 of this document; it is now a sibling file, cited the
 way `data-schemas.md` is.
@@ -363,6 +371,20 @@ class ModelProvider(Protocol):
     def effort_ladder(self) -> list[str]: ...         # [] when the engine has none
 
 
+# Status, 2026-09-21. Four of the seven seams below are DECLARED, NOT BUILT:
+#   EngineAdapter      — no Protocol exists in src/; the engine is module functions
+#                        under engines/claude_code/. Two documented members have no
+#                        counterpart at all: parse_transcript_delta (the code uses
+#                        transcript_tail.py) and hook_events() (a SUBSCRIBED_EVENTS
+#                        constant). D9 wrote the interface against three engines; the
+#                        interface itself was never extracted.
+#   WorkItemProvider   — arrives with M5.
+#   ModelProvider      — unbuilt.
+#   Credentials        — zero implementations; see docs/specs/credentials-and-auth.md.
+# Built and behind a Protocol: Runner, MasterRuntime, HostPlatform.
+# Runner ships TWELVE members, not the eight listed above: the eight plus pane(),
+# list_owned_panes(), attached_clients(), clear_input(); and snapshot()'s second
+# parameter is `scrollback`, not `lines`. See runner/base.py.
 class Credentials(Protocol):
     def resolve(self, owner_id: str, provider: str) -> AuthMaterial: ...
     def resolve_ref(self, credential_ref: str) -> AuthMaterial: ...   # for stored refs
@@ -547,7 +569,8 @@ Naming these matters more than the tables, because each was in an earlier draft:
 | `id` | TEXT PK | no | ulid |
 | `owner_id` | TEXT | no | |
 | `name` | TEXT | no | |
-| `root_path` | TEXT | **yes** | only where `discover_repos` starts looking; repos may live anywhere (D22) |
+| `root_path` | TEXT | **yes** | only where `discover_repos` starts looking; repos may live anywhere (D22). **Removed by D57** — migration 004, not yet applied. |
+| `description` | TEXT | **yes** | **Added by D57** — migration 004, not yet applied. |
 | `created_at` | TEXT | no | |
 | `last_activity_at` | TEXT | **yes** | fleet-page ordering |
 
@@ -556,12 +579,20 @@ Naming these matters more than the tables, because each was in an earlier draft:
 | field | type | null | notes |
 |---|---|---|---|
 | `id` | TEXT PK | no | |
-| `workspace_id` | TEXT FK | no | |
+| `workspace_id` | TEXT FK | no | **Becomes a repo↔project join table under D60** — migration 004, not yet applied. |
+| `owner_id` | TEXT | no | |
 | `name` | TEXT | no | defaults to directory basename |
-| `root_path` | TEXT | no | absolute, canonicalized, **UNIQUE**. The longest-prefix key that binds `cwd` → repo (D22) |
+| `root_path` | TEXT | no | absolute, canonicalized, **UNIQUE**. Display and discovery only — **the binding key is `git_common_dir` (D48)**, not this. |
+| `git_common_dir` | TEXT | **yes** | D48's binding key: `git rev-parse --path-format=absolute --git-common-dir`. A linked worktree is a *sibling* of its repo, which is why prefix matching failed. |
 | `vcs_remote` | TEXT | **yes** | null for non-git, and for a git repo with no `origin` remote (`git remote get-url origin` exits 2) |
 | `active` | BOOLEAN | no | soft delete — past sessions still reference it |
 | `added_at` | TEXT | no | |
+
+**Superseded by D48.** Binding no longer prefix-matches at all: `bind_cwd_to_repo`
+asks git for `--git-common-dir` and looks the repo up by that. The paragraph below is
+kept because it explains why the original design chose Python over SQL, and because
+`admission.py` still does prefix containment for the *allowlist*, which is a different
+question from binding.
 
 Prefix matching is done in Python over the full repo list. It is tens of rows;
 SQL prefix-matching on paths is a trap and there is no index for it.
@@ -619,7 +650,7 @@ Real shapes and examples: data-schemas.md §Common input fields (every hook's st
 | `outcome` | TEXT enum | **yes** | one of the seven palette buckets (§4) |
 | `why` | TEXT | **yes** | one line, ≤120 chars |
 | `confidence` | REAL | **yes** | |
-| `decided_by` | TEXT enum | **yes** | `mechanical` \| `model` \| `declared` \| `manual` |
+| `decided_by` | TEXT enum | **yes** | `mechanical` \| `model` \| `declared` \| `manual` \| `heuristic` — migration 002 widened the `CHECK` from four to five, and `heuristic` is what M2 writes |
 | `next_actions` | TEXT **JSON** | no | `[]`; up to 3 `{text, kind, target}` (D21) |
 | `ended_at` · `exit_code` | | yes | `exit_code` is `owned` only |
 
@@ -834,6 +865,14 @@ them on every render.
 
 ### Hook installation: one dispatcher, all events
 
+> **Status, 2026-09-21: the code below is the shape that was rejected.** No `hookd.py` is installed
+> and none exists. The installed entry is a **shell one-liner**, authored solely by
+> `HostPlatform.hook_dispatch()` (`engines/claude_code/hookd_command.py`, `host/linux.py`) and quoted
+> into the settings file by `hooks_config.py`, with `HOOK_ENTRY_TIMEOUT_S = 5` rather than 250 ms.
+> D55's sixth seam member exists *because* that one-liner is not portable, and the probes found a
+> Python hook gets **killed at shutdown**. §15 describes the real thing. This sample is kept because
+> the contract it illustrates — JSON on stdin, always exit 0 — is unchanged.
+
 CCC installs two hook scripts. We install **one** — `hookd.py` — registered for
 every event we need. It reads the JSON on stdin, writes it to `sessiond`'s UDS
 with a **250 ms timeout**, and **always exits 0**:
@@ -859,7 +898,7 @@ Real shapes and examples: data-schemas.md §Hooks config schema (`hooks` in sett
 
 | Purpose | Events |
 |---|---|
-| liveness | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `MessageDisplay` |
+| liveness | `PreToolUse`, `PostToolUse`, `PostToolBatch`, `PostToolUseFailure`, `MessageDisplay` |
 | needs-you | `Notification`, `PermissionRequest`, `PermissionDenied` (fires only for auto-mode classifier denials), `Elicitation`, `ElicitationResult` |
 | stop | `Stop`, `StopFailure`, `SessionEnd` |
 | subagents | `SubagentStart`, `SubagentStop` |
@@ -1104,27 +1143,9 @@ Each `owned` session is a tmux session named `shepherd_<session_id>`, on a **ded
 | Problem | How tmux solves it |
 |---|---|
 | Survive `sessiond` restart/upgrade | the tmux server is its own process |
-| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact**. On the host this was written against, Claude Code's TUI runs on the alternate screen, so tmux keeps no scrollback for it (`history_size` 0) and `-S -2000` returns only the visible rows. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
+| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact**. Claude Code's TUI runs on the alternate screen, so tmux keeps no scrollback for it (`history_size` 0) and `-S -2000` returns only the visible rows. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
 | Real "jump to terminal" | `tmux -L shepherd attach -t shepherd_<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
-| Alt-screen + resize + reflow | already handled by tmux, whichever screen the TUI takes |
-
-**Amended 2026-09-20, on the first macOS run — the alternate-screen claim only;
-the decision to use tmux stands, and is strengthened rather than weakened.**
-The two rows above asserted outright that Claude Code's TUI *runs on the
-alternate screen*. That was measured on Linux 6.8 / tmux 3.4 / engine 2.1.270
-and it is **not portable**: on macOS 26.6 / tmux 3.6a a live, prompt-ready
-engine reports `alternate_on=0`, and engine 2.1.267 and 2.1.278 both do, so it
-is not version drift (`docs/probes/2026-09-20-macos-pane/`).
-
-Nothing about the tmux choice depends on it — `capture-pane` returns the
-visible screen either way, which is what late-attach resync needs. What did
-depend on it was `runner/pane.py::_is_live_screen`, which used `alternate_on`
-as a proxy for "the TUI is drawing". Every healthy owned pane on a Mac fell
-through to `UNREADABLE`, and `write_policy` maps that to `REFUSE_NO_PTY` — so
-Shepherd could not send a keystroke to any owned session on macOS. The
-predicate now also accepts the engine's own input frame, which is the direct
-evidence the bit stood in for. The rule table is still derived from one host's
-captures; re-deriving it is `docs/backlog/2026-09-20-pane-table-macos.md`.
+| Alt-screen + resize + reflow | already handled; Claude Code's TUI uses the alternate screen |
 
 Fallback `PtyRunner` behind the same interface if tmux is unavailable —
 degraded (no late-attach resync), and the UI says so.
@@ -1313,6 +1334,13 @@ the queue.
   "priority_map": { "Highest": 1, "High": 2, "Medium": 3, "Low": 4, "Lowest": 5 }
 }
 ```
+
+**D64 supersedes the `jql` string above as the *primary* filter shape.** A provider now
+**declares** what it can be filtered on — per field a key, a label, a kind
+(`single_select` \| `multi_select` \| `text`) and how options are fetched — and the UI renders
+that declaration rather than learning a query language. The raw query survives as an explicit
+**Advanced** field for filters the declaration cannot express. `WorkItemCapabilities` in §6 does
+not carry the declaration yet; adding it is W3 in the 2026-09-21 backlog.
 
 Adding a third provider = one class + one config shape. Nothing else changes.
 
@@ -1699,7 +1727,15 @@ sessions, where Claude Code's own permission system already gates them and the
 `PermissionRequest` hook surfaces them into the Needs-You rail. We do not rebuild
 that.
 
-### Two bindings, scoped differently
+### Two bindings
+
+> **Status, 2026-09-21: only one binding exists.** The tier-2 stdio exporter
+> (`to_stdio_mcp_server()` / a `shepherd-mcp` console script) was **cut with M4 Tasks 12–15 on a
+> security finding**, with its reversal condition recorded in
+> `docs/plans/m4-blockers/router-decisions.md`. `toolsurface/export.py` records that
+> `tools_list_payload()` was retired because its only consumer was that binding, and
+> `pyproject.toml` declares exactly three console scripts: `shepherd`, `shepherd-controld`,
+> `shepherd-sessiond`. The master's `to_sdk_mcp_server()` is the one that shipped., scoped differently
 
 Both are **exporters over the one registry** (§11.0, D32) — not two tool
 implementations, and not two places a capability is defined:
@@ -1792,6 +1828,12 @@ conversation, not with the fleet.
 
 Three surfaces, one settings page, and one rail that is always present.
 
+**A fifth surface is decided but not specified here.** D58, D59 and D63 all place project
+lifecycle and work-source configuration on a **Projects page**, and Page 4 below defers to
+it. That page is specified in `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`
+(W1, W3) and drawn in `docs/design/ui-decisions.md` (U14), not in this section. §12 is
+rewritten when the design is implemented, not before.
+
 ### The Needs-You rail — on every page
 
 ```
@@ -1870,7 +1912,7 @@ of what was already done rather than a question.
 │                                                                        │
 │  ▶ billing-api                        1 stopped early                  │
 │  ▶ frontend                                 idle                       │
-│  ▶ scanner-cli-scanner                          attached · 1 running   │
+│  ▶ scanner-cli                          attached · 1 running   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2017,11 +2059,17 @@ quiet `local only` marker beside it — never a silent half-success:
   ◑ resolver + schema rewrite   ✎ local only ← renamed, engine can't sync it
 ```
 
-### Page 4 — Settings: connectors, autonomy, queues
+### Page 4 — Settings
 
-The connector list (§11, D20), the autonomy toggle, queue configuration, and
-`shepherd uninstall`. It is a settings page, not a fourth workspace — nothing here
-is watched during a working day.
+The connector list (§11, D20), the autonomy toggle, the orchestrator's own model
+and runtime (§17), discovery (D62), limits, data retention and the audit tail. It
+is a settings page, not a fourth workspace — nothing here is watched during a
+working day.
+
+**Queue *configuration* is not here (D63).** A work source belongs to a project
+and is edited on the Projects page; what Settings keeps is queue **health** —
+`last_sync_at`, `last_sync_error` and the drain state — because those are things
+you check about the instance, not things you set about a project.
 
 ### Event stream
 
@@ -2155,7 +2203,7 @@ Four lanes. The first two carry the value.
    `stalled_pending_tool`. Pure function in, verdict out. **No mocking of Claude
    Code — the fixtures *are* Claude Code.** Adding a missed case is: capture signals, drop in a fixture,
    fix the rule, run `replay`.
-2. **Contract suites, one per seam.** `WorkItemProvider`, `Runner`,
+2. **Contract suites, one per seam — **status 2026-09-21:** three exist (`tests/contracts/` covers host, master and runner). `testkit/` ships `ScriptedHost`, `ScriptedRunner` and `ScriptedMaster` only; `ScriptedWorkItemProvider` and `ScriptedEngine` are named below but not written, because the seams they double are not built. `ScriptedHost` shipped at M1 with D55 and is missing from the list below. Contract suites, one per seam.** `WorkItemProvider`, `Runner`,
    `EngineAdapter` and `MasterRuntime` each get **one** test suite that every
    implementation must pass. A new provider is done when it passes the existing
    suite. This is the mechanism that stops the abstractions rotting into
@@ -2446,6 +2494,15 @@ Named so they do not leak into v1:
 - **`⚡ do all` on action items** — `next_actions[]` renders buttons you press,
   never a batch the platform executes for you.
 - **Other engines** — `EngineAdapter` written against three, implemented for one.
+- **Bring your own harness** — a third party pointing configuration at their own
+  executable (LangGraph, an SDK loop, a script) and joining the flock without
+  forking this repository. Decided in outline on 2026-09-21 and written down in
+  **`docs/specs/harness-contract.md`**: the stop vocabulary stays closed (7
+  outward, 20 inward), the adapter runs out of process, `unknown` is a
+  fall-through and never a target, and conformance is claimed in capability
+  tiers so a partial harness renders what it supplied and nothing more. The
+  wire protocol, the security model and the bidirectional control path are
+  open there.
 - **Harness-less (API-loop) engine sessions** — the third `session.ownership`
   value D56 names. Deferred because every engine worth driving today ships a
   CLI, and because the pieces it needs are the pieces `ApiLoopMaster` needs
@@ -2453,6 +2510,41 @@ Named so they do not leak into v1:
   own end to end rather than observe. When it arrives it is a new session class
   and a new column-reader, **not** a `Runner` driver — D56 exists so that is not
   re-argued.
+- **Credentials and authentication.** Nothing is stored, read or forwarded
+  today: a spawned session uses whatever account the CLI on the machine is
+  already logged into, and the master runs on the same subscription through the
+  harness. `Credentials` is a seam with zero implementations, and §6's table
+  already puts *per-user API key / OAuth / BYOK* in the **later** column. That
+  is finished work for one person on one machine, and it stops being true for a
+  remote or multi-user instance, an API-based runtime, or a connector.
+  **Four separate questions, none decided**, are written down in
+  **`docs/specs/credentials-and-auth.md`** with the candidates the owner
+  reviewed and explicitly did not sign off on. Read it before re-deriving any
+  of them. Same trigger as sandboxing below: both become urgent when Shepherd
+  stops being one person on one machine.
+- **Real session sandboxing.** There is none today, and the word should not be
+  used for what exists. §13's registered-roots rule is **admission control at
+  spawn time**: `orchestration/admission.py` canonicalises the requested `cwd`,
+  refuses a spawn outside the allowlist, and touches nothing. It fires **once**.
+  A session that is running is an ordinary process with the user's own
+  permissions — it can `cd` anywhere and read or write anything the user can,
+  and nothing re-checks. There is no `bwrap`, `firejail`, `seccomp`, `chroot`,
+  namespace, rlimit or MAC profile anywhere in the tree. Sessions the user
+  started themselves are attached, so nothing gated them at all. The only real
+  runtime control on a session is the **engine's own permission prompt** —
+  §12's `needs you` card.
+
+  The intended shape, owner-stated on 2026-09-21: run a session **inside a
+  container** and mount only its project's repo paths, so the allowlist stops
+  being a routing rule and becomes the filesystem the session actually has.
+  Three things this will touch, named now so they are not discovered late:
+  `Runner` (a pane inside a container is a different driver, not a flag),
+  `HostPlatform` (§15 documents three deployment shapes; this is a fourth and
+  the container one is the closest relative), and **`add_repo`'s blast class** —
+  widening the allowlist would then widen a real mount, which makes D22's
+  `local_destructive` classification load-bearing rather than cautious.
+  Deferred because the product has to be worth running before it is worth
+  confining.
 - **Other work-item providers** beyond Jira and Notion.
 - **`DeployProvider` / prod verification** — a session can only see as far as the
   work item's status. Literal prod confirmation (GitLab pipelines, Datadog) is a new
@@ -2601,7 +2693,7 @@ realistic for this repo set, not invented.
   "vcs_remote": "git@gitlab.com:acme/payments-api.git", "active": true }
 { "id": "rep_b2", "name": "billing-api", "active": true,  "...": "..." }
 { "id": "rep_c3", "name": "frontend",          "active": true,  "...": "..." }
-{ "id": "rep_d4", "name": "scanner-cli-scanner",   "active": true,  "...": "..." }
+{ "id": "rep_d4", "name": "scanner-cli",   "active": true,  "...": "..." }
 { "id": "rep_e5", "name": "security-rules",    "active": false, "...": "..." }  // removed, history intact
 ```
 

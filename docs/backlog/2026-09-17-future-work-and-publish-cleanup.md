@@ -110,13 +110,45 @@ The remaining "left deliberately" items are unchanged and unrelated to the name:
 
 | # | Item |
 |---|---|
-| F9 | **Delete `docs/plans/2026-09-13-m1-foundation-visibility-plan.md`** — superseded by `2026-09-16-m1-foundation-visibility-plan.md`, and it predates D35–D55. |
+| F9 | **Delete `docs/plans/2026-09-13-m1-foundation-visibility-plan.md  (deleted under F9)`** — superseded by `2026-09-16-m1-foundation-visibility-plan.md`, and it predates D35–D55. |
 | F10 | **Nothing is committed since baseline `22d9ef2`.** Decide the commit strategy before publishing. |
 | F11 | **cc10x**: installed from the local directory `/root/src/cc10x-qa` (branch `feat/qa-route-clean`, commit `6ff8ae4` = PR #91), so it will not auto-update. When #91 merges upstream: `claude plugin marketplace remove cc10x && claude plugin marketplace add romiluz13/cc10x`. |
 
 ---
 
 ## Part 2 — Pre-publish cleanup
+
+> **HISTORICAL, 2026-09-17. Do not execute the checklist below.** It was written
+> before anything was committed or pushed and it was **overtaken by events**.
+> What actually happened, and what is true now:
+>
+> * **The repository was pushed public on 2026-09-18, before this cleanup ran.**
+>   A remote exists (`origin git@github.com:noamsalit/Shepherd.git`), `gh` is
+>   authenticated, and four commits are public. The paragraph below saying
+>   *"nothing is pushed anywhere today"* was true when written and is false now.
+> * **The 2a scrub was applied on 2026-09-20**, to the working tree — not to the
+>   published history. The plan of record is therefore to **delete and recreate
+>   the GitHub repository from a clean parentless root** (branch `integration`),
+>   which moots the open "should we rewrite history?" question in §0's status
+>   table. See `HANDOFF.md` → *Git state*.
+> * **2b was deliberately declined.** The hostname, the `/root/` paths and the
+>   `docs/reviews/` transcripts stay. §2b's imperative heading —
+>   *"must be scrubbed or excluded"* — was never softened and should be read as
+>   *considered, and declined*.
+> * **§2d's publish/exclude set was never applied.** `docs/probes/` (1,501 files),
+>   `docs/reviews/` (169) and `.cc10x/` (14) are all tracked and public. That is
+>   the correct outcome, not a mistake: D41 cites the probe corpus as the evidence
+>   behind documented shapes, and excluding it would break every citation. The
+>   *"~5 MB instead of 48 MB"* figure below describes a repository that was never
+>   published.
+> * **§2f's six-step sequence is spent.** Steps 1–6 are done or bypassed.
+>
+> Counts quoted below have drifted with the tree and are left as written rather
+> than chased: the owner's email now appears in **13** tracked files (the three
+> review copies plus nine under `docs/probes/2026-09-17-m4-sdk/` and this file),
+> and the hostname in **65** refs rather than 64.
+>
+> Kept in full because the *reasoning* is still the reasoning.
 
 **Order matters: scrub BEFORE the first real commit.** Git history is permanent,
 and rewriting it later is far more expensive. Nothing is pushed anywhere today —
@@ -222,7 +254,7 @@ These are **full session JSONL transcripts**. Highest-risk content in the repo.
 | `docs/plans/2026-09-17-m3-owned-sessions-plan.md` | 5 |
 | `docs/plans/2026-09-17-m3-BLOCKERS.md` | 4 |
 | `docs/plans/2026-09-16-m1-BLOCKERS.md` | 2 |
-| `docs/plans/2026-09-13-m1-foundation-visibility-plan.md` | 2 |
+| `docs/plans/2026-09-13-m1-foundation-visibility-plan.md  (deleted under F9)` | 2 |
 | `docs/specs/orchestrator-platform.md` | 1 |
 | `docs/specs/implementation-constraints.md` | 1 |
 
@@ -242,7 +274,9 @@ publish
   docs/plans/          current M1–M3 plans (minus the stale 2026-09-13 one)
   docs/methodology/    20K — the parallel-QA experiment write-up
   src/  tests/
-  README, LICENSE, .gitignore      (none of the three exists yet)
+  README, LICENSE, .gitignore      (README and .gitignore now exist and are
+                                    tracked; LICENSE still does not — no licence
+                                    has been chosen)
 
 exclude
   docs/probes/         17M — raw session captures, hook payloads, transcripts

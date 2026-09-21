@@ -2,15 +2,25 @@
 
 ## Current Focus
 
+**2026-09-21 — UI redesign, design phase.** Dark-only redesign of the web UI:
+a collapsible side pane (Shepherd / Flock / Queues / Projects / Kanban / Settings),
+the Shepherd conversation page, and the three-pane Flock page. **Design only** — it
+lives in a published artifact, and nothing under `src/shepherd/web/` has been edited.
+Implementation waits on the owner finishing the publish/identity cleanup. Note that
+`web/static/` is byte-frozen by `tests/boundaries/consumer_manifest.json`, so every
+real edit there costs a `post_milestone` declaration.
+
+**UI vocabulary changed (labels only, bucket values untouched):** Herd → **Flock**,
+`unfinished` → **stranded**, `paused` → **limit exceeded**, `unclassified` → **unknown**.
+
+Prior focus, complete:
+
 Implement the Shepherd orchestrator platform from `docs/specs/orchestrator-platform.md`,
 scoped to milestones **M1–M4** (foundation+visibility, signals engine, owned sessions,
 orchestrator). Per spec §0, each milestone gets its own plan → implementation cycle.
 Full flow requested: planner → builder → review → QA route.
 
 ## Recent Changes
-
-[DEBUG-RESET: wf:wf-20260920T063421Z-c6df8bbd]
-macOS portability pass: 14 failed / 25 errors on the first Mac run of a tree built and verified on Linux as root.
 
 - Repo was docs-only at session start (spec + QA-experiment methodology docs, one baseline commit).
 - Environment and hook-payload ground truth established before planning (see `## Learnings`).
@@ -52,6 +62,13 @@ planted in a *shadow* that rebooted the host (inert fixtures only — `CLAUDE.md
 bytecode recording a **false survivor** (clear `__pycache__`); and **"recorded" is not "applied"** — a
 decision written into the ledger while the code still had the old behaviour, twice.
 
+---
+
+## Historical — M2/M3 dispatch notes, finished work
+
+Everything from here to `## Learnings` is a record of how M2 and M3 were run. It is written in
+the present tense and it is **not** a current instruction. Nothing below is waiting on anybody.
+
 3b. **Wave 1, kept for its ordering decision (historical).** Plan at `docs/plans/2026-09-17-m3-owned-sessions-plan.md`
    **revision 2** (24 tasks; two fresh reviews returned 6 and 14 blocking findings, all
    dispositioned). Wave 1 dispatched: T2 (core runner vocabulary + 7 `AnomalyKind` members),
@@ -61,7 +78,6 @@ decision written into the ledger while the code still had the old behaviour, twi
    while every M3 safety mechanism is still unbuilt (reviewer 2's B11), and its only dependents
    (T15, T16) are far downstream — so the delay costs nothing and nothing reaches live tmux before
    the thing that refuses a bad argv is real.
-4. Then M4 (orchestrator), its own plan -> implementation cycle (§0).
 
 **M3 acceptance is SEVENTEEN clauses** (plan lines 3849-3946), not sixteen and not thirteen.
 Counted by reading the whole section, not a `sed` window. This is written down because M2's
@@ -93,7 +109,10 @@ sessions alive on the `shepherd` socket, 1 commit.
 
 ## Decisions
 
-- **(2026-09-17) PENDING RE-DECISION for M3 — D29's `can_set_title` mechanism is wrong in the spec,
+- **(2026-09-17, ANSWERED by M3 T20 — kept for the reasoning.)** D29's `can_set_title` mechanism was wrong in the spec, and the evidence to fix it already existed. `docs/plans/2026-09-17-m3-BLOCKERS.md` records the answer: *"T20 — DP1 is answered, and the spec's candidate mechanism was WRONG"*, with the recommendation **stated and not applied**. Nothing here is pending.
+  Original note follows.
+
+- **(2026-09-17) D29's `can_set_title` mechanism is wrong in the spec,
   and the evidence to fix it already exists.** §18's "spike before M3" is **already done**
   (`docs/probes/2026-09-14-schemas/tmux-tui/`, five capture folders, `-L shepherd-probe` throughout
   with verified teardown), so M3 is not blocked on a new spike. Two findings that must be stated as
@@ -230,15 +249,28 @@ END SUPERSEDED.
 
 ## References
 
-- Spec: `docs/specs/orchestrator-platform.md` — **55 decisions** (D1–D55), approved
+- Spec: `docs/specs/orchestrator-platform.md` — **64 decisions** (D1–D64, plus D38.1), approved
+- Layer map / import law: `docs/specs/logical-architecture.md`
+- **Deferred, decided in outline: `docs/specs/harness-contract.md`** — bring your own
+  harness. Pointed at from spec §17 and the README. Read it before re-deriving anything
+  about third-party engines.
+- **UI redesign (design only — no file under `src/shepherd/web/` was changed):**
+  `docs/design/ui-decisions.md` is the record, including U1–U4 and U15 which must be
+  answered before implementing. Prototype: `https://claude.ai/artifact/1HFNab8sksQdz7WAP4SfFc`;
+  the pre-redesign UI rebuilt for comparison: `https://claude.ai/artifact/JMSzca6pWM38GHuFVmNQeE`
+- **Forward-work register:** `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` — start here
+  for what to do next. It consolidates D57–D64, the UI work, and everything still open from before.
+- Open, owner did not agree to the candidates: `docs/specs/credentials-and-auth.md`
 - External shapes, with real captures: `docs/specs/data-schemas.md` (127 schemas)
 - Build-affecting facts: `docs/specs/implementation-constraints.md` (C1–C24)
 - Probe evidence + re-run scripts: `docs/probes/2026-09-14-schemas/`
   (429 captured hook events in `hooks/live/*/events.jsonl` — the fixture corpus for M1/M2)
 - tmux TUI spike: `docs/probes/2026-09-13-tmux-tui-spike.md`
 - Repo working rules (tmux safety): `CLAUDE.md`
-- Ignored by user instruction: `docs/methodology/*`, and `docs/plans/2026-09-13-*` (STALE —
-  predates D35–D55)
+- STALE, predates D35–D55: `docs/plans/2026-09-13-*`
+- `docs/methodology/sdlc-principles.md` is **deliberate owner work** (2026-09-20, draft — Part 2
+  awaits the owner's opinions). An earlier line here said to ignore `docs/methodology/*`; that
+  instruction predates the file and no longer applies.
 - Python: `/root/Shepherd/.venv` (pytest, mypy, claude-agent-sdk)
 
 ## Blockers
@@ -250,23 +282,19 @@ None blocking. Known gaps to resolve in the milestone that needs them, not to st
 - **This harness has no `TaskCreate`/`TaskList`/`TaskGet` primitive.** Subagent dispatch works.
   The cc10x task graph is therefore tracked in `.cc10x/workflows/{wf}.json` instead of the task
   system; every gate still runs. Logged as `task_primitive_unavailable`.
-- Appendix A of the spec is stale (C22): macOS paths under a Linux target, and `repo_id` values
-  that contradict D48's worktree binding. Rewrite it when M1 settles the real layout.
+- **Appendix A of the spec is stale (C22), and now doubly so.** macOS paths under a Linux target,
+  `repo_id` values that contradict D48's worktree binding — and its example row is built on
+  `workspace.root_path`, which **D57 removes**. C22's "when: before M1" is unmet four milestones
+  later. Tracked in `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`.
 
 ## Session Settings
 
 - AUTO_PROCEED: true
-- Rationale: user asked to "be as autonomous as possible" and to run the full flow end to end.
+- Rationale: the owner asked to "be as autonomous as possible" and to run the full flow end to end.
+- **Dated 2026-09-17, during the M1–M4 build. It has not been reaffirmed since, and the project now
+  carries many open decisions** (see the 2026-09-21 backlog). Treat it as a grant for mechanical
+  work, not as permission to settle an open design decision without asking.
 
 ## Last Updated
 
-2026-09-16
-
-## Debug History
-[DEBUG-1]: Lead 1 as stated ("tests/engines/test_hookd_command.py fails because MacHost refuses") → WRONG. Those 3 tests never touch MacHost: their `host_dispatch()` helper calls `LinuxHost().hook_dispatch(plan)`, which does a live `shutil.which("timeout")` against the *running* host. `timeout` is absent on macOS, so the Linux driver reports `available=False` here. The MacHost product gap is real and separate.
-[DEBUG-2]: Candidate macOS dispatch `nc -U -w 0` (the obvious `-q0` analogue) → REJECTED by measurement: it silently TRUNCATES a 40 KB frame to ~16-18 KB (3/3 runs). It is the exact "delivers, but not all of it" failure class E34 names.
-[DEBUG-3]: Lead 3's account of the test_controld failures ("tmp_path too long") → INCOMPLETE. Root cause is that `MacHost.environ` defaults to `{}` (LinuxHost defaults to `dict(os.environ)`), so `detect_host()` on macOS returns a host blind to HOME and TMPDIR: it wrote a real `shepherd.db` into `~/Library/Application Support/Shepherd` and a real socket into the shared `/tmp/Shepherd`. Both confirmed present on disk.
-[DEBUG-4]: WINNING — one root cause behind Lead 1 and most of Lead 3: **the product and its tests both asked the Linux driver about a macOS host.** `MacHost.environ` defaulted to `{}` (so `detect_host()` returned a driver blind to HOME/TMPDIR), `MacHost.hook_dispatch()` refused unconditionally over a flag set nobody had measured, and eight test modules spelled `LinuxHost()` where they meant "this host". Fixed at the seam in every case; 28 tests that had been silently skipping on macOS now run.
-[DEBUG-5]: Live-lane pass. Redirecting HOME in tests/e2e/conftest.py::shepherd_home isolated Shepherd's data dir AND broke the engine's login ("Not logged in · Please run /login") — measured: the engine resolves its account record from $CLAUDE_CONFIG_DIR/.claude.json, so no env combination gives "throwaway HOME for Shepherd, real config for the engine". Reverted: net-better to leave 1 pre-existing failure than to trade it for 2 new ones. The e2e lane needs an injected HostPlatform, not a mutated environment.
-[DEBUG-6]: HostPlatform injection landed. controld.start(host=...) threads host through control_socket, dirs(), compose_tool_surface, log_root and the discovery loop — so both the database AND logs/stops/ relocate with it, and no src/ change was needed. log_root's own docstring already said "a test relocates both by handing in a host". Proved: /tmp/shp-proof/.../shepherd-home/Library/Application Support/Shepherd/{shepherd.db,logs}. Key asymmetry: the process environment stays the ENGINE's (real HOME, real login), Shepherd's dirs arrive by injection — which is what my previous pass got wrong by redirecting HOME process-wide.
-[DEBUG-7]: Cause 4 SOLVED, and it is a product finding, not a test bug. The engine pane is fully readable (2211 bytes, valid UTF-8) and IS prompt-ready — the input box `─────/❯ /─────` is right there in the capture. What fails is one boolean: tmux reports `alternate_on=0` for a live Claude Code TUI on this Mac, and `_is_live_screen` in src/shepherd/runner/pane.py requires `alternate_on` — so PROMPT_READY and BUSY are BOTH unreachable and the table falls through to UNREADABLE, which is then counted as an anomaly. Proved by feeding the real captured bytes through read_pane: alternate_on=False -> unreadable, alternate_on=True -> prompt_ready. NOT engine drift: 2.1.267 and 2.1.278 both report alt=0 here. tmux 3.6a reports alt=1 correctly for a synthetic alt-screen app, so the field works — the engine simply does not use the alternate screen on this host. No code changed; this needs a decision.
+2026-09-21 — UI design phase; harness contract deferred and written down.

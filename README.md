@@ -86,10 +86,14 @@ conversation that produced it.
 
 | File | What it is |
 |---|---|
-| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 56 decisions **with their reasoning** — the most important section |
+| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 64 decisions **with their reasoning** — the most important section |
 | [`docs/specs/logical-architecture.md`](docs/specs/logical-architecture.md) | what may import what. Enforced as AST properties, not spellings |
 | [`docs/specs/data-schemas.md`](docs/specs/data-schemas.md) | every external shape, with a **real captured example**. Check one here before building on it |
 | [`docs/specs/implementation-constraints.md`](docs/specs/implementation-constraints.md) | 24 facts that change *how* a thing is built |
+| [`docs/specs/harness-contract.md`](docs/specs/harness-contract.md) | what a third-party harness must supply to join the flock. Deferred, decided in outline |
+| [`docs/specs/credentials-and-auth.md`](docs/specs/credentials-and-auth.md) | four authentication questions, open. Nothing is stored today and nothing needs to be |
+| [`docs/design/ui-decisions.md`](docs/design/ui-decisions.md) | the 2026-09-21 dark-mode redesign — what is settled, what is open, and the prototype links |
+| [`docs/backlog/2026-09-21-projects-work-sources-and-ui.md`](docs/backlog/2026-09-21-projects-work-sources-and-ui.md) | **the forward-work register.** Start here for what to do next |
 | [`HANDOFF.md`](HANDOFF.md) | current state: what is proved, what is recorded unverified, what is open |
 | `docs/plans/` | one plan per milestone, each with its own `*-BLOCKERS.md` ledger |
 | `docs/probes/` | frozen evidence. Read-only — the captures are what commands actually printed |

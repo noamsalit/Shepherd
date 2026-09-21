@@ -183,5 +183,8 @@ imports it has inverted the root — it can no longer be constructed without
 starting a process — and that is what the boundary suite fails on.
 
 Its size is a deliberate budget, not an accident: `daemons/controld.py` is **140
-lines**. A composition root that grows logic stops being a root and becomes an
-undeclared layer, so its length is asserted.
+lines against an asserted ceiling of 150**. A composition root that grows logic
+stops being a root and becomes an undeclared layer, so the ceiling is enforced —
+`MAX_DAEMON_LINES = 150` in `tests/boundaries/_imports.py`, applied to every
+module under `daemons/` (with `MAX_SOURCE_LINES = 600` everywhere else). What is
+asserted is the cap, not today's 140: the number moves, the ceiling does not.

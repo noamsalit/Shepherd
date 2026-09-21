@@ -48,6 +48,15 @@ SMALL_FRAME = (
 #: Result 2 of `docs/probes/2026-09-16-hookd-latency.md`: 40 KB arrives complete.
 LARGE_FRAME = b'{"pad":"' + b"x" * 40_000 + b'"}\n'
 
+#: The negative control below needs a frame that **cannot** fit in the kernel's
+#: socket send buffer, or the write completes into the buffer and returns and
+#: nothing wedges. 40 KB is enough on macOS (default ~8 KB) and not on Linux,
+#: where `/proc/sys/net/core/wmem_default` is 212,992 — which is why that test
+#: passed there and failed here. Sized well clear of both rather than probed:
+#: the buffer is tunable, and a test that reads the tunable it depends on can
+#: be made to pass by changing the machine.
+WEDGE_FRAME = b'{"pad":"' + b"x" * 1_000_000 + b'"}\n'
+
 #: Far above the measured 264-324 ms (macOS) and 250 ms (Linux `timeout 0.25`),
 #: and far below the 5 s the settings entry gives the hook (E18). A command that
 #: needs more than this against a wedged peer is unbounded in the way that
@@ -254,6 +263,6 @@ def test_the_wedge_fixture_really_wedges_an_unbounded_writer(tmp_path: Path) -> 
     listener = Listener(path, hang=True)
     try:
         with pytest.raises(subprocess.TimeoutExpired):
-            dispatch(command, LARGE_FRAME, ceiling_s=HUNG_PEER_CEILING_S)
+            dispatch(command, WEDGE_FRAME, ceiling_s=HUNG_PEER_CEILING_S)
     finally:
         listener.close()

@@ -2,7 +2,7 @@
 
 ## User Standards
 
-- **The spec's decision log (§3) is law.** 34 numbered decisions with reasoning. Do not silently
+- **The spec's decision log (§3) is law.** 64 numbered decisions (D1–D64, plus D38.1) with reasoning. Do not silently
   reverse one — if implementation pressure pushes against a decision, say so and re-decide out loud.
 - **Typed, strict, small** (spec principle 6): Python 3.12, `mypy --strict`, no `Any`. Single
   responsibility per module; a file past ~600 lines is a signal it is doing too much.
@@ -13,8 +13,11 @@
 - **`store/` exposes domain verbs returning dataclasses** (D33). No caller passes SQL, receives a
   driver row, or opens a transaction.
 - **No `shell=True` anywhere** (§13). argv lists only.
-- Naming: the product is `shepherd`. `shepherd` in older prose is the same product; correct it on
-  sight in a file already being edited, never as a sweeping rename commit.
+- **Naming.** The product is `shepherd`. The consumer-facing word for a `workspace` row is
+  **project** (D22). The 2026-09-21 redesign renames three UI labels and nothing else: the fleet
+  page becomes the **Flock**, `unfinished` prints as **stranded**, `paused` as **limit exceeded**,
+  `unclassified` as **unknown**. Bucket values in code are unchanged, and `core.stops.PALETTE`
+  still carries the old labels — see `docs/design/ui-decisions.md` before touching either.
 
 ## Common Gotchas
 
@@ -216,6 +219,31 @@ re-encode through the thing being tested.
 
 None.
 
+
+## Lessons from M4 and the QA pass (2026-09-21)
+
+These cost real time and are recorded in `CLAUDE.md` and the ledgers. They are
+here because this is the file a cc10x session loads first.
+
+- **Clear `__pycache__` before every mutation run.** CPython decides a `.pyc`
+  is fresh from (source mtime in whole seconds, source size). A mutation that
+  preserves size and lands in the same second re-imports the *unmutated*
+  bytecode and is recorded as a **false survivor** — a hole written down as a
+  proof there isn't one.
+- **A planted violation is an inert fixture that nothing imports.** A shadow
+  tree isolates files, not signals, subprocesses or the host. See `CLAUDE.md`;
+  the 2026-09-17 reboot is why.
+- **`-L` on a tmux session is not enough.** A command run *inside* tmux inherits
+  `$TMUX` and resolves to that socket, so pass `-L` on **every** invocation.
+  `patterns.md` used to state this rule without that clause; the clause is the
+  part that made it recur.
+- **Per-task ledger files, not one shared ledger.** Four builders appending to
+  one file lost two tasks' entries.
+- **"Recorded" is not "applied".** A decision written into a ledger while the
+  code still has the old behaviour happened twice in M4. Grep for the behaviour,
+  not for the sentence.
+- **Freeze a baseline on a quiet tree**, never while builders are writing.
+
 ## Last Updated
 
-2026-09-17
+2026-09-21.
