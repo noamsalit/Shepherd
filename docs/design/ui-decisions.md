@@ -212,8 +212,16 @@ console error, and asserts nothing scrolls sideways.
 - The prototype's JavaScript is a faithful transcription of `fleet.js`,
   `rail.js` and `chat.js` render logic. Porting is mostly moving CSS and
   markup, not re-deriving behaviour.
-- Everything in the prototype is `textContent`. §13's no-HTML-sink rule holds
-  in the design as written; do not introduce a sink while porting.
+- **Correction, 2026-09-21: "everything in the prototype is `textContent`" was
+  false.** Counted: the prototype has **eight** `innerHTML` assignments. Seven
+  build inline SVG by string concatenation (lines 2520, 2688, 2796, 2837, 2858,
+  3101, 3617) and one — `prose.innerHTML = line[1]`, line 2814 — assigns a bare
+  variable, which is the sink shape §13 exists to prevent.
+  `tests/web/test_frontend_escaping.py` permits a sink only when its right-hand
+  side is a **single quoted literal with no concatenation**, so all eight are
+  findings and none of them ports as written. The icons become `createElementNS`
+  calls or static markup; the prose span becomes `textContent`. Budgeted as
+  explicit scope in the plan rather than left to be found mid-port.
 - The prototype is a single file with an inline `<script>`. A stray `}` or a
   block of CSS pasted into the script kills the **entire** script silently, and
   the page still renders because the markup is static. Parse the script before
@@ -257,10 +265,29 @@ constants. Everything else is a labelled placeholder.
 
 ### And the freeze
 
-`web/static/` is byte-frozen by `tests/boundaries/consumer_manifest.json`. A
-redesign touches every file in it. **Spend one `post_milestone` declaration on
-the whole redesign**, dated and attributed, rather than one per file or one per
-iteration — that is what the block is shaped for.
+`web/static/` is byte-frozen by `tests/boundaries/consumer_manifest.json`.
+
+**Correction, 2026-09-21: an earlier version of this section said to spend one
+`post_milestone` declaration on the whole redesign. That is not possible.**
+`post_milestone_paths` (`tests/boundaries/_imports.py:242-266`) asserts
+`len(seen) == len(set(seen))` over the entries' `path` fields — entries are per
+**path**, not per edit and not per milestone.
+
+The rule, stated so it can be implemented: **every path whose bytes differ from
+the step-0b `baseline` — including files created and files deleted — must appear
+in exactly one of `rebase.regenerated_paths` or `post_milestone.edits`, and
+never both.** The five paths T24 already rebased (`web/routes.py`, `app.css`,
+`app.js`, `chat.js`, `index.html`) are therefore edited *without* a new
+declaration, and adding one for them **fails** the gate.
+
+`web/static/chat.js` is additionally pinned: it may be edited, never renamed or
+deleted. It is the only static file created after the baseline, so deleting it
+makes `moved_paths` report it as un-moved while the rebase block still declares
+it — an equality with no repair available.
+
+`docs/plans/recon/2026-09-21-backend-and-frontend-recon.md` §I carries the
+measured table of which files can move and five gate simulations run against the
+real manifest.
 
 ## Related
 
