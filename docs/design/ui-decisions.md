@@ -51,11 +51,12 @@ records stay readable.
 | `paused` | **limit exceeded** | the bucket is exactly two reasons, `rate_limited` and `quota_paused`. "Paused" was vaguer than the thing it names. |
 | `unclassified` | **unknown** | plain. |
 
-**`core.stops.PALETTE` still carries the old labels**, so the UI copy and the
-palette label now differ by intent. Whoever implements this decides whether the
-UI reads `PALETTE` and overrides, or carries its own label table — but the hexes
-and glyphs must keep coming from `PALETTE`, because the palette test is what
-stops them drifting.
+**The renames belong in `core.stops.PALETTE`, not in a second table.**
+`tests/web/test_palette.py` asserts the page's labels equal `PALETTE.label` for
+all eight buckets, and it is right to: a UI-side label table is precisely the
+drift it exists to catch. Change the label strings at the source. The `Bucket`
+*values* do not move, so `stop_rules.py`, the store and the 90-day log are
+untouched.
 
 ## Settled
 
@@ -94,6 +95,14 @@ stops them drifting.
   Limits, Users & access, Data, System). Anything unbuilt carries a `not built`
   chip **and says why in the panel**. `shepherd uninstall` is dropped from the
   UI entirely.
+- **U16 — the card takes a wash of its bucket colour, and the legend is the
+  glyph plus coloured text.** Chosen on 2026-09-21 by building six treatments
+  and comparing them on a real list (`payments-api`, four cards, four buckets),
+  not by describing them. Rejected: a coloured frame with coloured text, a
+  coloured left stripe, coloured text alone, a named chip, and filled cards with
+  filled legend pills. The wash is ~16% of the bucket colour over the card
+  ground; the ask stays neutral so the colour carries the state and the words
+  carry the content.
 - **U14 — the Projects page is two panes**, list and detail, with `Unassigned`
   pinned last and visually distinct. Repo paths are shown in full, and edited in
   the Edit dialog rather than inline. Sessions listed on a project are links
@@ -161,6 +170,48 @@ Nothing is gating the implementation.
   the page still renders because the markup is static. Parse the script before
   publishing — `esprima` (pip-installable) caught in one shot what four rounds
   of reading missed.
+
+## What implementing this actually requires
+
+**The Shepherd and Flock pages can be built now.** Every read and write they
+need already exists: `/api/master/send`, `/api/approvals`, `/api/audit`,
+`/api/autonomy`, `/api/fleet/tree`, `/api/sessions/{id}`, `.../output`,
+`.../permission`. No backend work, no migration.
+
+**The Projects page cannot.** It is designed against verbs that do not exist —
+`create_project`, `rename_project`, `delete_project`, `add_repo`,
+`remove_repo` — and against a `list_repos` that exists in the store with no
+tool and no route, so the UI cannot see a project's repos at all. **W1 in the
+2026-09-21 backlog is a hard prerequisite.** The work-source section needs M5's
+`queue` table on top of that.
+
+**Settings is partial, and honestly so.** Autonomy, Discovery's hook status,
+Data's audit tail and System's facts are all real today. Limits are compiled
+constants. Everything else is a labelled placeholder.
+
+### Two shipped tests will go red, and both are decisions, not breakages
+
+1. **`tests/web/test_palette.py::test_palette_matches_core_stops`** asserts the
+   page's `LABEL` table equals `PALETTE.label` for all eight buckets. Our
+   renames — **stranded**, **limit exceeded**, **unknown** — break that.
+   **The test is right and this file was wrong.** An earlier paragraph here said
+   the implementer could "decide whether the UI reads `PALETTE` or carries its
+   own label table". It cannot: a second label table is exactly the drift that
+   test exists to prevent. **The rename belongs in `core.stops.PALETTE`.** The
+   `Bucket` *values* still do not move, so nothing in `stop_rules.py`, the store
+   or the 90-day log is affected.
+2. **`tests/web/test_rail.py::test_rail_is_on_every_page`** asserts the rail slot
+   sits in `index.html` before `<main>` — that it is the shell and not one view's
+   child. U2 takes it off the shell. That test encodes §12's rule, so removing it
+   is reversing a decision: it needs a decision row of its own, the way D65
+   handled the autonomy toggle. Do not delete the assertion quietly.
+
+### And the freeze
+
+`web/static/` is byte-frozen by `tests/boundaries/consumer_manifest.json`. A
+redesign touches every file in it. **Spend one `post_milestone` declaration on
+the whole redesign**, dated and attributed, rather than one per file or one per
+iteration — that is what the block is shaped for.
 
 ## Related
 
