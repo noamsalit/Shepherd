@@ -122,22 +122,20 @@ gates.
 - **U4 — logging unclassified stops** was never a UI question; it is W-level
   work tracked in the backlog.
 
-## Open — one question, and it is small
+## Open
 
-- **U1 — tooltips are hover-only, and the reason given for that was wrong.**
-  The note said tap-to-open *"fights the card tap"*. It does not: the legend is
-  a strip at the top of the Flock page and its keys are their own buttons, well
-  away from the session cards. A tap on a legend key is unambiguous. The real
-  constraint is only that the owner does not want tap-to-open as a general
-  pattern across the app. Two shapes fit that, and one of them has to be picked:
+Nothing is gating the implementation.
 
-  1. **Tap the key itself** — same popover as hover, opened by tap on the legend
-     only. Smallest change; nothing else in the app gains tap-tooltips.
-  2. **One `ⓘ` at the end of the legend** opening a sheet that explains all eight
-     at once. A single target, reads better on a phone than eight popovers, and
-     doubles as the place to explain the page.
-
-  Hover and keyboard focus keep working either way.
+- ~~**U1 — the tooltip interaction.**~~ **Resolved: one `ⓘ` opens a sheet
+  explaining all eight at once.** Hover and keyboard focus keep the single-key
+  popover on a pointer device; a **tap** anywhere in the legend — a key or the
+  `ⓘ` — opens the sheet. A key that did nothing on tap would be a dead control,
+  and eight explanations read better together than one at a time on a phone.
+  On a narrow screen the sheet rises from the bottom edge.
+  *The reason originally recorded for going hover-only was wrong: the note said
+  tap "fights the card tap", and it does not — the legend is its own strip and
+  its keys are nowhere near the session cards. Corrected rather than quietly
+  dropped.*
 - ~~**U2 — the Needs-You rail has no home in the new design.**~~ Answered
   above: out for now, Flock page only if it returns.
 - ~~**U3 — the autonomy toggle has no home outside Settings.**~~ Answered
