@@ -5,3 +5,4 @@
 {"ts": "2026-09-21T22:22:51Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_revised", "revision": 2}
 {"ts": "2026-09-21T22:40:33Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "planning_review_pass2", "blocking": 5, "advisory": 10, "disposition": "amendment"}
 {"ts": "2026-09-21T22:49:33Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_amended", "revision": 4}
+{"ts": "2026-09-21T22:59:04Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_trust_gate_passed", "phases": 10}

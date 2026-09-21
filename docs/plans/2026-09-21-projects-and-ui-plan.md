@@ -3,11 +3,14 @@
 ## Metadata
 
 - Created: 2026-09-21
-- **Revision: 4** — **router-directed amendment** applying fresh-review pass 2
-  (5 blocking + 10 advisories). The two-pass fresh-review cap is spent; this is
-  the diff-scoped amendment lane, not a third pass.
-- Prior revisions: 3 (two router corrections), 2 (fresh-review pass 1: 7
-  blocking + 6 major + the minors), 1 (initial)
+- **Revision: 5** — **final router-directed amendment**, applying the
+  amendment-verification findings (F1's definitive enumeration + 8 stale
+  cross-references). The two-pass fresh-review cap is spent; this is the
+  diff-scoped amendment lane, not a third pass. **BUILD starts from this
+  revision.**
+- Prior revisions: 4 (fresh-review pass 2: 5 blocking + 10 advisories), 3 (two
+  router corrections), 2 (fresh-review pass 1: 7 blocking + 6 major + the
+  minors), 1 (initial)
 - Status: draft
 - Plan Mode: `execution_plan`
 - Verification Rigor: `critical_path` (irreversible migration · security-adjacent
@@ -17,6 +20,25 @@
 - Supersedes: `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` §W1, with
   real tasks. §W2 and §W3 stay in the backlog.
 
+### What changed in revision 5
+
+One blocking item, eight stale cross-references, and one more instance of a
+pattern the findings named twice.
+
+| # | Finding | Fix |
+|---|---|---|
+| **F1** | the version-3 enumeration was wrong in **every** prior revision — 7, then 19 | **Sixteen lines, named individually** in a table in T1.1. The root cause is written in as its own lesson: **`== 3` is the wrong discriminator; the table name is.** It over-matches `test_migration_003.py:333` (which counts `mailbox_message`, not migrations, and a mechanical sweep would break a green test) and under-matches `test_migration_003.py:185` (`versions == [1, 2, 3]`, which no `== 3\b` pattern can see). Two of the sixteen are `COUNT(*)` rows over `schema_migration`, and `:227`'s comment *"three applied migrations"* goes stale with the line beneath it. Three look-alikes are named as non-candidates. **The plan no longer states a grep as an enumeration.** |
+| **N1** | "these **nine** tasks" | ten (T1.1–T1.10) |
+| **N2** | "T1.1 → **T1.9**" | T1.10 |
+| **N3** | the risk matrix still credited **T3.2** with the bounded-statement assertion | **T1.10**, matching the index and AC-15 — the renumbering pressure actually biting |
+| **N4** | P10's owner row omitted **T1.1** and still listed **T5.3**, which retires nothing | T1.1 (1), T1.5 (1), T1.8 (3), T1.9 (4), T5.1 (7), T6.3 (1) = **17**, with the arithmetic shown in the cell |
+| **N5** | T1.1 retires a frozen id but did not run the gate that validates the entry | `tests/boundaries/test_collected_node_ids.py` added to its Required Checks |
+| **N6** | T1.5's exit claimed "whole suite green" while T1.10 is the task that makes it true | T1.5's exit narrowed to the directories it can actually green; the promise stays with T1.10, and the exit says why two tasks cannot both hold it |
+| **N7** | T6.2 ran a full `pytest -q` inside the T6.1→T6.4 red window | narrowed, with F7's reasoning restated |
+| **N8** | the `post_milestone` count was still on the pre-r3 base of seven/eight in **four prose sites** — ADR-P5, A11, T6.4's ledger note, the blockers ledger | all four → six/seventh. r3 residue that the F4 sweep missed **because it was prose, not tables** |
+| — | "Eleven findings. **Four** contradict a document" | two (#7 and #8) |
+| **new** | **T1.8 also ran a whole-suite `pytest -q` inside Phase 1's declared-red window** — the same shape as N6 and N7 on a third task, found while applying them | narrowed, and the rule stated once: **T10.2 is the only task whose Required Checks may be a bare `pytest -q`**, because it is the whole-tree gate and runs after every window has closed |
+
 ### What changed in revision 4
 
 Fifteen findings from fresh-review pass 2, all applied. Every one was
@@ -25,7 +47,7 @@ partly wrong, and it is flagged in F6 below rather than absorbed.**
 
 | # | Finding | Fix |
 |---|---|---|
-| **F1** | the `EXPECTED_SCHEMA_VERSION 3 → 4` bump was unswept, so **T1.1 could not pass its own Required Checks** | the three migration test modules join T1.1's Files; **19** hard-coded `3` literals enumerated by grep (the review listed seven); and a **17th retirement** — `test_future_schema_refuses_to_start_at_four` builds its impossible sentinel by inserting version 4, which 004 makes real and `schema_migration.version INTEGER PRIMARY KEY` turns into a PK collision. Successor proves the rule at version **5**. |
+| **F1** | the `EXPECTED_SCHEMA_VERSION 3 → 4` bump was unswept, so **T1.1 could not pass its own Required Checks** | the three migration test modules join T1.1's Files; the version-3 assertions **named individually — sixteen of them** (revision 4 said 19 and greppped for them; revision 5 replaced that with a list, see F1's note); and a **17th retirement** — `test_future_schema_refuses_to_start_at_four` builds its impossible sentinel by inserting version 4, which 004 makes real and `schema_migration.version INTEGER PRIMARY KEY` turns into a PK collision. Successor proves the rule at version **5**. |
 | **F2** | Phase 1 still did not end green: `tools_m1.py:156` reads `workspace.root_path`, served by `/api/projects`, called by `test_fleet_page.py:102` — a **suite failure**, not a `mypy` finding | new **Task 1.10** moves the `project_workspace` projection into Phase 1; T3.2 shrinks to compose wiring alone |
 | **F3** | Phase 5 did not end green either: `test_palette.py:97` reads `rail.js`, deleted by T5.3 one phase before the literal is fixed; and `:42` reads `fleet.js`, deleted by T6.1, making **T6.1's own exit criterion unsatisfiable** | `tests/web/test_palette.py` joins T5.3's and T6.1's Files and Allowed Scope |
 | **F4** | T6.4's exit said "exactly 5 entries" against its own `Produces` of "4 of 6" — the **third** total-versus-rows disagreement | 5 → 4, with the arithmetic spelled out; every table in the plan re-added afterwards |
@@ -156,7 +178,7 @@ are **near-term-refactor** — W3's work sources will reopen `projects.js` and
 
 ## Codebase Reality Check — what the source says, against the documents
 
-Eleven findings. **Four contradict a document** and are stated here rather than
+Eleven findings. **Two carry a CONTRADICTS label** (#7 and #8) and are stated here rather than
 planned around. N1 and N2 were new at revision 2 and were named by neither the
 design, the recon, nor the first review; **N2 is restated at revision 3 because
 revision 2 diagnosed it wrongly.**
@@ -350,7 +372,7 @@ every action with its source" stays literally true.
 | A8 | `PaneState.dialog_text` carries the permission dialog's numbered option lines | `inferred` | `pane.py:215` detects the dialog from `PERMISSION_MARKER` **plus a numbered option line**, so the lines are on the screen; that they survive into `dialog_text` is the inference. **Falsified by** T8.1's first assertion, which stops and writes `t8-1.md` rather than widening the capture path. |
 | A9 | Deriving `last_activity_at` at read time is fast enough here | `inferred` | One `GROUP BY` over `session`, a table this deployment holds in the hundreds. No index added; if it ever matters, that is a later migration. |
 | A10 | The `unassigned` row's `owner_id` matches every other row's | `proven_by_code` | 004's `INSERT` **omits `owner_id` entirely** so the column default in `001_m1_foundation.sql:30-37` applies. A hard-coded `'local'` would be a second definition site of a value the schema already owns. |
-| A11 | `session.js` and `terminal.js` can be restyled without changing `terminal.js`'s bytes | `inferred` | All styling lives in `app.css`. **If `terminal.js` must change**, it becomes an **eighth** `post_milestone` entry and the task says so rather than absorbing it. |
+| A11 | `session.js` and `terminal.js` can be restyled without changing `terminal.js`'s bytes | `inferred` | All styling lives in `app.css`. **If `terminal.js` must change**, it becomes a **seventh** `post_milestone` entry (the plan's count is six) and the task says so rather than absorbing it. |
 
 ---
 
@@ -692,7 +714,7 @@ through `discovery_loop` and `hook_lane`); integration (`/api/projects` through
 **Green at the internal task boundaries T1.1→T1.10:** **no, by construction.**
 `repo.workspace_id` cannot both exist and not exist, so expand–contract is
 unavailable for a single rehearsed migration. The design settled on one
-migration; this plan does not reopen it. These nine tasks share the phase's green
+migration; this plan does not reopen it. These **ten** tasks (T1.1–T1.10) share the phase's green
 promise, and **nothing outside Phase 1 starts until it is kept.** **T1.10 is
 the task that makes it true** (F2): it is the last `src/` module the schema
 change breaks, and `/api/projects` is a suite path, not a `mypy` path.
@@ -719,14 +741,48 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   `PRAGMA defer_foreign_keys=ON` copied from `002:37`; `EXPECTED_SCHEMA_VERSION`
   `3 → 4`.
   **The version-3 sweep, which is not optional and is the reason those three
-  modules are in Files (F1).** `EXPECTED_SCHEMA_VERSION` is compared against a
-  hard-coded `3` in **19 places** across them —
-  `grep -rn "== 3\b" tests/store/test_migrations.py tests/store/test_migration_002.py tests/store/test_migration_003.py`
-  is the enumeration — including `test_migrations.py:70,77,100-103,142`,
-  `test_migration_002.py:123,136-137,260,296` and
-  `test_migration_003.py:186,203-204,228,409,448`. T1.1's own Required Checks
-  run exactly these modules, so **without this sweep T1.1 cannot pass its own
-  checks.** Every one is a body rewrite; **one is not.**
+  modules are in Files (F1).** T1.1's own Required Checks run exactly these
+  modules, so **without this sweep T1.1 cannot pass its own checks.**
+
+  **Sixteen lines change, named individually.** They are listed rather than
+  greppped, and that is the lesson of this row rather than an accident of
+  formatting — see the note below.
+
+  | file | lines |
+  |---|---|
+  | `tests/store/test_migrations.py` | **70, 77, 100, 101, 103** |
+  | `tests/store/test_migration_002.py` | **136, 137, 260, 296** |
+  | `tests/store/test_migration_003.py` | **185, 186, 203, 204, 228, 409, 448** |
+
+  Two of the sixteen are `COUNT(*)` rows that count **applied migrations**, so
+  three becomes four: `test_migrations.py:103` and `test_migration_003.py:228`.
+  **`test_migration_003.py:227` is a comment reading *"three applied
+  migrations"* and goes stale with the line under it** — prose that contradicts
+  the assertion beneath it is how the next reader is misled.
+  And `test_migration_003.py:185` is `assert versions == [1, 2, 3]` →
+  `[1, 2, 3, 4]`.
+
+  **One line matches the pattern and must NOT change:**
+  **`tests/store/test_migration_003.py:333`** —
+  `SELECT COUNT(*) FROM mailbox_message … == 3`. It counts **messages, not
+  migrations**. A mechanical sweep over grep output breaks a green test here.
+
+  **Three more that look like candidates and are not:**
+  `test_migrations.py:102` (a `with connect(...)` line),
+  `test_migrations.py:142` and `test_migration_002.py:123` — the last two are
+  already version-agnostic through `EXPECTED_SCHEMA_VERSION`.
+
+  > **Why this is a list and not a grep, stated as its own lesson.** Every
+  > earlier count of this sweep was wrong — 7, then 19, both by people reading
+  > carefully. `== 3` is the **wrong discriminator**: it over-matches
+  > (`mailbox_message` at `:333`) and under-matches (`versions == [1, 2, 3]` at
+  > `:185`, which no `== 3\b` pattern can see). **The table name is the
+  > discriminator, not the number.** A plan that hands a builder a grep here
+  > hands them a sweep that is simultaneously too wide and too narrow, and the
+  > failure mode is a *green test broken* and a *red test missed* in the same
+  > pass.
+
+  Every one of the sixteen is a body rewrite; **one further test is not.**
   **The one retirement: `tests/store/test_migration_003.py::test_future_schema_refuses_to_start_at_four`.**
   It migrates to 3 and then inserts a `schema_migration` row at version **4** to
   build "a database from the future" (`:420-434`). Migration 004 makes version 4
@@ -753,7 +809,10 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   in `001_m1_foundation.sql:30-37` applies (A10). Hard-coding `'local'` would be
   a second definition site of a value the schema already owns.
 - **Required Checks:**
-  `.venv/bin/python -m pytest tests/store/test_migration_004.py tests/store/test_migrations.py tests/store/test_migration_002.py tests/store/test_migration_003.py -q`
+  `.venv/bin/python -m pytest tests/store/test_migration_004.py tests/store/test_migrations.py tests/store/test_migration_002.py tests/store/test_migration_003.py -q` ·
+  `.venv/bin/python -m pytest tests/boundaries/test_collected_node_ids.py -q`
+  (**N5** — this task retires a frozen id, and every other retiring task runs
+  the gate that validates the entry)
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** **human_verify** — print `PRAGMA table_info` for
   `workspace`, `repo` and `project_repo` from a migrated copy of a real database
@@ -766,8 +825,10 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   from `PRAGMA table_info` rather than typed twice; (e) re-running `migrate()`
   is a no-op; (f) 001–003's recorded sha256 are unchanged; (g)
   `sqlite3.sqlite_version >= "3.35"` is asserted, so A2's probe applies here and
-  a host that regresses says so; the 19 version-3 literals are updated and
-  `tests/store` is green; exactly one retirement, whose successor
+  a host that regresses says so; **the 16 version-3 assertions named above are
+  updated and `tests/store/test_migration_003.py:333` is unchanged**
+  (`git diff -U0 tests/store/test_migration_003.py | grep mailbox_message` is
+  empty), and `tests/store` is green; exactly one retirement, whose successor
   `test_future_schema_refuses_to_start_at_five` inserts version **5** and proves
   §7 rule 2 unchanged.
 - **Consumes:** none
@@ -898,13 +959,20 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Out-of-Scope Drift:** changing what any test asserts beyond N1's three. If a
   test cannot be made green mechanically, **stop and write
   `docs/plans/projects-ui-blockers/t1-5.md`** rather than weakening it.
-- **Required Checks:** `.venv/bin/python -m pytest -q` ·
+- **Required Checks:**
+  `.venv/bin/python -m pytest tests/store tests/signals tests/orchestration tests/golden tests/toolsurface -q` ·
   `.venv/bin/python -m pytest tests/boundaries/test_collected_node_ids.py -q`
+  *(not a whole-suite run — see Exit Criteria and N6)*
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
-- **Exit Criteria:** whole suite green; exactly one new retirement;
+- **Exit Criteria:** `tests/store`, `tests/signals`, `tests/orchestration`,
+  `tests/golden` and `tests/toolsurface` green; exactly one new retirement;
   `grep -rn "upsert_workspace" src/ tests/` returns nothing;
   `grep -rn "list_workspaces()\[0\]" tests/` returns nothing.
+  **Not "whole suite green" (N6).** `tests/web/test_fleet_page.py:102` calls
+  `/api/projects`, which still reaches the unrepaired `project_workspace` until
+  **T1.10**. Two tasks cannot both be the one that makes the suite green; the
+  promise belongs to T1.10 and this exit says so rather than claiming it twice.
 - **Consumes:** `writes.create_project(connection, *, name: str, description: str | None) -> Workspace`,
   `writes.add_repo(connection, *, workspace_id: str, root_path: str, name: str, git_common_dir: str, vcs_remote: str | None) -> Repo`,
   `reads.list_workspaces(connection) -> list[Workspace]` *(unchanged)*
@@ -974,9 +1042,18 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   mean building a caller to justify a module.*
 - **Out-of-Scope Drift:** deleting `probe_repo` or `resolve_remote`, which
   `binding.py` imports.
-- **Required Checks:** `.venv/bin/python -m pytest -q` ·
+- **Required Checks:**
+  `.venv/bin/python -m pytest tests/signals tests/store tests/orchestration -q` ·
   `! grep -rn "discover_repos" src/ tests/` ·
   `.venv/bin/python -m pytest tests/boundaries -q`
+  — **not a whole-suite run.** T1.8 sits inside Phase 1's declared-red window
+  (T1.1 → T1.10), so `pytest -q` is a check this task cannot pass:
+  `tests/web/test_fleet_page.py:102` stays red until T1.10. Found at revision 5
+  while applying N6 and N7, which named T1.5 and T6.2 — this is the same shape
+  on a third task, and the pattern is *"a whole-suite run inside a window the
+  plan itself declares red"*. **T10.2 is the only task whose Required Checks
+  may be a bare `pytest -q`**, because it is the whole-tree gate and runs after
+  every window has closed.
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** no reference to `discover_repos` anywhere; three retirement
@@ -1352,7 +1429,7 @@ the shell, the reset, the routing, and that removing the rail was recorded.
   `rail.js` moves a path, and the declaration for it is T5.4's; running the
   freeze gate before its own manifest task would be running a check this task
   cannot pass. **T5.3 → T5.4 is a red internal boundary, declared, exactly the
-  way Phase 1 declares T1.1 → T1.9.** The phase boundary (after T5.4) is green.
+  way Phase 1 declares T1.1 → T1.10.** The phase boundary (after T5.4) is green.
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** `test_every_shipped_module_is_reachable_from_the_page`
@@ -1470,8 +1547,14 @@ is Phase 10's live check and the human look there.
 - **Out-of-Scope Drift:** touching any `Bucket` **value**; touching
   `signals/stop_rules.py`, the store or the 90-day stop log; touching any hex or
   glyph; adding a UI-side label table.
-- **Required Checks:** `.venv/bin/python -m pytest -q` ·
+- **Required Checks:**
+  `.venv/bin/python -m pytest tests/web tests/test_core_stops.py -q` ·
   `.venv/bin/python -m pytest tests/boundaries/test_collected_node_ids.py -q`
+  — **not a whole-suite run and not `tests/boundaries` (N7).** T6.2 sits inside
+  the T6.1 → T6.4 window this phase declares red (F7): `fleet.js` has been
+  deleted and its manifest declaration is T6.4's. The same treatment F7 gave
+  T5.3 and T6.3 applies here; it was missed because F7 named only the two tasks
+  whose Required Checks listed `tests/boundaries` explicitly.
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** P6 passes with **zero** new retirements —
@@ -1522,8 +1605,8 @@ is Phase 10's live check and the human look there.
 - **Out-of-Scope Drift:** deleting `terminal.js`, `sse.js` or `vendor/`;
   changing `session.js`'s API contracts; changing the terminal's WebSocket path.
   **If `terminal.js`'s bytes must change** (A11), stop and say so — it becomes an
-  eighth `post_milestone` entry and the plan's count is wrong, which is worth
-  one line in `t6-3.md`.
+  **seventh** `post_milestone` entry — the plan's count is **six** — and the
+  plan is wrong by one, which is worth one line in `t6-3.md`.
 - **Required Checks:** `.venv/bin/python -m pytest tests/web -q` ·
   *(`tests/boundaries` is T6.4's, for F7's reason: T6.1 and T6.3 move paths
   whose declarations T6.4 writes. **T6.1 → T6.4 is a red internal boundary,
@@ -1549,8 +1632,8 @@ is Phase 10's live check and the human look there.
   the recon simulated and confirmed — and **`web/static/session.js` (edited,
   M6)**. State explicitly in this task's ledger note that `web/static/sse.js`,
   `web/static/terminal.js` and `web/static/vendor/*` are **byte-unchanged and
-  therefore get no entry**; if that stops being true, the count moves from seven
-  to eight and the task says so.
+  therefore get no entry**; if that stops being true, the count moves from
+  **six to seven** and the task says so.
 - **Out-of-Scope Drift:** as T5.4.
 - **Required Checks:** `.venv/bin/python -m pytest tests/boundaries -q`
 - **Validation Level:** Deterministic.
@@ -1882,7 +1965,7 @@ check; re-running it is `grep`, not memory.
 | `test_the_delete_dialog_renders_the_three_choices_from_the_refusal` | `tests/web/test_projects_page.py` | T9.1 | new |
 | `test_cancel_writes_nothing` | `tests/web/test_projects_page.py` | T9.1 | new |
 | `test_a_rebase_declares_every_path_whose_digest_moved` (P9) | `tests/boundaries/test_consumer_surface_frozen.py` | T5.4, T6.4, T7.2, T9.1 | existing, untouched |
-| `test_every_node_id_frozen_at_step_0b_still_collects` (P10) | `tests/boundaries/test_collected_node_ids.py` | T1.5, T1.8, T1.9, T5.1, T5.3, T6.3 | existing, untouched |
+| `test_every_node_id_frozen_at_step_0b_still_collects` (P10) | `tests/boundaries/test_collected_node_ids.py` | **T1.1 (1), T1.5 (1), T1.8 (3), T1.9 (4), T5.1 (7), T6.3 (1) = 17** | existing, untouched |
 | `test_every_page_renders_at_both_widths` (P11) | `tests/web/test_render_live.py` | T10.1 | new |
 
 ### Existing gates this plan leans on — edited, or untouched and relied upon
@@ -2061,7 +2144,7 @@ Error paths:
 | A module ships with a syntax error and the page still "looks fine" | med | **high** | Live — P11; a parse error is a console error. Plus `tools/js_syntax_check.py` |
 | A hard-coded count literal is left stale (`9`, `10`, the GET set) | **high** | low | Deterministic — P12; all three are in T4.2's Allowed Scope so none is discovered at run time |
 | A body field shadows the `project_id` path parameter | med | **high** | Deterministic — P13, in Phase 4 rather than Phase 9 |
-| `list_projects` becomes an N+1 over `list_repos` | med | med | Deterministic — T3.2's bounded-statement assertion over `repo_counts` |
+| `list_projects` becomes an N+1 over `list_repos` | med | med | Deterministic — **T1.10**'s `test_the_project_list_issues_a_bounded_number_of_statements` over `repo_counts` (F2 moved the projection out of T3.2; **N3**) |
 | The seeded `unassigned` row silently breaks "empty" assertions | **high** | low | Deterministic — E21, and the two sites named in T1.5 |
 | `list_workspaces()[0]` returns the seeded `Unassigned` instead of the fixture's project | **high** | med | Deterministic (and **the failure itself is deterministic**, so it cannot hide) — E22, and `grep -rn "list_workspaces()\[0\]" tests/` empty at T1.5's exit |
 | U17's parser breaks on an engine update | **high** | med | Deterministic — E16: the property tested is *degrades, never guesses*, which is what survives the update |
@@ -2128,8 +2211,8 @@ row **D67**, written in the task that performs the relocation.
 **Consequences:** keeps the live pty view, which nobody asked to lose; keeps 16
 frozen node ids as body rewrites instead of retirements; keeps `vendor/xterm.js`
 in the package, which `test_the_vendor_file_ships_in_a_built_wheel` already
-depends on. Costs: `session.js` is edited, so it is the seventh
-`post_milestone` entry.
+depends on. Costs: `session.js` is edited, so it is one of the **six**
+`post_milestone` entries — the fourth, declared by T6.4.
 **Reversibility:** reversible — a later decision could still delete the pane.
 
 ### ADR-P6: `escape.js` is kept, byte-unchanged
@@ -2185,7 +2268,7 @@ reconstructed from hand-back reports, but a reconstruction is not the original.
 - `t1-9.md` for any admission test whose property genuinely changes rather than
   whose wording does.
 - `t6-3.md` if `terminal.js`'s bytes must change after all (A11) — the
-  `post_milestone` count moves from seven to eight and the plan is wrong by one.
+  `post_milestone` count moves from **six to seven** and the plan is wrong by one.
 
 ---
 

@@ -38,8 +38,8 @@
     "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33."
   ],
   "plan_mode": "execution_plan",
-  "build_scope": null,
-  "worktree": null,
+  "build_scope": "standard",
+  "worktree": "in_place",
   "execution_mode": "subagent_dispatch",
   "inline_fallback_reason": "task_primitive_unavailable: this harness exposes no TaskCreate/TaskList/TaskGet. The task graph is tracked in this artifact; every cc10x gate still runs.",
   "verification_rigor": "critical_path",
@@ -66,7 +66,7 @@
       "Downward-only imports; 105 AST boundary rules in tests/boundaries/ must stay green.",
       "store/ exposes domain verbs returning dataclasses (D33). No SQL at call sites.",
       "No shell=True anywhere (section 13); argv lists only.",
-      "web/static/ is byte-frozen by tests/boundaries/consumer_manifest.json - spend ONE post_milestone declaration on the whole redesign.",
+      "web/static/ is byte-frozen by tests/boundaries/consumer_manifest.json. Every path whose bytes differ from the step-0b baseline - created and deleted files included - appears in exactly one of rebase.regenerated_paths or post_milestone.edits, never both. SIX post_milestone entries, one per path; entries are per PATH, not per edit. chat.js may be edited but never renamed or deleted.",
       "No node/npm/tsc on this host: plain ES modules, no build step (D51).",
       "Renames land in core.stops.PALETTE, not a second UI label table (test_palette_matches_core_stops).",
       "[hidden] display reset must be in the real stylesheet (U18); the artifact wrapper supplied it and web/static does not.",
@@ -90,8 +90,165 @@
     ],
     "open_decisions": []
   },
-  "normalized_phases": [],
-  "phase_cursor": "plan-review-amendment",
+  "normalized_phases": [
+    {
+      "phase_id": "phase-0",
+      "title": "Verification tooling and the ledger",
+      "objective": "Verification tooling and the ledger",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 0' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "unit: argument parsing",
+        "integration: the tool against a throwaway static server"
+      ]
+    },
+    {
+      "phase_id": "phase-1",
+      "title": "Migration 004, the store, and the `src/` half of the schema change",
+      "objective": "Migration 004, the store, and the `src/` half of the schema change",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 1' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "unit: migration SQL",
+        "integration: store verbs against a real sqlite file"
+      ]
+    },
+    {
+      "phase_id": "phase-3",
+      "title": "The tool surface: seven verbs",
+      "objective": "The tool surface: seven verbs",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 3' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "unit: tool schemas",
+        "integration: invoke() through the registry"
+      ]
+    },
+    {
+      "phase_id": "phase-4",
+      "title": "Routes",
+      "objective": "Routes",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 4' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "integration: route table against the registry"
+      ]
+    },
+    {
+      "phase_id": "phase-5",
+      "title": "The UI shell, and the rail's removal",
+      "objective": "The UI shell, and the rail's removal",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 5' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "static: markup and CSS scans",
+        "integration: the shell in a browser"
+      ]
+    },
+    {
+      "phase_id": "phase-6",
+      "title": "The Flock page, and D67's third pane",
+      "objective": "The Flock page, and D67's third pane",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 6' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "static: module scans",
+        "integration: the Flock page in a browser"
+      ]
+    },
+    {
+      "phase_id": "phase-7",
+      "title": "Shepherd and Settings",
+      "objective": "Shepherd and Settings",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 7' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "static: module scans",
+        "integration: Shepherd and Settings in a browser"
+      ]
+    },
+    {
+      "phase_id": "phase-8",
+      "title": "U17: the decision card's projection",
+      "objective": "U17: the decision card's projection",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 8' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "unit: the pane parser against frozen captures"
+      ]
+    },
+    {
+      "phase_id": "phase-9",
+      "title": "The Projects page \u2014 the acceptance test for the seven verbs",
+      "objective": "The Projects page \u2014 the acceptance test for the seven verbs",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 9' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "integration: the Projects page against the seven verbs"
+      ]
+    },
+    {
+      "phase_id": "phase-10",
+      "title": "Live verification against the served page",
+      "objective": "Live verification against the served page",
+      "files": [],
+      "checks": [
+        "pytest",
+        "mypy --strict src",
+        "105 boundary rules"
+      ],
+      "exit_criteria": "see plan '### Phase 10' \u2014 exit criteria are per task and non-empty",
+      "test_seams": [
+        "system: headless chromium against a served controld"
+      ]
+    }
+  ],
+  "phase_cursor": "phase-0",
   "capabilities": {
     "brightdata_available": "unknown",
     "octocode_available": "unknown",
@@ -122,7 +279,8 @@
     "plan-create": "completed",
     "plan-review-gap-1": "completed",
     "re-plan": "completed",
-    "plan-review-gap-2": "completed"
+    "plan-review-gap-2": "completed",
+    "plan-review-amendment": "completed"
   },
   "deferred_findings": [
     {
@@ -145,7 +303,12 @@
     }
   ],
   "results": {
-    "git_preflight": null,
+    "git_preflight": {
+      "isolated": false,
+      "detached_head": false,
+      "branch": "integration",
+      "status": "clean"
+    },
     "baseline": {
       "suite": "green (exit 0), -m 'not live'",
       "mypy": "clean over 127 files",
@@ -290,9 +453,9 @@
     "F8 advisory but important: AC-21 prints the post_milestone count instead of asserting it - exits 0 for any value, and it is the clause that would have caught F4.",
     "F13 advisory, decided: playwright would become an undeclared suite dependency via the path-loaded render_check import. Fix is pytest.importorskip('playwright')."
   ],
-  "planning_review_status": "revised_after_review",
-  "plan_revision": 4,
-  "last_reviewed_revision": 3,
+  "planning_review_status": "passed",
+  "plan_revision": 5,
+  "last_reviewed_revision": 5,
   "memory_notes": [],
   "pending_gate": null,
   "status_history": [
@@ -333,9 +496,14 @@
       "ts": "2026-09-21T22:49:33Z",
       "phase": "re-plan",
       "revision": 4
+    },
+    {
+      "event": "plan_trust_gate_passed",
+      "ts": "2026-09-21T22:59:04Z",
+      "phase": "phase-0"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-21T22:49:33Z"
+  "updated_at": "2026-09-21T22:59:04Z"
 }
