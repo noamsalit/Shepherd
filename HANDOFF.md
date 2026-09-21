@@ -13,7 +13,7 @@ unverified**, and what is **still open**.
 | boundary rules | **105 passed** |
 | `mypy --strict src` | clean over **127** files, `disallow_any_explicit` on |
 | composition root | `daemons/controld.py` still **140** lines, guard constants unedited |
-| decisions | **64** (D1–D64, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
+| decisions | **65** (D1–D65, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
 | your settings file | `~/.claude/settings.json` sha256 `375e5322…d6ac` — **never written, checked on both sides of every live test**. Shepherd's hooks are **not installed**. |
 | your tmux | socket `shepherd` never named in a write. The **socket** is the invariant; session *names* are not, and any check written against them goes red the next time you open a terminal. |
 

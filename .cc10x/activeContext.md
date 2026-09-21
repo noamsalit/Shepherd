@@ -249,7 +249,7 @@ END SUPERSEDED.
 
 ## References
 
-- Spec: `docs/specs/orchestrator-platform.md` — **64 decisions** (D1–D64, plus D38.1), approved
+- Spec: `docs/specs/orchestrator-platform.md` — **65 decisions** (D1–D65, plus D38.1), approved
 - Layer map / import law: `docs/specs/logical-architecture.md`
 - **Deferred, decided in outline: `docs/specs/harness-contract.md`** — bring your own
   harness. Pointed at from spec §17 and the README. Read it before re-deriving anything

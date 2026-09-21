@@ -99,29 +99,57 @@ stops them drifting.
   the Edit dialog rather than inline. Sessions listed on a project are links
   into the Flock.
 
-## Open — must be answered before implementing
+## Resolved 2026-09-21, after the first review of the prototype
 
-- **U1 — tooltips are hover-only.** Tap-to-open was deliberately not wired: on
-  a phone it fights the card tap. **The owner wants a real tooltip component**
-  that works on touch without stealing the tap. Decide the interaction
-  (long-press, an `ⓘ` affordance, a one-time legend sheet) first.
-- **U2 — the Needs-You rail has no home in the new design.** It was removed
-  from the Shepherd page because it was not asked for. In the shipped product it
-  is the one element present on **every** page (§12) and the thing the whole
-  design exists around. It has to come back somewhere.
-- **U3 — the autonomy toggle has no home outside Settings.** §12 says it should
-  be visible at all times so you never have to remember which level you are on.
-  In this design it is a Settings section only.
+The owner reviewed U1–U4 and U15 and answered four of the five. **None of them
+was a blocker**, and this section says so rather than leaving them looking like
+gates.
+
+- **U2 — the Needs-You rail stays out, for now.** It is not coming back to the
+  Shepherd page. The intent is that it lives on the **Flock page only**, when it
+  returns at all. This reverses the concern recorded below: a rail on every page
+  was §12's design, and one page is the owner's.
+- **U3 — the autonomy toggle is a Settings control and nothing else.**
+  Recorded as **D65**, which revises §12: that section used to place the toggle
+  on the master page *"visible at all times"*. The level is still legible from
+  behaviour — at the asking level you get cards, at the auto level you do not —
+  so what was lost is display, not information.
+- **U15 — model and engine per spawned session is deferred**, with no
+  precedence rule adopted. Today the only lever is `spawn_session`'s `model`
+  argument, and `engine="claude_code"` stays a literal. Revisit when a second
+  engine exists or a project genuinely wants a different model from the machine
+  default.
+- **U4 — logging unclassified stops** was never a UI question; it is W-level
+  work tracked in the backlog.
+
+## Open — one question, and it is small
+
+- **U1 — tooltips are hover-only, and the reason given for that was wrong.**
+  The note said tap-to-open *"fights the card tap"*. It does not: the legend is
+  a strip at the top of the Flock page and its keys are their own buttons, well
+  away from the session cards. A tap on a legend key is unambiguous. The real
+  constraint is only that the owner does not want tap-to-open as a general
+  pattern across the app. Two shapes fit that, and one of them has to be picked:
+
+  1. **Tap the key itself** — same popover as hover, opened by tap on the legend
+     only. Smallest change; nothing else in the app gains tap-tooltips.
+  2. **One `ⓘ` at the end of the legend** opening a sheet that explains all eight
+     at once. A single target, reads better on a phone than eight popovers, and
+     doubles as the place to explain the page.
+
+  Hover and keyboard focus keep working either way.
+- ~~**U2 — the Needs-You rail has no home in the new design.**~~ Answered
+  above: out for now, Flock page only if it returns.
+- ~~**U3 — the autonomy toggle has no home outside Settings.**~~ Answered
+  above and recorded as D65.
 - **U4 — stops that were never classified are not logged.** `logs/stops.py`
   records evidence and verdict for every stop it *sees*, so `unknown` verdicts
   are already durable. The gap is the cohort whose record never arrived —
   currently only a count on a page. Log the absence at the point the fleet
   notices a stopped session with no record.
-- **U15 — model and engine per spawned session.** `spawn_session` takes `model`
-  and `effort` as optional arguments and `engine="claude_code"` is a **literal**
-  in `orchestration/spawn.py`. There is no default, no per-project setting and
-  no engine choice. Proposed and **not yet decided**: per-spawn (exists) over
-  per-project over an instance default, with the engine's own default last.
+- ~~**U15 — model and engine per spawned session.**~~ **Deferred**, no
+  precedence rule adopted. `spawn_session`'s `model` argument is the only lever
+  and `engine="claude_code"` stays a literal in `orchestration/spawn.py`.
 
 ## Working notes for whoever implements this
 

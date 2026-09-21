@@ -2,7 +2,7 @@
 
 ## User Standards
 
-- **The spec's decision log (§3) is law.** 64 numbered decisions (D1–D64, plus D38.1) with reasoning. Do not silently
+- **The spec's decision log (§3) is law.** 65 numbered decisions (D1–D65, plus D38.1) with reasoning. Do not silently
   reverse one — if implementation pressure pushes against a decision, say so and re-decide out loud.
 - **Typed, strict, small** (spec principle 6): Python 3.12, `mypy --strict`, no `Any`. Single
   responsibility per module; a file past ~600 lines is a signal it is doing too much.

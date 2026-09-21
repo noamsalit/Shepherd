@@ -86,7 +86,7 @@ conversation that produced it.
 
 | File | What it is |
 |---|---|
-| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 64 decisions **with their reasoning** — the most important section |
+| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 65 decisions **with their reasoning** — the most important section |
 | [`docs/specs/logical-architecture.md`](docs/specs/logical-architecture.md) | what may import what. Enforced as AST properties, not spellings |
 | [`docs/specs/data-schemas.md`](docs/specs/data-schemas.md) | every external shape, with a **real captured example**. Check one here before building on it |
 | [`docs/specs/implementation-constraints.md`](docs/specs/implementation-constraints.md) | 24 facts that change *how* a thing is built |
