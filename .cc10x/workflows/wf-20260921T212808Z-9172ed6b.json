@@ -1,0 +1,275 @@
+{
+  "workflow_uuid": "wf-20260921T212808Z-9172ed6b",
+  "workflow_id": "wf-20260921T212808Z-9172ed6b",
+  "workflow_type": "PLAN",
+  "state_root": ".cc10x",
+  "user_request": "Implement all backend changes required to support the 2026-09-21 UI redesign, then implement the UI itself \u2014 every page discussed: Shepherd, Flock, Projects, Settings (plus the Queues and Kanban placeholders). Route through cc10x: PLAN -> BUILD -> QA (Playwright) -> bug fixes until QA passes. Run fully autonomously; decide where decisions are needed; on a real blocker move to another part of the effort; stop only when done or fully blocked, then summarise work and gaps.",
+  "plan_file": "docs/plans/2026-09-21-projects-and-ui-plan.md",
+  "design_file": "docs/plans/2026-09-21-projects-and-ui-design.md",
+  "research_files": [
+    "docs/plans/recon/2026-09-21-backend-and-frontend-recon.md"
+  ],
+  "approved_decisions": [
+    "2026-09-21 owner: the Projects page is included in this effort, not deferred to a later milestone.",
+    "2026-09-21 owner: run fully autonomously, decide where decisions are needed, move to other work on a real blocker, stop only when done or fully blocked.",
+    "U2: the Needs-You rail is out of the shell; Flock page only if it returns. Reverses section 12's 'visible at all times' - needs its own decision row.",
+    "D65: the autonomy control is Settings-only.",
+    "U15: model/engine per spawned session deferred; no precedence rule adopted.",
+    "U16: cards take a wash of their bucket colour; the legend is coloured glyph + text.",
+    "U1: one info button opens a sheet explaining all eight buckets.",
+    "Design: D61's cascade lives in the verb, not ON DELETE CASCADE. No session table rebuild.",
+    "Design: migration 004 uses ALTER TABLE DROP COLUMN (probed working on SQLite 3.45.1).",
+    "Design: Unassigned is the reserved id 'unassigned', seeded by the migration.",
+    "Design: the page never sorts; fleet_bucket_sort_key is the only order.",
+    "Design: the Google Fonts link is dropped for a system font stack.",
+    "Design: removing the rail from the shell gets a numbered decision row (D66).",
+    "RD-1 APPROVED: upsert_workspace is deleted, not aliased. Once binding stops creating projects it has no caller in src/, and an alias would keep the match-on-name defect reachable.",
+    "RD-2 APPROVED: signals/discovery.py and its test file are deleted. discover_repos() has no caller in src/ and its sole documented justification (workspace.root_path) is removed by 004. It can return as an add_repo directory scanner when something needs it.",
+    "RD-3 APPROVED: workspace.last_activity_at is derived at read time from MAX(session.last_event_at), not written. Correct by construction, no new write path, and it stops a column that is always NULL being projected to the UI."
+  ],
+  "plan_mode": "execution_plan",
+  "build_scope": null,
+  "worktree": null,
+  "execution_mode": "subagent_dispatch",
+  "inline_fallback_reason": "task_primitive_unavailable: this harness exposes no TaskCreate/TaskList/TaskGet. The task graph is tracked in this artifact; every cc10x gate still runs.",
+  "verification_rigor": "critical_path",
+  "proof_status": "gaps_found",
+  "traceability": {
+    "requirements": [],
+    "phases": [],
+    "verification": [],
+    "remediation": []
+  },
+  "intent": {
+    "goal": "Ship the projects backend (D57-D61) and the redesigned dark-only web UI (U1-U18) so that Shepherd, Flock, Projects and Settings are real pages backed by real verbs, verified in a real browser.",
+    "non_goals": [
+      "M5 queues / work-item providers (W3) beyond configuration-only placeholders",
+      "Bring-your-own-harness (harness-contract.md, deferred)",
+      "Credentials / multi-user auth (credentials-and-auth.md, four open questions)",
+      "Real sandboxing (spec section 17)",
+      "Queues and Kanban beyond nav placeholders (W5)",
+      "Model/engine-per-session precedence (U15, deferred)"
+    ],
+    "constraints": [
+      "Spec section 3 decision log is law: D1-D65 plus D38.1. No silent reversal.",
+      "mypy --strict over src/ with disallow_any_explicit, no Any.",
+      "Downward-only imports; 105 AST boundary rules in tests/boundaries/ must stay green.",
+      "store/ exposes domain verbs returning dataclasses (D33). No SQL at call sites.",
+      "No shell=True anywhere (section 13); argv lists only.",
+      "web/static/ is byte-frozen by tests/boundaries/consumer_manifest.json - spend ONE post_milestone declaration on the whole redesign.",
+      "No node/npm/tsc on this host: plain ES modules, no build step (D51).",
+      "Renames land in core.stops.PALETTE, not a second UI label table (test_palette_matches_core_stops).",
+      "[hidden] display reset must be in the real stylesheet (U18); the artifact wrapper supplied it and web/static does not.",
+      "tmux: never a bare kill-server; -L on every invocation; never touch the shepherd socket.",
+      "Never write under ~/.claude/; settings.json sha 375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac must not change.",
+      "Planted violations are inert fixtures only, never live source the suite executes."
+    ],
+    "acceptance_criteria": [
+      "Migration 004 drops workspace.root_path, adds workspace.description, replaces repo.workspace_id with a repo-project join table (D60), forward-only, with 001-003 untouched.",
+      "admission.py allowlist is the registered repo paths alone; the workspace-root branch and its T11-1 special case are gone.",
+      "upsert_workspace no longer matches on name; identity is workspace.id. The /work/api vs /personal/api collapse is proven fixed by a test.",
+      "Five verbs registered as ToolDefs and reachable from both the master and the HTTP API: create_project, rename_project, delete_project, add_repo, remove_repo, with create_project/add_repo/delete_project blast_class=local_destructive.",
+      "list_repos has a ToolDef and a route.",
+      "Unassigned (D59) is a reserved project and the policy lives in bind_cwd_to_repo.",
+      "delete_project forgets, cascading to sessions; running sessions force the three-way choice (kill / orphan to Unassigned / cancel) rather than dying silently.",
+      "core.stops.PALETTE carries stranded / limit exceeded / unknown; Bucket values unchanged; the 90-day stop log is unaffected.",
+      "The UI ships as a dark-only redesign with a collapsible side pane and the six nav entries; Shepherd, Flock, Projects and Settings are functional; Queues and Kanban are declared placeholders.",
+      "tools/render_check.py passes at 390x844 and 1280x900: zero console errors, every page opens, no horizontal overflow.",
+      "Full suite green and mypy --strict clean at the end of every phase.",
+      "QA route runs against the built UI with Playwright and passes."
+    ],
+    "open_decisions": []
+  },
+  "normalized_phases": [],
+  "phase_cursor": "plan-review-gap-1",
+  "capabilities": {
+    "brightdata_available": "unknown",
+    "octocode_available": "unknown",
+    "websearch_available": "unknown",
+    "webfetch_available": "unknown"
+  },
+  "research_rounds": [],
+  "research_backend_history": [],
+  "research_quality": {
+    "web": "none",
+    "github": "none",
+    "overall": "none"
+  },
+  "task_ids": {
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "doc_syncer": null,
+    "planner_create": null,
+    "planning_review_pass1": null,
+    "planner_replan": null,
+    "planning_review_pass2": null,
+    "memory_finalize": null
+  },
+  "phase_status": {
+    "plan-create": "completed"
+  },
+  "deferred_findings": [
+    {
+      "source": "planner",
+      "phase_id": "plan-create",
+      "severity": "minor",
+      "finding": "docs/design/ui-decisions.md says 'Everything in the prototype is textContent'. It is not: eight innerHTML assignments, all findings under unsafe_sinks. Scoped into T6.1; the sentence in ui-decisions.md still needs correcting."
+    },
+    {
+      "source": "planner",
+      "phase_id": "plan-create",
+      "severity": "minor",
+      "finding": "docs/design/ui-decisions.md says one post_milestone declaration covers the redesign. Entries are per path; seven are needed. The sentence needs correcting."
+    }
+  ],
+  "results": {
+    "git_preflight": null,
+    "baseline": {
+      "suite": "green (exit 0), -m 'not live'",
+      "mypy": "clean over 127 files",
+      "branch": "integration",
+      "sha": "4761c1d",
+      "settings_sha": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+      "tmux_shepherd_socket": [
+        "m3",
+        "master"
+      ]
+    },
+    "git_base_sha": null,
+    "target_repo": null,
+    "builder": null,
+    "investigator": null,
+    "reviewer": null,
+    "hunter": null,
+    "verifier": null,
+    "planner": {
+      "status": "PLAN_CREATED",
+      "confidence": 82,
+      "phases": 11,
+      "tasks": 29,
+      "acceptance_clauses": 24,
+      "gate": "SPEC_GATE_PASS"
+    },
+    "planning_reviewer": null,
+    "qa_researchers": [],
+    "qa_plan": null,
+    "qa_harness_builder": null,
+    "qa_executor": null,
+    "doc_syncer": null,
+    "finishing": null,
+    "final_branch_review": null,
+    "research": {
+      "web": null,
+      "github": null,
+      "synthesis": null
+    }
+  },
+  "evidence": {
+    "builder": [],
+    "investigator": [],
+    "reviewer": [],
+    "hunter": [],
+    "verifier": [],
+    "planning_reviewer": [],
+    "qa_executor": []
+  },
+  "source_wf": null,
+  "source_bug_candidate": null,
+  "qa": {
+    "qa_scope": null,
+    "qa_sources": {},
+    "qa_env_preflight": {},
+    "env_mode": null,
+    "artifacts": {
+      "feature_map": null,
+      "test_plan": null,
+      "env_plan": null,
+      "report": null,
+      "setup_record": null
+    },
+    "bug_candidates": [],
+    "isolation": {
+      "denied_reads": [],
+      "denied_read_reason": null,
+      "plan_phase_readonly": true,
+      "mutation_allowlist": [
+        ".cc10x/"
+      ]
+    },
+    "env_key": null,
+    "preflight": {
+      "status": null,
+      "cost_tier_reached": null,
+      "checks": [],
+      "human_prerequisites": [],
+      "env_plan_corrections": [],
+      "setup_record_stale": false,
+      "last_run_wf": null
+    }
+  },
+  "telemetry": {
+    "task_metrics_available": "unknown",
+    "workflow_wall_clock_seconds": 0,
+    "agent_wall_clock_seconds": {
+      "builder": 0,
+      "investigator": 0,
+      "reviewer": 0,
+      "hunter": 0,
+      "verifier": 0,
+      "planner": 0
+    },
+    "loop_counts": {
+      "re_review": 0,
+      "re_hunt": 0,
+      "re_verify": 0
+    },
+    "verifier": {
+      "phase_exit_proof_runs": 0,
+      "extended_audit_runs": 0,
+      "workload_seconds": {
+        "tests": 0,
+        "build": 0,
+        "scan": 0,
+        "reconcile": 0,
+        "reasoning": 0
+      }
+    }
+  },
+  "quality": {
+    "confidence": null,
+    "evidence_complete": false,
+    "scenario_coverage": 0,
+    "research_quality": "none",
+    "convergence_state": "pending"
+  },
+  "planning_review_runs": 0,
+  "planning_review_findings": [],
+  "planning_review_status": "in_progress",
+  "plan_revision": 1,
+  "last_reviewed_revision": 0,
+  "memory_notes": [],
+  "pending_gate": null,
+  "status_history": [
+    {
+      "event": "workflow_started",
+      "ts": "2026-09-21T21:28:40Z",
+      "phase": "plan-create"
+    },
+    {
+      "event": "design_saved",
+      "ts": "2026-09-21T21:38:21Z",
+      "phase": "plan-create"
+    },
+    {
+      "event": "plan_saved",
+      "ts": "2026-09-21T21:56:25Z",
+      "phase": "plan-create"
+    }
+  ],
+  "remediation_history": [],
+  "created_at": "2026-09-21T21:28:40Z",
+  "updated_at": "2026-09-21T21:56:25Z"
+}
