@@ -8,7 +8,7 @@ unverified**, and what is **still open**.
 
 | | |
 |---|---|
-| default suite | **1840 passed, 1 skipped, 75 deselected** on Linux |
+| default suite | **1866 passed, 2 skipped, 75 deselected** on Linux |
 | live lane (`pytest -m live`) | **75 passed** — starts real `claude` processes and real tmux panes |
 | boundary rules | **105 passed** |
 | `mypy --strict src` | clean over **127** files, `disallow_any_explicit` on |

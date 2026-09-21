@@ -61,7 +61,7 @@ commit; D56–D64 written; five new documents added.
 
 ## Verification
 
-**Current state, measured on Linux:** **1840 passed, 1 skipped, 75 deselected**; live lane **75
+**Current state, measured on Linux:** **1866 passed, 2 skipped, 75 deselected**; live lane **75
 passed**; boundary rules **105**; `mypy --strict src` clean over **127** files with
 `disallow_any_explicit` on; `daemons/controld.py` still **140** lines.
 

@@ -16,7 +16,7 @@ M5 (queues) and M6 (packaging and ship) are not started.
 
 | | |
 |---|---|
-| suite | 1,840 passed, 1 skipped |
+| suite | 1,866 passed, 2 skipped |
 | live lane (`pytest -m live`) | 75 passed — real `claude` processes, real tmux panes |
 | import-boundary rules | 105 |
 | `mypy --strict src` | clean over 127 files, `disallow_any_explicit` on |
