@@ -340,3 +340,43 @@ conversation module keeps the filename `chat.js`; the *page* is called Shepherd.
 A module filename is not a user-facing label, and paying for that rename means
 either breaking a freeze gate or rewriting a re-base that is explicitly spent
 once.
+
+---
+
+## J. The shipped page, measured in a browser for the first time
+
+A real `controld` was started against an isolated `HOME`, `XDG_*` and an **empty**
+`engine_config_dir` — so the store, socket and logs were scratch and discovery
+scanned no real session. Verified during and after: `~/.claude/settings.json`
+sha unchanged, the user's two tmux sessions on the `shepherd` socket untouched,
+and the isolated store held zero projects (which is itself the proof that
+discovery saw nothing of the user's).
+
+`tools/render_check.py` now accepts a URL as well as a path, and was pointed at
+the served page. Two results:
+
+1. **No console errors** on the shipped UI, at either width.
+2. **The page scrolls sideways by 7px at 390×844.** The overflowing element is
+   exactly one node:
+
+   ```
+   BUTTON #chat-autonomy-next .chat-autonomy-next   right=397  width=23
+   ```
+
+   The viewport is 390. It is the autonomy toggle's increment button on the chat
+   page.
+
+**Which is the autonomy toggle — the control D65 removes from this page
+entirely.** The single element that breaks the shipped layout at phone width, on
+the primary client, is the one the owner had already decided to delete for
+unrelated reasons. The redesign closes this by construction rather than by
+fixing it.
+
+Recorded because it is also evidence about method: the shipped page has been in
+the tree since M4 and nobody had opened it at phone width. The check that found
+this took one command once the tool could address a URL.
+
+**And the reason the URL mattered.** A `file://` open proves the markup and the
+script. It cannot prove that the server hands over the same bytes, that the
+module graph resolves from `/static/`, or that first paint survives a real API
+returning real data. Point the check at the served page whenever one is running.

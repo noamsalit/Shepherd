@@ -10,13 +10,21 @@ The rule this encodes: a page is not verified until a browser has run it and a
 console error is a failure. Screenshots are the secondary output; the console
 and the assertions are the point.
 
-    /root/Shepherd/.venv/bin/python render_check.py shepherd-dark.html
+**Point it at the served page, not at a file, whenever one is running.** A file
+opened over `file://` proves the markup and the script; it cannot prove that the
+server hands over the same bytes, that the module graph resolves from
+`/static/`, or that the first paint survives a real API answering with real
+data. Those are exactly the failures a local file cannot have.
+
+    /root/Shepherd/.venv/bin/python tools/render_check.py shepherd-dark.html
+    /root/Shepherd/.venv/bin/python tools/render_check.py http://127.0.0.1:8765/
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -32,7 +40,20 @@ PAGES = [
 ]
 
 
-def check(path: Path, shots: Path) -> int:
+def target_url(target: str) -> str:
+    """A URL is used as given; anything else is a path resolved to a `file://`.
+
+    Deliberately not a guess: `urlparse` only treats it as a URL when it carries
+    an http(s) scheme, so a Windows-style path or a file named `http-notes.html`
+    is still read as a path.
+    """
+    parsed = urlparse(target)
+    if parsed.scheme in ("http", "https"):
+        return target
+    return Path(target).resolve().as_uri()
+
+
+def check(url: str, shots: Path) -> int:
     shots.mkdir(parents=True, exist_ok=True)
     failures: list[str] = []
 
@@ -45,7 +66,7 @@ def check(path: Path, shots: Path) -> int:
             page.on("console", lambda m: console.append(f"{m.type}: {m.text}"))
             page.on("pageerror", lambda e: console.append(f"pageerror: {e}"))
 
-            page.goto(path.resolve().as_uri())
+            page.goto(url)
             page.wait_for_timeout(700)
 
             errors = [c for c in console if c.startswith(("error", "pageerror"))]
@@ -89,10 +110,16 @@ def check(path: Path, shots: Path) -> int:
 
     for f in failures:
         print("FAIL", f)
-    print(f"\n{len(failures)} failures · screenshots in {shots}")
+    print(f"\n{url}")
+    print(f"{len(failures)} failures · screenshots in {shots}")
     return 1 if failures else 0
 
 
 if __name__ == "__main__":
-    target = Path(sys.argv[1] if len(sys.argv) > 1 else "shepherd-dark.html")
-    raise SystemExit(check(target, target.parent / "shots"))
+    raw = sys.argv[1] if len(sys.argv) > 1 else "shepherd-dark.html"
+    # Screenshots land beside the file when checking one, and in ./shots when
+    # checking a URL — a served page has no directory of its own to sit in.
+    where = Path(sys.argv[2]) if len(sys.argv) > 2 else (
+        Path("shots") if urlparse(raw).scheme in ("http", "https") else Path(raw).parent / "shots"
+    )
+    raise SystemExit(check(target_url(raw), where))
