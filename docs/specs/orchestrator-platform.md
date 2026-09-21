@@ -1104,9 +1104,27 @@ Each `owned` session is a tmux session named `shepherd_<session_id>`, on a **ded
 | Problem | How tmux solves it |
 |---|---|
 | Survive `sessiond` restart/upgrade | the tmux server is its own process |
-| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact**. Claude Code's TUI runs on the alternate screen, so tmux keeps no scrollback for it (`history_size` 0) and `-S -2000` returns only the visible rows. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
+| Correct resync on late attach | `capture-pane -e -p -S -2000` returns the current screen **with ANSI intact**. On the host this was written against, Claude Code's TUI runs on the alternate screen, so tmux keeps no scrollback for it (`history_size` 0) and `-S -2000` returns only the visible rows. A raw pty gives a byte firehose with no way to reconstruct the screen for a client that connects late — you would need a server-side terminal emulator |
 | Real "jump to terminal" | `tmux -L shepherd attach -t shepherd_<id>` and you are driving it by hand. CCC fakes this with AppleScript keystroke injection into Terminal.app |
-| Alt-screen + resize + reflow | already handled; Claude Code's TUI uses the alternate screen |
+| Alt-screen + resize + reflow | already handled by tmux, whichever screen the TUI takes |
+
+**Amended 2026-09-20, on the first macOS run — the alternate-screen claim only;
+the decision to use tmux stands, and is strengthened rather than weakened.**
+The two rows above asserted outright that Claude Code's TUI *runs on the
+alternate screen*. That was measured on Linux 6.8 / tmux 3.4 / engine 2.1.270
+and it is **not portable**: on macOS 26.6 / tmux 3.6a a live, prompt-ready
+engine reports `alternate_on=0`, and engine 2.1.267 and 2.1.278 both do, so it
+is not version drift (`docs/probes/2026-09-20-macos-pane/`).
+
+Nothing about the tmux choice depends on it — `capture-pane` returns the
+visible screen either way, which is what late-attach resync needs. What did
+depend on it was `runner/pane.py::_is_live_screen`, which used `alternate_on`
+as a proxy for "the TUI is drawing". Every healthy owned pane on a Mac fell
+through to `UNREADABLE`, and `write_policy` maps that to `REFUSE_NO_PTY` — so
+Shepherd could not send a keystroke to any owned session on macOS. The
+predicate now also accepts the engine's own input frame, which is the direct
+evidence the bit stood in for. The rule table is still derived from one host's
+captures; re-deriving it is `docs/backlog/2026-09-20-pane-table-macos.md`.
 
 Fallback `PtyRunner` behind the same interface if tmux is unavailable —
 degraded (no late-attach resync), and the UI says so.

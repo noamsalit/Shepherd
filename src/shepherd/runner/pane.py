@@ -221,7 +221,48 @@ def _is_permission_dialog(fields: PaneFields, screen: Screen | None) -> bool:
 
 
 def _is_live_screen(fields: PaneFields, screen: Screen | None) -> bool:
-    return screen is not None and fields.alternate_on and not fields.pane_dead
+    """A live engine screen: the alternate screen, **or** the engine's own frame.
+
+    `alternate_on` alone was the rule until 2026-09-20, and it is not portable.
+    It was never evidence about the engine — it is a terminal *mode*, and it was
+    standing in for "the TUI is drawing". On Linux 6.8 / tmux 3.4 / Claude Code
+    2.1.270 the two coincided (`run-20260914T154946Z/02-after-trust-fmt.txt`
+    records `alternate_on=1` once the TUI is up). On macOS 26.6 / tmux 3.6a they
+    do not: a live, prompt-ready engine reports `alternate_on=0`
+    (`docs/probes/2026-09-20-macos-pane/`), and since `_is_busy` and
+    `_is_prompt_ready` both build on this predicate, **every** healthy owned pane
+    on this platform fell through the table to `UNREADABLE` — and was counted as
+    an anomaly. `write_policy` maps `UNREADABLE` to `REFUSE_NO_PTY`, so Shepherd
+    could not send a keystroke to any owned session on a Mac.
+
+    Not the engine version (2.1.267 and 2.1.278 both report `0` here) and not a
+    tmux fault (a synthetic `\\033[?1049h` pane on the same socket reports `1`):
+    the engine simply does not take the alternate screen on this host.
+
+    `screen.has_input_line` is the **direct** evidence the bit was a proxy for —
+    the engine's own input box, a `─{4,}` rule above and below a line starting
+    `❯ `, which `_read_screen` already finds portably.
+
+    **The narrowing is deliberate and the residual gap is recorded, not an
+    oversight.** This is `or`, not "drop `alternate_on`". Dropping it would make
+    `_is_busy` the residual for any readable non-dialog pane, so a bare shell
+    would read `BUSY` instead of `UNREADABLE` and `_is_trust_dialog`'s
+    `not alternate_on` clause would stop discriminating anything
+    (`02-bare-shell.ansi` is the checked-in negative). What this `or` does not
+    recover is the other half: on a host where `alternate_on` is always `0`, an
+    engine **mid-turn** — drawing, with no input box — still reads `UNREADABLE`
+    rather than `BUSY`. That is a real limitation of this predicate and the
+    honest smaller one: it under-reports a busy pane, and `write_policy` answers
+    `REFUSE_NO_PTY` for it, which refuses a write rather than mis-sending one.
+
+    The proper fix is a macOS capture run and a table re-derived from it, the way
+    the Linux rows were (`docs/backlog/2026-09-20-pane-table-macos.md`).
+    """
+    return (
+        screen is not None
+        and not fields.pane_dead
+        and (fields.alternate_on or screen.has_input_line)
+    )
 
 
 def _is_prompt_ready(fields: PaneFields, screen: Screen | None) -> bool:

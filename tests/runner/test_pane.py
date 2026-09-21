@@ -73,6 +73,21 @@ DOCUMENTED: dict[str, tuple[PaneKind, str]] = {
 #: `14-list-sessions-after-sigterm.txt`, `probe_sig`: dead, status 143, no title.
 DEAD_FIELDS_LINE = "0|1|143||160|45|4042531"
 
+#: The **second host** (2026-09-20): macOS 26.6 / tmux 3.6a / Claude Code 2.1.278,
+#: where a live engine does *not* take the alternate screen. Both rows carry
+#: `alternate_on=0` — that is the property under test, not an incidental — and the
+#: lines are the `*-fmt.txt` files beside each capture, `pane_title` redacted the
+#: same way the Linux rows redact it. The bare shell is the negative control that
+#: makes the fix a narrowing rather than a deletion.
+MACOS_PANE = REPO_ROOT / "docs" / "probes" / "2026-09-20-macos-pane"
+MACOS_DOCUMENTED: dict[str, tuple[PaneKind, str]] = {
+    "01-prompt-ready-normal-screen.ansi": (
+        PaneKind.PROMPT_READY,
+        "0|0||<redacted: host name>|160|45|70064",
+    ),
+    "02-bare-shell.ansi": (PaneKind.UNREADABLE, "0|0||<redacted: host name>|160|45|70717"),
+}
+
 #: The three degraded inputs that are not truncations, plus every prefix of every
 #: `-e` capture. Stated as a constant so the loop cannot shrink without this
 #: number disagreeing with the generated one.
@@ -163,6 +178,59 @@ def test_busy_is_the_residual_and_cites_no_capture() -> None:
     without_input = b"\n".join(line for line in lines if "❯ ".encode() not in line)
     assert without_input != b"\n".join(lines)
     assert read_pane(without_input, fields_for("03-after-stop.ansi"), sink()).kind is PaneKind.BUSY
+
+
+# ----- the second host --------------------------------------------------------
+
+
+def test_a_live_engine_that_never_takes_the_alternate_screen_is_still_readable() -> None:
+    """The macOS capture, and the narrowing it forced (2026-09-20).
+
+    `_is_live_screen` required `alternate_on` on the strength of the Linux run
+    alone, where it is `1` once the TUI is up. On macOS 26.6 / tmux 3.6a a live,
+    prompt-ready engine reports `0` — and because `_is_prompt_ready` and
+    `_is_busy` both build on that predicate, every healthy owned pane fell through
+    to `UNREADABLE` and was counted as an anomaly. `write_policy` maps
+    `UNREADABLE` to `REFUSE_NO_PTY`, so Shepherd could not send a keystroke to any
+    owned session on a Mac.
+
+    This reads the real bytes, not a reconstruction, so it cannot be made green by
+    editing evidence — and it pins the fix in **both** directions. The engine pane
+    must classify `PROMPT_READY` with `alternate_on=0`; the bare shell, which is
+    live and readable and is *not* the engine, must still classify `UNREADABLE`.
+    Drop `alternate_on` instead of widening it and the second assertion goes red.
+    """
+    on_disk = {path.name for path in MACOS_PANE.glob("*.ansi")}
+    assert on_disk == set(MACOS_DOCUMENTED), on_disk.symmetric_difference(MACOS_DOCUMENTED)
+    assert len(on_disk) == 2
+
+    for name, (kind, line) in sorted(MACOS_DOCUMENTED.items()):
+        fields = parse_pane_fields(line)
+        assert fields.alternate_on is False, f"{name}: the whole point is alternate_on=0"
+        anomalies = sink()
+        state = read_pane((MACOS_PANE / name).read_bytes(), fields, anomalies)
+        assert state.kind is kind, f"{name}: {state.kind}"
+
+    engine = "01-prompt-ready-normal-screen.ansi"
+    assert read_pane(
+        (MACOS_PANE / engine).read_bytes(), parse_pane_fields(MACOS_DOCUMENTED[engine][1]), sink()
+    ).kind is PaneKind.PROMPT_READY
+
+
+def test_the_linux_alternate_screen_rows_still_classify_the_same() -> None:
+    """The narrowing is an `or`, so the first host's captures are untouched.
+
+    `test_every_ansi_capture_classifies_to_its_documented_kind` already covers the
+    table; this states the *reason* separately, so a future change that widens the
+    predicate again has to face both hosts at once rather than only the newer one.
+    """
+    alternate = [
+        name for name, (_, line) in DOCUMENTED.items() if parse_pane_fields(line).alternate_on
+    ]
+    assert len(alternate) == 5, alternate
+    for name in alternate:
+        state = read_pane(capture(name), fields_for(name), sink())
+        assert state.kind is DOCUMENTED[name][0], f"{name}: {state.kind}"
 
 
 # ----- ghost text -------------------------------------------------------------
