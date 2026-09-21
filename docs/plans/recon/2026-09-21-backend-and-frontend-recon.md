@@ -380,3 +380,34 @@ this took one command once the tool could address a URL.
 script. It cannot prove that the server hands over the same bytes, that the
 module graph resolves from `/static/`, or that first paint survives a real API
 returning real data. Point the check at the served page whenever one is running.
+
+---
+
+## K. The test sweep, counted rather than estimated
+
+The backlog says "~60 call sites". Measured:
+
+| | Count |
+|---|---|
+| `upsert_workspace(` call sites in `tests/` | **74** |
+| `upsert_workspace(` call sites in `src/` | 6 |
+| `root_path` occurrences in `tests/` | 36, across **10** files |
+
+**All 74 test call sites are the same two-argument positional shape** —
+`store.upsert_workspace(<name>, <path>)`, the most common being
+`store.upsert_workspace("shepherd", "/root/Shepherd")` (11 occurrences) and
+`opened.upsert_workspace("shepherd", "/root/Shepherd")` (6). Four pass `None` as
+the path (`upsert_workspace("rootless", None)`), which is the arm
+`test_upsert_workspace_updates_a_moved_root_path` pins.
+
+That uniformity is the good news: it is one mechanical rewrite, not 74 judgement
+calls. It is also the argument for doing it as **its own task with its own
+ledger** rather than letting it leak into every phase — a sweep this size
+touching ten files while other builders are working is exactly the shape that
+lost two tasks' ledger entries in M3.
+
+The densest files are `tests/store/test_verbs.py` and
+`tests/orchestration/test_admission.py` (8 `root_path` references each), then
+`tests/store/test_store_delegation.py` and `tests/golden/corpus.py` (5 each).
+`corpus.py` is the one to look at first: its `Binding` dataclass carries
+`root_path` as a field, so it is a shape change, not a call-site change.
