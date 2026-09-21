@@ -3,9 +3,11 @@
 ## Metadata
 
 - Created: 2026-09-21
-- **Revision: 3** (two targeted router corrections applied on top of revision 2;
-  revision 2 was itself the fresh-review-pass-1 revision — 7 blocking + 6 major
-  + the minors)
+- **Revision: 4** — **router-directed amendment** applying fresh-review pass 2
+  (5 blocking + 10 advisories). The two-pass fresh-review cap is spent; this is
+  the diff-scoped amendment lane, not a third pass.
+- Prior revisions: 3 (two router corrections), 2 (fresh-review pass 1: 7
+  blocking + 6 major + the minors), 1 (initial)
 - Status: draft
 - Plan Mode: `execution_plan`
 - Verification Rigor: `critical_path` (irreversible migration · security-adjacent
@@ -14,6 +16,30 @@
 - Python: `/root/Shepherd/.venv/bin/python` (3.12)
 - Supersedes: `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` §W1, with
   real tasks. §W2 and §W3 stay in the backlog.
+
+### What changed in revision 4
+
+Fifteen findings from fresh-review pass 2, all applied. Every one was
+re-verified against the source before it was written in; **one I can show is
+partly wrong, and it is flagged in F6 below rather than absorbed.**
+
+| # | Finding | Fix |
+|---|---|---|
+| **F1** | the `EXPECTED_SCHEMA_VERSION 3 → 4` bump was unswept, so **T1.1 could not pass its own Required Checks** | the three migration test modules join T1.1's Files; **19** hard-coded `3` literals enumerated by grep (the review listed seven); and a **17th retirement** — `test_future_schema_refuses_to_start_at_four` builds its impossible sentinel by inserting version 4, which 004 makes real and `schema_migration.version INTEGER PRIMARY KEY` turns into a PK collision. Successor proves the rule at version **5**. |
+| **F2** | Phase 1 still did not end green: `tools_m1.py:156` reads `workspace.root_path`, served by `/api/projects`, called by `test_fleet_page.py:102` — a **suite failure**, not a `mypy` finding | new **Task 1.10** moves the `project_workspace` projection into Phase 1; T3.2 shrinks to compose wiring alone |
+| **F3** | Phase 5 did not end green either: `test_palette.py:97` reads `rail.js`, deleted by T5.3 one phase before the literal is fixed; and `:42` reads `fleet.js`, deleted by T6.1, making **T6.1's own exit criterion unsatisfiable** | `tests/web/test_palette.py` joins T5.3's and T6.1's Files and Allowed Scope |
+| **F4** | T6.4's exit said "exactly 5 entries" against its own `Produces` of "4 of 6" — the **third** total-versus-rows disagreement | 5 → 4, with the arithmetic spelled out; every table in the plan re-added afterwards |
+| **F5** | `add_repo` could not be built from its declared inputs: `git_common_dir`, `name` and `vcs_remote` have no source | T3.1 names `probe_repo` / `repo_root` / `resolve_remote` and the `toolsurface → signals` edge (which already exists at `tools_m1.py:33`); the Purity Map now says this module is **not pure**; new **E23** because `git_common_dir` is D48's binding key and a placeholder would silently route every UI-registered repo's sessions to `Unassigned` |
+| **F6** | the sink line-to-module mapping was wrong and named a non-existent `T4.3` | an authoritative **line → enclosing function → module → task** table, recovered by walking each line back to its top-level function. **Partly disagrees with the review — see the report.** |
+| **F7** | T5.3 and T6.3 ran the freeze gate before their own manifest task | `tests/boundaries` removed from those Required Checks and the **red internal boundary declared**, the way Phase 1 declares its own |
+| **F8** | AC-21 `print`ed the count instead of asserting it — it exited 0 for any value, and it is the clause that would have caught F4 | now `sys.exit(0 if n==6 else …)`, plus an `escape.js` byte check |
+| **F9** | AC-15 selected `-k bounded` against a test the plan never named | names `test_the_project_list_issues_a_bounded_number_of_statements`, now owned by T1.10 |
+| **F10** | T1.7's Consumes named `Store.add_repo`; the unattached-repo verb is `Store.upsert_repo`. Following it would have attached every discovered repo to the reserved project and **widened `_registered_roots("unassigned")` to every repo the machine has ever seen** | corrected, with the consequence written down; `Store.upsert_repo` added to T1.6's Produces |
+| **F11** | the typography reversal was in Durable Decisions but not in Differences From Agreement — the same quiet-reversal shape `escape.js` was corrected for | **Differences From Agreement #6** |
+| **F12** | `test_controld.py:313` asserts a static markup literal the seed cannot affect, and was wrongly on N1's red list | removed, with a note saying why listing it would invite a builder to "repair" a green assertion |
+| **F13** | `tools/render_check.py:29` imports `playwright.sync_api` at module level, so T0.1's by-path load would make **playwright an undeclared suite dependency** — A6's hazard by a second door, and `-m 'not live'` does not help because deselection happens after import | `pytest.importorskip("playwright")` as the test's first statement, asserted by T0.1's exit; recorded in **A5** and as **E24** |
+| **F14** | citation slips in RD-2 and E14 | RD-2 now cites `discovery.py:1` and `:28-66`; E14 cites `registry.py:69` **and** `:318-319`, where the correlation id is actually recorded |
+| **F15** | §3's headline *"65 decisions (D1–D65…)"* (`orchestrator-platform.md:34`) becomes false when D66 and D67 land | in T5.1's Allowed Scope (→ 66) and T6.3's (→ 67) |
 
 ### What changed in revision 3
 
@@ -39,7 +65,7 @@ before applying. **Nothing else changed.**
 | **M1–M6, minors** | all applied; see the index and the task bodies |
 | **My own r1 arithmetic** | r1's prose said "fifteen retirements" over a list of 7+4+3+1+1 = **16**. Corrected. |
 | **The dispatch brief's `1482`** | The brief used `wc -l`; `grep -c "::"` is **1480**. The plan carried 1480 from r1 and keeps it. |
-| **Two hazards nobody named** | N1 and N2 below — the seeded `unassigned` row breaks three "empty" assertions, and eight `list_workspaces()[0]` sites start returning the reserved project. Both are sweep items in T1.5. |
+| **Two hazards nobody named** | N1 and N2 below — the seeded `unassigned` row breaks two "empty" assertions, and eight `list_workspaces()[0]` sites start returning the reserved project. Both are sweep items in T1.5. |
 
 ---
 
@@ -99,9 +125,9 @@ before applying. **Nothing else changed.**
 | # | Decision | Recommended | Rejected | Why |
 |---|---|---|---|---|
 | RD-1 | What happens to `upsert_workspace` | **Delete the verb.** D57 removes match-on-name, and binding stops creating projects, so it has no caller in `src/`. Test fixtures call `create_project(name=…)` instead. | Keep it as a thin alias over `create_project` | A second creation path around the verb the lifecycle is built from is exactly the drift D57 exists to close. Cost: one retired frozen node id and the ~35-module sweep, which is its own task either way. |
-| RD-2 | `discover_repos()`'s fate | **Delete `src/shepherd/signals/discovery.py` and `tests/signals/test_discovery.py`.** | Wire it to `add_repo` as a directory-scan helper | Its module docstring names `workspace.root_path` as its whole reason to exist and 004 removes that column. U14 has repo paths typed in the Edit dialog, not scanned, so wiring it would be building a caller to justify a module rather than the other way round. Cost: three retired frozen node ids. Recoverable from git if W3 ever wants a scanner. |
+| RD-2 | `discover_repos()`'s fate | **Delete `src/shepherd/signals/discovery.py` and `tests/signals/test_discovery.py`.** | Wire it to `add_repo` as a directory-scan helper | Its module docstring (`discovery.py:1`) names `workspace.root_path` as its whole reason to exist, and 004 removes that column; the function itself is `discovery.py:28-66` and has no caller in `src/`. U14 has repo paths typed in the Edit dialog, not scanned, so wiring it would be building a caller to justify a module rather than the other way round. Cost: three retired frozen node ids. Recoverable from git if W3 ever wants a scanner. |
 | RD-3 | `workspace.last_activity_at` | **Stop reading the column; derive the value** as `MAX(session.last_event_at)` over the project's sessions, in one read (`reads.project_last_activity`). The column stays in the schema (004 does not drop it) and stays unwritten. | Write the column inside `apply_fold_delta` | A write per folded event on the hot path, to maintain a value one `GROUP BY` already answers, is a second source of truth for a number nothing else needs. **This is a deviation from the design's wording** and is listed under Differences From Agreement rather than absorbed. |
-| ~~RD-4~~ | ~~`escape.js`~~ | **Decided by the owner at revision 3: KEEP it, byte-unchanged.** No longer a default; it is applied. See ADR-P6 and Differences From Agreement #5. | Deleting it, as the design's file-layout table said | Deleting a documented, deliberately-kept helper is a small capability decision wearing a tidy-up's clothes — B4's lesson applied to a different file. It would also cost one retirement, one `post_milestone` entry and one `UNREACHABLE_BY_DESIGN` edit, in a change already retiring sixteen ids. |
+| ~~RD-4~~ | ~~`escape.js`~~ | **Decided by the owner at revision 3: KEEP it, byte-unchanged.** No longer a default; it is applied. See ADR-P6 and Differences From Agreement #5. | Deleting it, as the design's file-layout table said | Deleting a documented, deliberately-kept helper is a small capability decision wearing a tidy-up's clothes — B4's lesson applied to a different file. It would also cost one retirement, one `post_milestone` entry and one `UNREACHABLE_BY_DESIGN` edit, in a change already retiring seventeen ids. |
 
 ---
 
@@ -160,9 +186,30 @@ revision 2 diagnosed it wrongly.**
    2858, 3101, 3617 — and one, `prose.innerHTML = line[1]` at line 2814, assigns
    a bare variable. `unsafe_sinks` allows a sink only when its right-hand side is
    a **single** quoted literal with no concatenation, so **all eight are
-   findings**. They are split by owning module across T4.3, T5.1 and T6.1 — three
-   are in the shared conversation renderer and one is the shell's back chevron,
-   so putting all eight in one task would have put edits in the wrong files.
+   findings**.
+
+   **Assigned by enclosing function, not by line proximity** — revision 3's
+   split named a task (`T4.3`) that does not exist and put three of them in the
+   wrong module. The mapping below was recovered by walking each line back to
+   its top-level function in the prototype, and it is the authoritative one:
+
+   | line | enclosing function | ships in | task |
+   |---|---|---|---|
+   | 2520 | `renderLegend()` | `flock.js` | T6.1 |
+   | 2858 | `BACK_BUTTON(level)` | `flock.js` | T6.1 |
+   | 2688 | `bylineMark()` | `session.js` (the Flock's third pane, D67) | T6.3 |
+   | 2796 | `renderDetail()` — the `<details>` step | `session.js` | T6.3 |
+   | 2814 | `renderDetail()` — `prose.innerHTML = line[1]`, **the one bare variable** | `session.js` | T6.3 |
+   | 2837 | `renderDetail()` — the send-button icon | `session.js` | T6.3 |
+   | 3101 | `BACK_BUTTON_P()` | `projects.js` | T9.1 |
+   | 3617 | `panelHead(title)` | `settings.js` | T7.2 |
+
+   **T5.3 rewrites none of them** — the shell has no sink, and revision 3's
+   "the shell's back chevron" was wrong: both back chevrons belong to pages.
+   **T7.1 rewrites none either** — `chat.js` already has no sink
+   (`test_the_chat_page_has_no_html_sink`), and the prototype's Shepherd thread
+   is static markup; `renderDetail` is the *session pane's* renderer, which D67
+   puts in `session.js`. Totals: T6.1 = 2, T6.3 = 4, T7.2 = 1, T9.1 = 1.
 8. **CONTRADICTS `docs/design/ui-decisions.md`.** That file says *"Spend one
    `post_milestone` declaration on the whole redesign."* `post_milestone_paths`
    (`_imports.py:242-266`) asserts `len(seen) == len(set(seen))` — entries are
@@ -173,16 +220,21 @@ revision 2 diagnosed it wrongly.**
 9. **CONTRADICTS nothing, but no input document mentions it.**
    `tests/boundaries/collected_node_ids.txt` freezes **1480** node ids, and
    retirement entries must carry a reason over 80 characters and a decision
-   string containing `"§"` or `"RD-"`. This work retires **sixteen**; the
+   string containing `"§"` or `"RD-"`. This work retires **seventeen**; the
    per-file walk is in the next section.
 10. **N1 — CONTRADICTS nothing written down, and it breaks three tests.**
     Migration 004 seeds the `unassigned` row, so a fresh database is **no longer
     empty of projects**. Three assertions go red:
-    `tests/web/test_fleet_page.py:104` (`projects["projects"] == []`),
-    `tests/signals/test_binding.py:54` (`len(store.list_workspaces()) == 1`),
-    and `tests/daemons/test_controld.py:313` reads the empty-state markup that
-    goes with them. All three are **body rewrites** — the seeded project is real
-    and the tests should say so — and they are named in T1.5's sweep.
+    **two** assertions go red: `tests/web/test_fleet_page.py:104`
+    (`projects["projects"] == []`) and `tests/signals/test_binding.py:54`
+    (`len(store.list_workspaces()) == 1`). Both are **body rewrites** — the
+    seeded project is real and the tests should say so — and both are named in
+    T1.5's sweep.
+    **`tests/daemons/test_controld.py:313` is NOT one of them** (corrected at
+    revision 4, F12): it asserts `"no sessions discovered yet" in body`, a
+    **static markup literal** that the seeded row cannot affect. Listing it
+    would invite a builder to "repair" a green assertion, which is how a real
+    check gets weakened while nobody is looking.
     Good news, verified: `fleet_tree` groups over rows that exist, so an empty
     `unassigned` project does **not** appear in `data["workspaces"]`, and
     `test_controld.py:318`'s `data["workspaces"] == []` stays green.
@@ -229,13 +281,14 @@ does not name a location the redesign removed.
 
 ---
 
-## The frozen node-id walk — sixteen retirements, named per file
+## The frozen node-id walk — seventeen retirements, named per file
 
 Walked test by test. **Everything not listed as a retirement is a body rewrite
 that keeps its node id.**
 
 | File | Frozen ids | Retired | Kept | The decision string each retirement carries |
 |---|---|---|---|---|
+| `tests/store/test_migration_003.py` | 12 | **1** | 11 | `"§7 rule 2, re-anchored by §3 D57's migration 004"` |
 | `tests/web/test_rail.py` | 7 | **7** (all) | 0 | `"§3 D66"` |
 | `tests/orchestration/test_admission.py` | 15 | **4** | 11 | `"§3 D57"` |
 | `tests/signals/test_discovery.py` | 3 | **3** (all) | 0 | `"§3 D57 / RD-2"` |
@@ -246,7 +299,7 @@ that keeps its node id.**
 | `tests/web/test_palette.py` | 7 | **0** | 7 | — (the stop-summary strip is kept) |
 | `tests/web/test_session_wiring.py` | 10 | **0** | 10 | — (D67 retains reachability) |
 | `tests/web/test_routes.py`, `test_routes_m3.py`, `test_frontend_no_build_step.py` | 27 | **0** | 27 | — (literals widened, names untouched) |
-| **Total** | | **16** | | |
+| **Total** | | **17** | | |
 
 **The four in `test_admission.py`**, each `"§3 D57"`:
 `test_a_repo_registered_outside_its_workspace_root_is_admitted`,
@@ -255,6 +308,11 @@ that keeps its node id.**
 `test_a_workspace_with_neither_a_root_nor_a_repo_refuses_everything`.
 Each names a column that no longer exists or asserts behaviour D57 reverses.
 Each gets a named successor in the same file.
+
+**The one in `test_migration_003.py`:**
+`test_future_schema_refuses_to_start_at_four` — see T1.1. Its eleven siblings
+in that module, and all 21 frozen ids in `test_migrations.py` and
+`test_migration_002.py`, survive as body rewrites of the version-3 literals.
 
 **The one in `test_store_delegation.py`:**
 `test_upsert_workspace_updates_a_moved_root_path` (RD-1 deletes the verb; the
@@ -286,7 +344,7 @@ every action with its source" stays literally true.
 | A2 | `ALTER TABLE repo DROP COLUMN workspace_id` succeeds on the FK-referencing side | `proven_by_code` | Probed against SQLite 3.45.1. T1.1 asserts the host's `sqlite3.sqlite_version >= "3.35"` so the probe's answer applies here. |
 | A3 | A `HUMAN`-audience call to a `local_destructive` tool needs no approval card | `proven_by_code` | `toolsurface/policy.py` docstring, DP2/K23. |
 | A4 | New routes are permitted by the additive gate | `proven_by_code` | `test_the_pre_m4_route_mappings_are_unchanged` (`:170`) is a **subset** check. |
-| A5 | `playwright` + chromium work headless in this venv | `proven_by_code` | `import playwright` succeeds; the tool already ran against the prototype. |
+| A5 | `playwright` + chromium work headless in this venv | `proven_by_code` | `import playwright` succeeds; the tool already ran against the prototype. **But it is not a declared dependency either** (`pyproject.toml:15`), and `tools/render_check.py:29` imports `playwright.sync_api` at **module level** — so a test that loads that module by path makes playwright a suite import (F13). Marker deselection does not help: `-m 'not live'` deselects *after* collection imports the module. `tests/tools/test_render_check_args.py` therefore opens with `pytest.importorskip("playwright")`. |
 | A6 | `esprima` is importable but **not** a declared dependency | `proven_by_code` | `pyproject.toml:15` lists only `claude-agent-sdk` and `anyio`. **No suite test may import it.** |
 | A7 | Deleting `fleet.js` and adding `flock.js` passes the freeze with two `post_milestone` entries | `proven_by_code` | Simulated through the real helpers; recon §I. |
 | A8 | `PaneState.dialog_text` carries the permission dialog's numbered option lines | `inferred` | `pane.py:215` detects the dialog from `PERMISSION_MARKER` **plus a numbered option line**, so the lines are on the screen; that they survive into `dialog_text` is the inference. **Falsified by** T8.1's first assertion, which stops and writes `t8-1.md` rather than widening the capture path. |
@@ -373,7 +431,7 @@ Every test named here has an owning module and a building task in the
 | E11 | spawn into a project with zero repos | `_registered_roots` → empty | `test_a_project_with_no_repo_refuses_everything` |
 | E12 | a stored repo path that stops canonicalizing | `admission.py:141-143` | existing `test_a_registered_root_that_will_not_canonicalize_refuses_and_names_itself`, body rewritten, **node id kept** |
 | E13 | `delete_project` while a session is mid-turn | default refuse | `test_delete_refuses_by_default_and_names_the_running_sessions` |
-| E14 | tool handler raises | `registry.py:69` | `test_the_projects_page_renders_the_correlation_id` |
+| E14 | tool handler raises | `registry.py:69` (`GENERIC_ERROR = "request failed"`) and `registry.py:318-319` (where the correlation id is recorded against the failure) | `test_the_projects_page_renders_the_correlation_id` |
 | E15 | every page hidden at once (U18) | `[hidden] { display: none !important }` | `test_app_css_carries_the_hidden_reset` |
 | E16 | a `needs_you` pane the parser cannot read | `read_decision` returns `None` | `test_an_unparseable_dialog_degrades_to_the_ask_and_never_guesses` |
 | E17 | C15's workspace-trust dialog | `PaneKind.TRUST` named explicitly | `test_the_trust_dialog_is_named_and_never_answered_blind` |
@@ -382,6 +440,8 @@ Every test named here has an owning module and a building task in the
 | E20 | an **idle** session | no decision card at all (U11) | `test_an_idle_session_gets_no_decision_card` |
 | E21 | a fresh install now has one project, not zero (**N1**) | 004 seeds `unassigned` | `test_a_fresh_install_holds_exactly_the_unassigned_project` |
 | E22 | the seeded project leads the ordered list, so `[0]` is the wrong project (**N2**) | `reads.py:102`'s existing `ORDER BY name` + BINARY collation | `test_unassigned_leads_the_ordered_project_list` |
+| E23 | a repo registered through the UI must bind a later discovered session (**F5**) | `add_repo` probes git for `git_common_dir`, D48's binding key; a path that does not probe is refused, never stored with a placeholder | `test_a_ui_registered_repo_binds_a_discovered_session_to_that_project` |
+| E24 | the suite must not import `playwright` (**F13**) | `pytest.importorskip("playwright")` as the first statement of the tool test | `test_the_tool_test_skips_rather_than_importing_playwright` |
 
 ---
 
@@ -415,7 +475,7 @@ Every test named here has an owning module and a building task in the
 | `store/db.py` `Store` | the one writer thread | delegation only, no logic |
 | `signals/binding.py` | I/O (git subprocess), never raises | `RepoBinding` |
 | `orchestration/admission.py` | filesystem `resolve()` only | `Path` list or `SpawnRefused` |
-| `toolsurface/tools_projects.py` | composition, projection, **and path validation** | `dict[str, object]` |
+| `toolsurface/tools_projects.py` | composition, projection, path validation, **and the git probe** — it runs `probe_repo` / `repo_root` / `resolve_remote` in a subprocess, so it is the one new module in this plan that is **not** pure. Named rather than implied (F5): `writes.add_repo` needs `git_common_dir`, and `git_common_dir` is D48's binding key. | `dict[str, object]` |
 | `web/routes.py` | a path→name table. **No logic, ever.** | `Resolved` |
 | `web/static/*.js` | DOM only, `textContent` only | — |
 
@@ -490,7 +550,7 @@ down still resolves. Ten phases run.
 | Phase | Depends on | Enables |
 |---|---|---|
 | 0 — tooling and ledger | — | 10 (the live harness), every task (the ledger) |
-| 1 — migration, store, binding, admission | 0 | 3 |
+| 1 — migration, store, binding, admission, the project projection | 0 | 3 |
 | ~~2~~ | *retired — folded into 1* | |
 | 3 — tool surface | 1 | 4 |
 | 4 — routes | 3 | 5, 7, 8 |
@@ -558,7 +618,13 @@ checker can reach a served page and fails on a page it should fail on.
 - **Checkpoint Type:** none
 - **Exit Criteria:** `tests/tools` passes; `PAGES` has six entries and
   `NAV_SELECTOR` / `DRAWER_SELECTOR` are named constants; the tool still runs
-  against the prototype file; `grep -rn "esprima" tests/` is empty (A6).
+  against the prototype file; `grep -rn "esprima" tests/` is empty (A6); and
+  **the suite collects and passes with playwright uninstalled** — proved by
+  running the collection with the package hidden
+  (`.venv/bin/python -m pytest tests/tools -q -p no:cacheprovider` under a
+  `sys.path` that cannot see it, or simply by asserting the
+  `pytest.importorskip("playwright")` call is the module's first statement via
+  an AST read). (F13)
 - **Consumes:** none
 - **Produces:** `tools/render_check.py::check(origin, shots)`,
   `tools/render_check.py::PAGES` (six entries),
@@ -577,6 +643,15 @@ checker can reach a served page and fails on a page it should fail on.
 > `tools/js_syntax_check.py` imports `esprima`. **No file under `tests/` may
 > import it** (A6): a suite import would make a green run depend on an
 > undeclared package. It is an acceptance command, not a gate.
+>
+> **The same hazard reaches playwright by a different door (F13).**
+> `tools/render_check.py:29` does `from playwright.sync_api import sync_playwright`
+> at module level, and this task's test loads that module by path — so a plain
+> `pytest tests/tools` would import playwright. `-m 'not live'` does **not**
+> save it: deselection happens after collection has already imported the module.
+> The test's **first statement** is therefore
+> `pytest.importorskip("playwright")`, and T0.1's exit asserts the suite still
+> collects and passes on a machine where playwright is absent.
 
 #### Task 0.2 — the blockers ledger, one file per task
 
@@ -608,33 +683,62 @@ change breaks**, in one phase — because a phase that ends with two known-broke
 an irreversible migration gets one human look at the applied schema.
 **Test Seams:** unit (`store/writes.py`, `store/reads.py` against an in-memory
 connection); unit (`_registered_roots`, `bind_cwd_to_repo` against a temp git
-tree); integration (`Store` across its one writer thread); integration (the
-migration runner against a real file database with real rows); integration (both
-discovery lanes through `discovery_loop` and `hook_lane`).
+tree); unit (`project_workspace` as a pure projection, T1.10); integration
+(`Store` across its one writer thread); integration (the migration runner
+against a real file database with real rows); integration (both discovery lanes
+through `discovery_loop` and `hook_lane`); integration (`/api/projects` through
+`tests/web/conftest.py::Client`, which is the seam F2 showed was unguarded).
 **Green at the boundary:** yes.
-**Green at the internal task boundaries T1.1→T1.9:** **no, by construction.**
+**Green at the internal task boundaries T1.1→T1.10:** **no, by construction.**
 `repo.workspace_id` cannot both exist and not exist, so expand–contract is
 unavailable for a single rehearsed migration. The design settled on one
 migration; this plan does not reopen it. These nine tasks share the phase's green
-promise, and **nothing outside Phase 1 starts until it is kept.**
+promise, and **nothing outside Phase 1 starts until it is kept.** **T1.10 is
+the task that makes it true** (F2): it is the last `src/` module the schema
+change breaks, and `/api/projects` is a suite path, not a `mypy` path.
 **What this phase does NOT prove:** that any of it is reachable from a tool, a
 route or a page. Seven verbs with no caller are seven unproven verbs — Phase 9
 is where they are proved. It also does not prove the hook lane's other three
 call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 `RepoBinding` with a non-null `workspace_id`.
 
-> **Task-id note.** T1.7–T1.9 were T2.1–T2.3 at revision 1. The mapping is
-> recorded here so a ledger entry written against either spelling resolves.
+> **Task-id note.** T1.7–T1.9 were T2.1–T2.3 at revision 1. **T1.10 is new at
+> revision 4** (F2) and was T3.2's first half at revisions 1–3. Both mappings
+> are recorded so a ledger entry written against any spelling resolves.
 
 #### Task 1.1 — migration 004
 
 - **Files:** `src/shepherd/store/migrations/004_projects.sql` *(new)*,
   `src/shepherd/store/migrate.py` (one constant),
-  `tests/store/test_migration_004.py` *(new)*
+  `tests/store/test_migration_004.py` *(new)*,
+  **`tests/store/test_migrations.py`**, **`tests/store/test_migration_002.py`**,
+  **`tests/store/test_migration_003.py`** (the version-3 literals — **F1**),
+  `tests/boundaries/test_collected_node_ids.py` (one retirement)
 - **Dependencies:** none
 - **Allowed Scope:** the SQL exactly as the design rehearsed it, plus
   `PRAGMA defer_foreign_keys=ON` copied from `002:37`; `EXPECTED_SCHEMA_VERSION`
   `3 → 4`.
+  **The version-3 sweep, which is not optional and is the reason those three
+  modules are in Files (F1).** `EXPECTED_SCHEMA_VERSION` is compared against a
+  hard-coded `3` in **19 places** across them —
+  `grep -rn "== 3\b" tests/store/test_migrations.py tests/store/test_migration_002.py tests/store/test_migration_003.py`
+  is the enumeration — including `test_migrations.py:70,77,100-103,142`,
+  `test_migration_002.py:123,136-137,260,296` and
+  `test_migration_003.py:186,203-204,228,409,448`. T1.1's own Required Checks
+  run exactly these modules, so **without this sweep T1.1 cannot pass its own
+  checks.** Every one is a body rewrite; **one is not.**
+  **The one retirement: `tests/store/test_migration_003.py::test_future_schema_refuses_to_start_at_four`.**
+  It migrates to 3 and then inserts a `schema_migration` row at version **4** to
+  build "a database from the future" (`:420-434`). Migration 004 makes version 4
+  real, and `schema_migration.version` is `INTEGER PRIMARY KEY`
+  (`001_m1_foundation.sql:22`), so that insert becomes a **PK collision** — it
+  stops being the future-schema refusal it asserts. Decision string
+  **`"§7 rule 2, re-anchored by §3 D57's migration 004"`**, reason over 80
+  characters: *the test builds its impossible sentinel by inserting version 4,
+  and 004 makes 4 the real current version, so the row collides on the primary
+  key instead of tripping §7 rule 2; the rule itself is unchanged and is
+  re-proved one version up by the named successor
+  `test_future_schema_refuses_to_start_at_five`.*
 - **Out-of-Scope Drift:** touching 001–003; adding a trigger; a semicolon inside
   a string literal; numbering outside `00N_`; rebuilding `session`.
 - **Expected Artifacts:** `004_projects.sql` containing, in order —
@@ -662,7 +766,10 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   from `PRAGMA table_info` rather than typed twice; (e) re-running `migrate()`
   is a no-op; (f) 001–003's recorded sha256 are unchanged; (g)
   `sqlite3.sqlite_version >= "3.35"` is asserted, so A2's probe applies here and
-  a host that regresses says so.
+  a host that regresses says so; the 19 version-3 literals are updated and
+  `tests/store` is green; exactly one retirement, whose successor
+  `test_future_schema_refuses_to_start_at_five` inserts version **5** and proves
+  §7 rule 2 unchanged.
 - **Consumes:** none
 - **Produces:** `004_projects.sql`, `project_repo` (table), `ix_repo_common_dir`,
   `workspace.description`, `EXPECTED_SCHEMA_VERSION = 4`, the seeded project id
@@ -766,8 +873,8 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Files:** the **35** test modules that call `upsert_workspace` (measured:
   `grep -rl "upsert_workspace" tests/ --include=*.py | wc -l` == 35), plus those
   reading `Workspace.root_path` / `Repo.workspace_id`, plus `tests/golden/corpus.py`,
-  plus the three N1 sites (`tests/web/test_fleet_page.py:104`,
-  `tests/signals/test_binding.py:54`, `tests/daemons/test_controld.py:313`),
+  plus the **two** N1 sites (`tests/web/test_fleet_page.py:104`,
+  `tests/signals/test_binding.py:54` — **not** `test_controld.py:313`, F12),
   plus the **eight** N2 sites listed in Codebase Reality Check #11, plus
   `tests/boundaries/test_collected_node_ids.py` for the one retirement.
 - **Dependencies:** T1.4
@@ -775,7 +882,7 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   `store.upsert_workspace(name, root)` → `store.create_project(name=name, description=None)`
   plus, where the fixture needed the path admissible, `store.add_repo(...)`;
   `tests/golden/corpus.py::Binding.root_path` → `repo_root`;
-  **N1:** the three "empty" assertions become assertions about the one seeded
+  **N1:** the two "empty" assertions become assertions about the one seeded
   project (E21's `test_a_fresh_install_holds_exactly_the_unassigned_project` is
   the new positive statement of it);
   **N2:** all eight `store.list_workspaces()[0]` sites select the project they
@@ -821,7 +928,7 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Produces:** `Store.create_project`, `Store.rename_project`,
   `Store.delete_project`, `Store.add_repo`, `Store.remove_repo`,
   `Store.get_workspace`, `Store.projects_for_repo`, `Store.project_last_activity`,
-  `Store.repo_counts`, `Store.running_sessions_for`
+  `Store.repo_counts`, `Store.running_sessions_for`, **`Store.upsert_repo`**
 
 #### Task 1.7 — `bind_cwd_to_repo` binds to `Unassigned` *(was T2.1)*
 
@@ -839,8 +946,17 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   `test_a_non_repo_cwd_binds_to_unassigned_and_counts_the_anomaly` and
   `test_the_new_session_lands_in_that_project`; `RepoBinding.workspace_id` is
   still non-optional; the *"never raises"* docstring is unchanged **and true**.
+
+> **F10, and it is a live hazard, not a typo.** Revision 3's Consumes named
+> `Store.add_repo`. That verb attaches a repo **to a project**; the new-repo
+> branch must register the repo row **unattached**. Following revision 3 would
+> have put every discovered repo into `project_repo` under the reserved id, and
+> `_registered_roots("unassigned")` would then widen to every repo the machine
+> has ever seen — a §13 allowlist that grows by discovery. The verb is
+> `Store.upsert_repo`.
+
 - **Consumes:** `shepherd.store.models.UNASSIGNED_PROJECT_ID`,
-  `Store.projects_for_repo`, `Store.add_repo`
+  `Store.projects_for_repo`, `Store.upsert_repo`
 - **Produces:** `bind_cwd_to_repo(store, cwd) -> RepoBinding` with
   `workspace_id` never null and never auto-created
 
@@ -899,6 +1015,38 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Produces:** `_registered_roots(store, workspace_id) -> list[Path] | SpawnRefused`
   over repo paths alone
 
+#### Task 1.10 — the `project_workspace` projection, because Phase 1 must end green
+
+- **Files:** `src/shepherd/toolsurface/tools_m1.py`,
+  `tests/toolsurface/test_tools_m1.py`, `tests/web/test_fleet_page.py`
+- **Dependencies:** T1.6
+- **Allowed Scope:** **F2, and it is B1's shape on a third module B1 did not
+  enumerate.** `project_workspace` reads `workspace.root_path`
+  (`tools_m1.py:156`) and is reached from `list_projects` (`:363-364`), which
+  `/api/projects` serves and `tests/web/test_fleet_page.py:102` calls. T1.2
+  removes that field, so leaving the repair in Phase 3 would end Phase 1 with a
+  **suite failure, not merely a `mypy` finding**.
+  `project_workspace()` drops `root_path`, gains `description` and
+  `repo_count`, and takes `last_activity_at` and `repo_count` as arguments fed
+  from `Store.project_last_activity` and `Store.repo_counts` — **one query each
+  for the whole list**, never an N+1 (M4, RD-3). The consumer key stays
+  `project_id`. `list_projects` is rewired to pass them.
+- **Out-of-Scope Drift:** registering anything (that is T3.1); touching
+  `compose.py` (T3.2); touching `fleet_tree`'s ordering; calling `list_repos`
+  once per project.
+- **Required Checks:**
+  `.venv/bin/python -m pytest tests/toolsurface tests/web/test_fleet_page.py -q` ·
+  `.venv/bin/mypy --strict src/shepherd`
+- **Validation Level:** Deterministic.
+- **Checkpoint Type:** none
+- **Exit Criteria:** **the whole suite is green and `mypy --strict src/` is
+  clean** — this is the task that makes Phase 1's green boundary true;
+  `test_the_project_list_issues_a_bounded_number_of_statements` passes.
+- **Consumes:** `Store.project_last_activity`, `Store.repo_counts`,
+  `Workspace(id, owner_id, name, description, created_at, last_activity_at)`
+- **Produces:** `project_workspace(workspace, *, repo_count: int, last_activity_at: str | None) -> dict[str, object]`
+  with keys `project_id`, `name`, `description`, `repo_count`, `last_activity_at`
+
 ---
 
 ### Phase 2 — *retired*
@@ -939,7 +1087,21 @@ or that a person can drive them (Phase 9).
   default**, and `OnRunning.REFUSE` as the handler's fallback — default-refuse
   must be unskippable by omission.
   **`add_repo` canonicalizes its path here** (E10), because `store/` does no
-  filesystem I/O.
+  filesystem I/O — **and it probes git here too (F5).**
+  `writes.add_repo` requires `git_common_dir`, `name` and `vcs_remote`, and the
+  route declares only `("root_path",)`. The three are answered by
+  `signals/binding.py`'s `probe_repo` (`:158`), `repo_root` (`:163`) and
+  `resolve_remote` (`:181`) — a **subprocess**, and a `toolsurface → signals`
+  import edge. That edge already exists (`tools_m1.py:33` imports
+  `shepherd.signals.ordering`), so it is permitted rather than new; it is named
+  here because this module was not previously authorised to use it and a builder
+  would otherwise have to invent the values.
+  **Why this is more than plumbing:** `git_common_dir` is **D48's binding key**.
+  A repo registered through the UI with a guessed or empty `git_common_dir`
+  never matches `find_repo_by_common_dir`, so a session started in it binds to
+  `Unassigned` — silently, and in exactly the flow the Functionality Flow
+  Mapping's step 5 asserts works. A path that does not probe as a repo is
+  **refused and says so**; it is never registered with a placeholder.
   **Add the new module to `test_the_three_modules_are_each_under_the_cap`'s
   enumeration** (`len(sizes) == 5` becomes 6); if the module would exceed 450
   lines, split into `tools_projects.py` + `tools_projects_reads.py` and name
@@ -952,11 +1114,18 @@ or that a person can drive them (Phase 9).
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** seven tools register and freeze; the cap test names every
-  new module; E10 passes; `delete_project` with no `on_running` refuses a project
-  with a running session; a test asserts all seven schemas spell `project_id`.
+  new module; E10 and **E23** pass; `delete_project` with no `on_running`
+  refuses a project with a running session; a test asserts all seven schemas
+  spell `project_id`; `test_a_ui_registered_repo_binds_a_discovered_session_to_that_project`
+  passes, which is the end-to-end statement that the probed `git_common_dir` is
+  the same key D48 binds on.
 - **Consumes:** every `Store.*` name from T1.6,
   `shepherd.store.models.OnRunning`, `shepherd.store.models.DeleteOutcome`,
-  `shepherd.store.models.UNASSIGNED_PROJECT_ID`
+  `shepherd.store.models.UNASSIGNED_PROJECT_ID`,
+  `probe_repo`, `repo_root`, `resolve_remote`,
+  `bind_cwd_to_repo(store, cwd) -> RepoBinding`
+  *(the three probe helpers are `shepherd.signals.binding`'s — see Allowed
+  Scope for the layer edge that permits the import)*
 - **Produces:**
   `PROJECT_TOOL_NAMES: tuple[str, ...] = ("create_project", "rename_project", "delete_project", "add_repo", "remove_repo", "list_repos", "get_project")`
   `build_project_tools(...) -> tuple[ToolDef, ...]`
@@ -964,33 +1133,27 @@ or that a person can drive them (Phase 9).
   `project_repo_row(repo: Repo) -> dict[str, object]`
   `project_detail(workspace, repos, sessions, last_activity_at) -> dict[str, object]`
 
-#### Task 3.2 — compose wiring and the `project_workspace` projection
+#### Task 3.2 — compose wiring
 
 - **Files:** `src/shepherd/toolsurface/compose.py`,
-  `src/shepherd/toolsurface/tools_m1.py`,
-  `tests/toolsurface/test_tools_m1.py`,
   `tests/boundaries/test_composition_root.py`
 - **Dependencies:** T3.1
 - **Allowed Scope:** call `register_project_tools(...)` **before**
   `install_chokepoint` (`compose.py:457`) and `freeze_registry()` (`:473`).
-  `project_workspace()` drops `root_path`, gains `description` and `repo_count`,
-  and takes `last_activity_at` and `repo_count` as arguments fed from
-  `Store.project_last_activity` and `Store.repo_counts` — **both one query each
-  for the whole list** (M4, RD-3). The key stays `project_id`.
+  Nothing else. **The `project_workspace` projection moved to T1.10** at
+  revision 4 (F2), because leaving it here ended Phase 1 with a red suite.
 - **Out-of-Scope Drift:** reordering anything else in `compose_tool_surface`;
-  changing `fleet_tree`'s ordering; calling `list_repos` per project.
+  touching `tools_m1.py` (T1.10 owns it); changing `fleet_tree`'s ordering.
 - **Required Checks:**
   `.venv/bin/python -m pytest tests/toolsurface tests/boundaries -q` ·
   `.venv/bin/mypy --strict src/shepherd`
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** a composed process answers all seven; the registry freezes
-  without a double-registration refusal; the 105 boundary rules green; a test
-  asserts `list_projects` over N projects issues a bounded number of statements.
-- **Consumes:** `register_project_tools(*, store: Store, kill: Callable[[str], None], now: Clock) -> None`,
-  `Store.project_last_activity`, `Store.repo_counts`
-- **Produces:** `project_workspace(workspace, *, repo_count: int, last_activity_at: str | None) -> dict[str, object]`
-  with keys `project_id`, `name`, `description`, `repo_count`, `last_activity_at`
+  without a double-registration refusal; the 105 boundary rules green.
+- **Consumes:** `register_project_tools(*, store: Store, kill: Callable[[str], None], now: Clock) -> None`
+- **Produces:** a composed process in which all seven project tools are
+  reachable through `invoke()`
 
 ---
 
@@ -1076,7 +1239,11 @@ reverses.
 forbids taking a reversal quietly.
 **Test Seams:** unit (static scans of `index.html` / `app.css` / `app.js`); E2E
 (the live render check, Phase 10).
-**Green at the boundary:** yes.
+**Green at the boundary:** yes — **after T5.4**. T5.3 → T5.4 is red by
+construction (F7): a deleted path and its manifest declaration cannot land in
+the same commit without the declaration being written first against a file that
+still exists. Declared here rather than discovered, the way Phase 1 declares its
+own internal reds.
 **What this phase does NOT prove:** that any page has content. The Flock,
 Projects and Settings roots are empty shells until Phases 6, 7 and 9. It proves
 the shell, the reset, the routing, and that removing the rail was recorded.
@@ -1092,7 +1259,12 @@ the shell, the reset, the routing, and that removing the rail was recorded.
   every page' is reversed; if the rail returns it lives on the Flock page alone
   (U2)."* — with owner attribution and date, in §3's voice. Seven
   `RETIRED_NODE_IDS` entries, decision string **`"§3 D66"`**, each reason over
-  80 characters. `tests/qa/test_s4_needs_you_rail.py` is not frozen: retarget its
+  80 characters.
+  **§3's headline sentence must move with the row (F15):**
+  `docs/specs/orchestrator-platform.md:34` reads *"**65 decisions** (D1–D65,
+  plus D38.1, an amendment)"*. D66 makes that false. Update it in this task —
+  a section whose own count is wrong is a section that has stopped being
+  checkable. `tests/qa/test_s4_needs_you_rail.py` is not frozen: retarget its
   projection assertions at `project_needs_you`, which survives.
 - **Out-of-Scope Drift:** deleting `tools_m1.py::project_needs_you` or
   `fleet_summary`'s `needs_you` list — the projection stays, only its renderer
@@ -1144,6 +1316,7 @@ the shell, the reset, the routing, and that removing the rail was recorded.
   `src/shepherd/web/static/app.js`,
   delete `src/shepherd/web/static/rail.js`,
   `tests/web/test_frontend_escaping.py`,
+  **`tests/web/test_palette.py`** (F3),
   `tests/web/test_shell.py`
 - **Dependencies:** T5.2
 - **Allowed Scope:** six page roots (`#page-shepherd`, `#page-flock`,
@@ -1154,20 +1327,32 @@ the shell, the reset, the routing, and that removing the rail was recorded.
   `#stop-summary` / `#unknown-rate` / `#low-confidence` (B3)**. `app.js` owns
   page routing and the one `EventSource`. **The prototype's `herd` page id
   becomes `flock` everywhere**, including `render_check.PAGES`.
-  **One of the eight `innerHTML` rewrites lands here** — the shell's back
-  chevron — as `createElementNS` construction or static markup (finding 7).
+  **None of the eight `innerHTML` rewrites land here (F6).** The shell has no
+  sink; both back chevrons belong to pages (`BACK_BUTTON` → `flock.js`,
+  `BACK_BUTTON_P` → `projects.js`). See the table in Codebase Reality Check #7.
   `EXPECTED_MODULES` in `test_frontend_escaping.py` is widened by name (`rail.js`
   drops out, `flock.js` / `projects.js` / `settings.js` come in), never loosened
   into a glob. **`escape.js` stays in that list** and the file stays
   byte-unchanged (ADR-P6).
+  **`tests/web/test_palette.py` is edited here, not one phase later (F3).**
+  `test_palette.py:97` iterates `("fleet.js", "app.js", "rail.js")` and reads
+  each file, so deleting `rail.js` raises `FileNotFoundError` at a boundary this
+  plan declares green. Drop `"rail.js"` from that tuple **in this task**; the
+  `"fleet.js"` → `"flock.js"` half of the same literal is T6.1's, for the same
+  reason one task later.
   **This task retires nothing** and makes **no** edit to
   `UNREACHABLE_BY_DESIGN`.
 - **Out-of-Scope Drift:** deleting or renaming `chat.js` (**pinned**); deleting
   `session.js`, `terminal.js`, `sse.js` or `vendor/` (**D67 retains them**);
   **deleting `escape.js` or touching `UNREACHABLE_BY_DESIGN`** (ADR-P6);
   introducing `setInterval` or `requestAnimationFrame`; a second `EventSource`.
-- **Required Checks:** `.venv/bin/python -m pytest tests/web tests/boundaries -q` ·
+- **Required Checks:** `.venv/bin/python -m pytest tests/web -q` ·
   `.venv/bin/python tools/js_syntax_check.py src/shepherd/web/static/*.js`
+  — **`tests/boundaries` is deliberately NOT run here (F7).** Deleting
+  `rail.js` moves a path, and the declaration for it is T5.4's; running the
+  freeze gate before its own manifest task would be running a check this task
+  cannot pass. **T5.3 → T5.4 is a red internal boundary, declared, exactly the
+  way Phase 1 declares T1.1 → T1.9.** The phase boundary (after T5.4) is green.
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
 - **Exit Criteria:** `test_every_shipped_module_is_reachable_from_the_page`
@@ -1222,7 +1407,8 @@ being deleted.
 spec row and §0 forbids taking one quietly.
 **Test Seams:** unit (static scans: label/glyph tables, no-sort, no-sink);
 integration (`tests/web/conftest.py::Client` over `/api/fleet/tree`).
-**Green at the boundary:** yes.
+**Green at the boundary:** yes — **after T6.4**. T6.1 → T6.4 is red by
+construction (F7), for the same reason Phase 5's is.
 **What this phase does NOT prove:** a pixel. `test_palette.py`'s own docstring
 says so: the scan proves the palette the page *ships* is `PALETTE`; the rendering
 is Phase 10's live check and the human look there.
@@ -1232,11 +1418,13 @@ is Phase 10's live check and the human look there.
 - **Files:** `src/shepherd/web/static/flock.js` *(new)*, delete
   `src/shepherd/web/static/fleet.js`, `src/shepherd/web/static/index.html`,
   `src/shepherd/web/static/app.js`, `tests/web/test_flock_page.py` *(new)*,
-  `tests/web/test_fleet_page.py`
+  `tests/web/test_fleet_page.py`, **`tests/web/test_palette.py`** (F3)
 - **Dependencies:** Phase 5
 - **Allowed Scope:** the prototype's three-pane render, `textContent`
-  throughout. **Four of the eight `innerHTML` assignments are rewritten here**
-  (the Flock-side SVG icons) as `createElementNS` construction or static markup.
+  throughout. **Two of the eight `innerHTML` assignments are rewritten here
+  (F6)** — `renderLegend()` at prototype line 2520 and `BACK_BUTTON(level)` at
+  2858 — as `document.createElementNS` construction or static markup in
+  `index.html`.
   U8's relative time spelled out, scaling to years, with `never seen` for no
   timestamp (E19). U16's wash. U10's legend with an **`acts:`** line taken
   verbatim from `PALETTE.who_acts`. U1's `ⓘ` sheet (`#dlg-legend`) —
@@ -1247,6 +1435,11 @@ is Phase 10's live check and the human look there.
   page half, `test_unassigned_sessions_render_on_the_flock_page`);
   `tests/web/test_fleet_page.py` **keeps its filename and all 17 test names**
   and its body literals move from `fleet.js` to `flock.js`.
+  **`tests/web/test_palette.py` is edited here too (F3)**, in the same breath as
+  the deletion that breaks it: its module-level helper `fleet_js()` reads
+  `fleet.js` (`:42`) and `test_the_page_does_not_re_derive_the_order` names it
+  again (`:97`). Deleting `fleet.js` without them makes **this task's own exit
+  criterion ("P7 passes") unsatisfiable**, which is the defect F3 caught.
 - **Out-of-Scope Drift:** porting `BUCKET_ORDER`, `fleetSortKey`, `.sort(` or
   `localeCompare` — all four banned by name; porting the Google Fonts link; a
   second label table; putting D21's action list on the card (U7 is four items and
@@ -1306,6 +1499,15 @@ is Phase 10's live check and the human look there.
   session **card** carries U7's four items and no more."* — with date and
   attribution, in §3's voice.
   On a phone the three panes are a drill-down with a back chevron.
+  **§3's headline count moves again in this task (F15):** it reads `66` after
+  T5.1 and must read **`67` (D1–D67, plus D38.1)** after D67 lands.
+  **Four of the eight `innerHTML` assignments are rewritten here (F6)** —
+  `bylineMark()` (2688) and `renderDetail()`'s three (2796, 2814, 2837). The one
+  at 2814, `prose.innerHTML = line[1]`, assigns a **bare variable** and becomes
+  `textContent`; the other three build SVG by concatenation and become
+  `document.createElementNS`. They land here rather than in `chat.js` because
+  `renderDetail` is the *session pane's* renderer, which D67 puts in
+  `session.js`.
   `session.js` is restyled and its mount point moves; its **contracts are
   unchanged**. `tests/web/test_session_page.py` keeps all **16** node ids as body
   rewrites. One `RETIRED_NODE_IDS` entry for
@@ -1322,7 +1524,10 @@ is Phase 10's live check and the human look there.
   **If `terminal.js`'s bytes must change** (A11), stop and say so — it becomes an
   eighth `post_milestone` entry and the plan's count is wrong, which is worth
   one line in `t6-3.md`.
-- **Required Checks:** `.venv/bin/python -m pytest tests/web tests/boundaries -q` ·
+- **Required Checks:** `.venv/bin/python -m pytest tests/web -q` ·
+  *(`tests/boundaries` is T6.4's, for F7's reason: T6.1 and T6.3 move paths
+  whose declarations T6.4 writes. **T6.1 → T6.4 is a red internal boundary,
+  declared.** The phase boundary, after T6.4, is green.)* ·
   `grep -n "D67" docs/specs/orchestrator-platform.md` ·
   `git diff --stat src/shepherd/web/static/terminal.js src/shepherd/web/static/sse.js`
   (expected: empty)
@@ -1350,7 +1555,7 @@ is Phase 10's live check and the human look there.
 - **Required Checks:** `.venv/bin/python -m pytest tests/boundaries -q`
 - **Validation Level:** Deterministic.
 - **Checkpoint Type:** none
-- **Exit Criteria:** P9 passes; `post_milestone.edits` holds exactly 5 entries.
+- **Exit Criteria:** P9 passes; `post_milestone.edits` holds exactly **4** entries — 1 from T5.4 (`rail.js`) plus this task's 3 (`fleet.js`, `flock.js`, `session.js`). Revision 3 said 5, which contradicted this task's own `Produces` (**F4**); a builder satisfying the wrong number would have declared a path that did not move and failed P9's equality.
 - **Consumes:** the moved-path set from T6.1 and T6.3
 - **Produces:** three `post_milestone` entries (running total: 4 of 6)
 
@@ -1378,11 +1583,11 @@ says **why** in its panel (U13), not that any of them works.
   `tests/web/test_chat_page.py`
 - **Dependencies:** Phase 6
 - **Allowed Scope:** the prototype's conversation, composer and inline approval
-  card. **Three of the eight `innerHTML` assignments are rewritten here** — they
-  are in the shared conversation renderer (`step.innerHTML` at 2796,
-  `prose.innerHTML = line[1]` at 2814, and the send-button icon at 2837) and
-  `prose` in particular must become `textContent`, because it assigns a bare
-  variable. The audit tail (`chat.js:242-260` into `#chat-audit`) **moves to
+  card. **None of the eight `innerHTML` assignments are rewritten here (F6).**
+  `chat.js` has no sink today (`test_the_chat_page_has_no_html_sink`) and gains
+  none: the prototype's Shepherd thread is static markup, and `renderDetail` —
+  which revision 3 mis-assigned to this task — is the session pane's renderer
+  and belongs to T6.3. The audit tail (`chat.js:242-260` into `#chat-audit`) **moves to
   Settings → Data with its four-field whitelist intact** (`at`, `tool`,
   `decision`, `approved_by`; `args` deliberately excluded per D25). D65: the
   autonomy toggle **leaves this page entirely**.
@@ -1405,8 +1610,9 @@ says **why** in its panel (U13), not that any of them works.
   `tests/web/test_settings_page.py` *(new)*,
   `tests/boundaries/consumer_manifest.json`
 - **Dependencies:** T7.1
-- **Allowed Scope:** ten sections under *Yours* (Account, Notifications, API
-  keys) and *This instance* (Autonomy, Shepherd, Discovery, Limits, Users &
+- **Allowed Scope:** **one of the eight `innerHTML` rewrites lands here (F6)** —
+  `panelHead(title)` at prototype line 3617. Then: ten sections under *Yours*
+  (Account, Notifications, API keys) and *This instance* (Autonomy, Shepherd, Discovery, Limits, Users &
   access, Data, System). Real today: Autonomy, Discovery's hook status, Data's
   audit tail, System's facts. Everything else carries a `not built` chip **and
   says why in its panel**. U12: the two autonomy options read *"Ask me before
@@ -1524,7 +1730,9 @@ them does).
   `src/shepherd/web/static/app.css`, `tests/web/test_projects_page.py` *(new)*,
   `tests/boundaries/consumer_manifest.json`
 - **Dependencies:** Phase 4, Phase 6
-- **Allowed Scope:** the list/detail panes; `#dlg-project` (create and edit) and
+- **Allowed Scope:** **one of the eight `innerHTML` rewrites lands here (F6)** —
+  `BACK_BUTTON_P()` at prototype line 3101. Then: the list/detail panes;
+  `#dlg-project` (create and edit) and
   `#dlg-delete` (the three-way choice rendered **from the refusal**, not from a
   guess); the allowlist warning the prototype carries verbatim — *"A path here
   **widens where Shepherd may start sessions**"* (D22/D58, and it is true).
@@ -1591,6 +1799,9 @@ host.
 - **Files:** none (verification only)
 - **Dependencies:** T10.1
 - **Allowed Scope:** running the gates.
+- **Out-of-Scope Drift:** fixing anything. A gate task that repairs what it
+  finds has stopped being a gate — a failure here opens a ledger entry and goes
+  back to the owning task, it is not patched in place.
 - **Required Checks:** `.venv/bin/python -m pytest -q` ·
   `.venv/bin/mypy --strict src/` ·
   `.venv/bin/python -m pytest tests/boundaries -q` ·
@@ -1619,6 +1830,10 @@ check; re-running it is `grep`, not memory.
 | `test_migration_004_is_idempotent_across_two_runs` | `tests/store/test_migration_004.py` | T1.1 | new |
 | `test_the_recorded_checksums_of_001_to_003_are_unchanged` | `tests/store/test_migration_004.py` | T1.1 | new |
 | `test_unassigned_leads_the_ordered_project_list` (E22) | `tests/store/test_verbs.py` | T1.3 | new |
+| `test_future_schema_refuses_to_start_at_five` (F1's successor) | `tests/store/test_migration_003.py` | T1.1 | new (replaces the one retirement there) |
+| `test_the_project_list_issues_a_bounded_number_of_statements` (M4, AC-15) | `tests/toolsurface/test_tools_m1.py` | **T1.10** | new |
+| `test_a_ui_registered_repo_binds_a_discovered_session_to_that_project` (E23) | `tests/toolsurface/test_tools_projects.py` | T3.1 | new |
+| `test_the_tool_test_skips_rather_than_importing_playwright` (E24) | `tests/tools/test_render_check_args.py` | T0.1 | new |
 | `test_two_projects_may_share_a_name` (E1) | `tests/store/test_verbs.py` | T1.4 | new |
 | `test_re_adding_an_orphaned_path_rebinds_the_same_repo_row` (E6) | `tests/store/test_verbs.py` | T1.4 | new |
 | `test_unassigned_refuses_add_repo` (E7) | `tests/store/test_verbs.py` | T1.4 | new |
@@ -1696,12 +1911,13 @@ needs building; each row says whether a task touches it.
 
 ### Retired — no builder, by design
 
-These sixteen are **deleted**, so "nobody builds it" is the correct state, not
+These seventeen are **deleted**, so "nobody builds it" is the correct state, not
 a gap. Each carries a `RETIRED_NODE_IDS` entry with a >80-character reason and a
 decision string containing `"§"` or `"RD-"`.
 
 | Test | Retired by | Decision string |
 |---|---|---|
+| `test_future_schema_refuses_to_start_at_four` | T1.1 | `"§7 rule 2, re-anchored by §3 D57's migration 004"` |
 | the 7 in `tests/web/test_rail.py` | T5.1 | `"§3 D66"` |
 | `test_a_repo_registered_outside_its_workspace_root_is_admitted` | T1.9 | `"§3 D57"` |
 | `test_a_workspace_with_no_root_path_still_admits_its_registered_repos` | T1.9 | `"§3 D57"` |
@@ -1838,15 +2054,15 @@ Error paths:
 | The allowlist silently narrows | med | **high** | Deterministic — P5 |
 | The allowlist silently **widens** (a §13 admission bypass) | low | **high** | Deterministic — the five parametrised escape cases, node ids kept |
 | A byte-freeze assertion goes red and is "repaired" by editing `rebase` | med | **high** | Deterministic — P9, plus every manifest task naming `rebase` as untouchable |
-| A frozen test is deleted without a retirement entry, or with one the gate rejects | **high** | med | Deterministic — P10, sixteen retirements pre-identified per file, and both mechanical checks written into Durable Decisions |
-| An `innerHTML` is ported from the prototype | **high** | med | Deterministic — P8, and the eight rewrites split across T5.3/T6.1/T7.1 by owning module |
+| A frozen test is deleted without a retirement entry, or with one the gate rejects | **high** | med | Deterministic — P10, seventeen retirements pre-identified per file, and both mechanical checks written into Durable Decisions |
+| An `innerHTML` is ported from the prototype | **high** | med | Deterministic — P8, and the eight rewrites assigned by **enclosing function** across T6.1 (2), T6.3 (4), T7.2 (1), T9.1 (1) — the table in Codebase Reality Check #7 |
 | The client-side sort is ported | med | med | Deterministic — P7 |
 | Every page renders on top of every other (U18) | med | **high** | Deterministic (`test_app_css_carries_the_hidden_reset`, **owned by `tests/web/test_shell.py`**) and Live (P11) |
 | A module ships with a syntax error and the page still "looks fine" | med | **high** | Live — P11; a parse error is a console error. Plus `tools/js_syntax_check.py` |
 | A hard-coded count literal is left stale (`9`, `10`, the GET set) | **high** | low | Deterministic — P12; all three are in T4.2's Allowed Scope so none is discovered at run time |
 | A body field shadows the `project_id` path parameter | med | **high** | Deterministic — P13, in Phase 4 rather than Phase 9 |
 | `list_projects` becomes an N+1 over `list_repos` | med | med | Deterministic — T3.2's bounded-statement assertion over `repo_counts` |
-| The seeded `unassigned` row silently breaks "empty" assertions | **high** | low | Deterministic — E21, and the three sites named in T1.5 |
+| The seeded `unassigned` row silently breaks "empty" assertions | **high** | low | Deterministic — E21, and the two sites named in T1.5 |
 | `list_workspaces()[0]` returns the seeded `Unassigned` instead of the fixture's project | **high** | med | Deterministic (and **the failure itself is deterministic**, so it cannot hide) — E22, and `grep -rn "list_workspaces()\[0\]" tests/` empty at T1.5's exit |
 | U17's parser breaks on an engine update | **high** | med | Deterministic — E16: the property tested is *degrades, never guesses*, which is what survives the update |
 | `esprima` becomes an undeclared suite dependency | med | med | Deterministic — `grep -rn "esprima" tests/` empty, in T0.1's exit |
@@ -1928,7 +2144,7 @@ deletion would retire.
 `EXPECTED_MODULES`, its exemption stays in `UNREACHABLE_BY_DESIGN`, and the
 test stays live. Owner instruction, 2026-09-21, revision 3.
 **Rejected:** deleting it per the design table.
-**Consequences:** retirements drop 17 → 16; `post_milestone` entries drop
+**Consequences:** retirements drop by one; `post_milestone` entries drop
 7 → 6; T5.3 loses its `UNREACHABLE_BY_DESIGN` edit and now retires nothing at
 all. The cost is a 21-line module that nothing imports — which is what
 `UNREACHABLE_BY_DESIGN` exists to make legible, and which
@@ -1996,13 +2212,13 @@ whose command named a file nobody built.
 | AC-12 | The five escape shapes still refuse, node ids intact | `.venv/bin/python -m pytest "tests/orchestration/test_admission.py::test_a_directory_outside_every_registered_repo_is_refused" -q` |
 | AC-13 | Seven project tools register and freeze, and all seven schemas spell `project_id` | `.venv/bin/python -m pytest tests/toolsurface/test_tools_projects.py -q` |
 | AC-14 | Every new tool module is held to the 450-line cap | `.venv/bin/python -m pytest tests/toolsurface/test_tools_m3.py::test_the_three_modules_are_each_under_the_cap -q` |
-| AC-15 | `list_projects` over N projects issues a bounded number of statements (**M4**) | `.venv/bin/python -m pytest tests/toolsurface/test_tools_m1.py -k bounded -q` |
+| AC-15 | `list_projects` over N projects issues a bounded number of statements (**M4**) | `.venv/bin/python -m pytest tests/toolsurface/test_tools_m1.py::test_the_project_list_issues_a_bounded_number_of_statements -q` |
 | AC-16 | Every POST body field is a property of its tool's schema, arrival count 14, `len(BODY_ARGS) == 15` | `.venv/bin/python -m pytest tests/web/test_routes_m3.py -q` |
 | AC-17 | No body field shadows a path parameter, for `project_id` as well as `session_id` (**M1**) | `.venv/bin/python -m pytest tests/web/test_routes_m3.py::test_no_body_field_shadows_a_path_parameter tests/web/test_routes_projects.py -q` |
 | AC-18 | The GET closed-set literal names all 14 paths by hand | `.venv/bin/python -m pytest tests/web/test_routes.py::test_every_api_route_names_a_registered_tool -q` |
 | AC-19 | The pre-M4 route mappings are unchanged (additive only) | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_additive.py -q` |
 | AC-20 | `web/server.py` is byte-identical | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_additive.py::test_web_server_is_byte_unchanged -q` |
-| AC-21 | The byte-freeze equality and disjointness hold, with exactly **six** `post_milestone` entries, and `escape.js` byte-unchanged | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_frozen.py -q && .venv/bin/python -c "import json;print(len(json.load(open('tests/boundaries/consumer_manifest.json'))['post_milestone']['edits']))"` |
+| AC-21 | The byte-freeze equality and disjointness hold, with exactly **six** `post_milestone` entries, and `escape.js` byte-unchanged | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_frozen.py -q && .venv/bin/python -c "import json,sys; n=len(json.load(open('tests/boundaries/consumer_manifest.json'))['post_milestone']['edits']); sys.exit(0 if n==6 else f'post_milestone has {n} entries, expected 6')" && test -z "$(git diff --name-only src/shepherd/web/static/escape.js)"` |
 | AC-22 | `chat.js` still exists at its own path | `test -f src/shepherd/web/static/chat.js` |
 | AC-23 | D67's retained modules still ship and are still byte-clean where promised | `test -f src/shepherd/web/static/session.js && test -f src/shepherd/web/static/terminal.js && test -f src/shepherd/web/static/vendor/xterm.js && test -z "$(git diff --name-only src/shepherd/web/static/terminal.js src/shepherd/web/static/sse.js)"` |
 | AC-24 | No frozen test vanished without a retirement entry the gate accepts | `.venv/bin/python -m pytest tests/boundaries/test_collected_node_ids.py -q` |
@@ -2018,7 +2234,7 @@ whose command named a file nobody built.
 | Phase | Not proved |
 |---|---|
 | 0 | That any page is correct. Only that the checker can reach a served page and fails on a page it should fail on. |
-| 1 | That any of it is reachable from a tool, a route or a page; the hook lane's other three call sites under load. |
+| 1 | That any of it is reachable from a **tool** or from the **project routes**; the hook lane's other three call sites under load. (`/api/projects` *is* exercised here, by T1.10 — that is F2's repair.) |
 | ~~2~~ | *retired* |
 | 3 | That any route reaches these tools; that a person can drive them. |
 | 4 | That any page calls these routes. |
@@ -2033,7 +2249,7 @@ whose command named a file nobody built.
 
 ## Differences From Agreement
 
-Five, all stated rather than absorbed:
+Six, all stated rather than absorbed:
 
 1. **`last_activity_at` is derived, not written** (RD-3). The design says *"This
    design fills it"*; this plan projects `MAX(session.last_event_at)` at read
@@ -2046,8 +2262,9 @@ Five, all stated rather than absorbed:
    `projects.js`.
 3. **The prototype contains eight `innerHTML` assignments**, contradicting
    `docs/design/ui-decisions.md`'s *"Everything in the prototype is
-   `textContent`"*. Rewriting all eight is scoped across T5.3, T6.1 and T7.1 by
-   owning module.
+   `textContent`"*. Rewriting all eight is scoped by **enclosing function**
+   across T6.1 (2), T6.3 (4), T7.2 (1) and T9.1 (1) — see the table in Codebase
+   Reality Check #7.
 4. **The prototype omits the stop-summary strip; the plan keeps it.** The
    prototype is a mock, and principle 5 plus §12 put the unknown rate on the
    fleet page. Where the mock and the shipped page disagree, the shipped page
@@ -2064,8 +2281,20 @@ Five, all stated rather than absorbed:
    collects — the exact shape `test_a_stale_exemption_is_caught` exists to
    catch — or forces a third edit to keep the record honest. One retirement,
    one `post_milestone` entry and one constant edit, all bought for tidiness, in
-   a change already retiring sixteen ids. Deleting a deliberately-kept helper is
+   a change already retiring seventeen ids. Deleting a deliberately-kept helper is
    a small capability decision wearing a tidy-up's clothes. See **ADR-P6**.
+
+6. **The typefaces are reversed: a system font stack, not Instrument Sans and
+   JetBrains Mono.** `docs/design/ui-decisions.md:36-37` specifies both by name.
+   T5.2 mandates a system stack instead, and the design's own Questions-Resolved
+   table agrees (*"Webfont? Dropped."*) — but this plan had it recorded only in
+   Durable Decisions, which is the **same quiet-reversal shape `escape.js` was
+   corrected for** (F11). Stated here: the reasons are that the server binds
+   loopback only and must work offline, that a remote font is a third-party
+   request from a local tool, and that `web/server.py` is byte-pinned so
+   `_CONTENT_TYPES` cannot host a font file locally. The design's type choices
+   survive as the fallback list. `test_no_remote_script_sources` enforces it
+   mechanically, so the reversal is also checkable.
 
 Plus two corrections carried from outside the plan: **`chat.js` keeps its
 filename** (ADR-P3), and **the session view relocates rather than being deleted**

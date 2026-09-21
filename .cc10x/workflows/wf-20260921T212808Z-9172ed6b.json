@@ -31,7 +31,11 @@
     "D21's next_actions list relocates from the session CARD to the session PANE. U7's four-item card stands; section 12 already says the same list renders in the session view header. Capability preserved, U7 honoured, and most of test_fleet_page.py's assertions become body rewrites pointing at the new location rather than retirements.",
     "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right.",
     "RD-4 DECIDED, reversing the design's file-layout row: escape.js is KEPT, byte-unchanged. UNREACHABLE_BY_DESIGN's reason string quotes the very test the retirement would remove, so deleting it either leaves a stale exemption citing a test that no longer collects or forces a third edit. One retirement, one post_milestone entry and one constant edit, all bought for tidiness. post_milestone drops 7 -> 6; retirements 17 -> 16.",
-    "Router correction to N2: reads.list_workspaces DOES have ORDER BY name (reads.py:102). The seeded 'Unassigned' sorts FIRST under BINARY collation (uppercase before lowercase), so all 8 list_workspaces()[0] sites read Unassigned instead of their own project. Deterministic, not flaky - it fails identically everywhere and cannot hide. The count is 8, not 10. The repair is selecting by name or captured id, never by position."
+    "Router correction to N2: reads.list_workspaces DOES have ORDER BY name (reads.py:102). The seeded 'Unassigned' sorts FIRST under BINARY collation (uppercase before lowercase), so all 8 list_workspaces()[0] sites read Unassigned instead of their own project. Deterministic, not flaky - it fails identically everywhere and cannot hide. The count is 8, not 10. The repair is selecting by name or captured id, never by position.",
+    "F13 DECIDED: tests/tools/test_render_check_args.py opens with pytest.importorskip('playwright'), and T0.1's exit asserts the suite still collects and passes without playwright installed. Same rule A6 states for esprima; marker deselection does not help because -m deselects after import.",
+    "Router: pass-2 findings are applied as a diff-scoped AMENDMENT rather than escalated. The two-pass fresh-review cap is spent, but all 15 findings carry named mechanical fixes and none is an owner decision. The amendment lane is uncapped and exists for exactly this case.",
+    "F6 pushback ACCEPTED: the planner's sink-to-module walk is right and the review's was not. Verified independently - 2520 renderLegend, 2858 BACK_BUTTON (flock.js); 2688 bylineMark, 2796/2814/2837 renderDetail (session.js, per D67); 3101 BACK_BUTTON_P (projects.js); 3617 panelHead (settings.js). T5.3 and T7.1 rewrite no sinks at all, so this removes work rather than moving it.",
+    "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33."
   ],
   "plan_mode": "execution_plan",
   "build_scope": null,
@@ -87,7 +91,7 @@
     "open_decisions": []
   },
   "normalized_phases": [],
-  "phase_cursor": "re-plan",
+  "phase_cursor": "plan-review-amendment",
   "capabilities": {
     "brightdata_available": "unknown",
     "octocode_available": "unknown",
@@ -117,7 +121,8 @@
   "phase_status": {
     "plan-create": "completed",
     "plan-review-gap-1": "completed",
-    "re-plan": "in_progress"
+    "re-plan": "completed",
+    "plan-review-gap-2": "completed"
   },
   "deferred_findings": [
     {
@@ -131,6 +136,12 @@
       "phase_id": "plan-create",
       "severity": "minor",
       "finding": "docs/design/ui-decisions.md says one post_milestone declaration covers the redesign. Entries are per path; seven are needed. The sentence needs correcting."
+    },
+    {
+      "source": "router",
+      "phase_id": "plan-review-amendment",
+      "severity": "minor",
+      "finding": "Revision 4 states 19 sites for grep -rn '== 3\\b' over the three migration test modules; that pattern returns 16 (union with EXPECTED_SCHEMA_VERSION and [1,2,3] is 22). Conclusion unaffected - far more than the seven originally listed, and the plan carries the grep rather than a hand list. Fourth stated count in this plan to disagree with its source."
     }
   ],
   "results": {
@@ -155,19 +166,19 @@
     "verifier": null,
     "planner": {
       "status": "PLAN_CREATED",
-      "revision": 2,
-      "confidence": 85,
+      "revision": 4,
+      "confidence": 88,
       "phases": 10,
-      "tasks": 30,
+      "tasks": 31,
       "acceptance_clauses": 28,
       "retirements": 17,
-      "note": "phase 2 folded into phase 1 and its number retired"
+      "post_milestone_entries": 6
     },
     "planning_reviewer": {
-      "pass": 1,
+      "pass": 2,
       "status": "FINDINGS",
-      "blocking": 7,
-      "major": 6,
+      "blocking": 5,
+      "advisory": 10,
       "mode": "fresh"
     },
     "qa_researchers": [],
@@ -261,7 +272,7 @@
     "research_quality": "none",
     "convergence_state": "pending"
   },
-  "planning_review_runs": 1,
+  "planning_review_runs": 2,
   "planning_review_findings": [
     "B1 blocking: Phase 1's boundary cannot be green - binding.py and admission.py break in Phase 1 and are repaired in Phase 2.",
     "B2 blocking: test_fleet_page.py's 17 frozen ids assert fleet.js internals (stoppedRow, sessionRow, expansion, ACTION_MILESTONE, LIVE_KINDS, empty-state) the redesign does not contain; zero retirements budgeted.",
@@ -270,11 +281,18 @@
     "B5 blocking: every planned retirement cites a decision string the gate rejects - it asserts 'RD-' in decision or 'section-sign' in decision.",
     "B6 blocking: test_routes_m3.py:237 asserts len(BODY_ARGS) == 10, a second hard-coded count outside T4.2's declared scope.",
     "B7 blocking: E15's deciding test test_app_css_carries_the_hidden_reset is named three times and built by no task - the exact M4 failure shape.",
-    "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry."
+    "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry.",
+    "F1 blocking: EXPECTED_SCHEMA_VERSION 3->4 reddens 7 frozen migration tests T1.1 itself runs; test_future_schema_refuses_to_start_at_four uses version 4 as its impossible sentinel and 004 makes it real. A 17th retirement.",
+    "F2 blocking: toolsurface/tools_m1.py:156 project_workspace reads workspace.root_path - a third src module broken at the Phase 1 boundary, and a suite failure not just a mypy one.",
+    "F3 blocking: test_palette.py:97 reads rail.js (deleted T5.3) and :42 reads fleet.js (deleted T6.1); both repairs are one task later, so two declared-green boundaries raise FileNotFoundError.",
+    "F4 blocking: T6.4 exit says 5 post_milestone entries, its own arithmetic says 4. Third total-vs-rows disagreement.",
+    "F5 blocking: add_repo has no declared source for git_common_dir/name/vcs_remote. D48's binding key guessed means a UI-registered repo never matches a discovered session and silently lands in Unassigned.",
+    "F8 advisory but important: AC-21 prints the post_milestone count instead of asserting it - exits 0 for any value, and it is the clause that would have caught F4.",
+    "F13 advisory, decided: playwright would become an undeclared suite dependency via the path-loaded render_check import. Fix is pytest.importorskip('playwright')."
   ],
   "planning_review_status": "revised_after_review",
-  "plan_revision": 2,
-  "last_reviewed_revision": 1,
+  "plan_revision": 4,
+  "last_reviewed_revision": 3,
   "memory_notes": [],
   "pending_gate": null,
   "status_history": [
@@ -303,9 +321,21 @@
       "ts": "2026-09-21T22:22:51Z",
       "phase": "re-plan",
       "revision": 2
+    },
+    {
+      "event": "planning_review_pass2_findings",
+      "ts": "2026-09-21T22:40:33Z",
+      "phase": "plan-review-gap-2",
+      "blocking": 5
+    },
+    {
+      "event": "plan_amended",
+      "ts": "2026-09-21T22:49:33Z",
+      "phase": "re-plan",
+      "revision": 4
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-21T22:22:51Z"
+  "updated_at": "2026-09-21T22:49:33Z"
 }
