@@ -29,7 +29,9 @@
     "D67 (new spec row): the session view relocates into the Flock's third pane rather than being deleted. session.js, terminal.js and vendor/xterm.js are RETAINED and reachable from that pane. Section 12's Page 3 is rewritten as a pane, not a page. Reason: the owner asked for a three-pane Flock whose third pane is shaped like the Shepherd page; they never asked to lose the live pty view, and removing xterm would be a silent capability regression plus 16 retirements bought for nothing.",
     "The stop-summary strip (#stop-summary, #unknown-rate, #low-confidence) is KEPT, in the Flock page header beside the legend. Reason: principle 5 - the unknown rate is counted and displayed, never hidden - and it is the headline metric section 12 puts on the fleet page. Preserves three frozen palette ids rather than retiring them.",
     "D21's next_actions list relocates from the session CARD to the session PANE. U7's four-item card stands; section 12 already says the same list renders in the session view header. Capability preserved, U7 honoured, and most of test_fleet_page.py's assertions become body rewrites pointing at the new location rather than retirements.",
-    "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right."
+    "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right.",
+    "RD-4 DECIDED, reversing the design's file-layout row: escape.js is KEPT, byte-unchanged. UNREACHABLE_BY_DESIGN's reason string quotes the very test the retirement would remove, so deleting it either leaves a stale exemption citing a test that no longer collects or forces a third edit. One retirement, one post_milestone entry and one constant edit, all bought for tidiness. post_milestone drops 7 -> 6; retirements 17 -> 16.",
+    "Router correction to N2: reads.list_workspaces DOES have ORDER BY name (reads.py:102). The seeded 'Unassigned' sorts FIRST under BINARY collation (uppercase before lowercase), so all 8 list_workspaces()[0] sites read Unassigned instead of their own project. Deterministic, not flaky - it fails identically everywhere and cannot hide. The count is 8, not 10. The repair is selecting by name or captured id, never by position."
   ],
   "plan_mode": "execution_plan",
   "build_scope": null,
@@ -114,7 +116,8 @@
   },
   "phase_status": {
     "plan-create": "completed",
-    "plan-review-gap-1": "completed"
+    "plan-review-gap-1": "completed",
+    "re-plan": "in_progress"
   },
   "deferred_findings": [
     {
@@ -152,11 +155,13 @@
     "verifier": null,
     "planner": {
       "status": "PLAN_CREATED",
-      "confidence": 82,
-      "phases": 11,
-      "tasks": 29,
-      "acceptance_clauses": 24,
-      "gate": "SPEC_GATE_PASS"
+      "revision": 2,
+      "confidence": 85,
+      "phases": 10,
+      "tasks": 30,
+      "acceptance_clauses": 28,
+      "retirements": 17,
+      "note": "phase 2 folded into phase 1 and its number retired"
     },
     "planning_reviewer": {
       "pass": 1,
@@ -267,8 +272,8 @@
     "B7 blocking: E15's deciding test test_app_css_carries_the_hidden_reset is named three times and built by no task - the exact M4 failure shape.",
     "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry."
   ],
-  "planning_review_status": "findings",
-  "plan_revision": 1,
+  "planning_review_status": "revised_after_review",
+  "plan_revision": 2,
   "last_reviewed_revision": 1,
   "memory_notes": [],
   "pending_gate": null,
@@ -292,9 +297,15 @@
       "event": "planning_review_pass1_findings",
       "ts": "2026-09-21T22:06:12Z",
       "phase": "plan-review-gap-1"
+    },
+    {
+      "event": "plan_revised",
+      "ts": "2026-09-21T22:22:51Z",
+      "phase": "re-plan",
+      "revision": 2
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-21T22:06:12Z"
+  "updated_at": "2026-09-21T22:22:51Z"
 }
