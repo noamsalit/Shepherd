@@ -54,7 +54,7 @@ Three separations do the real work:
 | **Doing vs. judging** | The agent that wrote the code never certifies it. Advisory routes cannot start write work. The route that measures cannot repair. |
 | **State vs. conversation** | Every fact a later step needs lives in a file, not in the transcript. Compaction must cost nothing. |
 
-## 1.2 The fifteen principles
+## 1.2 The sixteen principles
 
 | # | Principle | Mechanism | Why |
 |---|---|---|---|
@@ -73,6 +73,7 @@ Three separations do the real work:
 | P13 | **Push the checkpoint right** | Stop for humans only on irreversible actions, real scope changes, or input only they can give. Never to narrate or to ask "shall I continue?". | Each unnecessary stop trains the human to stop reading. |
 | P14 | **Enforce in code, not in prose** | Deny-lists, blast-radius limits, destructive-op consent, artifact schema, remediation counting — all hooks. A rule that lives only in a prompt is a request. | Proven the hard way: prompt-only isolation was bypassed by a tool nobody thought to guard. |
 | P15 | **Compound the knowledge** | Learnings, gotchas and verification results persist after every workflow. Cross a threshold — 3+ failed hypotheses, the same defect in 3+ files, a fix that contradicts a documented assumption — and it becomes a permanent write-up. | Otherwise every session re-learns the same constraint. |
+| P16 | **Never assume a shape at a boundary you do not own** | Every external data shape, signal and protocol behaviour is **observed against a live instance** and the capture is committed. Documentation, SDK typings, memory and model priors are hypotheses, not facts. An unprobed shape is a recorded gap, never a detail. See §1.7. | The shape you assume is the one nobody tests. It is wrong silently, and it is wrong at the one boundary where you cannot see inside the other side. |
 
 ## 1.3 Reviewer taxonomy — four postures
 
@@ -132,6 +133,7 @@ Two framing rules:
 | **Plan trust** | before executing any phase | Plan missing, drifted from its recorded anchor, or carrying unresolved open decisions. |
 | **Test seam** | at build dispatch | The phase must name the seam it tests at. The builder confirms or *formally disagrees with a rationale* — it may not silently pick another. |
 | **TDD red** | inside build | A red must be a *behavioral* failure with the reason recorded verbatim. An import/syntax/collection error is a broken harness, not a red. |
+| **Boundary evidence** | before an external interface is designed or built | Any external shape, signal or protocol behaviour the work depends on that has no probe: no captured example, or a capture pinned to a version that has since moved. An unprobed shape blocks the phase that consumes it, not the whole plan. |
 | **Self-critique** | before running any verification | No stubs, no debug logging, no `as any`, every acceptance criterion has code, every scenario has a test. Never run a suite you know will fail on hygiene. |
 | **Phase exit** | end of every phase | Contract validates, result persisted, event logged. A failed contract routes to remediation and never advances the cursor. |
 | **Failure stop** | anywhere | Any `FAIL`/`BLOCKED` halts the chain until cleared by remediation, research, or a human. |
@@ -151,7 +153,74 @@ Two framing rules:
 
 Rule: **every artifact is read back after it is written.** Write-without-readback is the most common silent failure in the whole method.
 
-## 1.7 Principles this project added
+## 1.7 Boundary evidence — never assume a shape you have not observed
+
+**The rule.** Whenever the system talks to something it does not own — a third-party API,
+a database, another process, a terminal, a signal, a hook payload, a file format — the
+shape and behaviour of that exchange is **established by making the real call against a
+live instance and capturing what comes back**. Not from the vendor's documentation, not
+from SDK typings, not from memory, not from what a reasonable API *would* look like.
+
+To talk to a database, make real calls against a real instance holding real data, and
+watch what actually returns. That is the only way to learn two separate things at once:
+**that the call gets through at all**, and **what the response is actually shaped like**.
+
+### What counts as a boundary
+
+Anything you do not compile against and control:
+
+- HTTP/gRPC APIs, webhooks, and callback payloads
+- databases and their drivers — wire protocol, driver return types, and server behaviour are three different things
+- another program's stdout/stderr, exit codes, and CLI flags
+- terminals, ptys, escape sequences, and byte-exact keystroke input
+- signals, process lifecycle, and what a runtime does on receiving them
+- message queues, event streams, and their ordering and delivery guarantees
+- file and serialization formats, including "obvious" ones
+- OS-level behaviour that differs by platform — path limits, socket options, credential APIs
+
+### What must be observed, never assumed
+
+| Assume nothing about | Because |
+|---|---|
+| **Field names and nesting** | The most common and most silent error. A field named in a doc is not a field emitted by a binary. |
+| **Types and nullability** | A driver may hand back its own wrapper type, not the primitive the wire carried. |
+| **Enum values** | The set is rarely what the docs list, and it grows between versions. |
+| **Ordering and pagination** | "Returns a list" says nothing about order, stability, or what an empty page looks like. |
+| **Encoding and byte-exactness** | Especially for terminals and signals, where a human-readable transcript is not the bytes. |
+| **The error shape** | Usually a completely different schema from the success shape, and usually undocumented. |
+| **Timing** | Latency, buffering, and whether a response arrives whole or in pieces. |
+| **The empty and the failing case** | A probe that captures only the happy path has documented half a contract. |
+
+### What a probe must produce
+
+A probe is not "I tried it and it worked". It is a committed artifact carrying:
+
+1. **The exact call** — command or request, verbatim and re-runnable.
+2. **The pinned environment** — the version of the thing on the other side, the platform, the date. A shape is only true *at a version*.
+3. **The raw capture**, committed to the repo — not a summary of it.
+4. **A real example value for every field** — a shape stated without a real example is a gap.
+5. **An explicit statement of what the probe does NOT cover.** Partial coverage reported as full coverage is worse than no probe.
+
+### Re-probing, doubles, and honesty
+
+- **A capture can be re-probed; a guess cannot.** That is the whole reason to capture. Ship a drift check that re-runs the cheap part of the probe and **exits non-zero** when a name or an enum has moved, and wire it to dependency and version upgrades.
+- **Doubles are generated from captures, never hand-written.** A fake built from imagination encodes the very assumption the probe existed to test, and then the suite passes against the assumption.
+- **Probe safely.** Use a real instance of the real thing — a local or staging instance first. Against production, read-only and least-privilege, and never a schema experiment against a shared database.
+- **Declare coverage honestly.** Say which surface is verified, at which version, and what remains unverified.
+
+### The worked example
+
+This project's own decision D41 exists because of exactly this failure. Shapes for the
+engine's hook events had been written into the spec from documentation and memory. Probes
+against the live binary found four of them wrong: an `error_type` field that is actually
+`error`, an `end_reason` that is `reason`, a `start_reason` that is `source`, and a
+documented `stop_reason` that the payload does not contain at all. Every one would have
+compiled, and every one would have failed silently at runtime.
+
+The rule that came out of it — *a shape stated without a probe and a real example is a
+gap* — is the same rule stated generally above.
+
+## 1.8 Principles this project added
 
 Hard-won here, not in the plugin, and they generalize:
 
@@ -223,6 +292,23 @@ implementation. Per unit:
 in both the diagram and the interface table*, and *every interface has operations, errors,
 and a seam*. Both blocking.
 
+**W3 — the plan names every external boundary and schedules its probe.**
+
+Follows from P16 (§1.7). An interface table (W2) for an adapter **cannot be filled in from
+documentation** — the shapes on the far side are not the plan's to invent. So:
+
+| Requirement | Detail |
+|---|---|
+| **Enumerate** | The plan lists every boundary the work crosses: each API, database, external process, terminal, signal, hook, file format. Nothing crosses a boundary that the plan did not name. |
+| **Cite or schedule** | Each boundary either cites an existing probe — with its pinned version — or gets a **probe phase scheduled before** the phase that designs the adapter against it. Probe first, design second. |
+| **Mark the diagram** | Every edge in W1's architecture document that leaves the system is drawn as a boundary crossing and carries its probe reference. An unprobed external edge is visibly unproven. |
+| **Version pin** | The plan records the version each shape was observed at, so a later upgrade has something to invalidate. |
+| **Gap, not silence** | Where a boundary genuinely cannot be probed (no access, no instance, vendor-only), that is recorded as an open risk with its blast radius — never quietly assumed. |
+
+**Gate to add:** the plan-completeness checklist grows a third blocking row — *every
+external boundary is named, and each one cites a probe or schedules one before its
+consuming phase*.
+
 **[undecided] Further candidates**
 - A standing "what would make this plan wrong?" adversarial pass on the key decision, before the plan is finalized rather than after the build discovers it.
 - A dependency-order proof: walk the phases and show each prerequisite exists in an earlier one.
@@ -246,6 +332,7 @@ first, per-phase base commit so each review sees only that phase's diff.
 **[undecided] Candidates**
 - **Implementation must match the plan's interface table verbatim.** Today the builder can confirm or disagree about the *seam*; it cannot silently redraw an *interface*. Make interface drift a blocking review finding, not a code-quality note.
 - **Diagram drift check.** If a phase adds a component or an edge that is not in the plan's architecture document, that is a scope increase and must escalate.
+- **Doubles are generated from captures, never hand-written.** A fake built from an assumption makes the suite pass against the assumption. If a test crosses a boundary, name the capture its double came from.
 - **A whole-branch review before done, by default.** It exists but is optional. Per-phase gates structurally cannot catch a phase-6 misuse of a phase-2 seam.
 - **Where the mutation-proof discipline (§1.7) attaches** — per phase, per milestone, or on a sampled basis.
 
@@ -270,6 +357,7 @@ before verifying.
 **[undecided] Candidates**
 - **Every root cause answers: why did no existing gate catch this?** The fix is the code change; the outcome is the missing check. Make it a required field.
 - **Variant sweep is explicit** — name the dimensions that must keep working (config, platform, data shape, concurrency) and show the fix holds across them.
+- **Suspect the observation before the system at a boundary.** When a third party behaves impossibly, re-probe the shape before theorizing about the code — a moved field name mimics a logic bug perfectly.
 - **A repro that survives the workflow** — promote the repro loop into a permanent regression test, or state why it cannot be.
 
 **Your notes:**
@@ -287,6 +375,7 @@ may only *offer* to start a build.
 **[undecided] Candidates**
 - **Review against the plan's interfaces and architecture document**, not only the diff. Once PLAN produces both (W1/W2), REVIEW gains a spec surface it does not have today.
 - **A review has a declared scope** — diff, module, or whole branch — stated up front, because the three find different classes of defect.
+- **Flag every unprobed external shape as a finding.** A field name read off documentation and typed into code is a defect waiting for runtime, and it is invisible in a diff unless someone is looking for it.
 - **Standing lenses beyond code quality**: operability, failure modes, and whether the change is observable in production.
 
 **Your notes:**
@@ -315,6 +404,7 @@ that may become a bug candidate). A failing check with no class is invalid outpu
 - **Resolve the draft.** The route still carries placeholders and two recorded gaps: no machine-readable mutation log, and no verifier for a plan amended after the second review pass.
 - **The test plan's scenario matrix derives from the plan's flow mapping** — so a flow the plan named cannot be a flow QA forgot to test.
 - **Prove the suite can fail** before trusting a green run — the QA analogue of the false-red guard.
+- **The harness asserts the observed shape, and a shape change is a finding, not a flake.** QA's preflight already measures rather than asks; extend that to the contract itself, so a third party moving under you surfaces as a `wrong-guess` rather than a mystery red.
 - **A standing regression lane**: re-run a saved harness alone, without repeating research and planning. The capability exists; nothing schedules it.
 
 **Your notes:**
@@ -391,3 +481,6 @@ is not an adapter).
 4. **Should routes be composable?** Today each is entered fresh. QA→DEBUG and
    HEALTH→PLAN are deliberately manual handoffs, and that manual step is a feature — but
    it is also the step that never happens.
+5. **Who owns re-probing, and on what trigger?** A drift check only helps if something
+   runs it. Dependency upgrade, engine upgrade, scheduled, or all three — and which route
+   owns the failure when it exits non-zero.
