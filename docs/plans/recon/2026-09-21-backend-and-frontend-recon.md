@@ -292,3 +292,51 @@ is slow, and a new file type the server cannot host locally anyway (see the
 **Decision: drop the webfont; use a system font stack.** The design's type
 choices survive as fallbacks. Recorded here because it is a deviation from the
 published prototype and should not be silently absorbed.
+
+
+### Proven, not asserted — the gate simulated against the planned edits
+
+The rules above were run against the real manifest through the real helpers
+(`tests/boundaries/_imports.py`) before any builder relied on them. Five
+predictions, five confirmations:
+
+| Simulated edit | Gate |
+|---|---|
+| edit `app.css` (already in `regenerated_paths`), no new declaration | **passes** |
+| add `projects.js`, undeclared | **fails** — `undeclared=['web/static/projects.js']` |
+| add `projects.js`, declared in `post_milestone` | **passes** |
+| delete `escape.js`, undeclared | **fails** |
+| declare `app.css` in `post_milestone` as well | **fails** — `dup=['web/static/app.css']` |
+
+### And one trap neither the backlog nor §I predicted
+
+**`web/static/chat.js` cannot be deleted or renamed. It can only be edited.**
+
+It is the only static file that was **created after** the step-0b baseline, and
+T24's rebase claimed it. So:
+
+- `baseline` does not contain it; `files` does → it is currently "moved", and
+  `regenerated_paths` declares it. Consistent.
+- Delete it, and it becomes absent from *both* blocks. `moved_paths` uses
+  `was.get(path) != now.get(path)`, so absent-on-both is **not moved** — while
+  `regenerated_paths` permanently asserts that it *did* move.
+- The equality `moved == declared | later` then fails with
+  `declared-but-not-moved = ['web/static/chat.js']`, and it **cannot be
+  repaired**: adding it to `post_milestone` trips the disjointness assertion,
+  and `rebase` may not be rewritten (`assert rebase["regenerated_by"] in (None,
+  "T24")`).
+
+Measured for every static file:
+
+| File | In baseline | In rebase | Deletable / renamable |
+|---|---|---|---|
+| `app.css`, `app.js`, `index.html` | yes | yes | yes |
+| `escape.js`, `fleet.js`, `rail.js`, `session.js`, `sse.js`, `terminal.js` | yes | no | yes, with one `post_milestone` entry each |
+| **`chat.js`** | **no** | **yes** | **no — pinned in place** |
+
+**Consequence for the redesign:** `fleet.js` → `flock.js` is fine (verified:
+both declared, gate passes). **`chat.js` → `shepherd.js` is not.** The
+conversation module keeps the filename `chat.js`; the *page* is called Shepherd.
+A module filename is not a user-facing label, and paying for that rename means
+either breaking a freeze gate or rewriting a re-base that is explicitly spent
+once.

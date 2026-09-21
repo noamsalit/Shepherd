@@ -213,11 +213,29 @@ of script. It ships as the existing module shape, not as one file:
 | `app.css` | 582 lines, no reset, no tokens | the redesign's stylesheet, token layer first |
 | `app.js` | bootstrap + nav | bootstrap + pane/drawer + page routing |
 | `fleet.js` | fleet page | **flock.js** — three panes |
-| `chat.js` | chat + audit tail | **shepherd.js** — conversation only; the audit tail moves to Settings (U6) |
+| `chat.js` | chat + audit tail | **keeps its filename** (see below) — conversation only; the audit tail moves to Settings (U6) |
 | `session.js`, `terminal.js`, `sse.js` | unchanged in role | restyled, same contracts |
 | `rail.js` | the Needs-You rail | **deleted** — see below |
 | `escape.js` | dead, nothing imports it | deleted |
 | *(new)* `projects.js`, `settings.js` | — | the two new pages |
+
+### `chat.js` keeps its name — the freeze pins it
+
+`fleet.js` → `flock.js` is fine. **`chat.js` → `shepherd.js` is not**, and this
+was found by simulating the gate rather than by reading it.
+
+`chat.js` is the only static file created *after* the step-0b baseline, and
+T24's rebase claimed it. Deleting it makes it absent from both `baseline` and
+`files`, which `moved_paths` reads as **not moved** — while
+`rebase.regenerated_paths` permanently asserts it moved. The equality fails with
+`declared-but-not-moved = ['web/static/chat.js']`, and it cannot be repaired:
+declaring it in `post_milestone` trips disjointness, and the rebase block may
+not be rewritten.
+
+So the module keeps the filename and the page is called Shepherd. A module
+filename is not a user-facing label, and the alternative is either a broken gate
+or a rewritten re-base that was explicitly spent once. Recon §I carries the
+measured table of which files can move.
 
 ### Three things in the prototype that must NOT be ported
 
