@@ -26,6 +26,10 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # that passes by finding nothing, so this list is widened deliberately rather
 # than loosened into a glob. The chat page is the one that most needs it — it
 # interpolates the master's own output, which carries tool results.
+# T7.2 appends `settings.js` (U13's Settings page), by name and for the third
+# time for the same reason: widened deliberately, never loosened into a glob.
+# It is the page that most needs the rule after `chat.js` — it renders the audit
+# tail, whose `tool` field is whatever a caller named.
 EXPECTED_MODULES = (
     "app.js",
     "chat.js",
@@ -33,6 +37,7 @@ EXPECTED_MODULES = (
     "fleet.js",
     "rail.js",
     "session.js",
+    "settings.js",
     "sse.js",
     "terminal.js",
 )

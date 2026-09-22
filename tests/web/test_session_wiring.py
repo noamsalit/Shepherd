@@ -62,6 +62,41 @@ UNREACHABLE_BY_DESIGN = {
     ),
 }
 
+#: **Debt, not design** — and kept in a second list for exactly that reason.
+#:
+#: Phases 5-9 of the Projects-and-UI plan are built contract-first, each in its
+#: own worktree, because what made them serial was four shared files and not the
+#: dependency. `index.html` and `app.js` belong to Phase 5; a page module built
+#: in another worktree therefore ships before the shell that imports it, and
+#: this walk — correctly — reports it dead.
+#:
+#: The integration pass wires the shell and **empties this list**. It is not
+#: merged into `UNREACHABLE_BY_DESIGN`: that list means *this module is not
+#: supposed to be loaded*, which is the opposite of what is true here, and an
+#: entry that said so would make the page permanently dead by definition. The
+#: test below asserts the list's exact contents, so it cannot grow quietly and
+#: cannot be forgotten while it is non-empty.
+PENDING_SHELL_WIRING = {
+    "settings.js": (
+        "U13's Settings page (T7.2), built in the Phase 7 worktree. It is"
+        " imported by the shell Phase 5 is writing; until those two merge, the"
+        " walk from the shipped `index.html` cannot reach it."
+    ),
+}
+
+
+def test_the_pending_wiring_list_is_exactly_what_is_owed() -> None:
+    """A debt list that can grow silently is a permission slip, not a debt.
+
+    When the integration pass lands the shell, `PENDING_SHELL_WIRING` empties
+    and this test is deleted with it. While it is non-empty it names every
+    module the shipped page does not yet load, one line each, with the reason.
+    """
+    assert set(PENDING_SHELL_WIRING) == {"settings.js"}, sorted(PENDING_SHELL_WIRING)
+    assert not set(PENDING_SHELL_WIRING) & set(UNREACHABLE_BY_DESIGN)
+    for name, reason in PENDING_SHELL_WIRING.items():
+        assert len(reason) >= 60, name
+
 
 def reachable_modules(markup: str, read: Callable[[str], str]) -> set[str]:
     """Every module the page really loads, walked from `index.html`'s scripts.
@@ -104,7 +139,9 @@ def test_every_shipped_module_is_reachable_from_the_page() -> None:
     shipped = {path.name for path in STATIC_ROOT.glob("*.js")}
     assert len(shipped) >= 7, shipped
 
-    assert shipped - reached == set(UNREACHABLE_BY_DESIGN), sorted(shipped - reached)
+    assert shipped - reached == set(UNREACHABLE_BY_DESIGN) | set(
+        PENDING_SHELL_WIRING
+    ), sorted(shipped - reached)
     # Named rather than merely implied by the set difference: these three are
     # what the review found dead, and the vendored emulator is what page 3 is.
     assert {"session.js", "terminal.js"} <= reached, sorted(reached)

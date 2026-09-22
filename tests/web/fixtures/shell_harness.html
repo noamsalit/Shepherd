@@ -94,27 +94,83 @@
       <span class="topbar-sub">agent-a377e9e352405bde7 · integration · 2026-09-22T21:28:08Z</span>
     </header>
 
-    <!-- ============ Shepherd: the conversation, with verbatim prose ======= -->
-    <div class="scroll" id="page-shepherd">
-      <div class="thread">
-        <div class="turn turn-you">
-          <div class="bubble">
-            Shepherd — re-run the check against /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css and tell me what overflowed
-          </div>
-        </div>
+    <!-- ============ Shepherd: the conversation and the composer ==========
+      T7.1's shell contract. `chat.js` fills `#shepherd-thread` and wires
+      `#shepherd-input`, `#shepherd-send` and `#shepherd-status`; the thread
+      ships **empty**, so the page's own name has to be in the static markup
+      for `tools/render_check.py` to see it before the daemon answers.
 
-        <div class="turn turn-shepherd">
-          <div class="byline">
-            <span class="byline-mark"></span>
-            <span>Shepherd</span>
+      The root is `.detail` and not `.scroll` because this page is a scroller
+      **plus** a pinned composer — exactly the shape `app.css` already ships for
+      the session pane (`.detail` > `.detail-scroll` + `.composer-wrap`). A
+      `.scroll` root would put the composer inside the scroller and let it
+      scroll away.
+
+      The hostile strings T5.2 put in the thread are preserved in the two
+      example turns below: they are what makes the overflow check able to fail.
+      They stand in for what `chat.js` renders — a `.bubble` and `.prose` built
+      by the module carry the same classes.
+    -->
+    <div class="detail" id="page-shepherd">
+      <div class="detail-scroll" id="shepherd-scroll">
+        <div class="thread" id="shepherd-thread"></div>
+        <div class="thread">
+          <div class="turn turn-you">
+            <div class="bubble">
+              Shepherd — re-run the check against /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css and tell me what overflowed
+            </div>
           </div>
-          <p class="prose">
-            The engine was handed this verbatim, and a pane that cannot wrap it scrolls sideways: eyJzZXNzaW9uIjoiYWdlbnQtYTM3N2U5ZTM1MjQwNWJkZTciLCJjd2QiOiIvcm9vdC9TaGVwaGVyZC8uY2xhdWRlL3dvcmt0cmVlcy9hZ2VudC1hMzc3ZTllMzUyNDA1YmRlNyIsInByb21wdCI6InJlLXJ1biB0aGUgcmVuZGVyIGNoZWNrIGF0IDM5MCBhbmQgMTI4MCBhbmQgcmVwb3J0IGV2ZXJ5IG92ZXJmbG93IHlvdSBzZWUifQ== — one token, no spaces, 400 characters of it.
-          </p>
-          <p class="prose">
-            The path it was resolved against was /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css
-          </p>
+
+          <div class="turn turn-shepherd">
+            <div class="byline">
+              <span class="byline-mark"></span>
+              <span>Shepherd</span>
+            </div>
+            <p class="prose">
+              The engine was handed this verbatim, and a pane that cannot wrap it scrolls sideways: eyJzZXNzaW9uIjoiYWdlbnQtYTM3N2U5ZTM1MjQwNWJkZTciLCJjd2QiOiIvcm9vdC9TaGVwaGVyZC8uY2xhdWRlL3dvcmt0cmVlcy9hZ2VudC1hMzc3ZTllMzUyNDA1YmRlNyIsInByb21wdCI6InJlLXJ1biB0aGUgcmVuZGVyIGNoZWNrIGF0IDM5MCBhbmQgMTI4MCBhbmQgcmVwb3J0IGV2ZXJ5IG92ZXJmbG93IHlvdSBzZWUifQ== — one token, no spaces, 400 characters of it.
+            </p>
+            <p class="prose">
+              The path it was resolved against was /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css
+            </p>
+
+            <details class="step">
+              <summary>
+                <span class="step-chevron">›</span>
+                <span class="step-tool">list_sessions</span>
+                <span class="step-time">—</span>
+              </summary>
+              <div class="step-body">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</div>
+            </details>
+
+            <div class="approval" data-approval-id="ap-harness">
+              <div class="approval-head">needs you</div>
+              <div class="approval-tool">kill_session</div>
+              <div class="approval-meta">
+                <span>stop /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7</span>
+                <span>2026-09-22T21:33:08Z</span>
+              </div>
+              <div class="approval-acts">
+                <button class="btn btn-primary" type="button">Approve</button>
+                <button class="btn" type="button">Reject</button>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea id="shepherd-input" rows="1" placeholder="Tell Shepherd what to do"></textarea>
+          <div class="composer-row">
+            <span class="chip-hint">Shepherd · one turn at a time</span>
+            <button class="send" id="shepherd-send" type="button" aria-label="send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <p class="status" id="shepherd-status"></p>
       </div>
     </div>
 
@@ -192,11 +248,37 @@
       </div>
     </div>
 
-    <!-- ============ Settings =============================================== -->
-    <div class="scroll" id="page-settings" hidden>
-      <div class="stub">
-        <h2>Settings</h2>
-        <p>One autonomy control and nothing else (D65).</p>
+    <!-- ============ Settings ===============================================
+      T7.2's shell contract. `settings.js` fills `#settings-nav` and
+      `#settings-panel` and wires `#settings-back`; both containers ship empty,
+      so the page's own name is in the static `.col-head` for
+      `tools/render_check.py` to see before the daemon answers.
+
+      The root is `.panes2` — the same two-pane grid the Projects page uses —
+      because `app.css`'s one phone rule for it is a drill-down keyed on
+      `data-level`, and Settings wants exactly that: the section list, then the
+      panel, one at a time under 760px. The nav column is a `.herd-col` and the
+      panel is a `.proj-detail`, which are the two children that rule names.
+    -->
+    <div class="panes2" id="page-settings" data-level="list" hidden>
+      <div class="herd-col">
+        <!-- A `.proj-band` and **not** a `.col-head`: `.col-head` carries
+             `text-transform: uppercase`, and `inner_text()` returns the
+             transformed text, so `render_check.py`'s "every page shows its own
+             name" reads `SETTINGS` there and fails. Found in a browser, not by
+             reading. It is in the *list* column because that is the one the
+             phone shows first (`.panes2[data-level="list"]`). -->
+        <div class="proj-band"><h2 class="proj-title">Settings</h2></div>
+        <div class="set-nav" id="settings-nav"></div>
+      </div>
+      <div class="proj-detail set-panel">
+        <button class="back" id="settings-back" type="button" aria-label="back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6"/>
+          </svg>
+        </button>
+        <p class="status" id="settings-note"></p>
+        <div id="settings-panel"></div>
       </div>
     </div>
   </main>
