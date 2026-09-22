@@ -46,6 +46,11 @@ EXPECTED_MODULES = (
     "chat.js",
     "escape.js",
     "flock.js",
+    # T9.1 appends `projects.js`, by name and for the reason the list is a
+    # closed set: the Projects page carries the one `innerHTML` the prototype
+    # put in `BACK_BUTTON_P` (line 3101), rewritten here with `createElementNS`,
+    # and a scan that never enumerated the file would report that as clean.
+    "projects.js",
     "session.js",
     "settings.js",
     "sse.js",
