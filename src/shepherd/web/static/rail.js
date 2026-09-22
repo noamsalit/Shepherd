@@ -21,7 +21,13 @@
 // non-empty transition (RD9). The transition has an obvious place: it is the
 // branch below, and nothing else in this module would have to move.
 
-import { element } from "./fleet.js";
+// T6.1's rename follows here and nowhere further. `rail.js` is D66's module —
+// the rail has left the shell — and it is still on disk because its deletion is
+// T5.1's, not this task's. What could not be left alone is the *specifier*: it
+// named `fleet.js`, which no longer exists, so the page's module graph had a
+// dead edge in it. `element` is the same function, exported from the module the
+// rename moved it to. Nothing else in this file changes.
+import { element } from "./flock.js";
 
 // Principle 5: a session can block without the reason ever being recorded — a
 // lost hook, a build older than the normaliser. The row still renders, and it
