@@ -39,7 +39,11 @@
     "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired.",
     "T8.1 scope increases RATIFIED: Choice.number is int|None (the trust dialog's choices are unnumbered), Choice.selected exists (nowhere else to report which line carries the cursor), DecisionPrompt.kind exists (E17 requires the trust dialog be named so T8.2 refuses it by name rather than by sniffing its text). Each is forced by captured evidence, not preference.",
     "The tests/golden claude-dir guard is NARROWED, not dropped: it excludes paths under the repository's own tree. This harness places agent worktrees at <repo>/.claude/worktrees/, so the bare '/.claude/' substring flagged 138 frozen captures. The clause is kept because it is the one that would catch ANOTHER user's config dir. Proven both ways with a four-case control.",
-    "A6 RETIRED in the plan: esprima replaced by chromium at Phase 0. The live form of that risk is playwright, which render_check.py imports at module level and pyproject.toml does not declare; pytest.importorskip guards it."
+    "A6 RETIRED in the plan: esprima replaced by chromium at Phase 0. The live form of that risk is playwright, which render_check.py imports at module level and pyproject.toml does not declare; pytest.importorskip guards it.",
+    "Phase 3 RATIFIED: delete_project is not registered, and test_delete_project_is_not_registered_and_the_reason_is_the_writer_thread asserts the absence so it goes red the moment someone wires it. A name a consumer can read but cannot call is worse than a gap that is stated.",
+    "Phase 3 RATIFIED: the three store-side refusal conventions are adapted to ONE record at the tool surface, not by changing store/. The reason is sharper than consistency - registry.py:69 turns any handler exception into GENERIC_ERROR = 'request failed', so a guard that RAISES reaches the page with no reason at all, and the reserved-project refusal is precisely the case a page must explain.",
+    "Phase 3 RATIFIED: T3.2's test lives in test_compose_m4.py rather than the plan's test_composition_root.py, which composes nothing (114 lines of AST rules, no store, host or SocketPlan). The seam is the plan's; only the file differs.",
+    "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -286,10 +290,11 @@
     "plan-review-gap-2": "completed",
     "plan-review-amendment": "completed",
     "phase-0": "completed",
-    "phase-8-T8.1": "completed",
+    "phase-8-T8.1": "remediation_in_progress",
     "w6-docs": "completed",
-    "phase-1": "in_progress",
-    "phase-5-T5.2": "in_progress"
+    "phase-1": "remediation_in_progress",
+    "phase-5-T5.2": "in_progress",
+    "phase-3": "partial_held_for_merge"
   },
   "deferred_findings": [
     {
@@ -321,6 +326,18 @@
       "phase_id": "phase-0",
       "severity": "minor",
       "finding": "js_syntax_check.py now needs playwright, as render_check.py already did. Neither is declared in pyproject.toml. The suite reaches the JS gate only by subprocess and the whole test file is behind pytest.importorskip, so a machine without playwright still collects and passes."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-3",
+      "severity": "minor",
+      "finding": "tools_projects.py is 408 lines against the 450 cap that now names it. delete_project plus its projection and three-branch handler is ~60-80 lines, so the authorised tools_projects.py + tools_projects_reads.py split is very likely required - and BOTH halves must be named on the cap line, or the split hides growth."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-3",
+      "severity": "minor",
+      "finding": "add_repo refusal completeness: absent, not-a-repo and bare are proved; an unreadable path, a submodule, and a filesystem vanishing mid-probe are not. get_project's session ordering is unpinned."
     }
   ],
   "results": {
@@ -394,6 +411,24 @@
       "web": null,
       "github": null,
       "synthesis": null
+    },
+    "held_branches": {
+      "worktree-agent-a707de229afd3fe16": {
+        "sha": "8cf0e4d",
+        "what": "T5.2 app.css + tests/web/test_shell.py",
+        "adopt_at": "Phase 5"
+      },
+      "worktree-agent-ab6cfa80ec1636e6f": {
+        "sha": "41f9504",
+        "what": "T8.1 (already merged as 12cb3c8)",
+        "adopt_at": "merged"
+      },
+      "worktree-agent-af94e2c302e58b42f": {
+        "sha": "e1d2fe2",
+        "base": "44c26cc",
+        "what": "Phase 3: six of seven project tools + compose wiring; delete_project deliberately NOT registered",
+        "adopt_at": "after the Phase 1 remediation lands; files are disjoint from it"
+      }
     }
   },
   "evidence": {
@@ -558,9 +593,14 @@
       "event": "parallel_tracks_landed",
       "ts": "2026-09-22T04:46:22Z",
       "detail": "T8.1 merged from worktree; W6 docs complete; T5.2 dispatched in a worktree"
+    },
+    {
+      "event": "phase_3_partial",
+      "ts": "2026-09-22T05:56:40Z",
+      "detail": "six of seven verbs; delete_project blocked on the Phase 1 split"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T04:46:22Z"
+  "updated_at": "2026-09-22T05:56:40Z"
 }
