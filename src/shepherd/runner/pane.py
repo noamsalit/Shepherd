@@ -379,3 +379,157 @@ def _state(kind: PaneKind, fields: PaneFields, screen: Screen | None) -> PaneSta
         ghost_text=readable.ghost_text if readable is not None else None,
         dialog_text=(screen.text if screen is not None and kind in dialogs else None),
     )
+
+
+# ----- the decision -----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Choice:
+    """One option the engine is offering, read positionally."""
+
+    number: int | None
+    label: str
+    selected: bool
+
+
+@dataclass(frozen=True)
+class DecisionPrompt:
+    """What the screen is asking, and the options it offers, verbatim."""
+
+    kind: PaneKind
+    text: str
+    choices: tuple[Choice, ...]
+
+    @property
+    def selected(self) -> Choice | None:
+        for choice in self.choices:
+            if choice.selected:
+                return choice
+        return None
+
+
+#: The footer both captured shapes draw, and the cheapest discriminator on
+#: screen: `Esc to cancel · Tab to amend` (permission) and
+#: `Enter to confirm · Esc to cancel` (trust) share exactly this much.
+DIALOG_FOOTER = "Esc to cancel"
+
+#: The cursor. It marks *which* line is selected and nothing more: in the
+#: permission dialog it sits on `Yes`, in the trust dialog on `No, exit`, so
+#: reading it as "the affirmative" answers C15 by exiting the session.
+CURSOR = "\u276f"
+
+_CURSOR_LINE = re.compile(r"^(\s*)\u276f(\s*)")
+_NUMBERED = re.compile(r"^(\d+)\.\s+(.*)$")
+_LEADING = re.compile(r"^\s*")
+
+#: The two kinds whose `dialog_text` is populated (`_state`). Every other kind —
+#: a prompt-ready pane included, and its screen carries `\u276f` lines too — is
+#: asking nothing, and asking it for a decision is how an idle session grows a
+#: card it should not have (U11/E20).
+_DECIDABLE = (PaneKind.TRUST_DIALOG, PaneKind.PERMISSION_DIALOG)
+
+#: A block of one is not evidence of a choice list. Both captured shapes offer
+#: two or more, so a single aligned line above the footer degrades rather than
+#: becoming a one-option decision nobody has ever seen the engine draw.
+_MINIMUM_CHOICES = 2
+
+
+def read_decision(state: PaneState) -> DecisionPrompt | None:
+    """What the pane is asking, or `None` — never a guess (U17, E16).
+
+    **Pure.** A `PaneState` in, a `DecisionPrompt` or `None` out: no I/O, no
+    clock, no process, and nothing that could answer the dialog it just read. The
+    module that reads the trust screen must not be able to press Enter on it,
+    because on that screen Enter answers *"No, exit"* (C15, E17).
+
+    **Positional, never numeric.** The permission dialog numbers its options and
+    the trust dialog does not (`docs/design/decision-card-shapes.md`). A parser
+    keyed on the numbered form finds nothing in the trust screen, and if "no
+    choices" is read as "not a dialog" a blocked session reports no ask while it
+    sits there forever. So a choice is **a line in the block between the box and
+    the footer**, and the number, when present, is a label to display and to
+    send — not the thing that identifies the choice.
+
+    **The structure it requires, and the four ways it degrades.** The footer
+    line; a cursor line above it; every line from the cursor to the footer
+    starting at the cursor's own label column, with no second cursor among them;
+    and a rule line above, opening the box whose body is the ask. Any of the four
+    absent and the answer is `None` — which T8.2 renders as the ask plus
+    approve/reject, saying it could not read the choices. Only two shapes were
+    ever captured, both on `claude` 2.1.270, so an unrecognised screen has to be
+    a degradation and not an exception.
+    """
+    if state.kind not in _DECIDABLE or not state.dialog_text:
+        return None
+
+    lines = [line.rstrip() for line in state.dialog_text.split("\n") if line.strip()]
+
+    footer = _last(lines, lambda line: DIALOG_FOOTER in line)
+    if footer is None:
+        return None
+
+    cursor = _last(lines[:footer], lambda line: _CURSOR_LINE.match(line) is not None)
+    if cursor is None:
+        return None
+
+    choices = _read_choices(lines[cursor:footer])
+    if choices is None:
+        return None
+
+    rule = _last(lines[:cursor], lambda line: _RULE.search(line) is not None)
+    if rule is None:
+        return None
+    text = _dedent(lines[rule + 1 : cursor])
+    if not text:
+        return None
+
+    return DecisionPrompt(kind=state.kind, text=text, choices=choices)
+
+
+def _last(lines: list[str], matches: Callable[[str], bool]) -> int | None:
+    """The **last** match, not the first: the permission capture's scrollback
+    holds the operator's own cursor-prefixed prompt lines well above the box."""
+    for index in reversed(range(len(lines))):
+        if matches(lines[index]):
+            return index
+    return None
+
+
+def _indent(line: str) -> int:
+    match = _LEADING.match(line)
+    return len(match.group(0)) if match is not None else 0
+
+
+def _read_choices(block: list[str]) -> tuple[Choice, ...] | None:
+    """`block[0]` carries the cursor; the rest must align under its label."""
+    head = _CURSOR_LINE.match(block[0])
+    if head is None:  # pragma: no cover - _last already matched this line
+        return None
+    column = len(head.group(0))
+
+    read = [_choice(block[0][column:], selected=True)]
+    for line in block[1:]:
+        if CURSOR in line or _indent(line) != column:
+            return None
+        read.append(_choice(line[column:], selected=False))
+
+    if len(read) < _MINIMUM_CHOICES:
+        return None
+    return tuple(read)
+
+
+def _choice(body: str, *, selected: bool) -> Choice:
+    """The number is a label, and it is optional: the trust dialog has none."""
+    numbered = _NUMBERED.match(body)
+    if numbered is None:
+        return Choice(number=None, label=body.strip(), selected=selected)
+    return Choice(number=int(numbered.group(1)), label=numbered.group(2).strip(), selected=selected)
+
+
+def _dedent(body: list[str]) -> str:
+    """The ask as the engine drew it, shifted left but never reflowed."""
+    if not body:
+        return ""
+    common = min(_indent(line) for line in body)
+    return "\n".join(line[common:] for line in body).strip()
