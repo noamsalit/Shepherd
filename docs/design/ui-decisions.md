@@ -274,6 +274,10 @@ constants. Everything else is a labelled placeholder.
    child. U2 takes it off the shell. That test encodes §12's rule, so removing it
    is reversing a decision: it needs a decision row of its own, the way D65
    handled the autonomy toggle. Do not delete the assertion quietly.
+   **Done, 2026-09-22: that row is D66**, written in the same commit that
+   deletes the assertion, with seven retirements under `"§3 D66"` and §3's own
+   headline count moved with it. The projection survives — only the renderer
+   went.
 
 ### And the freeze
 
