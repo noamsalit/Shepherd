@@ -272,9 +272,24 @@ def test_no_fixture_reads_the_real_claude_dir(monkeypatch: pytest.MonkeyPatch) -
     # `~/.claude`. Re-derived rather than imported, because `tests/` is not a
     # package and its `conftest` name is already taken in this directory.
     forbidden = str(Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude"))
-    offenders = [path for path in opened if path.startswith(forbidden) or "/.claude/" in path]
+    # **The repository's own tree is never the engine's directory.** The bare
+    # `/.claude/` substring was a second net behind `startswith(forbidden)`, and
+    # it fires on every frozen capture when the checkout itself lives under a
+    # `.claude/` path — which is exactly where this harness puts an agent's git
+    # worktree (`<repo>/.claude/worktrees/agent-<id>/`). Measured: 138 offenders,
+    # all of them `docs/probes/**` read from inside the worktree.
+    # The net is kept and narrowed rather than dropped, because it is the clause
+    # that would catch *another* user's config dir, which `forbidden` would not.
+    here = str(Path(__file__).resolve().parents[2])
+    offenders = [
+        path
+        for path in opened
+        if path.startswith(forbidden) or ("/.claude/" in path and not path.startswith(here))
+    ]
     assert offenders == [], f"a fixture read the engine's own directory: {offenders[:3]}"
     assert any("docs/probes" in path for path in opened), "no capture was read at all"
 
     named = [source for fixture in fixtures for source in fixture.sources]
-    assert [source for source in named if "/.claude/" in source] == []
+    assert [
+        source for source in named if "/.claude/" in source and not source.startswith(here)
+    ] == []
