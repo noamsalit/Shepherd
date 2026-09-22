@@ -340,12 +340,16 @@ path to the same capability.
 class Runner(Protocol):
     def start(self, spec: SessionSpec) -> RunnerHandle: ...
     def attach(self, handle: RunnerHandle) -> ByteStream: ...        # live output
-    def snapshot(self, handle: RunnerHandle, lines: int) -> bytes: ...  # screen+scrollback
+    def snapshot(self, handle: RunnerHandle, scrollback: int) -> bytes: ...  # screen+scrollback
     def write(self, handle: RunnerHandle, data: bytes) -> None: ...  # key bytes, D43
     def resize(self, handle: RunnerHandle, cols: int, rows: int) -> None: ...
     def interrupt(self, handle: RunnerHandle) -> None: ...            # D43 — not a signal
     def terminate(self, handle: RunnerHandle) -> None: ...            # D43 — ends the session
     def probe(self, handle: RunnerHandle) -> ProcState: ...          # alive?, exit_code
+    def pane(self, handle: RunnerHandle) -> PaneState: ...           # screen classification (N11)
+    def list_owned_panes(self) -> tuple[PaneRef, ...]: ...           # cap population (N11)
+    def attached_clients(self, handle: RunnerHandle) -> int: ...     # concurrent client count
+    def clear_input(self, handle: RunnerHandle) -> None: ...         # D45, T13-2
 
 
 class EngineAdapter(Protocol):
@@ -582,10 +586,10 @@ Naming these matters more than the tables, because each was in an earlier draft:
 |---|---|---|---|
 | `id` | TEXT PK | no | |
 | `workspace_id` | TEXT FK | no | **Becomes a repo↔project join table under D60** — migration 004, not yet applied. |
-| `owner_id` | TEXT | no | |
+| `owner_id` | TEXT | no | D2: partition key for multi-user scope |
 | `name` | TEXT | no | defaults to directory basename |
 | `root_path` | TEXT | no | absolute, canonicalized, **UNIQUE**. Display and discovery only — **the binding key is `git_common_dir` (D48)**, not this. |
-| `git_common_dir` | TEXT | **yes** | D48's binding key: `git rev-parse --path-format=absolute --git-common-dir`. A linked worktree is a *sibling* of its repo, which is why prefix matching failed. |
+| `git_common_dir` | TEXT | **yes** | D48's binding key: `git rev-parse --path-format=absolute --git-common-dir`. A linked worktree is a *sibling* of its repo, which is why prefix matching failed. This column matters most: it is how D48 distinguishes two worktrees that share `root_path` as a prefix. |
 | `vcs_remote` | TEXT | **yes** | null for non-git, and for a git repo with no `origin` remote (`git remote get-url origin` exits 2) |
 | `active` | BOOLEAN | no | soft delete — past sessions still reference it |
 | `added_at` | TEXT | no | |
@@ -629,6 +633,9 @@ Real shapes and examples: data-schemas.md §Common input fields (every hook's st
 | `cwd` · `worktree_path` · `runner_handle` | TEXT | worktree/handle yes | |
 | `engine` · `provider` · `model` · `effort` · `credential_ref` · `runner` | TEXT | mostly yes | null = engine default. `effort` is a top-level transcript field on assistant entries, absent for models without effort (haiku); `model` is at `message.model`, which is `<synthetic>` on client-generated entries |
 | `started_at` | TEXT | no | |
+| `observed_at` | TEXT | **yes** | per-field recency key (RD8): without it a writer cannot observe both fields changing |
+| `live_subagent_ids` · `created_task_ids` · `completed_task_ids` | TEXT JSON | no | lists of agent/task ids, tracking lineage. Defaults `[]` |
+| `pid` · `proc_start` | INTEGER · TEXT | yes | the pane's child process and its start tick from `/proc/stat` (C13, E31) |
 
 **Title is its own small subsystem** — see `title` / `title_source` in §7.1.
 
@@ -655,6 +662,7 @@ Real shapes and examples: data-schemas.md §Common input fields (every hook's st
 | `decided_by` | TEXT enum | **yes** | `mechanical` \| `model` \| `declared` \| `manual` \| `heuristic` — migration 002 widened the `CHECK` from four to five, and `heuristic` is what M2 writes |
 | `next_actions` | TEXT **JSON** | no | `[]`; up to 3 `{text, kind, target}` (D21) |
 | `ended_at` · `exit_code` | | yes | `exit_code` is `owned` only |
+| `auto_compact_at` · `quota_notice_at` | TEXT | yes | C12 and G-M2-1 marks: evidence discarded after folding is recorded as a column |
 
 The stop group is **derived and recomputable**: truth is the transcript plus the
 stop-evidence log (D25), and `shepherd recompute` rebuilds these columns. They exist
@@ -875,24 +883,22 @@ them on every render.
 > Python hook gets **killed at shutdown**. §15 describes the real thing. This sample is kept because
 > the contract it illustrates — JSON on stdin, always exit 0 — is unchanged.
 
-CCC installs two hook scripts. We install **one** — `hookd.py` — registered for
-every event we need. It reads the JSON on stdin, writes it to `sessiond`'s UDS
-with a **250 ms timeout**, and **always exits 0**:
+CCC installs two hook scripts. We install **one** — a shell one-liner authored
+solely by `HostPlatform.hook_dispatch()` (see `host/linux.py` for Linux, `host/mac.py`
+for macOS). It reads the JSON on stdin, writes it to `sessiond`'s UDS with a
+**5 second timeout** (E18/C7: per-entry default is 600 s, we budget 5), and **always exits 0**:
 
-```python
-def main() -> None:
-    try:
-        payload = sys.stdin.read()
-        send_uds(payload, timeout=0.25)
-    except BaseException:
-        pass
-    sys.exit(0)
+```bash
+timeout 5 nc -U -q0 /path/to/control.socket || true
 ```
 
+The `-q0` flag (OpenBSD netcat) is platform-specific (D55's sixth member), measured
+at 3.2 ms per invocation (docs/probes/2026-09-16-hookd-latency.md Result 1b). Without
+it, a hook costs 250+ ms per invocation while still delivering the payload.
+
 A hook that can block or fail Claude Code is unacceptable (principle 4). Claude
-Code runs hooks synchronously and waits for them (default timeout 600 s), so
-this one bounds its own run with the 250 ms socket timeout and never fails the
-session.
+Code runs hooks synchronously and waits for them, so this one bounds its own run with
+a timeout and always exits 0 — delivering the payload or not, it never fails the session.
 
 Real shapes and examples: data-schemas.md §Hooks config schema (`hooks` in settings.json), §Hook runtime contract (process, stdin, env, exit codes, stdout, timeout, sync, ancestry), §Hook process ancestry and environment (which claude owns this hook?).
 
@@ -1898,26 +1904,26 @@ of what was already done rather than a question.
 ### Page 2 — Fleet: projects → sessions → subagents
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│  ▼ payments-api                              2 running · 1 needs you   │
-│     ┌──────────────────────────────────────────────────────────────┐   │
-│     │ ⏸ needs you   PROJ-86559 federation      permission: push   │    │
-│     │               owned · opus-5 · 14m                    [open] │   │
-│     ├──────────────────────────────────────────────────────────────┤   │
-│     │ ● running     PROJ-81711 custom reports          3 subagents│    │
-│     │               owned · opus-5 · 6m · 2/5 tasks             ▼  │   │
-│     │      ├─ ● cc10x:component-builder  resolver + specs     4m   │   │
-│     │      ├─ ● general-purpose          scan schema.gql      1m   │   │
-│     │      └─ ✓ cc10x:planner            plan revision 2      2m   │   │
-│     ├──────────────────────────────────────────────────────────────┤   │
-│     │ ⏱ paused      PROJ-74458 skills scan      rate limited      │    │
-│     │               resumes 14:20 · attempt 1/2            [retry] │   │
-│     └──────────────────────────────────────────────────────────────┘   │
-│                                                                        │
-│  ▶ billing-api                        1 stopped early                  │
-│  ▶ frontend                                 idle                       │
-│  ▶ scanner-cli                          attached · 1 running   │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│  ▼ payments-api                              2 running · 1 needs you       │
+│     ┌──────────────────────────────────────────────────────────────────┐   │
+│     │ ⏸ needs you   PROJ-86559 federation      permission: push        │   │
+│     │               owned · opus-5 · 14m                        [open] │   │
+│     ├──────────────────────────────────────────────────────────────────┤   │
+│     │ ● running     PROJ-81711 custom reports          3 subagents    │   │
+│     │               owned · opus-5 · 6m · 2/5 tasks                 ▼ │   │
+│     │      ├─ ● cc10x:component-builder  resolver + specs     4m       │   │
+│     │      ├─ ● general-purpose          scan schema.gql      1m       │   │
+│     │      └─ ✓ cc10x:planner            plan revision 2      2m       │   │
+│     ├──────────────────────────────────────────────────────────────────┤   │
+│     │ ⏱ limit exceeded PROJ-74458 skills scan  rate limited           │   │
+│     │               resumes 14:20 · attempt 1/2            [retry]    │   │
+│     └──────────────────────────────────────────────────────────────────┘   │
+│                                                                            │
+│  ▶ billing-api                        1 stopped early                      │
+│  ▶ frontend                                 idle                           │
+│  ▶ scanner-cli                          attached · 1 running               │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Projects collapsed by default. **Ordering is derived from state, never
@@ -2207,7 +2213,7 @@ Four lanes. The first two carry the value.
    `stalled_pending_tool`. Pure function in, verdict out. **No mocking of Claude
    Code — the fixtures *are* Claude Code.** Adding a missed case is: capture signals, drop in a fixture,
    fix the rule, run `replay`.
-2. **Contract suites, one per seam — **status 2026-09-21:** three exist (`tests/contracts/` covers host, master and runner). `testkit/` ships `ScriptedHost`, `ScriptedRunner` and `ScriptedMaster` only; `ScriptedWorkItemProvider` and `ScriptedEngine` are named below but not written, because the seams they double are not built. `ScriptedHost` shipped at M1 with D55 and is missing from the list below. Contract suites, one per seam.** `WorkItemProvider`, `Runner`,
+2. **Contract suites, one per seam — **status 2026-09-21:** three exist (`tests/contracts/` covers host, master and runner). `testkit/` ships `ScriptedHost`, `ScriptedRunner` and `ScriptedMaster`; `ScriptedWorkItemProvider` and `ScriptedEngine` are named below but not written, because the seams they double are not built.** `WorkItemProvider`, `Runner`,
    `EngineAdapter` and `MasterRuntime` each get **one** test suite that every
    implementation must pass. A new provider is done when it passes the existing
    suite. This is the mechanism that stops the abstractions rotting into
@@ -2215,9 +2221,9 @@ Four lanes. The first two carry the value.
 
 #### `Scripted*` — what they are and why every seam gets one
 
-**Every seam ships a `Scripted*` implementation**: `ScriptedRunner`,
-`ScriptedWorkItemProvider`, `ScriptedEngine`, `ScriptedMaster`. They live in
-`testkit/` and ship with the package, not only with the tests.
+**Every seam ships a `Scripted*` implementation**: `ScriptedHost`, `ScriptedRunner`,
+`ScriptedMaster`. They live in
+`testkit/` and ship with the package, not only with the tests. (Future: `ScriptedWorkItemProvider`, `ScriptedEngine`.)
 
 **What one is.** A real implementation of the seam's `Protocol` that answers from
 a fixture instead of from the outside world. `ScriptedMaster` satisfies
@@ -2438,7 +2444,7 @@ its keep.
 | **M1** | Foundation + visibility | **Hook-payload probe first** (§18), then both daemons, `hookd` dispatcher, ingest folding into `session` columns in `controld` (D24, D37), a **minimal `toolsurface/`: `ToolDef` + `invoke()` with read-only tools, no gate yet (D38)**, **four of the six tables** (`workspace`, `repo`, `session`, `app_state` — `work_item` and `queue` arrive with M5) + migrations, workspace/repo discovery and binding (D22), workspace→session→subagent tree, fleet page, SSE. **Read-only, `attached` sessions only.** Ordering uses the three live `state` values (`needs_you` → `running` → `stopped` → idle) — the full 7-bucket palette lands in M2. | 4–6 d |
 | **M2** | Signals engine | Classifier over transcript tail + stop metadata (D24), the `session` stop columns, **`next_actions[]` and the default table (D21)**, 7-bucket palette and its ordering, expandable stopped rows with action buttons, Needs-You rail, `replay`, `unknown` rate. **Mechanical reasons + heuristics only — the LLM verdict lane is deferred (D34)**, stubbed behind `classify_end_turn()`. | 5–6 d |
 | **M3** | Owned sessions | tmux runner, spawn, xterm.js terminal, write policy, mailbox, `ask()` via fork, rename + the `can_set_title` probe (D29). | 5–7 d |
-| **M4** | Orchestrator | **Complete the tool registry first (§11.0, D32, D38)** — `authorize()`, the audit log and the two MCP exporters behind the `invoke()` that M1 shipped; **no file in `web/` or `cli/` may change** — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
+| **M4** | Orchestrator | **Complete the tool registry first (§11.0, D32, D38)** — `authorize()`, the audit log and the one MCP exporter (the SDK binding) behind the `invoke()` that M1 shipped; **no file in `web/` or `cli/` may change** — then `MasterRuntime` + `AgentSDKMaster` **behind the D19 import boundary + its isolation test**, `ScriptedMaster` and the `MasterRuntime` contract suite (§14.2), the wake set and its retry cap (D31), `authorize()` off `tool.blast_class`, approvals, audit, chat page. | 5–6 d |
 | **M4.5** | Connectors | `connector` table + catalogue, settings page, OAuth/token capture into the credential store, mount/unmount at turn boundaries, health polling, `ask_orchestrator()` brokering, per-tool blast overrides. | 3–4 d |
 | **M5** | Queues | Jira provider, reconcile, the `work_item` table + claims, hierarchy and leaf-only dispatch (D23), workers, lazy per-repo worktrees (D22), verdict routing, two-chip rows, **the matrix view (D27)**. | 7–9 d |
 | **M6** | Notion + channels + ship | Notion provider (proves the seam), broadcast channels, `shepherd install` packaging, uninstall. | 4–6 d |

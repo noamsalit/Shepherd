@@ -544,3 +544,51 @@ def test_nothing_deactivates_a_repo_so_list_repos_needs_no_active_filter() -> No
     # Arrival before absence: the scan really did read the write that sets it.
     assert sql == [("writes.py", "active = 1")], sql
     assert all(text.endswith("1") for _, text in assignments), assignments
+
+
+# ----- T1.2: the project vocabulary (§3 D57) --------------------------------
+
+
+def test_the_reserved_project_id_has_one_definition_site() -> None:
+    """ADR-P2. `store.models` is the one place the literal is written.
+
+    `tests/boundaries/test_one_definition_site.py` is the rule; this is the
+    name that rule protects.
+    """
+    assert models.UNASSIGNED_PROJECT_ID == "unassigned"
+
+
+def test_on_running_names_the_three_choices_the_page_offers() -> None:
+    """The delete state machine's third axis, as an enum rather than a string.
+
+    The tool schema puts these in an `enum`, so a fourth spelling is refused
+    before the handler; this asserts the three the schema will be built from.
+    """
+    assert [choice.value for choice in models.OnRunning] == ["refuse", "kill", "orphan"]
+
+
+def test_a_delete_outcome_carries_every_field_the_refusal_needs() -> None:
+    """`delete_project` answers with one frozen record, never a bare bool.
+
+    The Projects page renders the three choices *from the refusal* (E13), so
+    `refused` and `running` are part of the answer and not a log line.
+    """
+    outcome = models.DeleteOutcome(
+        deleted=False, refused="a reason", running=("s1",), killed=(), orphaned=()
+    )
+    assert (outcome.deleted, outcome.refused, outcome.running) == (False, "a reason", ("s1",))
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        outcome.deleted = True  # type: ignore[misc]
+
+
+def test_a_workspace_carries_a_description_and_no_root_path() -> None:
+    """D57: a project is a label plus a description; paths belong to repos."""
+    fields = {field.name for field in dataclasses.fields(models.Workspace)}
+    assert "description" in fields
+    assert "root_path" not in fields
+
+
+def test_a_repo_no_longer_carries_the_project_it_belongs_to() -> None:
+    """The join table owns that edge now, and a repo may sit in two projects."""
+    fields = {field.name for field in dataclasses.fields(models.Repo)}
+    assert "workspace_id" not in fields

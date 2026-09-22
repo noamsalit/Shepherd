@@ -50,6 +50,17 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "by T6, out loud'), applied by T6 and recorded in docs/plans/m4-blockers/t6.md "
         "section T6-1.",
     ),
+    "tests/store/test_migration_003.py::test_future_schema_refuses_to_start_at_four": (
+        "The test builds its impossible sentinel by inserting a schema_migration row at "
+        "version 4, and migration 004 makes 4 the real current version. Because "
+        "schema_migration.version is INTEGER PRIMARY KEY (001_m1_foundation.sql:22), that "
+        "insert became a primary-key collision inside the test's own setup rather than the "
+        "future-schema refusal it asserts, so the test could no longer observe the rule it "
+        "was written for. The rule itself is unchanged and is re-proved one version up by "
+        "the named successor in the same module, "
+        "test_future_schema_refuses_to_start_at_five, which inserts version 5.",
+        "§7 rule 2, re-anchored by §3 D57's migration 004.",
+    ),
 }
 
 

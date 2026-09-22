@@ -91,7 +91,7 @@ def workspace(row: sqlite3.Row) -> Workspace:
         id=str(row["id"]),
         owner_id=str(row["owner_id"]),
         name=str(row["name"]),
-        root_path=None if row["root_path"] is None else str(row["root_path"]),
+        description=None if row["description"] is None else str(row["description"]),
         created_at=str(row["created_at"]),
         last_activity_at=None if row["last_activity_at"] is None else str(row["last_activity_at"]),
     )
@@ -101,7 +101,6 @@ def repo(row: sqlite3.Row) -> Repo:
     return Repo(
         id=str(row["id"]),
         owner_id=str(row["owner_id"]),
-        workspace_id=str(row["workspace_id"]),
         name=str(row["name"]),
         root_path=str(row["root_path"]),
         git_common_dir=None if row["git_common_dir"] is None else str(row["git_common_dir"]),

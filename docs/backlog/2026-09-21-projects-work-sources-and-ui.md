@@ -135,7 +135,9 @@ section rewrite rather than a sentence fix. **Each is a real inaccuracy, not a n
 5. **§8's hook-dispatcher code sample is the shape that was rejected.** Flagged in place;
    the real one-liner lives in §15 and in `hookd_command.py`.
 6. **Appendix A needs a rewrite** (C22): `repo_id` values contradict D48, and the
-   `workspace` row is built on `root_path`, which D57 removes.
+   `workspace` row is built on `root_path`, which D57 removes. **Blocked on W1 (Phase 1)
+   landing** — migration 004 is in concurrent flight and will remove `root_path`;
+   rewriting against a mid-change schema would be wrong twice.
 7. **§12's ASCII mockups took damage in the 2026-09-20 scrub** — box borders at the
    fleet-page mockup no longer align after the substitutions changed string widths.
 

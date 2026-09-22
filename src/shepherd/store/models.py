@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import StrEnum
+from typing import Final
 
 from shepherd.core.runner import RunnerHandle
 from shepherd.core.states import Origin, Ownership, SessionState, TitleSource
@@ -28,7 +30,10 @@ from shepherd.core.stops import NextAction
 __all__ = [
     "DEFAULT_ENGINE",
     "SESSION_COLUMNS",
+    "UNASSIGNED_PROJECT_ID",
+    "DeleteOutcome",
     "FleetRow",
+    "OnRunning",
     "Repo",
     "ReplayTarget",
     "Session",
@@ -41,6 +46,64 @@ __all__ = [
 
 #: The engine M1 observes. §7 has no default for it, so the verb supplies one.
 DEFAULT_ENGINE = "claude_code"
+
+#: The reserved project (ADR-P2, §3 D57), seeded by `004_projects.sql`. Work
+#: that matched no declared project lands here rather than minting one.
+#:
+#: **The one definition site.** A literal rather than a ULID because a sentinel
+#: that reads as itself in a log beats one nobody can recognise, and it lives
+#: here rather than beside each guard because a reserved id spelled twice is a
+#: reserved id that will eventually be spelled two ways.
+UNASSIGNED_PROJECT_ID: Final[str] = "unassigned"
+
+
+class OnRunning(StrEnum):
+    """What `delete_project` does about sessions that are still running.
+
+    The default is `REFUSE`: the page renders the other two choices *from the
+    refusal*, so the destructive answers are ones a human picked rather than
+    ones a default picked for them.
+    """
+
+    REFUSE = "refuse"
+    KILL = "kill_sessions"
+    """Spelled `kill_sessions`, not `kill`, and the reason is a real one.
+
+    `tests/boundaries/test_tmux_blast_radius.py` refuses any string constant in
+    `src/` that `runner.tmux_cmd.is_server_teardown` answers `True` for, and a
+    bare `kill` is one: tmux resolves an unambiguous command-name **prefix**, so
+    `kill` reaches `kill-server`, and the guard refuses ambiguous prefixes on
+    purpose. That guard exists because a spike's `kill-server` destroyed three
+    live sessions on 2026-09-12, and because M3 later found the first version of
+    it was a *spelling* that `kill-serv` walked straight through.
+
+    The word is not lost: `kill_sessions` is what D61 means, it is what the page
+    says, and it matches the `kill_session` tool that has shipped since M3 — which
+    is itself a string constant in `src/` that this same guard already accepts.
+    The value was the collision, not the vocabulary.
+    """
+    ORPHAN = "orphan"
+
+
+@dataclass(frozen=True)
+class DeleteOutcome:
+    """What `delete_project` answers with — never a bare bool.
+
+    A refusal has to carry *why* and *which sessions*, because E13's dialog is
+    built from this record: a caller that only learns `False` has to go and ask
+    a second question to render anything, and the second question can disagree
+    with the first.
+    """
+
+    deleted: bool
+    refused: str | None = None
+    running: tuple[str, ...] = ()
+    """Session ids that stopped the delete, when `on_running` was `REFUSE`."""
+    killed: tuple[str, ...] = ()
+    orphaned: tuple[str, ...] = ()
+    """Sessions moved to `UNASSIGNED_PROJECT_ID`. They stay visible on Flock —
+    `Store.fleet()` is an INNER JOIN, so a session pointing at a deleted
+    workspace would vanish without trace (P2)."""
 
 SESSION_COLUMNS = (
     "id, owner_id, engine_session_id, workspace_id, repo_id, origin, ownership, ephemeral,"
@@ -67,9 +130,12 @@ class Workspace:
     id: str
     owner_id: str
     name: str
-    root_path: str | None
+    description: str | None
     created_at: str
     last_activity_at: str | None
+    """Derived at read time from the project's sessions (ADR-P4), never
+    written: a column would need a writer on every session update and would be
+    wrong the moment one of them was missed."""
 
 
 @dataclass(frozen=True)
@@ -78,7 +144,6 @@ class Repo:
 
     id: str
     owner_id: str
-    workspace_id: str
     name: str
     root_path: str
     git_common_dir: str | None

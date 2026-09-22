@@ -133,8 +133,8 @@ def test_002_applies_over_001(tmp_path: Path) -> None:
     """
     db_path = build_001_database(tmp_path)
 
-    assert migrate(db_path) == 3
-    assert read_schema_version(db_path) == 3
+    assert migrate(db_path) == 4
+    assert read_schema_version(db_path) == 4
 
     with connect(db_path) as connection:
         row = connection.execute("SELECT * FROM session WHERE id = '01SESSION'").fetchone()
@@ -257,7 +257,7 @@ def test_checksum_mismatch_on_002_refuses_to_start(tmp_path: Path) -> None:
     directory = tmp_path / "migrations"
     shutil.copytree(MIGRATIONS_DIR, directory)
     db_path = tmp_path / "shepherd.db"
-    assert migrate(db_path, migrations_dir=directory) == 3
+    assert migrate(db_path, migrations_dir=directory) == 4
 
     target = directory / "002_m2_stop_verdicts.sql"
     target.write_text(target.read_text(encoding="utf-8") + "\n-- edited\n", encoding="utf-8")
@@ -271,7 +271,10 @@ def test_checksum_mismatch_on_002_refuses_to_start(tmp_path: Path) -> None:
 def test_future_schema_refuses_to_start(tmp_path: Path) -> None:
     """§7 rule 2 — a database one version ahead of the binary.
 
-    003 landed (DP3), so the version from the future moved from 3 to 4.
+    004 landed (§3 D57), so the version from the future moved from 4 to 5.
+    The name carries no version, so this is a body rewrite and the node id is
+    kept; `test_migration_003.py`'s sibling named *at_four* could not be, which
+    is the whole argument for not putting a number in a test name.
     `tests/store/test_migration_003.py` re-runs this rule at its own version.
     """
     db_path = tmp_path / "shepherd.db"
@@ -279,21 +282,21 @@ def test_future_schema_refuses_to_start(tmp_path: Path) -> None:
     with connect(db_path) as connection:
         connection.execute(
             "INSERT INTO schema_migration (version, name, checksum, applied_at)"
-            " VALUES (4, '004_from_the_future', 'x', '2026-09-17T00:00:00Z')"
+            " VALUES (5, '005_from_the_future', 'x', '2026-09-17T00:00:00Z')"
         )
 
     with pytest.raises(MigrationRefused) as excinfo:
         migrate(db_path)
     message = str(excinfo.value)
-    assert "4" in message and "3" in message
-    assert read_schema_version(db_path) == 4
+    assert "5" in message and "4" in message
+    assert read_schema_version(db_path) == 5
 
 
 def test_001_is_untouched_by_m2(tmp_path: Path) -> None:
     """ADR-M2-4's whole point: a dev database that applied 001 still starts."""
     db_path = build_001_database(tmp_path)
     # No checksum refusal on the way up — 001's bytes are as M1 left them.
-    assert migrate(db_path) == 3
+    assert migrate(db_path) == 4
 
 
 def test_every_stop_reason_is_accepted_by_the_check(tmp_path: Path) -> None:

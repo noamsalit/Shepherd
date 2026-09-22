@@ -182,8 +182,8 @@ def test_migrate_expected_version_matches_the_highest_file() -> None:
     moving without the file.
     """
     versions = sorted(int(path.name.split("_", 1)[0]) for path in MIGRATIONS_DIR.glob("*.sql"))
-    assert versions == [1, 2, 3]
-    assert EXPECTED_SCHEMA_VERSION == 3
+    assert versions == [1, 2, 3, 4]
+    assert EXPECTED_SCHEMA_VERSION == 4
     assert (MIGRATIONS_DIR / "003_m3_mailbox.sql").is_file()
 
 
@@ -200,8 +200,8 @@ def test_003_applies_over_002_and_changes_nothing_that_was_there(tmp_path: Path)
         before_indexes = index_spec(connection, "session")
     assert len(before_columns) == len(FULL_SESSION)  # 52 columns, all of them written above
 
-    assert migrate(db_path) == 3
-    assert read_schema_version(db_path) == 3
+    assert migrate(db_path) == 4
+    assert read_schema_version(db_path) == 4
 
     with connect(db_path) as connection:
         assert session_column_spec(connection) == before_columns
@@ -224,8 +224,8 @@ def test_003_applies_over_002_and_changes_nothing_that_was_there(tmp_path: Path)
             )
 
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
-        # three applied migrations, and 001/002's bookkeeping rows untouched
-        assert connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 3
+        # four applied migrations, and 001/002's bookkeeping rows untouched
+        assert connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 4
 
 
 def test_003_leaves_every_session_default_alone(tmp_path: Path) -> None:
@@ -406,7 +406,7 @@ def test_checksum_mismatch_on_003_refuses_to_start(tmp_path: Path) -> None:
     directory = tmp_path / "migrations"
     shutil.copytree(MIGRATIONS_DIR, directory)
     db_path = tmp_path / "shepherd.db"
-    assert migrate(db_path, migrations_dir=directory) == 3
+    assert migrate(db_path, migrations_dir=directory) == 4
 
     target = directory / "003_m3_mailbox.sql"
     target.write_text(target.read_text(encoding="utf-8") + "\n-- edited\n", encoding="utf-8")
@@ -417,21 +417,31 @@ def test_checksum_mismatch_on_003_refuses_to_start(tmp_path: Path) -> None:
     assert "003" in str(excinfo.value)
 
 
-def test_future_schema_refuses_to_start_at_four(tmp_path: Path) -> None:
-    """§7 rule 2, re-run at version 3 — a database at 4 against a binary at 3."""
+def test_future_schema_refuses_to_start_at_five(tmp_path: Path) -> None:
+    """§7 rule 2, re-anchored one version up — a database at 5 against a binary
+    at 4.
+
+    The successor to `test_future_schema_refuses_to_start_at_four`, retired by
+    §3 D57's migration 004. That test built its impossible sentinel by
+    inserting version **4**; 004 makes 4 the real current version and
+    `schema_migration.version` is `INTEGER PRIMARY KEY` (`001:22`), so the
+    insert became a primary-key collision instead of the refusal it asserted.
+    The rule itself is unchanged, which is why this is a rename-with-successor
+    rather than a deletion.
+    """
     db_path = tmp_path / "shepherd.db"
     migrate(db_path)
     with connect(db_path) as connection:
         connection.execute(
             "INSERT INTO schema_migration (version, name, checksum, applied_at)"
-            " VALUES (4, '004_from_the_future', 'x', '2026-09-17T00:00:00Z')"
+            " VALUES (5, '005_from_the_future', 'x', '2026-09-17T00:00:00Z')"
         )
 
     with pytest.raises(MigrationRefused) as excinfo:
         migrate(db_path)
     message = str(excinfo.value)
-    assert "4" in message and "3" in message
-    assert read_schema_version(db_path) == 4
+    assert "5" in message and "4" in message
+    assert read_schema_version(db_path) == 5
 
 
 def test_001_and_002_are_untouched_by_m3(tmp_path: Path) -> None:
@@ -445,7 +455,7 @@ def test_001_and_002_are_untouched_by_m3(tmp_path: Path) -> None:
     forbids, and the fix is a new numbered file rather than a new digest here.
     """
     assert build_002_database(tmp_path) is not None
-    assert migrate(tmp_path / "shepherd.db") == 3
+    assert migrate(tmp_path / "shepherd.db") == 4
 
     digests = {
         "001_m1_foundation.sql": (

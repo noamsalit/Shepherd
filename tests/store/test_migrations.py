@@ -65,16 +65,16 @@ def insert_minimal_session(
 def test_migrate_creates_four_tables_and_bookkeeping(tmp_path: Path) -> None:
     db_path = tmp_path / "data" / "shepherd.db"
 
-    # M2's 002 and M3's 003 apply on top (ADR-M2-4, DP3); 001's own bookkeeping
+    # M2's 002, M3's 003 and 004 apply on top (ADR-M2-4, DP3, D57); 001's own bookkeeping
     # row is asserted below and is what this test is about.
-    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION == 3
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION == 4
 
     names = table_names(db_path)
     assert M1_TABLES <= names
     assert "schema_migration" in names
     # M5's tables must not exist yet.
     assert {"work_item", "queue"} & names == set()
-    assert read_schema_version(db_path) == 3
+    assert read_schema_version(db_path) == 4
 
     with connect(db_path) as conn:
         version, name, checksum, applied_at = conn.execute(
@@ -97,10 +97,10 @@ def test_migrate_creates_four_tables_and_bookkeeping(tmp_path: Path) -> None:
 
 def test_migrate_is_idempotent(tmp_path: Path) -> None:
     db_path = tmp_path / "data" / "shepherd.db"
-    assert migrate(db_path) == 3
-    assert migrate(db_path) == 3
+    assert migrate(db_path) == 4
+    assert migrate(db_path) == 4
     with connect(db_path) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 3
+        assert conn.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 4
 
 
 def test_migrate_creates_missing_data_dir(tmp_path: Path) -> None:
@@ -240,4 +240,9 @@ def test_full_outer_join_is_available(tmp_path: Path) -> None:
         rows = conn.execute(
             "SELECT s.id, w.id FROM session s FULL OUTER JOIN workspace w ON w.id = s.workspace_id"
         ).fetchall()
-        assert rows == []
+        # 004 seeds the reserved project (§3 D57), so a fresh database is no
+        # longer empty of workspaces. The unmatched row this returns is a
+        # *better* witness than the old `[]`: an INNER JOIN over the same two
+        # tables gives `[]`, and only an outer join surfaces the workspace that
+        # no session points at.
+        assert rows == [(None, "unassigned")]

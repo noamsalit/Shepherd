@@ -24,7 +24,7 @@ from pathlib import Path
 from shepherd.core.clock import utc_now
 
 #: The version this binary understands. Rule 2 compares the database to it.
-EXPECTED_SCHEMA_VERSION = 3
+EXPECTED_SCHEMA_VERSION = 4
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
