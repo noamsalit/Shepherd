@@ -37,8 +37,19 @@ Tree verified clean after each pass (`git status --porcelain` empty).
 | M13 | the strip drops the unknown rate | `flock.js` | `test_the_stop_summary_strip_is_filled_by_the_flock_page` | **RED** |
 | M14 | the page sorts client-side | `flock.js` | `test_the_flock_page_does_not_re_derive_the_order` | **RED** |
 | M15 | the pane forgets it is a pane (`showLevel` gone) | `session.js` | `test_the_pane_is_mounted_in_the_flocks_third_pane` | **RED** |
+| M16 | the debt is paid — `app.js` rewired to `flock.js` | `app.js` | `test_the_pending_shell_wiring_is_exactly_what_is_owed` | **RED** |
+| M17 | an **undeclared** module goes missing (`./nowhere.js`) | `app.js` | `test_every_shipped_module_is_reachable_from_the_page` | **RED** |
+| M18 | the reachability walk stops biting on an orphan | `test_session_wiring.py` | `test_the_reachability_walk_bites` | **RED** |
 
-19 rows · 18 red · 1 real survivor, closed.
+22 rows · 21 red · 1 real survivor, closed.
+
+M16 is the important one and it runs the gate **backwards**: it plants the
+*fix*, not a defect, and asserts the pin falls. A debt list whose test still
+passes after the debt is paid is a permanent exemption wearing a temporary name.
+M17 is its companion control: `STALE_SPECIFIERS` lets the walk skip exactly one
+declared dead edge, and a module that goes missing without being declared is
+still a hard failure — otherwise the skip would have become "the walk tolerates
+absence".
 
 ## M8 — the one that was a hole
 
