@@ -369,15 +369,26 @@ def _unreadable_detail(capture: bytes, screen: Screen | None) -> str:
     return f"no recognisable screen structure ({len(capture)} bytes)"
 
 
+#: The kinds that are **asking something**: the two whose `dialog_text` `_state`
+#: populates, and the two `read_decision` will parse. **One constant, referenced
+#: twice**, because two copies of "which kinds are dialogs" drift: add a third
+#: kind to one and not the other and you get a populated `dialog_text` that
+#: `read_decision` silently answers `None` for — a session with a visible ask
+#: reporting no ask, the exact failure this module exists to prevent. Every
+#: other kind — a prompt-ready pane included, and its screen carries `❯`
+#: lines too — is asking nothing, and asking it for a decision is how an idle
+#: session grows a card it should not have (U11/E20).
+DIALOG_KINDS = (PaneKind.TRUST_DIALOG, PaneKind.PERMISSION_DIALOG)
+
+
 def _state(kind: PaneKind, fields: PaneFields, screen: Screen | None) -> PaneState:
-    dialogs = (PaneKind.TRUST_DIALOG, PaneKind.PERMISSION_DIALOG)
     readable = screen if kind is not PaneKind.DEAD else None
     return PaneState(
         kind=kind,
         fields=fields,
         input_text=(readable.input_text or "") if readable is not None else "",
         ghost_text=readable.ghost_text if readable is not None else None,
-        dialog_text=(screen.text if screen is not None and kind in dialogs else None),
+        dialog_text=(screen.text if screen is not None and kind in DIALOG_KINDS else None),
     )
 
 
@@ -423,12 +434,6 @@ _CURSOR_LINE = re.compile(r"^(\s*)\u276f(\s*)")
 _NUMBERED = re.compile(r"^(\d+)\.\s+(.*)$")
 _LEADING = re.compile(r"^\s*")
 
-#: The two kinds whose `dialog_text` is populated (`_state`). Every other kind —
-#: a prompt-ready pane included, and its screen carries `\u276f` lines too — is
-#: asking nothing, and asking it for a decision is how an idle session grows a
-#: card it should not have (U11/E20).
-_DECIDABLE = (PaneKind.TRUST_DIALOG, PaneKind.PERMISSION_DIALOG)
-
 #: A block of one is not evidence of a choice list. Both captured shapes offer
 #: two or more, so a single aligned line above the footer degrades rather than
 #: becoming a one-option decision nobody has ever seen the engine draw.
@@ -451,38 +456,74 @@ def read_decision(state: PaneState) -> DecisionPrompt | None:
     the footer**, and the number, when present, is a label to display and to
     send — not the thing that identifies the choice.
 
-    **The structure it requires, and the four ways it degrades.** The footer
-    line; a cursor line above it; every line from the cursor to the footer
-    starting at the cursor's own label column, with no second cursor among them;
-    and a rule line above, opening the box whose body is the ask. Any of the four
-    absent and the answer is `None` — which T8.2 renders as the ask plus
-    approve/reject, saying it could not read the choices. Only two shapes were
-    ever captured, both on `claude` 2.1.270, so an unrecognised screen has to be
-    a degradation and not an exception.
+    **The block is found structurally; the cursor only marks a member of it.**
+    Anchoring the list on the cursor line was this function's worst bug: with
+    `❯` on option 2, option 1 left the choices and reappeared as the last line of
+    the ask, and with `❯` on the last option the list collapsed to one member and
+    degraded. Both are wrong answers about a screen that is perfectly readable,
+    and `01c-trust-yes-selected.txt` — frozen since 2026-09-14 — is the state
+    that produces them. **The cursor moves for ordinary reasons**: a human
+    attached to the pane, a poll landing mid-interaction. So the block is the
+    contiguous run of lines at one label column, bounded below by the footer and
+    above by the box rule, of which exactly one carries the cursor; and the
+    cursor's only job afterwards is to say which member is `selected`.
+
+    **The structure it requires, and the seven ways it degrades.** Each of the
+    seven is a distinct `return None`, tagged `# degrade: …` in the source, and
+    `test_each_degradation_row_drives_its_own_branch` traces one row onto each
+    tag — a table of mutilations that all trip the same early return would
+    certify one branch while reading as several. Any of them and the answer is
+    `None`, which T8.2 renders as the ask plus approve/reject, saying it could
+    not read the choices. Only two shapes were ever captured, both on `claude`
+    2.1.270, so an unrecognised screen has to be a degradation and not an
+    exception.
     """
-    if state.kind not in _DECIDABLE or not state.dialog_text:
-        return None
+    if state.kind not in DIALOG_KINDS or not state.dialog_text:
+        return None  # degrade: not a dialog
 
     lines = [line.rstrip() for line in state.dialog_text.split("\n") if line.strip()]
 
     footer = _last(lines, lambda line: DIALOG_FOOTER in line)
     if footer is None:
-        return None
+        return None  # degrade: no footer
 
-    cursor = _last(lines[:footer], lambda line: _CURSOR_LINE.match(line) is not None)
-    if cursor is None:
-        return None
-
-    choices = _read_choices(lines[cursor:footer])
-    if choices is None:
-        return None
-
-    rule = _last(lines[:cursor], lambda line: _RULE.search(line) is not None)
+    rule = _last(lines[:footer], lambda line: _RULE.search(line) is not None)
     if rule is None:
-        return None
-    text = _dedent(lines[rule + 1 : cursor])
+        return None  # degrade: no rule
+
+    #: Inside the box only. The permission capture's scrollback holds the
+    #: operator's own `❯`-prefixed prompt line (capture line 21) well above the
+    #: rule, and a cursor found there is not a selection on this dialog.
+    cursor = _last(lines[:footer], _is_cursor_line)
+    if cursor is None or cursor <= rule:
+        return None  # degrade: no cursor in the box
+
+    column = _label_column(lines[cursor])
+    top = cursor
+    while top - 1 > rule and _label_column(lines[top - 1]) == column:
+        top -= 1
+    bottom = cursor
+    while bottom + 1 < footer and _label_column(lines[bottom + 1]) == column:
+        bottom += 1
+
+    #: The last choice sits directly above the footer in both captured shapes
+    #: (blank lines are dropped above). A block that stops short means a line
+    #: between it and the footer is not at the block's column — the list is not
+    #: the list we think it is, so it is not read at all.
+    if bottom != footer - 1:
+        return None  # degrade: the block does not reach the footer
+
+    body = range(top, footer)
+    if sum(1 for index in body if _is_cursor_line(lines[index])) > 1:
+        return None  # degrade: a second cursor
+
+    choices = tuple(_choice(lines[index][column:], selected=index == cursor) for index in body)
+    if len(choices) < _MINIMUM_CHOICES:
+        return None  # degrade: below the two-choice floor
+
+    text = _dedent(lines[rule + 1 : top])
     if not text:
-        return None
+        return None  # degrade: no ask above the block
 
     return DecisionPrompt(kind=state.kind, text=text, choices=choices)
 
@@ -496,27 +537,27 @@ def _last(lines: list[str], matches: Callable[[str], bool]) -> int | None:
     return None
 
 
+def _is_cursor_line(line: str) -> bool:
+    return _CURSOR_LINE.match(line) is not None
+
+
 def _indent(line: str) -> int:
     match = _LEADING.match(line)
     return len(match.group(0)) if match is not None else 0
 
 
-def _read_choices(block: list[str]) -> tuple[Choice, ...] | None:
-    """`block[0]` carries the cursor; the rest must align under its label."""
-    head = _CURSOR_LINE.match(block[0])
-    if head is None:  # pragma: no cover - _last already matched this line
-        return None
-    column = len(head.group(0))
+def _label_column(line: str) -> int:
+    """Where a line's text starts, counting the cursor as part of the gutter.
 
-    read = [_choice(block[0][column:], selected=True)]
-    for line in block[1:]:
-        if CURSOR in line or _indent(line) != column:
-            return None
-        read.append(_choice(line[column:], selected=False))
-
-    if len(read) < _MINIMUM_CHOICES:
-        return None
-    return tuple(read)
+    This is what makes the block findable without the cursor: the TUI draws `❯`
+    *in place of* the two-space indent, so a selected option and an unselected
+    one begin at the same column, and one number of a block is one number of a
+    block whichever line is currently marked.
+    """
+    match = _CURSOR_LINE.match(line)
+    if match is not None:
+        return len(match.group(0))
+    return _indent(line)
 
 
 def _choice(body: str, *, selected: bool) -> Choice:
