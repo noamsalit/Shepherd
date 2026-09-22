@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>app.css render harness</title>
+
+<!--
+  The render harness for `src/shepherd/web/static/app.css`, committed so the
+  render evidence is **regenerable**:
+
+      /root/Shepherd/.venv/bin/python tools/render_check.py \
+          --file tests/web/fixtures/shell_harness.html
+
+  T5.2's first pass rendered twelve pages and reported them green, but the page
+  it rendered was never committed — so the result could not be reproduced from
+  the branch, and a reader had only the claim. `CLAUDE.md`'s frozen-evidence
+  section states the property directly: what makes a capture worth keeping is
+  that it is regenerable.
+
+  **It lives here and not under `web/static/`.** `server.py` is byte-pinned to a
+  content-type table of `.html` / `.js` / `.css`, so a page dropped in the
+  static tree would be *served* — a test fixture reachable from the running
+  product. This directory is read by name, never globbed (see
+  `tests/web/test_frontend_escaping.py`), so nothing collects it by accident.
+
+  **It is not `index.html`.** T5.3 builds the shipped shell; this exercises the
+  stylesheet's class contract and nothing more, and where the two disagree the
+  shipped page wins. It carries the six nav entries, the `#drawer-open`
+  control and the six `#page-*` roots `tools/render_check.py` drives by name.
+
+  **The strings are deliberately hostile**, because the review's finding was
+  that the previous harness's strings were short enough that nothing could
+  overflow and the test therefore could not fail:
+
+    * a real absolute repo path, unbroken, in a `.bubble`, a `.prose`, a
+      `.card-title` and a `.proj-row`
+    * a 400-character engine prompt carrying one unbroken base64 token
+    * a topbar title long enough to pass the viewport if `.topbar h1` keeps its
+      intrinsic min-content floor
+
+  `render_check.py` only measures **document** overflow, so a pane scrolling
+  inside itself is still invisible to it. The static rules in
+  `tests/web/test_shell.py` cover that half; this covers the other.
+-->
+
+<link rel="stylesheet" href="../../../src/shepherd/web/static/app.css">
+</head>
+
+<body>
+<div class="shell" id="shell" data-rail="expanded">
+
+  <nav class="pane">
+    <div class="pane-top">
+      <span class="pane-label">Shepherd</span>
+    </div>
+
+    <div class="pane-nav">
+      <button class="nav-item" type="button" data-page="shepherd" aria-current="page">
+        <span class="nav-text">Shepherd</span>
+      </button>
+      <button class="nav-item" type="button" data-page="flock">
+        <span class="nav-text">Flock</span>
+        <span class="nav-badge">3</span>
+      </button>
+      <button class="nav-item" type="button" data-page="queues">
+        <span class="nav-text">Queues</span>
+      </button>
+      <button class="nav-item" type="button" data-page="projects">
+        <span class="nav-text">Projects</span>
+      </button>
+      <button class="nav-item" type="button" data-page="kanban">
+        <span class="nav-text">Kanban</span>
+      </button>
+      <button class="nav-item" type="button" data-page="settings">
+        <span class="nav-text">Settings</span>
+      </button>
+    </div>
+
+    <div class="pane-foot">
+      <span class="pane-dot"></span>
+      <span class="pane-foot-text">connected</span>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="drawer-open" id="drawer-open" type="button" aria-label="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+        </svg>
+      </button>
+      <h1 id="topbar-title">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</h1>
+      <span class="topbar-sub">agent-a377e9e352405bde7 · integration · 2026-09-22T21:28:08Z</span>
+    </header>
+
+    <!-- ============ Shepherd: the conversation, with verbatim prose ======= -->
+    <div class="scroll" id="page-shepherd">
+      <div class="thread">
+        <div class="turn turn-you">
+          <div class="bubble">
+            Shepherd — re-run the check against /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css and tell me what overflowed
+          </div>
+        </div>
+
+        <div class="turn turn-shepherd">
+          <div class="byline">
+            <span class="byline-mark"></span>
+            <span>Shepherd</span>
+          </div>
+          <p class="prose">
+            The engine was handed this verbatim, and a pane that cannot wrap it scrolls sideways: eyJzZXNzaW9uIjoiYWdlbnQtYTM3N2U5ZTM1MjQwNWJkZTciLCJjd2QiOiIvcm9vdC9TaGVwaGVyZC8uY2xhdWRlL3dvcmt0cmVlcy9hZ2VudC1hMzc3ZTllMzUyNDA1YmRlNyIsInByb21wdCI6InJlLXJ1biB0aGUgcmVuZGVyIGNoZWNrIGF0IDM5MCBhbmQgMTI4MCBhbmQgcmVwb3J0IGV2ZXJ5IG92ZXJmbG93IHlvdSBzZWUifQ== — one token, no spaces, 400 characters of it.
+          </p>
+          <p class="prose">
+            The path it was resolved against was /root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Flock: the legend, the cards, the tooltip ============== -->
+    <div class="herd" id="page-flock" data-level="projects" hidden>
+      <div class="legend">
+        <button class="legend-key bucket-needs_you" type="button"><span class="legend-mark">●</span>needs you</button>
+        <button class="legend-key bucket-running" type="button"><span class="legend-mark">●</span>running</button>
+        <button class="legend-key bucket-blocked" type="button"><span class="legend-mark">●</span>blocked</button>
+        <button class="legend-key bucket-unfinished" type="button"><span class="legend-mark">●</span>unfinished</button>
+        <button class="legend-key bucket-error" type="button"><span class="legend-mark">●</span>error</button>
+        <button class="legend-key bucket-paused" type="button"><span class="legend-mark">●</span>paused</button>
+        <button class="legend-key bucket-finished" type="button"><span class="legend-mark">●</span>finished</button>
+        <button class="legend-key bucket-unclassified" type="button"><span class="legend-mark">●</span>unclassified</button>
+      </div>
+
+      <div class="herd-col col-projects">
+        <div class="col-head">Flock</div>
+        <div class="cards">
+          <button class="card bucket-blocked" type="button">
+            <span class="card-top">
+              <span class="card-mark">●</span>
+              <span class="card-title">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</span>
+            </span>
+            <span class="card-bar"><span style="width:40%"></span></span>
+          </button>
+          <button class="card bucket-needs_you" type="button">
+            <span class="card-top">
+              <span class="card-mark">●</span>
+              <span class="card-title">Flock · waiting on an approval</span>
+            </span>
+            <span class="card-bar"><span style="width:70%"></span></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="herd-col col-sessions">
+        <div class="col-head">sessions</div>
+      </div>
+
+      <div class="herd-col col-detail">
+        <div class="col-head">detail</div>
+      </div>
+    </div>
+
+    <!-- ============ Queues: a placeholder, by decision ===================== -->
+    <div class="scroll" id="page-queues" hidden>
+      <div class="stub">
+        <h2>Queues</h2>
+        <p>Nothing here this milestone.</p>
+      </div>
+    </div>
+
+    <!-- ============ Projects ============================================== -->
+    <div class="panes2" id="page-projects" data-level="list" hidden>
+      <div class="herd-col">
+        <div class="col-head">Projects</div>
+        <div class="proj-list">
+          <button class="proj-row" type="button">
+            <span>Projects · shepherd</span>
+            <span class="path-text">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</span>
+          </button>
+        </div>
+      </div>
+      <div class="proj-detail">
+        <div class="col-head">detail</div>
+      </div>
+    </div>
+
+    <!-- ============ Kanban: a placeholder, by decision ===================== -->
+    <div class="scroll" id="page-kanban" hidden>
+      <div class="stub">
+        <h2>Kanban</h2>
+        <p>Nothing here this milestone.</p>
+      </div>
+    </div>
+
+    <!-- ============ Settings =============================================== -->
+    <div class="scroll" id="page-settings" hidden>
+      <div class="stub">
+        <h2>Settings</h2>
+        <p>One autonomy control and nothing else (D65).</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // No module, no import graph: this harness proves the stylesheet, and a
+  // console error here would be reported as a stylesheet failure.
+  (function () {
+    var shell = document.getElementById("shell");
+    var roots = document.querySelectorAll('[id^="page-"]');
+    var drawer = document.getElementById("drawer-open");
+
+    function open(page) {
+      for (var i = 0; i < roots.length; i++) {
+        roots[i].hidden = roots[i].id !== "page-" + page;
+      }
+      var items = document.querySelectorAll(".nav-item");
+      for (var j = 0; j < items.length; j++) {
+        if (items[j].dataset.page === page) {
+          items[j].setAttribute("aria-current", "page");
+        } else {
+          items[j].removeAttribute("aria-current");
+        }
+      }
+      shell.removeAttribute("data-drawer");
+    }
+
+    document.addEventListener("click", function (event) {
+      var item = event.target.closest(".nav-item");
+      if (item) {
+        open(item.dataset.page);
+      }
+    });
+
+    drawer.addEventListener("click", function () {
+      if (shell.getAttribute("data-drawer") === "open") {
+        shell.removeAttribute("data-drawer");
+      } else {
+        shell.setAttribute("data-drawer", "open");
+      }
+    });
+  })();
+</script>
+</body>
+</html>
