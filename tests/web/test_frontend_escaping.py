@@ -33,11 +33,15 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # scan back into one that passes by finding nothing. `escape.js` stays (ADR-P6:
 # the owner kept it, byte-unchanged) and so does `chat.js`, which may be edited
 # but never deleted or renamed.
+# **T6.1 replaces `fleet.js` with `flock.js`** — a rename, so the list loses an
+# entry and gains one rather than growing. The rename is T6.1's by plan, and it
+# is what makes T6.4's manifest arithmetic come out: one path removed, one path
+# added.
 EXPECTED_MODULES = (
     "app.js",
     "chat.js",
     "escape.js",
-    "fleet.js",
+    "flock.js",
     "session.js",
     "sse.js",
     "terminal.js",

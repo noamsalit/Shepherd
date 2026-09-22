@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from shepherd.core.stops import NextActionKind
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_ROOT = REPO_ROOT / "src" / "shepherd" / "web" / "static"
 VENDOR_ROOT = STATIC_ROOT / "vendor"
@@ -593,3 +595,150 @@ def test_the_vendor_record_claims_only_what_is_proved() -> None:
         "tests/orchestration/test_write_policy.py",
     ):
         assert proof in manifest, proof
+
+
+# ----- D67: the session view is the Flock's third pane ------------------------
+#
+# The view **relocates**; it is not deleted. What moves with it is D21's
+# `next_actions` list, which §12 already placed in the Session view header —
+# U7 fixes the card at four items, so the list has nowhere else to be. The
+# stopped-row logic that used to live in `fleet.js` therefore lives here, and
+# every rule it carried comes with it rather than being quietly dropped: RD6's
+# labelled-and-inert unreachable kinds, N10's honest `[why?]`, §14's
+# `nothing to do`, and G-M2-7's targetless `external`.
+
+#: `const ACTION_MILESTONE = { resume: "M3", … }` — the table RD6 requires.
+_MILESTONE_TABLE = re.compile(r"const\s+ACTION_MILESTONE\s*=\s*\{(.*?)\n\}", re.DOTALL)
+_LIVE_TABLE = re.compile(r"const\s+LIVE_KINDS\s*=\s*\{(.*?)\n\}", re.DOTALL)
+_ENTRY = re.compile(r"(\w+):\s*\"?([\w]+)\"?")
+
+
+def session_code() -> str:
+    """`session.js` with its comments removed, so prose cannot satisfy a scan."""
+    return code_only(source("session.js"))
+
+
+def session_function(name: str) -> str:
+    """The text of one top-level function in `session.js`, up to the next one."""
+    text = source("session.js")
+    start = text.index(f"function {name}(")
+    rest = text[start + 1 :]
+    end = rest.find("\nfunction ")
+    tail = rest.find("\nexport function ")
+    if tail != -1 and (end == -1 or tail < end):
+        end = tail
+    return rest if end == -1 else rest[:end]
+
+
+def test_the_session_pane_renders_why_and_every_action() -> None:
+    """D67's successor to `test_stopped_row_renders_why_and_first_action`.
+
+    The retired test asserted `stoppedRow` rendered `session-why` and
+    `actions[0]` — **one** action, because a collapsed fleet row had space for
+    one. The pane has space for the list, and §12 always said the list renders
+    in the Session view header, so the successor asserts the property the
+    redesign actually keeps: the `why`, and **every** action with its ordinal
+    and the source it came from.
+    """
+    body = session_function("renderSession")
+    assert "session-why" in body
+    assert "actions[0]" not in body, "the pane renders the list, not its head"
+
+    listing = session_function("actionList")
+    assert "next_actions" in listing
+    assert "index + 1" in listing
+    assert "action-ordinal" in listing
+    assert "action-source" in listing
+
+    # The word "every" in this test's own name, asserted. A mutation that sliced
+    # the list to its first element survived all four assertions above — the
+    # ordinal, the source and the class are all still rendered for the one
+    # action that is left — which is exactly the truncation the retired card
+    # test settled for and this one claims to have removed.
+    assert "actions.forEach(" in listing
+    for truncating in (".slice(", "actions[0]", ".at(0)", "actions.shift("):
+        assert truncating not in listing, truncating
+
+
+def test_the_pane_labels_unreachable_action_kinds_rather_than_dropping_them() -> None:
+    """RD6, relocated with the list it governs. `not yet`, with the milestone.
+
+    This is the half a relocation most easily loses: the *list* is obviously
+    load-bearing and moves, and the rules about what the buttons in it may claim
+    are easy to leave behind. Totality is asserted, so a kind in neither table —
+    the silent dead button — fails here.
+    """
+    text = source("session.js")
+    milestone_match = _MILESTONE_TABLE.search(text)
+    live_match = _LIVE_TABLE.search(text)
+    assert milestone_match is not None, "RD6's table did not move with the list"
+    assert live_match is not None, "the live-kind table did not move with the list"
+    milestones = dict(_ENTRY.findall(milestone_match.group(1)))
+    live = dict(_ENTRY.findall(live_match.group(1)))
+    assert milestones == {
+        "resume": "M3",
+        "respawn": "M3",
+        "retry": "M3",
+        "escalate": "M4",
+        "requeue": "M4",
+        "reauth": "M4",
+    }
+    assert set(milestones) | set(live) == {kind.value for kind in NextActionKind}
+
+    body = session_function("actionButton")
+    assert "disabled" in body
+    assert "not yet" in body
+    assert ".title" in body
+
+
+def test_the_panes_why_note_is_a_disclosure_not_a_verdict() -> None:
+    """N10 / D34, relocated. A button that fires nothing is worse than none.
+
+    `[why?]` expands the heuristic evidence the row already carries and says, in
+    words, that the model verdict lane is not built in this build. It must not
+    imply a verdict nobody computed.
+    """
+    text = source("session.js")
+    body = session_function("whyNote")
+    assert 'element("details"' in body
+    assert "summary" in body
+    assert "addEventListener" not in body
+
+    note = re.search(r"MODEL_LANE_NOTE\s*=\s*\n?\s*\"([^\"]+)\"", text)
+    assert note is not None, "the honest note is a named constant"
+    wording = note.group(1).lower()
+    assert "not built" in wording or "not available" in wording
+    assert "model" in wording
+
+
+def test_the_pane_is_mounted_in_the_flocks_third_pane() -> None:
+    """D67. The view relocates rather than being deleted.
+
+    `terminal.js` and the vendored emulator stay reachable from it — which is
+    the whole difference between *relocated* and *removed*, and the reason the
+    import below is asserted rather than assumed.
+    """
+    text = source("session.js")
+    assert 'from "./terminal.js"' in text
+    assert "openTerminal(" in session_code()
+    # The relocation itself: opening a session walks the Flock's drill-down to
+    # its third level. The pane's *markup* moves in the shell; what has to be in
+    # this module is the fact that it knows it is a pane rather than a page.
+    assert 'from "./flock.js"' in text
+    assert 'showLevel("detail")' in session_code()
+
+
+def test_the_pane_builds_its_nodes_through_the_flocks_helper() -> None:
+    """One `element(tag, class, text)`, not a second copy of it.
+
+    `session.js` used to build its own nodes with `document.createElement` and
+    a hand-written `textContent` line each time. Two helpers doing the same
+    thing under different names is how one of them acquires a sink and the
+    escaping scan keeps passing on the other.
+    """
+    text = source("session.js")
+    assert "import { element, showLevel }" in text
+    body = session_code()
+    assert "document.createElement(" not in body.replace(
+        'document.createElement("input")', ""
+    ), "every node but the rename input comes from the shared helper"

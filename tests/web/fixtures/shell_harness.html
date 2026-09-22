@@ -118,45 +118,124 @@
       </div>
     </div>
 
-    <!-- ============ Flock: the legend, the cards, the tooltip ============== -->
+    <!-- ============ Flock: the legend, the cards, the tooltip ==============
+
+      **T6.1 adds the slot contract `flock.js` needs**, inside `#page-flock` and
+      nowhere else — this file is shared but additive. The ids below are the
+      ones `flock.js` and `session.js` reach for by name, and they are written
+      here first because the shipped `index.html` is another agent's file this
+      milestone: the integration pass copies this contract into it. Listing them
+      in a report would have been a promise; carrying them in a file the render
+      check drives is a thing that can be wrong out loud.
+
+      The labels are U5's three renames (`stranded`, `limit exceeded`,
+      `unknown`), because a harness showing the old words would be rendering a
+      page that no longer exists.
+                                                                            -->
     <div class="herd" id="page-flock" data-level="projects" hidden>
-      <div class="legend">
-        <button class="legend-key bucket-needs_you" type="button"><span class="legend-mark">●</span>needs you</button>
+      <div class="legend" id="flock-legend">
+        <!-- The page says its own name, inside its own root, at every level of
+             U9's drill-down. `tools/render_check.py` requires the literal
+             `Flock` in `#page-flock`'s rendered text, and before this line the
+             only source of it was a card title — so the check passed at desktop
+             width (three columns up) and failed at phone width (one). The
+             projects pane's head cannot supply it either: `.col-head` is
+             `text-transform: uppercase`, so it renders FLOCK and the literal
+             comparison misses. It sits inside `.legend` because that strip is
+             the one part of the page visible at every level of the drill-down;
+             it carries **no class**, deliberately, because `app.css` is another
+             agent's file this milestone and inventing a rule name it does not
+             define would be a contract nobody agreed to. -->
+        <span id="flock-heading">Flock</span>
+        <button class="legend-key bucket-needs_you" type="button"><span class="legend-mark">⏸</span>needs you</button>
+        <button class="legend-key bucket-error" type="button"><span class="legend-mark">✕</span>error</button>
+        <button class="legend-key bucket-unfinished" type="button"><span class="legend-mark">◑</span>stranded</button>
         <button class="legend-key bucket-running" type="button"><span class="legend-mark">●</span>running</button>
-        <button class="legend-key bucket-blocked" type="button"><span class="legend-mark">●</span>blocked</button>
-        <button class="legend-key bucket-unfinished" type="button"><span class="legend-mark">●</span>unfinished</button>
-        <button class="legend-key bucket-error" type="button"><span class="legend-mark">●</span>error</button>
-        <button class="legend-key bucket-paused" type="button"><span class="legend-mark">●</span>paused</button>
-        <button class="legend-key bucket-finished" type="button"><span class="legend-mark">●</span>finished</button>
-        <button class="legend-key bucket-unclassified" type="button"><span class="legend-mark">●</span>unclassified</button>
+        <button class="legend-key bucket-paused" type="button"><span class="legend-mark">⏱</span>limit exceeded</button>
+        <button class="legend-key bucket-blocked" type="button"><span class="legend-mark">⏳</span>blocked</button>
+        <button class="legend-key bucket-finished" type="button"><span class="legend-mark">✓</span>finished</button>
+        <button class="legend-key bucket-unclassified" type="button"><span class="legend-mark">?</span>unknown</button>
+        <button class="legend-info" type="button" aria-label="What the colours mean">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+          </svg>
+          <span>what these mean</span>
+        </button>
+      </div>
+
+      <!-- B3 / principle 5: three numbers, three meanings, none folded into
+           another. `#unknown-rate` sits before `#low-confidence`, which
+           `test_palette.py` asserts on the shipped markup. -->
+      <div class="legend-note" id="stop-summary">
+        <span>unknown rate <b id="unknown-rate">14%</b></span>
+        <span>low-confidence completions <b id="low-confidence">31</b></span>
+        <span>never classified <b id="unclassified">4</b></span>
       </div>
 
       <div class="herd-col col-projects">
         <div class="col-head">Flock</div>
-        <div class="cards">
-          <button class="card bucket-blocked" type="button">
-            <span class="card-top">
-              <span class="card-mark">●</span>
-              <span class="card-title">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</span>
-            </span>
-            <span class="card-bar"><span style="width:40%"></span></span>
+        <div id="flock-projects">
+          <button class="project" type="button" aria-current="true">
+            <span class="project-name">payments-api</span><span class="project-n">6</span>
           </button>
-          <button class="card bucket-needs_you" type="button">
-            <span class="card-top">
-              <span class="card-mark">●</span>
-              <span class="card-title">Flock · waiting on an approval</span>
-            </span>
-            <span class="card-bar"><span style="width:70%"></span></span>
+          <button class="project" type="button" aria-current="false">
+            <span class="project-name">Unassigned</span><span class="project-n">2</span>
           </button>
         </div>
       </div>
 
       <div class="herd-col col-sessions">
-        <div class="col-head">sessions</div>
+        <div class="col-head">
+          <button class="back" type="button" data-level="projects" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <span id="flock-sessions-head">payments-api</span>
+        </div>
+        <div class="cards" id="flock-cards">
+          <button class="card bucket-blocked" type="button">
+            <span class="card-top">
+              <span class="card-mark">⏳</span>
+              <span class="card-title">/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7/src/shepherd/web/static/app.css</span>
+              <span class="card-age">11 days ago</span>
+            </span>
+            <span class="card-ask">blocked on payments-api · migrate refunds table</span>
+            <span class="card-bar"><span style="width:40%"></span></span>
+          </button>
+          <button class="card bucket-needs_you" type="button">
+            <span class="card-top">
+              <span class="card-mark">⏸</span>
+              <span class="card-title">Flock · waiting on an approval</span>
+              <span class="card-age">never seen</span>
+            </span>
+            <span class="card-ask" data-tone="loud">permission: Bash(psql -h staging …)</span>
+            <span class="card-bar"><span style="width:70%"></span></span>
+          </button>
+        </div>
       </div>
 
-      <div class="herd-col col-detail">
-        <div class="col-head">detail</div>
+      <!-- D67: the session view is this column, not a fourth page. The slot ids
+           below are `session.js`'s and are unchanged by the move — its
+           contracts did not change, only its mount point. -->
+      <div class="herd-col col-detail detail" id="flock-detail">
+        <div class="detail-band">
+          <button class="back" type="button" data-level="sessions" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <span class="detail-mark bucket-error" id="session-chip">✕</span>
+          <h2 class="detail-title" id="session-title">migrate refunds table</h2>
+          <span class="detail-state" id="session-state">error</span>
+        </div>
+        <div class="detail-why">
+          <b>why</b><span id="session-why">the engine exited 1 on the third migration step</span>
+        </div>
+        <div id="session-actions"></div>
       </div>
     </div>
 

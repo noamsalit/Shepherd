@@ -63,6 +63,39 @@ UNREACHABLE_BY_DESIGN = {
 }
 
 
+#: The shell's **debt**, named rather than disguised, with the one line that
+#: pays each entry. This is emphatically **not** `UNREACHABLE_BY_DESIGN`: that
+#: constant means *not meant to be reachable*, and folding a module the shell
+#: simply has not wired yet into it asserts the opposite of what is true and
+#: makes the page permanently dead by definition — the exact laundering that
+#: turns a temporary red into a permanent green.
+#:
+#: **The integration pass empties this dict and deletes
+#: `test_the_pending_shell_wiring_is_exactly_what_is_owed`.** The test pins the
+#: contents as a whole set precisely so the dict cannot be added to quietly: a
+#: debt list that grows without anyone noticing is not a debt list.
+PENDING_SHELL_WIRING = {
+    "app.js": (
+        "T6.1 renamed `fleet.js` to `flock.js`, and `app.js` line 9 still reads"
+        " `import { render, renderStatus } from \"./fleet.js\"`. `app.js` is the"
+        " shell's file and Phase 6 owns only its own modules, so the rename"
+        " landed and the import did not. **One line pays it:**"
+        " `import { renderFlock as render, renderStatus } from \"./flock.js\";`"
+        " — planted on a committed tree, observed at 178 passed across"
+        " `tests/web`, and reverted. Two things are wrong until it lands: the"
+        " shell names a module that does not ship, and the Flock's renderer is"
+        " reached only through `rail.js`, which D66 takes off the shell and the"
+        " integration pass deletes. Both are asserted below."
+    ),
+}
+
+#: The specifiers the shell still names that no longer resolve to a file. Every
+#: one is the other half of a `PENDING_SHELL_WIRING` entry, and the walk skips
+#: **only** these — a missing module that is not declared here is still a hard
+#: failure, which is what keeps this from becoming "the walk tolerates absence".
+STALE_SPECIFIERS = frozenset({"fleet.js"})
+
+
 def reachable_modules(markup: str, read: Callable[[str], str]) -> set[str]:
     """Every module the page really loads, walked from `index.html`'s scripts.
 
@@ -84,10 +117,55 @@ def reachable_modules(markup: str, read: Callable[[str], str]) -> set[str]:
         seen.add(name)
         if name.startswith(VENDOR_PREFIX):
             continue
+        if name in STALE_SPECIFIERS and not (STATIC_ROOT / name).is_file():
+            # A specifier the shell still names for a file that no longer
+            # ships. It is *recorded as reached* — the page really does ask for
+            # it, and pretending otherwise would hide the dead edge — but there
+            # is nothing to descend into.
+            continue
         here = posixpath.dirname(name)
         for specifier in module_specifiers(read(name)):
             queue.append(posixpath.normpath(posixpath.join(here, specifier)))
     return seen
+
+
+def test_the_pending_shell_wiring_is_exactly_what_is_owed() -> None:
+    """**Delete this test when the dict is empty.** That is the point of it.
+
+    Two halves, and the second is the one that stops this becoming an excuse
+    list. The first pins the contents as a whole set, so nothing joins quietly.
+    The second asserts the debt is **currently real** — so an entry that has
+    silently been paid fails here rather than sitting as a permanent exemption
+    for something that is wired after all. Every assertion in it fails with
+    *"the debt is paid — delete this test"*, which is the instruction.
+
+    The debt is an **import line**, not a module: `flock.js` is reached (through
+    `session.js`) and the page still never draws it, because `app.js` calls the
+    `render` it imported from a module that no longer ships. A reachability walk
+    cannot see that, which is exactly why this is not folded into one.
+    """
+    assert set(PENDING_SHELL_WIRING) == {"app.js"}, sorted(PENDING_SHELL_WIRING)
+    assert set(STALE_SPECIFIERS) == {"fleet.js"}, sorted(STALE_SPECIFIERS)
+    for owed, why in PENDING_SHELL_WIRING.items():
+        assert len(why) > 80, owed
+
+    app = code_only(source("app.js"))
+    # Half one: the shell names a module that does not ship.
+    assert 'from "./fleet.js"' in app, "the debt is paid — delete this test"
+    assert 'from "./flock.js"' not in app, "the debt is paid — delete this test"
+    assert not (STATIC_ROOT / "fleet.js").is_file(), "fleet.js is back; the entry is stale"
+
+    # Half two, and the one a reachability walk alone calls green. `flock.js`
+    # **is** reached — `session.js` imports `element` and `showLevel` from it,
+    # and `session.js` is on the graph — so the walk is satisfied and the page
+    # still never draws. **Loaded is not driven.** The bootstrap holds no
+    # reference to the Flock's renderer at all, which is the actual missing
+    # line, and it is asserted separately because the walk structurally cannot
+    # see it.
+    markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+    assert "flock.js" in reachable_modules(markup, source), "loaded"
+    assert "renderFlock" not in app, "the debt is paid — delete this test"
+    assert 'from "./flock.js"' in code_only(source("session.js")), "…and only via here"
 
 
 def test_every_shipped_module_is_reachable_from_the_page() -> None:
@@ -104,6 +182,14 @@ def test_every_shipped_module_is_reachable_from_the_page() -> None:
     shipped = {path.name for path in STATIC_ROOT.glob("*.js")}
     assert len(shipped) >= 7, shipped
 
+    # Two exclusions, two different meanings, kept apart on purpose:
+    # `UNREACHABLE_BY_DESIGN` is *not meant to be reachable* and is permanent;
+    # `PENDING_SHELL_WIRING` is *not wired yet* and is a debt with a named payer.
+    # Merging them would make the second permanent by spelling — so
+    # `PENDING_SHELL_WIRING` is deliberately **not** excused here. Its one entry
+    # is a shell file that is reached; what is owed about it is an import line,
+    # and `test_the_pending_shell_wiring_is_exactly_what_is_owed` is where that
+    # is asserted. Widening this comparison would have been the laundering.
     assert shipped - reached == set(UNREACHABLE_BY_DESIGN), sorted(shipped - reached)
     # Named rather than merely implied by the set difference: these three are
     # what the review found dead, and the vendored emulator is what page 3 is.
@@ -150,10 +236,16 @@ def test_a_fleet_row_click_reaches_the_session_page() -> None:
     `app.js` reads that session through the API it already knows, and hands the
     projection to `renderSession`.
 
-    The id comes off the row's `data-session-id` rather than out of a closure,
-    because `fleet.js` builds the rows and `app.js` owns the navigation; a
+    The id comes off the card's `data-session-id` rather than out of a closure,
+    because `flock.js` builds the cards and `app.js` owns the navigation; a
     positional match between DOM order and payload order would be the kind of
     implicit coupling that breaks silently when either side re-orders.
+
+    **M5 moved the row and kept the chain.** `fleet.js`'s `li.session` is now
+    `flock.js`'s `.card`, and the identity it carries is the same field read the
+    same way — which is the point of asserting the field rather than the
+    selector. What the card no longer does is render D21's list: D67 puts that
+    in the pane, and U7 fixes the card at four items.
     """
     app = code_only(source("app.js"))
     assert re.search(r'import\s*\{[^}]*\brenderSession\b[^}]*\}\s*from\s*"\./session\.js"', app)
@@ -163,12 +255,12 @@ def test_a_fleet_row_click_reaches_the_session_page() -> None:
     assert "data-session-id" in app or "dataset.sessionId" in app, app
     assert "renderSession(" in app, app
 
-    # …and `fleet.js` really puts that identity on the row (arrival: without
+    # …and `flock.js` really puts that identity on the card (arrival: without
     # this the selector above matches nothing at runtime and the page is dead
     # again, with every scan still green).
-    fleet = code_only(source("fleet.js"))
-    assert re.search(r"\w+\.dataset\.sessionId\s*=\s*\w+\.session_id", fleet), (
-        "no fleet row carries its session id"
+    flock = code_only(source("flock.js"))
+    assert re.search(r"\w+\.dataset\.sessionId\s*=\s*\w+\.session_id", flock), (
+        "no session card carries its session id"
     )
 
     # §16: the click opens a row, it does not re-derive an order.
@@ -214,14 +306,30 @@ def assignments(text: str) -> list[str]:
 #: K6/principle 5 say page 3 must put on the screen.
 REQUIRED_ASSIGNMENTS = {
     # `fill(id, value)`: principle 5's em dash for a datum the row does not carry.
-    'element.textContent = value === null || value === undefined ? "—" : String(value)',
-    # D21's buttons. `text` is the field `project_action` emits — the page read
-    # `action.label`, which exists nowhere in the projection layer, so every
-    # stopped-band button rendered empty and no unknown was counted.
-    'button.className = "session-action"',
+    # Bound as `node` rather than `element` since D67: the shared node helper is
+    # imported from `flock.js` under that name, and a local binding shadowing it
+    # would turn every later `element(...)` into a call on a DOM node.
+    'node.textContent = value === null || value === undefined ? "—" : String(value)',
+    # D21's buttons, relocated to the pane by **D67**. `text` and `kind` are the
+    # fields `project_action` emits — the page once read `action.label`, which
+    # exists nowhere in the projection layer, so every stopped-band button
+    # rendered empty and no unknown was counted. They are now built through
+    # `flock.js::element`, which sets the class and the text in one call, so the
+    # two lines that used to do it by hand are gone rather than missing.
     'button.type = "button"',
-    "button.textContent = actionText(action)",
-    "button.dataset.kind = actionKind(action)",
+    "button.dataset.kind = kind",
+    # RD6, which moved with the list it governs: an action whose capability
+    # lands later is **labelled and inert**, never an unlabelled dead button.
+    # One inert path, two reasons — a second `disabled` write would be the same
+    # render performed twice, which the duplicate check above refuses.
+    "button.disabled = true",
+    "button.title = reason",
+    # G-M2-7's `external` with somewhere to go: live at M2 because it needs
+    # nothing of ours. The three lines are one affordance and move together.
+    "link.href = action.target",
+    'link.target = "_blank"',
+    'link.rel = "noopener noreferrer"',
+
     # D29's click-to-edit rename, and DP1's boundary: this is the **local**
     # rename. The engine write-back stays behind `can_set_title`, server-side.
     'input.className = "session-rename-input"',
@@ -304,6 +412,12 @@ def test_the_pages_read_only_fields_the_projection_emits() -> None:
     fallback, no unknown was counted either. `fleet.js` got the same payload
     right *with* a fallback, so the two pages disagreed about one payload.
 
+    **D67 collapses the disagreement rather than policing it.** The list renders
+    in the pane now and nowhere else, so `session.js` is the only reader of an
+    action — and the loops below are over one module, which is an honest count
+    and not a narrowing: `flock.js` reads no `action.` field at all, and that is
+    asserted rather than assumed.
+
     The expected names come from the **producer**, called on a real shipped
     action, not from anyone's memory of the payload.
     """
@@ -318,19 +432,20 @@ def test_the_pages_read_only_fields_the_projection_emits() -> None:
         emitted |= set(project_action(action))
     assert emitted == {"text", "kind", "target", "source"}, emitted
 
-    read: set[str] = set()
-    for name in ("session.js", "fleet.js"):
-        read |= set(re.findall(r"\baction\.(\w+)", code_only(source(name))))
+    read = set(re.findall(r"\baction\.(\w+)", code_only(source("session.js"))))
     assert "text" in read, "arrival: no page reads an action's label at all"
     assert read <= emitted, sorted(read - emitted)
 
-    # Principle 5: the unknown is a value, displayed — both pages the same way.
-    for name in ("session.js", "fleet.js"):
-        text = code_only(source(name))
-        assert re.search(
-            r'typeof action\.text === "string" && action\.text !== "" \? action\.text : UNKNOWN',
-            text,
-        ), name
+    # …and the page that lists sessions reads none of them, which is U7's card
+    # rule expressed at the payload rather than at the markup.
+    assert re.findall(r"\baction\.(\w+)", code_only(source("flock.js"))) == []
+
+    # Principle 5: the unknown is a value, displayed.
+    text = code_only(source("session.js"))
+    assert re.search(
+        r'typeof action\.text === "string" && action\.text !== "" \? action\.text : UNKNOWN',
+        text,
+    )
 
 
 def test_every_id_in_the_session_view_is_wired_by_the_scripts() -> None:

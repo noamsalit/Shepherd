@@ -264,18 +264,18 @@ class Verdict:
         object.__setattr__(self, "why", _capped(self.why, WHY_MAX))
 
 
-#: §4's table (`orchestrator-platform.md:202-208`) plus `UNCLASSIFIED`, which is
-#: grey because a row nobody could classify is neither good news nor bad.
+#: §4's table (`orchestrator-platform.md:202-208`) plus `UNCLASSIFIED`, grey because
+#: nobody could classify it. **U5's three `label` renames land here, not in a UI copy.**
 PALETTE: Mapping[Bucket, BucketStyle] = MappingProxyType(
     {
         Bucket.RUNNING: BucketStyle("#3B82F6", "●", "running", "nobody"),
         Bucket.NEEDS_YOU: BucketStyle("#F59E0B", "⏸", "needs you", "you, now"),
         Bucket.FINISHED: BucketStyle("#10B981", "✓", "finished", "nobody"),
-        Bucket.UNFINISHED: BucketStyle("#8B5CF6", "◑", "unfinished", "you, when ready"),
+        Bucket.UNFINISHED: BucketStyle("#8B5CF6", "◑", "stranded", "you, when ready"),
         Bucket.BLOCKED: BucketStyle("#64748B", "⏳", "blocked", "someone else"),
-        Bucket.PAUSED: BucketStyle("#06B6D4", "⏱", "paused", "nobody, wait"),
+        Bucket.PAUSED: BucketStyle("#06B6D4", "⏱", "limit exceeded", "nobody, wait"),
         Bucket.ERROR: BucketStyle("#EF4444", "✕", "error", "you, fix it"),
-        Bucket.UNCLASSIFIED: BucketStyle("#9CA3AF", "?", "not classified", "nobody yet"),
+        Bucket.UNCLASSIFIED: BucketStyle("#9CA3AF", "?", "unknown", "nobody yet"),
     }
 )
 

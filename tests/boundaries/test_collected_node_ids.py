@@ -201,6 +201,18 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "unclassified grey, both of which D66 takes off the shell.",
         "§3 D66",
     ),
+    "tests/web/test_fleet_page.py::test_stopped_row_renders_why_and_first_action": (
+        "The test asserts stoppedRow renders session-why and actions[0], and U7 fixes the card "
+        "at four items — glyph, title, the ask, relative time — so after the redesign no row "
+        "renders either; the property survives at the pane and is asserted by its named "
+        "successor test_the_session_pane_renders_why_and_every_action. The successor is "
+        "strictly stronger rather than equivalent: the collapsed fleet row had space for one "
+        "action and rendered actions[0], while the pane renders every action with its ordinal "
+        "and its source, so what retires is the truncation and not the rule. D67 relocates the "
+        "session view into the Flock's third pane, and §12 already placed D21's next_actions "
+        "list in that view's header, which is why there is somewhere for the list to go.",
+        "§12 (the Session view header already carries the list) with §3 D67",
+    ),
 }
 
 
