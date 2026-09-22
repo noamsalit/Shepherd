@@ -45,7 +45,10 @@
     "Phase 3 RATIFIED: T3.2's test lives in test_compose_m4.py rather than the plan's test_composition_root.py, which composes nothing (114 lines of AST rules, no store, host or SocketPlan). The seam is the plan's; only the file differs.",
     "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path.",
     "T8.1 remfix RATIFIED: the degrade reason is NOT exposed on the return value. The interface stays DecisionPrompt | None so no caller can route on WHY a screen was unreadable; the branch tags are source comments read by the test through sys.settrace. Keeps degrade-never-guess a property rather than a protocol.",
-    "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed."
+    "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed.",
+    "Phase 9 RATIFIED: #dlg-project and #dlg-delete are built by mountProjects() inside #page-projects rather than declared in index.html. A departure from T9.1's Consumes line, forced by the contract-first mode and better regardless - one reader, one contract.",
+    "Phase 9 RATIFIED: the first delete POST carries NO on_running key at all, not 'refuse'. A key that is absent cannot be edited out of the body; a key spelled 'refuse' can.",
+    "Phase 9 RATIFIED: the page confirms before it asks, because delete_project destroys on its first call and no dry-run route exists."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -296,7 +299,8 @@
     "w6-docs": "completed",
     "phase-1": "remediation_in_progress",
     "phase-5-T5.2": "in_progress",
-    "phase-3": "partial_held_for_merge"
+    "phase-3": "partial_held_for_merge",
+    "phase-9": "built_held_for_integration"
   },
   "deferred_findings": [
     {
@@ -352,6 +356,36 @@
       "phase_id": "phase-8",
       "severity": "minor",
       "finding": "In 06-permission-dialog.ansi the command lines sit at column 3 - the choice column - and are kept out of the block only by the indent-1 question line above them. An engine drawing its question at column 3 would have it read as a choice. Structural residual; the standing reason the degrade rule must stay structural."
+    },
+    {
+      "source": "phase-9 (first consumer)",
+      "phase_id": "phase-9",
+      "severity": "major",
+      "finding": "GAP 1 doomed: DeletePlan.doomed never reaches a consumer - the handler discards it and delete_outcome has no key. The refusal can say '2 running' and cannot say 'and 400 finished ones go with the project', which delete_outcome's own docstring says a person is owed. The page currently derives the count itself, a COPY of a store derivation - the thing that drifts."
+    },
+    {
+      "source": "phase-9 (first consumer)",
+      "phase_id": "phase-9",
+      "severity": "major",
+      "finding": "GAP 2 killability: DeletePlan.running does not distinguish owned from attached, and the shipped kill answers no_pane for every attached session. So the page can offer a kill_sessions button that cannot succeed, with a refusal that does not say why."
+    },
+    {
+      "source": "phase-9 (first consumer)",
+      "phase_id": "phase-9",
+      "severity": "minor",
+      "finding": "GAP 3 description: no verb changes a description. create_project takes one; rename_project takes name only. A description is write-once at creation, so the Edit dialog renders the field inert with the reason rather than dropping typed text."
+    },
+    {
+      "source": "phase-9 (first consumer)",
+      "phase_id": "phase-9",
+      "severity": "minor",
+      "finding": "GAP 4 D60 unreachable: nothing answers WHICH projects hold this repo. D60 says a path may sit in more than one project and the row says so - but no read exposes it, and deriving it is an N+1 the projections were shaped to avoid. The page shows the path in full and invents nothing."
+    },
+    {
+      "source": "phase-9 (first consumer)",
+      "phase_id": "phase-9",
+      "severity": "minor",
+      "finding": "GAP 5 destructive-first-call: delete_project destroys on its first call when nothing is running, so a 'probe for the refusal' would destroy any idle project. The page confirms before it asks. A dry-run would close it properly."
     }
   ],
   "results": {
@@ -617,9 +651,14 @@
     {
       "event": "t8_1_remediated",
       "ts": "2026-09-22T06:13:03Z"
+    },
+    {
+      "event": "phase_9_built",
+      "ts": "2026-09-22T08:29:11Z",
+      "detail": "all seven verbs driven end to end; five contract gaps found at the verb/consumer seam"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T06:13:03Z"
+  "updated_at": "2026-09-22T08:29:11Z"
 }
