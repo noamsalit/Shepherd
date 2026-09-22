@@ -1,9 +1,9 @@
 """S4 — the Needs-You rail, fed by three milestones at once.
 
-§12 puts the rail on **every** page and forbids generic text: *"the actual ask
-on each row — never 'session needs attention'"*. Its rows are supposed to come
-from M2's signals, M3's owned sessions and M4's approvals **simultaneously**,
-and the spec's own mock says so in three lines:
+§12 forbids generic text: *"the actual ask on each row — never 'session needs
+attention'"*. Its rows are supposed to come from M2's signals, M3's owned
+sessions and M4's approvals **simultaneously**, and the spec's own mock says so
+in three lines:
 
     ● 3 NEED YOU    payments-api · permission: Bash(git push) [→]
                     billing-api · PROJ-71937 · question       [→]
@@ -11,8 +11,16 @@ and the spec's own mock says so in three lines:
 
 **Deterministic only.** This host has no browser, so every assertion here is
 against the **projection** — `fleet_summary()["needs_you"]` — and never against
-the render. `tests/web/test_rail.py` already scans `rail.js`; what nothing
-asserted is what the renderer is *handed*.
+the render.
+
+**Since D66 (2026-09-22) this module is the only place the rail's content rules
+are asserted.** §12's *"on every page"* is reversed: the rail leaves the shell
+and lives on the Flock page alone if it returns, so `tests/web/test_rail.py` and
+its scans of `rail.js` are retired (`tests/boundaries/test_collected_node_ids.py`
+carries the seven entries). What D66 keeps is exactly what this module measures
+— `project_needs_you` and `fleet_summary`'s `needs_you` list, the data whatever
+draws the rail next will be handed. Every assertion below was already at that
+seam, which is why none of them moved.
 
 ---
 
@@ -81,8 +89,8 @@ NOW = "2026-09-18T10:00:00Z"
 
 #: The two asks, each in the voice §12 demands. They are **different strings**
 #: so a rail that rendered one row's ask onto both would be caught, and neither
-#: is a category: `"session needs attention"` is the wording the spec forbids and
-#: `tests/web/test_rail.py` fails the build on.
+#: is a category: `"session needs attention"` is the wording §12 forbids and D66
+#: keeps forbidding — the placement was reversed, the content rules were not.
 SIGNAL_ASK = "permission: Bash(git push)"
 DIALOG_ASK = "permission dialog open: Edit(src/shepherd/store/db.py)"
 

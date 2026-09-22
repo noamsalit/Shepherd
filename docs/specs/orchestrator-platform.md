@@ -31,7 +31,7 @@ reading before planning.
 You have everything you need. Do this, in order:
 
 1. Read §1–§4. §3 (Decision log) is the most important section in the document —
-   **65 decisions** (D1–D65, plus D38.1, an amendment) with their reasoning. If
+   **66 decisions** (D1–D66, plus D38.1, an amendment) with their reasoning. If
    implementation pressure pushes against one, say so and re-decide out loud; do
    not quietly reverse it.
 2. Note §2 — the product name (`shepherd`) and repo location are settled.
@@ -180,6 +180,8 @@ re-decide.
 | D64 | **Filters are declared by the provider and rendered by the UI; the UI never learns a provider's query language.** `WorkItemCapabilities` gains a filter declaration — per field: a key, a human label, a kind (`single_select` \| `multi_select` \| `text`), and how its options are fetched. Jira declares *project*, *labels*, *assignee*, *status category*; Notion declares its database and that database's select properties. The rendered choices are stored in `queue.provider_config` beside the maps already there. A **raw provider query stays available as an explicit "Advanced" field** for filters the declaration cannot express, and a project uses one or the other, never both silently merged. **Saving a filter validates it and reports the match count** (*"matches 23 items"*). | The alternative already in §10 is a raw `jql` string, and it fails in the specific way this product exists to prevent: a typo returns zero items, which is **indistinguishable from a correct filter over an empty backlog**. Neither is an error, nobody is told, and the queue quietly does nothing — the silent-success failure principle 5 names. Declaring the filters moves the provider-specific knowledge into the provider, which is where `status_model`, `legal_statuses` and `child_kind_raw` already live; the page renders a declaration exactly as the fleet page renders a bucket it was handed. It is also the only shape that works from a phone, which is the primary client. The escape hatch is kept because a declaration will always lag a real query language, and removing power to gain friendliness is how a tool becomes unusable for the person who needed it most. The match count is the cheap half of the decision and the half that makes a wrong filter *visible* rather than merely present. |
 
 | D65 | **The autonomy toggle lives in Settings and nowhere else. Revises §12.** One control, one place. §12 previously placed it on the master page *"visible at all times"* so a reader never had to remember which level they were on; that is reversed. What the level *means* is still shown where it is felt — an approval card exists **because** the level asked for one, and a turn that ran on is a turn the level permitted. | Owner decision, 2026-09-21. The original reasoning solved a real problem — not knowing which level you are on — but solved it by putting a mode switch on the page you use most, where it is both permanent clutter and an easy mis-tap with a real blast radius: flipping to auto-approve is exactly the action you least want to take by accident while reaching for something else. The information it carried is not lost, because the level is **observable from behaviour**: at the asking level you get cards, at the auto level you do not. A setting that is inferable from what the system does needs to be *changeable* in one findable place, not *displayed* in every place. Recorded rather than applied quietly, per §0. |
+
+| D66 | **The Needs-You rail leaves the shell. §12's "on every page" is reversed; if the rail returns it lives on the Flock page alone (U2).** §12 previously fixed the rail to the top of every page — *"not a page you navigate to"* — and `tests/web/test_rail.py::test_rail_is_on_every_page` encoded that by asserting the `id="rail"` slot sits in `index.html` before `<main>`. That test is retired with this row. **The projection is not retired**: `tools_m1.py::project_needs_you` and `fleet_summary`'s `needs_you` list stay exactly as they are, approval rows included — only the renderer goes, and what it displayed is the data the Flock page will need. | Owner decision, 2026-09-22. The rail has **no home in the new shell**: the redesign gives every page a single scrolling column under one header, and a fixed bar above it is the one element that belongs to no page and is therefore nobody's to maintain. The intent is that it lives on the **Flock page only**, if it returns at all — the Flock is where the sessions it names already are, so a row that says *payments-api · permission: Bash(git push)* is one tap from the thing it is about instead of being a permanent banner over pages that have nothing to do with it. This is the same shape as D65: a thing that was put on every page so it could never be missed became permanent clutter, and the information is not lost, because a blocked session is legible on the page that lists sessions. Recorded rather than applied quietly, per §0, and written in the same task that deletes the assertion. |
 
 ---
 
@@ -1842,7 +1844,7 @@ it. That page is specified in `docs/backlog/2026-09-21-projects-work-sources-and
 (W1, W3) and drawn in `docs/design/ui-decisions.md` (U14), not in this section. §12 is
 rewritten when the design is implemented, not before.
 
-### The Needs-You rail — on every page
+### The Needs-You rail — off the shell (D66)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -1852,10 +1854,22 @@ rewritten when the design is implemented, not before.
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Fixed to the top of every page — **not a page you navigate to.** Empty state
-collapses to a 4px green line. Non-empty: amber bar, count, and *the actual ask*
-on each row — never "session needs attention". Plus a browser notification and an
-optional sound on transition into `needs_you`.
+**D66 reverses this section's placement rule.** The mock above is what the rail
+looked like when it was fixed to the top of every page — *"not a page you
+navigate to"* — and that is no longer the design. The rail is **off the shell**,
+and if it returns it lives on the **Flock page alone** (U2). It is drawn here for
+the record, not as a specification of where it sits.
+
+What D66 does **not** reverse is the rail's content rules, which outlive its
+placement and bind whatever draws it next: *the actual ask* on each row — never
+"session needs attention"; empty collapses to a 4px green line and is a different
+state from **not read yet**; the three row kinds are a blocked session from a
+signal, an owned session in a dialog, and a pending approval. Those are properties
+of `fleet_summary`'s `needs_you` list, which **stays**, projected through
+`tools_m1.py::project_needs_you`, and they are asserted at that projection by
+`tests/qa/test_s4_needs_you_rail.py` rather than at any renderer. The browser
+notification and the optional sound on transition into `needs_you` are likewise
+unaffected — they never depended on a bar being on the page.
 
 ### Page 1 — Chat (default landing)
 

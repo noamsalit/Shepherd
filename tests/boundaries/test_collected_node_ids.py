@@ -100,6 +100,76 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "Half the condition in the name — 'neither a root' — stopped existing when migration 004 dropped workspace.root_path, so the test now describes a two-part setup of which only one part can be built. The property is unchanged and is the whole of the named successor in the same file, test_a_project_with_no_repo_refuses_everything: an empty allowlist is a refusal and never permission, asserted for an ordinary project and for the reserved one.",
         "§3 D57.",
     ),
+    "tests/web/test_rail.py::test_rail_is_on_every_page": (
+        "This is the assertion D66 reverses, and it is the reason the row exists: it read "
+        "index.html for an id=\"rail\" slot positioned before <main> in order to prove the rail "
+        "was the shell rather than one view's child, which is exactly what §12 specified and "
+        "what the owner has now decided against. The rail leaves the shell; if it returns it "
+        "lives on the Flock page alone (U2), so there is no shell slot left for this test to "
+        "find and no narrowed form of it that would still be true. Retired with its decision "
+        "written in the same task, per §0, rather than deleted as an inconvenient failure.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_rail_shows_the_actual_ask": (
+        "Two halves, and only the renderer half dies. The payload half asserted that "
+        "fleet_summary's needs_you list carries the fold's own needs_you_reason, and that half "
+        "is re-proved at the projection seam by tests/qa/test_s4_needs_you_rail.py::"
+        "test_the_rail_carries_a_row_per_blocked_session_with_its_own_ask, which drives two "
+        "sessions in with different asks so a repeated reason is caught. The other half scanned "
+        "rail.js for renderRail and for the absence of the forbidden category wording, and D66 "
+        "takes that renderer off the shell, so the scan is of a module the shell no longer loads.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_idle_prompt_is_needs_you_and_the_rail_says_idle": (
+        "C21's wording rule, asserted through the rail's HTTP payload: idle_prompt flips an idle "
+        "TUI to needs_you 60 s after a Stop, and the row must read 'idle — waiting for your next "
+        "instruction' rather than a category. The rule is about what the fold composes, not about "
+        "where it is drawn, and D66 removes only the drawing. The surviving assertion of the same "
+        "property is at the projection: tests/qa/test_s4_needs_you_rail.py compares every row's "
+        "needs_you_reason against the exact text its own source wrote, which is the same check "
+        "one layer below the renderer that has left.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_rail_renders_with_a_null_reason": (
+        "Principle 5 on a missing ask — unknown, never a blank row and never an invented one. The "
+        "projection half (a needs_you row whose needs_you_reason is None is still a row) is a "
+        "property of project_needs_you and survives; what cannot survive is the other half, a "
+        "regex over rail.js for a named RAIL_UNKNOWN_ASK fallback constant whose wording is "
+        "checked for 'unknown' or 'not recorded'. D66 takes the renderer off the shell, so its "
+        "fallback string is no longer a thing any page displays, and a scan asserting the wording "
+        "of text nobody reads is a green that means nothing.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_empty_rail_collapses_to_a_line": (
+        "§12's empty state: a 4 px green line rather than an empty panel announcing nothing, in "
+        "the same finished green as the chip, read out of app.css's .rail-empty rule and "
+        "cross-checked against core.stops.PALETTE. D66 removes the rail from the shell and T5.2 "
+        "rewrites app.css for the new one, so .rail-empty is a rule for a component with no "
+        "mount point. The palette-is-the-one-source property this leaned on is independently "
+        "held by tests/web/test_palette.py, which parses every .bucket-<name> rule back out of "
+        "the stylesheet and compares it against PALETTE.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_rail_updates_from_sse_not_polling": (
+        "§12's no-polling rule, asserted by scanning rail.js for setInterval, setTimeout, "
+        "requestAnimationFrame and fetch( and by checking app.js drives the redraw from "
+        "onEnvelope. The rule is not retired with the test — it is a property of the whole UI, "
+        "and the stream half of it is held by the EventSource assertion in sse.js's own coverage "
+        "— but the module this scanned is the rail renderer D66 takes off the shell, and the "
+        "app.js half names an import (./rail.js) that the new shell does not make. Re-anchor any "
+        "future rail on the Flock page's own no-polling scan rather than on this one.",
+        "§3 D66",
+    ),
+    "tests/web/test_rail.py::test_rail_says_unknown_before_the_fleet_has_been_read": (
+        "The rail's own third state: not-read-yet is not empty, because a green line is a claim "
+        "that nothing is waiting on you and nobody has established that before the first "
+        "fleet_summary lands. The property is real and it survives at the projection, where "
+        "tests/qa/test_s4_needs_you_rail.py::test_an_empty_rail_is_distinguishable_from_an_unread_one "
+        "drives both states and asserts [] and None are different values. What is retired is its "
+        "rendering: an index.html slot carrying rail-unknown and a .rail-unknown CSS rule in the "
+        "unclassified grey, both of which D66 takes off the shell.",
+        "§3 D66",
+    ),
 }
 
 
