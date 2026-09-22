@@ -1182,3 +1182,209 @@ def test_every_value_that_can_be_truncated_carries_its_full_text_as_a_title(
     )
     assert mismatched == [], mismatched
     assert console.messages == []
+
+
+# ============================================================================
+# The second QA remediation pass (same workflow, re-run after the first).
+#
+# Eleven defects closed; two more found on ground the first pass had only just
+# made reachable. Both are below, each naming the defect it closes.
+# ============================================================================
+
+
+@pytest.fixture()
+def the_kill_raises(store: Store, projects_root: Path) -> None:
+    """Re-register the project verbs behind a kill that **raises**.
+
+    Three outcomes are possible from `_kill_running` and the suite could only
+    reach two of them. `web/conftest.py`'s `refuses_every_kill` returns `False`
+    (a stop that did not land and said so); `kills_the_owned_one` returns `True`
+    for one session (a stop that landed). Neither produces a `kill_failures`
+    row, and `kill_failures` is populated **only** by the raising branch —
+    which is the branch `runner/local.py` actually takes for a stale handle:
+    a row whose `ended_at` is still NULL while its tmux pane is gone.
+
+    The reason string is the shape QA measured off the wire, argv and all.
+    """
+    from shepherd.core.runner import RunnerRefusal
+    from shepherd.toolsurface.registry import reset_registry
+    from shepherd.toolsurface.tools_m1 import register_read_tools
+    from shepherd.toolsurface.tools_projects import register_project_tools
+
+    from chokepoint_fixture import install_test_chokepoint
+
+    def kill(session_id: str) -> bool:
+        raise RunnerRefusal(KILL_ARGV_REASON)
+
+    reset_registry()
+    install_test_chokepoint()
+    register_read_tools(
+        store=store,
+        projects_root=projects_root,
+        clock=lambda: NOW,
+        pending_approvals=lambda: (),
+    )
+    register_project_tools(store=store, kill=kill, now=lambda: NOW)
+
+
+#: The tmux argv a real `RunnerRefusal` carries. It is long on purpose: the
+#: defect's second half is that the page must render it *readably* rather than
+#: ellipsising the half that names the socket.
+KILL_ARGV_REASON = (
+    "tmux exited 1 for ['tmux', '-L', 'shepherd-runner', 'kill-session', "
+    "'-t', 'shp_eng_owned']: error connecting to "
+    "/tmp/tmux-0/shepherd-runner (No such file or directory)"
+)
+
+
+def test_a_stop_that_refused_names_the_session_and_says_why(
+    projects_page: Page, store: Store, the_kill_raises: None, console: Console
+) -> None:
+    """**Defect 1 of the second pass (HIGH).** The server says *why* a stop did
+    not take, and the page threw the answer away.
+
+    `delete_outcome` projects eleven keys. QA counted the page's readers of each
+    and found exactly one with none: `kill_failures`. So the dialog said *"2
+    session(s) in this project are still running and were not stopped; nothing
+    was deleted"* over a record that also held a `RunnerRefusal` naming the
+    session and the socket that was not there. `bump_anomaly(STOP_FAILED)` had
+    already fired — the failure was recorded everywhere except where a person
+    would look.
+
+    The assertion is on the **reason text in full**, not on its presence: the
+    string carries a tmux argv, and a fix that ellipsised it would satisfy a
+    "contains the session id" check while losing the part that answers the
+    question.
+    """
+    project = store.create_project(name="payments", description=None)
+    owned = owned_session(store, project.id, "eng-owned")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+    projects_page.click('.dlg-choice[data-choice="delete"]')
+    projects_page.wait_for_selector('.dlg-choice[data-choice="kill_sessions"]', timeout=5000)
+
+    projects_page.click('.dlg-choice[data-choice="kill_sessions"]')
+
+    projects_page.wait_for_selector("#dlg-delete-body:has-text('were not stopped')", timeout=5000)
+    live = projects_page.locator("#dlg-delete-live").inner_text()
+    assert "Not stopped, and why:" in live, live
+    assert owned in live, live
+    assert f"RunnerRefusal: {KILL_ARGV_REASON}" in live, live
+    # The project survives, which is what makes the reason worth reading.
+    assert store.get_workspace(project.id) is not None
+    assert console.messages == []
+
+
+def test_a_second_create_click_cannot_make_a_second_project(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 2 of the second pass (MEDIUM).** Defect 7's failure class, fixed
+    on the delete side and left on the create side.
+
+    `inFlight` shipped with **one** key — `delete` — and `onProjectSubmit` never
+    consulted it. The duplicate-name warning does not save it: both POSTs leave
+    before the list is re-read, so `view.projects` never holds the first project
+    when the second is decided. QA measured `posts: 2, rows: 2` on three of
+    three attempts — a *durable wrong row*, which is what separates this handler
+    from the four other unguarded ones (their verbs are idempotent).
+
+    Asserted on the wire as well as in the store: one click, one request.
+    """
+    posted: list[str] = []
+    projects_page.on(
+        "request",
+        lambda request: posted.append(request.url)
+        if request.method == "POST" and request.url.endswith("/api/projects")
+        else None,
+    )
+    projects_page.click("#proj-new")
+    projects_page.fill("#p-name", "payments")
+    projects_page.fill("#p-desc", "the api")
+
+    projects_page.locator("#p-save").dblclick()
+
+    projects_page.wait_for_selector('.proj-name:text-is("payments")', timeout=5000)
+    projects_page.wait_for_timeout(500)
+    made = [row for row in store.list_workspaces() if row.name == "payments"]
+    assert len(posted) == 1, posted
+    assert len(made) == 1, [row.name for row in store.list_workspaces()]
+    assert console.messages == []
+
+
+@pytest.fixture()
+def the_kill_ends_the_session_then_raises(store: Store, projects_root: Path) -> None:
+    """The narrow cell where a `kill_failures` row rides a **successful** delete.
+
+    A kill that raises normally leaves `ended_at` NULL, so `commit_project_delete`
+    re-derives a still-running project and refuses — which is why the refusal
+    branch is where the reason is usually read. But the raise can come *after*
+    the session has gone: the pane dies, the teardown that follows it does not,
+    and `RunnerRefusal` escapes over a row that is already ended. The commit
+    then succeeds, and a reader wired only into the refusal branch would drop
+    the one record saying a stop Shepherd issued did not land.
+    """
+    from shepherd.core.runner import RunnerRefusal
+    from shepherd.toolsurface.registry import reset_registry
+    from shepherd.toolsurface.tools_m1 import register_read_tools
+    from shepherd.toolsurface.tools_projects import register_project_tools
+
+    from chokepoint_fixture import install_test_chokepoint
+
+    def kill(session_id: str) -> bool:
+        store.apply_stop_verdict(
+            session_id=session_id,
+            verdict=Verdict(
+                stop_reason=StopReason.USER_EXITED,
+                bucket=Bucket.FINISHED,
+                why="the pane went away",
+                confidence=1.0,
+                decided_by=DecidedBy.MECHANICAL,
+                next_actions=(),
+                waiting_on=None,
+                missing=(),
+            ),
+            ended_at="2026-09-22T12:00:00.000Z",
+            exit_code=None,
+        )
+        raise RunnerRefusal(KILL_ARGV_REASON)
+
+    reset_registry()
+    install_test_chokepoint()
+    register_read_tools(
+        store=store,
+        projects_root=projects_root,
+        clock=lambda: NOW,
+        pending_approvals=lambda: (),
+    )
+    register_project_tools(store=store, kill=kill, now=lambda: NOW)
+
+
+def test_a_delete_that_succeeded_still_says_which_stop_did_not_land(
+    projects_page: Page, store: Store, the_kill_ends_the_session_then_raises: None,
+    console: Console
+) -> None:
+    """The second branch of defect 1, named rather than assumed.
+
+    The refusal path is the common one and the test above certifies it. This
+    one certifies the other: the delete goes through and the reason is still on
+    screen, in `#dlg-delete-outcome` beside `destroyed` and `severed`. Without
+    it the fix would be one call site proved and one call site hoped for.
+    """
+    project = store.create_project(name="payments", description=None)
+    owned = owned_session(store, project.id, "eng-owned")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+    projects_page.click('.dlg-choice[data-choice="delete"]')
+    projects_page.wait_for_selector('.dlg-choice[data-choice="kill_sessions"]', timeout=5000)
+
+    projects_page.click('.dlg-choice[data-choice="kill_sessions"]')
+
+    projects_page.wait_for_selector("#dlg-delete-outcome", timeout=5000)
+    outcome = projects_page.locator("#dlg-delete-outcome").inner_text()
+    assert store.get_workspace(project.id) is None, "the delete did go through"
+    assert "Not stopped, and why:" in outcome, outcome
+    assert owned in outcome, outcome
+    assert f"RunnerRefusal: {KILL_ARGV_REASON}" in outcome, outcome
+    assert console.messages == []

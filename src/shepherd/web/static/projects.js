@@ -626,8 +626,32 @@ function duplicateWarning(name) {
   );
 }
 
+//: Defect 2 of the second QA pass — defect 7's failure class, fixed on the
+//: delete side and left here. Two POSTs both leave before `loadList()` runs,
+//: so `view.projects` never holds the first project when the second is
+//: decided and the duplicate-name warning cannot see it either: a double click
+//: made two projects on three of three measured attempts.
+//:
+//: A flag rather than a disabled button, for `inFlight.delete`'s reason and
+//: one more: `#p-save` is a `<form>` submit control, and disabling it inside
+//: its own handler is a race against the browser's second submit rather than a
+//: guard on it. The wrapper covers **both** branches of this handler — create
+//: and edit — because they share the submit, and the branch that is about to
+//: issue a request is not known until the name is read.
 async function onProjectSubmit(event) {
   event.preventDefault();
+  if (inFlight.project) {
+    return;
+  }
+  inFlight.project = true;
+  try {
+    await submitProject();
+  } finally {
+    inFlight.project = false;
+  }
+}
+
+async function submitProject() {
   const name = document.getElementById("p-name").value.trim();
   const description = document.getElementById("p-desc").value.trim();
   if (name === "") {
@@ -791,6 +815,30 @@ function runningSessions(project) {
   return project.sessions.filter((row) => row.ended_at === null);
 }
 
+//: `kill_failures`, rendered — the one member of `delete_outcome`'s eleven that
+//: had no reader on this page. The server already knew *why* a stop did not
+//: take (`tools_projects_delete.py:132`, and `bump_anomaly(STOP_FAILED)` had
+//: fired), and the dialog said only "N session(s) … were not stopped". A
+//: refusal that cannot say why sends a person to the logs for a fact the
+//: response was already carrying.
+//:
+//: The reason is a `RunnerRefusal` string with a tmux argv inside it, so it is
+//: **wrapped, not ellipsised** — `.dlg-reason` in `app.css`. The half of an
+//: argv that names the socket is the half that answers the question, and
+//: `.dlg-identity`'s truncation would be exactly the wrong borrowing here.
+function renderKillFailures(host, failures) {
+  if (failures.length === 0) {
+    return;
+  }
+  host.appendChild(element("div", "dlg-row", "Not stopped, and why:"));
+  for (const failure of failures) {
+    const entry = element("div", "dlg-fail");
+    entry.appendChild(element("div", "dlg-row", failure.session_id));
+    entry.appendChild(element("div", "dlg-reason", failure.reason));
+    host.appendChild(entry);
+  }
+}
+
 //: `doomed`, rendered — the server's list, never a filter over it.
 function renderDoomed(ids) {
   const host = document.getElementById("dlg-delete-doomed");
@@ -856,7 +904,11 @@ function openDeleteDialog(project) {
 //: about a delete that had worked. One in two runs. The guard is a flag rather
 //: than a disabled button because the choices are rebuilt on every answer and
 //: a disabled node is replaced before the second click reaches it.
-const inFlight = { delete: false };
+//: `project` is the create/edit submit, added by the second QA pass. Two keys
+//: and not a general "the page is busy" latch: the delete dialog and the
+//: project dialog are different modals and a shared flag would make one of
+//: them silently swallow the other's first click.
+const inFlight = { delete: false, project: false };
 
 //: The note under "Stop them, then delete", written out of the plan's own
 //: split. `killable` is `runner_handle IS NOT NULL` — the column the shipped
@@ -922,6 +974,7 @@ async function onDeleteAnswer(project, onRunning) {
   // miss: on a mixed project the owned sessions really were stopped before the
   // commit half refused over the ones that could not be.
   idList(live, "Already stopped by this attempt:", answer.killed);
+  renderKillFailures(live, answer.kill_failures);
   if (answer.running.length === 0) {
     return;
   }
@@ -965,6 +1018,13 @@ async function renderDeleteOutcome(answer) {
   );
   idList(outcome, "Moved to Unassigned, still running:", answer.orphaned);
   idList(outcome, "Stopped by this delete:", answer.killed);
+  // On the success path too, and the case is narrow rather than impossible: a
+  // kill that raised leaves `ended_at` NULL and the commit half normally
+  // refuses over it — unless the session ended on its own between the raise
+  // and the re-derivation, in which case the delete went through *and* a stop
+  // Shepherd issued did not land. That is precisely the moment a person is
+  // owed the reason, and the moment a refusal-only reader would drop it.
+  renderKillFailures(outcome, answer.kill_failures);
   for (const link of answer.severed) {
     outcome.appendChild(
       element("div", "dlg-row", `${link.session_id}: ${link.column} was cleared`)
