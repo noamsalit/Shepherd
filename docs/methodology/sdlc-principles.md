@@ -54,7 +54,7 @@ Three separations do the real work:
 | **Doing vs. judging** | The agent that wrote the code never certifies it. Advisory routes cannot start write work. The route that measures cannot repair. |
 | **State vs. conversation** | Every fact a later step needs lives in a file, not in the transcript. Compaction must cost nothing. |
 
-## 1.2 The sixteen principles
+## 1.2 The seventeen principles
 
 | # | Principle | Mechanism | Why |
 |---|---|---|---|
@@ -74,6 +74,7 @@ Three separations do the real work:
 | P14 | **Enforce in code, not in prose** | Deny-lists, blast-radius limits, destructive-op consent, artifact schema, remediation counting — all hooks. A rule that lives only in a prompt is a request. | Proven the hard way: prompt-only isolation was bypassed by a tool nobody thought to guard. |
 | P15 | **Compound the knowledge** | Learnings, gotchas and verification results persist after every workflow. Cross a threshold — 3+ failed hypotheses, the same defect in 3+ files, a fix that contradicts a documented assumption — and it becomes a permanent write-up. | Otherwise every session re-learns the same constraint. |
 | P16 | **Never assume a shape at a boundary you do not own** | Every external data shape, signal and protocol behaviour is **observed against a live instance** and the capture is committed. Documentation, SDK typings, memory and model priors are hypotheses, not facts. An unprobed shape is a recorded gap, never a detail. See §1.7. | The shape you assume is the one nobody tests. It is wrong silently, and it is wrong at the one boundary where you cannot see inside the other side. |
+| P17 | **Sequence is a consequence, not a default** | The plan emits a dependency **graph**, not a list. The executor dispatches on unblock, never on a wave boundary. Independence is tested before two units run together, and re-checked at the join. See §1.9. | Most plans are straight lines only because they were written in order. Every dependency that isn't real is idle time, and it compounds across the whole build. |
 
 ## 1.3 Reviewer taxonomy — four postures
 
@@ -133,6 +134,7 @@ Two framing rules:
 | **Plan trust** | before executing any phase | Plan missing, drifted from its recorded anchor, or carrying unresolved open decisions. |
 | **Test seam** | at build dispatch | The phase must name the seam it tests at. The builder confirms or *formally disagrees with a rationale* — it may not silently pick another. |
 | **TDD red** | inside build | A red must be a *behavioral* failure with the reason recorded verbatim. An import/syntax/collection error is a broken harness, not a red. |
+| **Independence** | before two units run concurrently | Any one of: coupled understanding, overlapping write sets, shared in-flight state, or a shared machine resource. On failure, serialize or merge the units. Re-checked at the join against the files **actually** edited, not the declared scope. |
 | **Boundary evidence** | before an external interface is designed or built | Any external shape, signal or protocol behaviour the work depends on that has no probe: no captured example, or a capture pinned to a version that has since moved. An unprobed shape blocks the phase that consumes it, not the whole plan. |
 | **Self-critique** | before running any verification | No stubs, no debug logging, no `as any`, every acceptance criterion has code, every scenario has a test. Never run a suite you know will fail on hygiene. |
 | **Phase exit** | end of every phase | Contract validates, result persisted, event logged. A failed contract routes to remediation and never advances the cursor. |
@@ -232,6 +234,106 @@ Hard-won here, not in the plugin, and they generalize:
 | **The runtime net is not a substitute for the rule** | Guards exist and must themselves be proven to bite — using an operation that delivers nothing. A guard against a catastrophe must not be able to cause one. |
 | **Assert on the invariant, not the snapshot** | Assert on the thing that is structurally true (the socket, the boundary), not on today's list of names. A check written against a snapshot goes red the next time a human touches the system. |
 
+## 1.9 Parallelism — plan the graph, execute on unblock
+
+**The rule.** Work that is genuinely independent runs at the same time, and a unit starts
+the moment **its own** dependencies are satisfied — not when a phase, a wave, or a batch
+finishes. Sequencing is a consequence of the dependency graph. It is never the default.
+
+Two distinct failures this prevents, and they are worth naming separately:
+
+| Failure | Shape | Example |
+|---|---|---|
+| **False serialization** | A, B and C are unrelated but run one after another, because they were *written* one after another. | Three independent modules planned as phases 1, 2, 3. |
+| **The barrier** | B depends only on A1, but waits for A2 and A3 too, because they were grouped into one phase. | Screen 1's UI waits on backends 2 and 3 for no reason. Its own backend was ready an hour ago. |
+
+The barrier is the more expensive of the two and the harder to see, because the plan looks
+correct: every stated dependency is real. The defect is the *grouping*, not the edges.
+
+### The plan owns the graph
+
+- **Edges are declared at the artifact level.** A dependency means *"I consume something
+  you produce"* — nothing else is one. The plan already carries verbatim-matched
+  **Consumes / Produces** per unit; that **is** the edge data. Use it to compute the graph
+  rather than restating an order by hand.
+- **A declared dependency that names no consumed artifact is a false edge — delete it.**
+  False edges are the single largest source of accidental serialization, and they are
+  invisible because they look like caution.
+- **The plan states its critical path and its width** — the longest chain of real
+  dependencies, and how many units can run at once. A plan whose critical path equals its
+  total length is a straight line: either justify it or re-cut it.
+- **Shared resources are edges too.** A port, a fixture database, a migration, a lockfile,
+  a single build cache. Model them explicitly, or two lanes will collide on a machine that
+  file isolation cannot separate. *Worktrees isolate files, not the host.*
+
+### The executor runs on unblock
+
+- Hold a **runnable set**, not a cursor.
+- On **every** completion, recompute what is now unblocked and dispatch it **immediately**.
+- **No wave barriers.** A unit never waits on a sibling it does not consume from.
+- Cap concurrency to what the machine and the budget support. When more is runnable than
+  the cap allows, **prefer the unit on the longest remaining chain** — critical path first,
+  because that is the only work that can extend the finish time.
+
+### The independence test
+
+All four must hold before two units run concurrently. This generalizes the test the debug
+route already applies to a fan-out.
+
+1. **Separable understanding** — each unit is comprehensible and completable without
+   reading the other. If doing A requires knowing B's outcome, they are one unit.
+2. **Disjoint write sets** — no file is written by both.
+3. **No shared in-flight state** — neither depends on the other's uncommitted output.
+4. **No shared machine resource** — port, database, fixture, external account, lockfile.
+
+If any one fails: serialize, or merge them into a single unit. **When in doubt,
+serialize.** A wrongly-parallelized pair costs more than a wrongly-serialized one.
+
+### The join
+
+A join **is** a barrier, and that is correct — barriers belong at joins, never inside lanes.
+
+- **Fan-in conflict check** against the files each lane **actually** edited, not what it
+  declared. Two write agents that strayed past their scope clobber each other silently.
+- **Per-lane baseline and per-lane verify before the join.** This is what buys back
+  attribution: with several lanes in flight, a red suite at the end is very hard to
+  attribute to a change. Verify each lane against its own baseline first, then run one
+  whole-system verification at the join.
+- Any conflict → reconcile with a single agent that sees both sides, then re-check. Do not
+  verify through a conflict.
+
+### Contract-first parallelism (the stronger version)
+
+With interfaces fixed at plan time (PLAN W2), a consumer does not wait for its producer's
+**implementation** — only for its **contract**. The UI lane starts when the interface is
+agreed, both sides build against the same contract suite, and integration is the join.
+
+This is strictly more parallel than waiting for the producer, and it is only safe under
+conditions:
+
+- The interface is genuinely fixed — designed twice, owned by the caller's need, and
+  carrying its error contract and invariants, not just a signature.
+- **One shared contract suite** that both sides run. Two private interpretations of one
+  interface is not contract-first; it is two guesses.
+- If the contract moves, **both** sides rework. So spend this only where the plan is
+  confident, and treat a mid-flight contract change as the scope increase it is.
+- For an **external** boundary the contract comes from a probe (P16), never from
+  imagination. Contract-first against an unprobed third party is a guess with two
+  consumers instead of one.
+
+### What parallelism costs
+
+Say it plainly, so the choice is made rather than assumed:
+
+- **Attribution** degrades with width. Per-lane verify is the mitigation, and it is not free.
+- **Context and tokens** multiply with lanes.
+- **Human checkpoints do not parallelize.** A lane that hits one stops, and a plan that
+  puts checkpoints on several lanes serializes itself through the human.
+- **Gates do not weaken.** Every lane carries the full gate set. Parallelism changes *when*
+  work runs, never *what it must prove*.
+
+---
+
 ---
 
 # Part 2 — The routes
@@ -309,6 +411,26 @@ documentation** — the shapes on the far side are not the plan's to invent. So:
 external boundary is named, and each one cites a probe or schedules one before its
 consuming phase*.
 
+**W4 — the plan is a dependency graph, and it is optimized for width.**
+
+Follows from P17 (§1.9). Planning is not only "what are the steps" — it is "what is the
+shortest path through them given everything that can run at once".
+
+| Requirement | Detail |
+|---|---|
+| **Graph, not list** | Every unit declares what it consumes and what it produces, verbatim. Dependencies are **derived** from those artifacts, not written by hand as an order. |
+| **No false edges** | A declared dependency that names no consumed artifact is deleted. "It felt safer after" is not a dependency. |
+| **Cut for width** | Decompose deliberately so independent work *is* independent — split by artifact ownership, not by chronology. A unit that produces one thing three others consume should produce it early and alone. |
+| **Declare the shape** | The plan states its **critical path** (longest real chain) and its **maximum width** (how many units can run at once). A plan whose critical path equals its full length must justify it. |
+| **Model shared resources** | Ports, fixture databases, migrations, lockfiles and external accounts are edges. Unmodelled, they become collisions no file isolation can prevent. |
+| **Mark contract-first lanes** | Where a consumer can start from the interface rather than the implementation (§1.9), the plan says so explicitly and names the shared contract suite both sides run. |
+| **Checkpoint placement is a design decision** | Human checkpoints do not parallelize. Put them on the critical path where they are unavoidable — not scattered across lanes, where they serialize the whole plan through one person. |
+
+**Gate to add:** the plan-completeness checklist grows a fourth blocking row — *every
+dependency names the artifact it consumes, and the plan states its critical path and
+width*. The plan reviewer's scope-and-alignment check gains a matching question: **could
+any two of these units have run at the same time?**
+
 **[undecided] Further candidates**
 - A standing "what would make this plan wrong?" adversarial pass on the key decision, before the plan is finalized rather than after the build discovers it.
 - A dependency-order proof: walk the phases and show each prerequisite exists in an earlier one.
@@ -328,6 +450,23 @@ gets a reduced graph; the verifier's proof path is unchanged.
 first, per-phase base commit so each review sees only that phase's diff.
 
 ### Wanted
+
+**W1 — execute on unblock, not on phase completion.**
+
+Follows from P17 (§1.9). This is a real change to how BUILD runs, not a tuning knob:
+today's model is one cursor, one builder, advance on verify. Replace the cursor with a
+**runnable set**.
+
+| Requirement | Detail |
+|---|---|
+| **Recompute on every completion** | The moment a unit finishes, dispatch everything it unblocked. Do not wait for its siblings. Backend A finishing starts UI A, even while backends B and C are still running. |
+| **Lane isolation** | Each concurrent lane gets its own workspace and its own recorded base commit, so its review and verification see only its own diff. |
+| **Per-lane baseline and per-lane verify** | Mandatory, not optional. This is what keeps failures attributable once several lanes are in flight. |
+| **Independence tested before dispatch** | The four-part test in §1.9. Fail any part → serialize. When in doubt, serialize. |
+| **Fan-in conflict check** | At the join, intersect the files each lane **actually** edited. Any overlap → reconcile with one agent that sees both sides, then re-check. Never verify through a conflict. |
+| **Critical path first** | When more is runnable than the concurrency cap allows, dispatch the unit on the longest remaining chain. |
+| **Full gates per lane** | Every lane runs the whole gate set. Width changes when work happens, never what it must prove. |
+| **Escalate on graph drift** | If a unit turns out to depend on something the plan said it did not, that is a scope increase: stop the lane, repair the graph, and say so — do not quietly serialize around it. |
 
 **[undecided] Candidates**
 - **Implementation must match the plan's interface table verbatim.** Today the builder can confirm or disagree about the *seam*; it cannot silently redraw an *interface*. Make interface drift a blocking review finding, not a code-quality note.
