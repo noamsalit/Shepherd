@@ -385,7 +385,7 @@ function renderProjects(view, handlers) {
 //
 // D21's `next_actions` list is deliberately **not** here. It renders in the
 // session pane's header, which is where §12 already placed it (D67).
-function sessionCard(session, view, handlers, now) {
+function sessionCard(session, view, now) {
   const bucket = bucketOf(session);
   const card = element("button", `card bucket-${bucket}`);
   card.type = "button";
@@ -420,7 +420,12 @@ function sessionCard(session, view, handlers, now) {
     card.appendChild(bar);
   }
 
-  card.addEventListener("click", () => handlers.onOpenSession(session.session_id));
+  // QA run 4's D5: the card binds **no** click handler of its own. `app.js`
+  // carries a delegated listener on `#flock-cards`, which is the path page
+  // root 3 documents, and a second binding here meant one tap ran the open
+  // twice — two sockets, two `GET /api/sessions/{id}`, and at the `Runner`
+  // seam two `capture-pane` and two `pipe-pane` against the same tmux pane.
+  // The card's `data-session-id` is the whole of its side of that contract.
   return card;
 }
 
@@ -458,7 +463,7 @@ function currentProject(view) {
   return null;
 }
 
-function renderCards(view, handlers, now) {
+function renderCards(view, now) {
   const project = currentProject(view);
   document.getElementById("flock-sessions-head").textContent =
     project === null ? "Sessions" : project.name || UNKNOWN;
@@ -470,7 +475,7 @@ function renderCards(view, handlers, now) {
   // The order arrives with the payload (`fleet_bucket_sort_key`, §16). This
   // loop renders an order it was handed rather than learning one.
   for (const session of project.sessions || []) {
-    host.appendChild(sessionCard(session, view, handlers, now));
+    host.appendChild(sessionCard(session, view, now));
   }
 }
 
@@ -522,13 +527,13 @@ export function renderFlock(view, handlers, now) {
 
   if (view.workspaces.length === 0) {
     renderProjects(view, handlers);
-    renderCards(view, handlers, now);
+    renderCards(view, now);
     renderEmptyState(view);
     return;
   }
   document.getElementById("empty-state").hidden = true;
   renderProjects(view, handlers);
-  renderCards(view, handlers, now);
+  renderCards(view, now);
 }
 
 // U9's drill-down: the level the page is showing. A wide screen shows all three

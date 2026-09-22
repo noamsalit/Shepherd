@@ -46,8 +46,21 @@ PHONE = VIEWPORTS["phone"]
 DESKTOP = VIEWPORTS["desktop"]
 
 
-def _open(client: Client, viewport: dict[str, int]):
-    """A chromium page on the shipped index, with its console collected."""
+def _open(
+    client: Client,
+    viewport: dict[str, int],
+    *,
+    touch: bool = False,
+    init_script: str | None = None,
+):
+    """A chromium page on the shipped index, with its console collected.
+
+    `touch` gives the context a real touchscreen, which is the only way to ask
+    a phone question honestly: `page.click()` synthesises a mouse, and a mouse
+    has a `hover` a finger does not. `init_script` runs **before any module of
+    the page does**, which is what makes an `addEventListener` spy able to see
+    a binding that happens at import time.
+    """
     from playwright.sync_api import sync_playwright
 
     play = sync_playwright().start()
@@ -56,7 +69,9 @@ def _open(client: Client, viewport: dict[str, int]):
     except Exception as exc:  # noqa: BLE001 - an absent browser is not a defect
         play.stop()
         pytest.skip(f"chromium is not available: {exc}")
-    page = browser.new_page(viewport=viewport)
+    page = browser.new_page(viewport=viewport, has_touch=touch)
+    if init_script is not None:
+        page.add_init_script(init_script)
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
     page.on(
@@ -469,9 +484,17 @@ DISPLAY_OF = """
 
 
 @contextmanager
-def _at(client: Client, viewport: dict[str, int]):
+def _at(
+    client: Client,
+    viewport: dict[str, int],
+    *,
+    touch: bool = False,
+    init_script: str | None = None,
+):
     """The shipped page at one viewport, torn down whatever happens."""
-    play, browser, page, errors = _open(client, viewport)
+    play, browser, page, errors = _open(
+        client, viewport, touch=touch, init_script=init_script
+    )
     try:
         yield page, errors
     finally:
@@ -720,4 +743,365 @@ def test_the_legend_tooltip_never_swallows_a_click(
         page.evaluate("() => document.activeElement.blur()")
         page.wait_for_timeout(150)
         assert page.locator(".tip").count() == 0, "the tooltip outlived the focus it follows"
+        assert errors == [], errors
+
+
+# ==============================================================================
+# QA run 4, lane A — the phone defects: D4, D5, D8 and D9
+# ==============================================================================
+
+
+def _tap(page, selector: str) -> bool:
+    """A real finger on the centre of `selector`. False if it is not there.
+
+    `locator.click()` is a mouse; this is the touchscreen. The distinction is
+    the whole of D4: a `<dialog>` with no `closedby` does not close on a
+    backdrop *tap*, and a mouse click is not the event a phone sends.
+    """
+    box = page.evaluate(
+        """(s) => { const e = document.querySelector(s);
+             if (e === null) return null;
+             const b = e.getBoundingClientRect();
+             if (b.width === 0 && b.height === 0) return null;
+             return [Math.round(b.x + b.width / 2), Math.round(b.y + b.height / 2)]; }""",
+        selector,
+    )
+    if box is None:
+        return False
+    page.touchscreen.tap(box[0], box[1])
+    page.wait_for_timeout(350)
+    return True
+
+
+#: Everything a reader with no keyboard could use to get out of a `<dialog>`,
+#: read off the live element rather than off the markup: whether it is open and
+#: modal, every button of its own that has a box, whether that button is wired
+#: to close it, and whether the platform's own light-dismiss is asked for.
+DIALOG_EXITS = """
+(id) => {
+  const d = document.getElementById(id);
+  if (d === null) return null;
+  const visible = [...d.querySelectorAll('button')].filter((e) => {
+    const b = e.getBoundingClientRect();
+    return b.width > 0 && b.height > 0;
+  });
+  return {
+    open: d.open,
+    modal: d.matches(':modal'),
+    closedby: d.getAttribute('closedby'),
+    closedbySupported: 'closedBy' in d,
+    dataCloseWired: document.querySelectorAll('[data-close="' + id + '"]').length,
+    visibleButtons: visible.map((e) => ({
+      id: e.id || null,
+      text: (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 32),
+      w: Math.round(e.getBoundingClientRect().width),
+      h: Math.round(e.getBoundingClientRect().height),
+      closesThisDialog: e.getAttribute('data-close') === id,
+    })),
+  };
+}
+"""
+
+
+def test_the_legend_sheet_is_dismissable_by_touch_alone(
+    client: Client, master_doubles: MasterDoubles
+) -> None:
+    """QA run 4's D4: the explainer sheet was a trapdoor on a phone.
+
+    `index.html` declared `<dialog id="dlg-legend" class="sheet">` with **no
+    button at all**, while `flock.js` looped over `[data-close="dlg-legend"]`
+    to wire a close handler — an attribute that existed nowhere in the
+    document, so the loop was dead code and `dataCloseWired` read 0. A native
+    `<dialog>` with no `closedby` does not light-dismiss, so the sheet had
+    exactly one exit: a keyboard `Escape`. The sheet opens from the ⓘ **and
+    from all eight legend keys**, which makes the whole legend row a trapdoor
+    whose only phone exit is a page reload.
+
+    This is run 3's D2 one layer over. That sweep marked `#dlg-legend` fine
+    because it measured **visibility**; this one measures **dismissal**, and
+    it measures it with a finger rather than a synthesised mouse.
+    """
+    with _at(client, PHONE, touch=True) as (page, errors):
+        _nav(page, "flock")
+        # The trapdoor's own door: a legend key, not the ⓘ. Eight of them open
+        # this sheet and QA measured the phone entering through one.
+        assert _tap(page, "#flock-legend .legend-key"), "no legend key at 390px"
+        reading = page.evaluate(DIALOG_EXITS, "dlg-legend")
+        assert reading is not None and reading["open"] is True, reading
+
+        exits = [b for b in reading["visibleButtons"] if b["closesThisDialog"]]
+        assert exits, (
+            "the legend sheet is open and modal at 390px and offers no visible"
+            f" control that closes it: visibleButtons={reading['visibleButtons']},"
+            f" dataCloseWired={reading['dataCloseWired']},"
+            f" closedby={reading['closedby']!r} — on a phone the only exit is a"
+            " page reload"
+        )
+        small = [b for b in exits if min(b["w"], b["h"]) < 24]
+        assert not small, f"the sheet's way out is below 24x24: {small}"
+
+        # …and it is not merely present: a finger on it closes the sheet.
+        assert _tap(page, '#dlg-legend [data-close="dlg-legend"]')
+        assert page.evaluate("() => document.getElementById('dlg-legend').open") is False, (
+            "tapping the sheet's own close control left it open"
+        )
+
+        # The platform's light-dismiss, asked for and honoured. Verified rather
+        # than assumed (chromium 153 here): a tap on the backdrop, far from the
+        # box, with the button deliberately not used.
+        assert _tap(page, "#flock-legend .legend-info")
+        again = page.evaluate(DIALOG_EXITS, "dlg-legend")
+        assert again["open"] is True, again
+        assert again["closedbySupported"] is True, (
+            "this browser has no `closedby`, so the attribute in the markup is"
+            " decoration; the close button above is what the fix rests on"
+        )
+        page.touchscreen.tap(6, 6)
+        page.wait_for_timeout(350)
+        assert page.evaluate("() => document.getElementById('dlg-legend').open") is False, (
+            "a tap on the backdrop left the sheet open although the element"
+            f" declares closedby={again['closedby']!r}"
+        )
+        assert errors == [], errors
+
+
+#: Wraps `addEventListener` before a single module of the page has run, and
+#: counts per element per type. A `WeakMap` because the count belongs to the
+#: node and must not keep it alive.
+LISTENER_SPY = r"""
+(() => {
+  window.__clickSpy = new WeakMap();
+  const original = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (type, fn, opts) {
+    try {
+      if (this instanceof Element || this === document || this === window) {
+        let counts = window.__clickSpy.get(this);
+        if (!counts) { counts = {}; window.__clickSpy.set(this, counts); }
+        counts[type] = (counts[type] || 0) + 1;
+      }
+    } catch (error) { /* a spy that breaks the page proves nothing */ }
+    return original.call(this, type, fn, opts);
+  };
+})();
+"""
+
+#: How many click handlers one tap on `selector` runs: its own, plus every
+#: delegated one on an ancestor, since a click bubbles.
+CLICK_HANDLERS = """
+(selector) => {
+  const el = document.querySelector(selector);
+  if (el === null) return null;
+  let total = 0;
+  const chain = [];
+  let node = el;
+  while (node) {
+    const counts = window.__clickSpy.get(node);
+    const n = counts && counts.click ? counts.click : 0;
+    if (n) {
+      chain.push((node.tagName + (node.id ? '#' + node.id : '')) + ' x' + n);
+      total += n;
+    }
+    node = node.parentElement;
+  }
+  return { total, chain };
+}
+"""
+
+#: The spy proved in both directions before it is believed: a planted node with
+#: a known number of handlers must read back as that number. A spy that counted
+#: nothing would report every control as clean.
+SPY_PROOF = """
+() => {
+  const host = document.createElement('div');
+  const button = document.createElement('button');
+  host.appendChild(button);
+  document.body.appendChild(host);
+  button.addEventListener('click', () => {});
+  button.addEventListener('click', () => {});
+  host.addEventListener('click', () => {});
+  let total = 0;
+  let node = button;
+  while (node) {
+    const counts = window.__clickSpy.get(node);
+    total += counts && counts.click ? counts.click : 0;
+    node = node.parentElement;
+  }
+  host.remove();
+  return total;
+}
+"""
+
+
+def test_one_tap_on_a_session_card_runs_exactly_one_handler(
+    client: Client, master_doubles: MasterDoubles, store: Store
+) -> None:
+    """QA run 4's D5: one click on a card ran the open twice.
+
+    Two bindings for one click — `flock.js` bound the card itself, and
+    `app.js` carries the delegated listener on `#flock-cards` that
+    `index.html` documents as the intended path. Measured 6/6 deterministic
+    across all four cards: two WebSocket sockets, two `GET /api/sessions/{id}`,
+    two degrade lines and one console warning per click; at the `Runner` seam
+    `['snapshot', 'attach', 'snapshot', 'attach']`, which in production is two
+    `capture-pane` and two `pipe-pane` against the same tmux pane.
+    `session.js::closeAttached()` is why it read as a warning and not a crash.
+
+    The redundant half is the card's own listener: `index.html` documents the
+    delegated one, so that is the one that stays.
+    """
+    session = seed(store)
+    with _at(client, DESKTOP, init_script=LISTENER_SPY) as (page, errors):
+        _nav(page, "flock")
+        page.reload()
+        page.wait_for_timeout(700)
+        _nav(page, "flock")
+
+        assert page.evaluate(SPY_PROOF) == 3, (
+            "the listener spy does not count: a planted node with two of its own"
+            " click handlers and one on its parent did not read back as three,"
+            " so any count it reports below is meaningless"
+        )
+
+        page.locator("#flock-projects .project").first.click()
+        page.wait_for_timeout(300)
+        selector = f'#flock-cards .card[data-session-id="{session.id}"]'
+        assert page.locator(selector).count() == 1, page.locator("#flock-cards").inner_html()
+
+        reading = page.evaluate(CLICK_HANDLERS, selector)
+        assert reading is not None, selector
+        assert reading["total"] == 1, (
+            "one tap on a session card runs"
+            f" {reading['total']} click handlers, not one: {reading['chain']} —"
+            " the card is opened twice, which is two attaches against the same"
+            " tmux pane"
+        )
+        assert errors == [], errors
+
+
+#: Every control the reader can reach on the page that is open, with the shape
+#: WCAG 2.2 AA 2.5.8 asks about. Padding is already inside the border box, so
+#: the box **is** the target.
+TOUCH_TARGETS = r"""
+() => {
+  const root = document.querySelector('[id^="page-"]:not([hidden])');
+  if (root === null) return null;
+  const selector =
+    'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  return [...root.querySelectorAll(selector)]
+    .filter((e) => {
+      const b = e.getBoundingClientRect();
+      return b.width > 0 && b.height > 0;
+    })
+    .map((e) => {
+      const b = e.getBoundingClientRect();
+      return {
+        key: e.id || e.className.toString().trim().split(/\s+/).slice(0, 2).join('.'),
+        text: (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24),
+        w: Math.round(b.width),
+        h: Math.round(b.height),
+        minSide: Math.round(Math.min(b.width, b.height)),
+      };
+    });
+}
+"""
+
+#: A back chevron's own box against the box of the band it sits in. A chevron
+#: that took the whole band is D8: `place-items: center` then puts the glyph at
+#: the middle of the screen with nothing beside it.
+CHEVRON_SHAPE = """
+(selector) => {
+  const el = document.querySelector(selector);
+  if (el === null) return null;
+  const parent = el.parentElement;
+  const b = el.getBoundingClientRect();
+  const p = parent.getBoundingClientRect();
+  return {
+    parent: parent.tagName + '.' + parent.className.toString().trim(),
+    w: Math.round(b.width),
+    h: Math.round(b.height),
+    leadingGap: Math.round(b.left - p.left),
+    parentWidth: Math.round(p.width),
+    glyphCentre: Math.round(b.left + b.width / 2),
+  };
+}
+"""
+
+#: The drill-downs, by the route a phone takes to reach them. The back chevrons
+#: are `display: none` above 760, which is why run 4's 1280 sweep saw not one
+#: sub-24 target and this is driven at 390 only.
+DRILL_DOWNS = (
+    ("projects", "#page-projects .proj-row"),
+    ("settings", "#page-settings .set-item"),
+    ("flock", "#page-flock .col-projects .project"),
+)
+
+
+def test_every_control_at_phone_width_meets_the_target_size_minimum(
+    client: Client, master_doubles: MasterDoubles, store: Store
+) -> None:
+    """QA run 4's D9, and D8 with it: six controls below 24x24 at 390px.
+
+    WCAG 2.2 AA 2.5.8. Every one of the six was 21px tall, and the two shapes
+    share one cause — `.back` was `display: grid; place-items: center` with no
+    size of its own, so its box was whatever the parent imposed. Driven at 390
+    and through **both** drill-down levels, because the chevrons are
+    `display: none` above 760 and the 1280 sweep could not see them.
+    """
+    seed(store)
+    with _at(client, PHONE, touch=True) as (page, errors):
+        page.reload()
+        page.wait_for_timeout(700)
+        small: list[str] = []
+        for target, into in DRILL_DOWNS:
+            _nav(page, target)
+            for level in ("list", "detail"):
+                if level == "detail":
+                    if page.locator(into).count() == 0:
+                        continue
+                    page.locator(into).first.click()
+                    page.wait_for_timeout(400)
+                for control in page.evaluate(TOUCH_TARGETS) or []:
+                    if control["minSide"] < 24:
+                        small.append(
+                            f"{target}/{level} {control['w']}x{control['h']}"
+                            f" {control['key']} {control['text']!r}"
+                        )
+        assert small == [], (
+            "controls below WCAG 2.2 AA 2.5.8's 24x24 minimum at 390px, where a"
+            f" chevron is the only way out of a drill-down: {small}"
+        )
+        assert errors == [], errors
+
+
+def test_the_settings_back_chevron_is_a_chevron_and_not_a_full_width_band(
+    client: Client, master_doubles: MasterDoubles
+) -> None:
+    """QA run 4's D8: `#settings-back` was 394x21 with its glyph at x=193.
+
+    `.back` had `display: grid; place-items: center` and no width, so its shape
+    was the parent's. Projects (`DIV.proj-band`, a flex **row**) gave it 21x21
+    at the leading edge; Settings (`DIV.proj-detail set-panel`, a flex
+    **column**) stretched it to the full 394px and `place-items: center` put
+    the chevron at the dead centre of a 390px screen with nothing beside it —
+    a glyph that looks like a heading ornament rather than the way back.
+
+    Pre-existing, and not introduced by the D1 fix. The assertion is the
+    comparison QA made against the same control on a page whose band is a row.
+    """
+    with _at(client, PHONE) as (page, errors):
+        _nav(page, "settings")
+        page.locator("#page-settings .set-item").first.click()
+        page.wait_for_timeout(400)
+        shape = page.evaluate(CHEVRON_SHAPE, "#settings-back")
+        assert shape is not None, "#settings-back is not in the document"
+        assert shape["w"] < shape["parentWidth"] / 2, (
+            f"#settings-back is {shape['w']}x{shape['h']} inside a"
+            f" {shape['parentWidth']}px {shape['parent']} — a full-width band,"
+            f" and `place-items: center` puts its chevron at x={shape['glyphCentre']}"
+            " with nothing beside it"
+        )
+        assert shape["leadingGap"] <= 12, (
+            f"#settings-back sits {shape['leadingGap']}px in from the leading edge"
+            " of its band; every other back chevron leads its row"
+        )
         assert errors == [], errors
