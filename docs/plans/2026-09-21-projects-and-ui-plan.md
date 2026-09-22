@@ -3,7 +3,13 @@
 ## Metadata
 
 - Created: 2026-09-21
-- **Revision: 5** — **final router-directed amendment**, applying the
+- **Revision: 6** — **QA-scope amendment.** The acceptance surface was written
+  as *six pages × two viewports* in four places; QA round 4 found a defect
+  140px wide sitting between those two widths, so AC-28 could pass green over
+  an unusable page. The scope now names `tools/render_check.py::VIEWPORTS` as
+  its single definition site rather than restating a width count. **No task,
+  contract or build baseline changed** — revision 5 remains what BUILD executed.
+- Revision: 5 — **final router-directed amendment**, applying the
   amendment-verification findings (F1's definitive enumeration + 8 stale
   cross-references). The two-pass fresh-review cap is spent; this is the
   diff-scoped amendment lane, not a third pass. **BUILD starts from this
@@ -19,6 +25,26 @@
 - Python: `/root/Shepherd/.venv/bin/python` (3.12)
 - Supersedes: `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` §W1, with
   real tasks. §W2 and §W3 stay in the backlog.
+
+### What changed in revision 6
+
+One finding, one root cause, one rule.
+
+| # | Finding | Fix |
+|---|---|---|
+| **F-QA1** | **A width count is not an acceptance surface.** P11, the Live-E2E row, AC-28 and out-of-scope item 10 each spelled the rendered surface as *six pages × two viewports*, four independent restatements of 390 and 1280. `.herd-col` carried `overflow: hidden` above 900px and its rescue lived in a `max-width: 760px` block, so a **140px band** — 761–900px, every iPad in portrait — was unreachable, unusable, and invisible to every gate. AC-28, the plan's own whole-tree criterion, reported green over it. | The four places now name **`tools/render_check.py::VIEWPORTS`** — the one definition site — and 820×1180 (iPad portrait) is in it. The rule written into that file: *a width is added when a class of real client falls between the widths already there.* Both tool gates now report 18 pages / 18 screenshots. |
+
+**The reusable part, which is the same shape as F1's.** F1's lesson was *`== 3`
+is the wrong discriminator; the table name is.* This is that lesson at the
+acceptance layer: **a restated constant is a second definition site, and the
+gap between two restated bounds is where a defect hides from every check that
+quotes them.** A criterion should name the enumeration, not copy its length.
+The node id `test_every_page_renders_at_both_widths` keeps its name — it is in
+`tests/boundaries/collected_node_ids.txt` and a rename costs a retirement entry
+for no behavioural gain; it parametrises over `VIEWPORTS` and the name is now
+one width short, which is recorded here rather than fixed by drifting the freeze.
+
+---
 
 ### What changed in revision 5
 
@@ -486,7 +512,7 @@ Every test named here has an owning module and a building task in the
 | P8 | **Zero HTML sinks.** | existing `tests/web/test_frontend_escaping.py::test_no_unescaped_interpolation_in_frontend` | Port any one of the prototype's eight `innerHTML` assignments verbatim. |
 | P9 | **The freeze equality holds**, over exactly **six** `post_milestone` entries. | existing `tests/boundaries/test_consumer_surface_frozen.py::test_a_rebase_declares_every_path_whose_digest_moved` | Add `flock.js` without declaring it; declare `app.css` twice; or declare the byte-unchanged `escape.js`. |
 | P10 | **No frozen test vanished unaccounted.** | existing `tests/boundaries/test_collected_node_ids.py::test_every_node_id_frozen_at_step_0b_still_collects` | Delete `tests/web/test_rail.py` without a retirement entry. |
-| P11 | **Every served page renders**, six pages × two viewports, from a real `controld`. | `tests/web/test_render_live.py::test_every_page_renders_at_both_widths` (`@pytest.mark.live`) | Omit the `[hidden]` reset; ship a module with a syntax error. |
+| P11 | **Every served page renders**, six pages × **three** viewports — the widths in `tools/render_check.py::VIEWPORTS` (390 / 820 / 1280) — from a real `controld`. | `tests/web/test_render_live.py::test_every_page_renders_at_both_widths` (`@pytest.mark.live`) | Omit the `[hidden]` reset; ship a module with a syntax error. |
 | P12 | **Every declared body field is a real property of its tool's schema.** | existing `tests/web/test_routes_m3.py::test_the_route_table_declares_every_query_and_body_field` | Declare `on_running` in `BODY_ARGS` but omit it from `delete_project`'s schema. |
 | P13 | **No path parameter is shadowed by a body field** — for `project_id` as well as `session_id` (**M1**). | existing `tests/web/test_routes_m3.py::test_no_body_field_shadows_a_path_parameter`, widened | Declare `project_id` in a `BODY_ARGS` tuple. |
 
@@ -1879,8 +1905,8 @@ screenshots once.
 **Test Seams:** E2E (headless chromium against a real `controld` on loopback).
 **Green at the boundary:** yes.
 **What this phase does NOT prove:** anything about a phone's real browser, a
-tunnel, or a slow network. Six pages × two viewports in headless chromium on this
-host.
+tunnel, or a slow network. Six pages × three viewports (390 / 820 / 1280) in
+headless chromium on this host.
 
 #### Task 10.1 — the live render check
 
@@ -1898,15 +1924,16 @@ host.
 - **Required Checks:**
   `.venv/bin/python -m pytest -m live tests/web/test_render_live.py -q`
 - **Validation Level:** **Live.**
-- **Checkpoint Type:** **human_verify** — the twelve screenshots.
-- **Exit Criteria:** P11 passes; zero console errors at 390×844 and 1280×900;
+- **Checkpoint Type:** **human_verify** — the eighteen screenshots.
+- **Exit Criteria:** P11 passes; zero console errors at **every width in
+  `render_check.VIEWPORTS`** — 390×844, 820×1180 and 1280×900;
   horizontal overflow ≤ 1px on every page; the `must_see` string found on each of
   the six pages.
 - **Consumes:** `tools/render_check.py::check(origin, shots)`,
   `tools/render_check.py::PAGES`, `tools/render_check.py::NAV_SELECTOR`,
   `tools/render_check.py::DRAWER_SELECTOR`, every page root id
 - **Produces:** `tests/web/test_render_live.py::test_every_page_renders_at_both_widths`,
-  twelve screenshots under the scratchpad
+  eighteen screenshots under the scratchpad
 
 #### Task 10.2 — the whole-tree gate
 
@@ -2058,7 +2085,7 @@ Four layers, each with a named owner and a stated limit.
 | **Pure-unit** | `read_decision`, `delete_project`'s outcome table, `_registered_roots`, `bind_cwd_to_repo`'s branch table | the function's own seam, no store, no browser | proves the decision, not the wiring |
 | **Store integration** | the migration, the seven verbs, the cascade ordering, the FK graph, read ordering | a real SQLite file through `Store`'s one writer thread | proves the data, not the surface |
 | **Route integration** | every path resolves to a registered tool with a real schema property per declared field; no body field shadows a path parameter | `tests/web/conftest.py::Client` against the real handler | proves the wire, not the render |
-| **Live E2E** | six pages × two viewports from a served `controld`: no console error, content present, no sideways scroll | headless chromium via `tools/render_check.py` | proves this host's headless chromium, not a phone |
+| **Live E2E** | six pages × three viewports (390 / 820 / 1280) from a served `controld`: no console error, content present, no sideways scroll | headless chromium via `tools/render_check.py` | proves this host's headless chromium, not a phone |
 
 Plus three **static gates that are not tests of behaviour at all**, listed
 separately because confusing them with behaviour tests is how a green suite hides
@@ -2339,7 +2366,7 @@ whose command named a file nobody built.
 | AC-25 | Zero HTML sinks; the shipped module list matches the directory | `.venv/bin/python -m pytest tests/web/test_frontend_escaping.py -q` |
 | AC-26 | The page never re-derives the order; its labels are `PALETTE`'s; the stop-summary strip renders | `.venv/bin/python -m pytest tests/web/test_palette.py tests/web/test_shell.py -q` |
 | AC-27 | No build step, no remote asset, no polling | `.venv/bin/python -m pytest tests/web/test_frontend_no_build_step.py -q` |
-| AC-28 | Whole tree: suite green, `mypy --strict` clean, 105 boundary rules green, probes byte-unchanged, and six pages × two viewports render from a **served** `controld` | `.venv/bin/python -m pytest -q && .venv/bin/mypy --strict src/ && .venv/bin/python -m pytest tests/boundaries -q && test -z "$(git status --porcelain docs/probes/)" && .venv/bin/python -m pytest -m live tests/web/test_render_live.py -q` |
+| AC-28 | Whole tree: suite green, `mypy --strict` clean, 105 boundary rules green, probes byte-unchanged, and six pages × **three** viewports — every width in `render_check.VIEWPORTS` — render from a **served** `controld` | `.venv/bin/python -m pytest -q && .venv/bin/mypy --strict src/ && .venv/bin/python -m pytest tests/boundaries -q && test -z "$(git status --porcelain docs/probes/)" && .venv/bin/python -m pytest -m live tests/web/test_render_live.py -q` |
 
 ---
 
@@ -2357,7 +2384,7 @@ whose command named a file nobody built.
 | 7 | That the unbuilt Settings sections do anything — only that each says why. |
 | 8 | That the parser survives an engine update. It cannot; it proves degradation instead. |
 | 9 | W3's work-source configuration. |
-| 10 | Anything about a real phone, a tunnel, or a slow network. Six pages × two viewports, headless, on this host. |
+| 10 | Anything about a real phone, a tunnel, or a slow network. Six pages × three viewports (390 / 820 / 1280), headless, on this host. |
 
 ---
 
