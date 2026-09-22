@@ -6,16 +6,19 @@ case for P18. Nothing here writes SQL — that is the point of the suite.
 
 from __future__ import annotations
 
+import collections.abc
 import dataclasses
 import inspect
 import re
 import sqlite3
 import threading
 import typing
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
+from shepherd.core.clock import stamp
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.store import models, reads, writes
@@ -650,10 +653,21 @@ def plant_session(
     started_at: str,
     last_event_at: str | None = None,
     ended_at: str | None = None,
+    parent_session_id: str | None = None,
+    retry_of: str | None = None,
 ) -> None:
+    """A session row, including the two columns `session` points at itself with.
+
+    `parent_session_id` and `retry_of` are parameters because the fixture could
+    not express them, and a shape a fixture cannot express is a shape its
+    matrix cannot reach: `test_delete_is_total_over_its_matrix` called itself
+    total while the input that made the cascade abort — a surviving child of a
+    deleted parent — was unreachable from here.
+    """
     connection.execute(
         "INSERT INTO session (id, workspace_id, origin, ownership, engine, started_at,"
-        " state, last_event_at, ended_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " state, last_event_at, ended_at, parent_session_id, retry_of)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             session_id,
             workspace_id,
@@ -664,6 +678,8 @@ def plant_session(
             str(SessionState.STOPPED.value if ended_at else SessionState.RUNNING.value),
             last_event_at,
             ended_at,
+            parent_session_id,
+            retry_of,
         ),
     )
 
@@ -731,13 +747,43 @@ def test_project_last_activity_is_derived_from_sessions(
     """
     plant_project(connection, "w-api", "api")
     plant_project(connection, "w-quiet", "quiet")
+    # Stamped through `core.clock.stamp`, and **inside one second**. The MAX is
+    # lexical, and the fixture used to plant `"2026-01-01T00:00:00Z"` — a
+    # spelling no writer in this system produces: `stamp()` is millisecond
+    # precision, always, and `discovery_loop._seconds` says of these same
+    # stamps that `"…:56Z"` sorts *after* `"…:56.789Z"` as text, which would
+    # invert it. A fixture in a format production never writes cannot tell a
+    # lexical MAX from a temporal one, and two events inside one second are
+    # ordinary.
+    base = datetime(2026, 3, 1, 12, 0, 0, 100_000, tzinfo=UTC)
+    earlier = stamp(base)
+    later = stamp(base + timedelta(milliseconds=250))
+    assert earlier < later and earlier[:19] == later[:19]
     plant_session(
-        connection, "s-old", "w-api", started_at="2026-01-01T00:00:00Z",
-        last_event_at="2026-01-02T00:00:00Z",
+        connection, "s-old", "w-api", started_at=stamp(base - timedelta(days=60)),
+        last_event_at=earlier,
     )
-    plant_session(connection, "s-new", "w-api", started_at="2026-03-01T00:00:00Z")
+    plant_session(connection, "s-new", "w-api", started_at=later)
 
-    assert reads.project_last_activity(connection) == {"w-api": "2026-03-01T00:00:00Z"}
+    assert reads.project_last_activity(connection) == {"w-api": later}
+
+
+def test_workspace_carries_no_column_the_store_never_writes() -> None:
+    """RD-3, applied the whole way.
+
+    `project_last_activity` derives the value correctly — and `rows.workspace`
+    went on mapping the dead `workspace.last_activity_at` column into the
+    dataclass, where it is now **permanently `None`** behind a field docstring
+    saying it is *"derived at read time"*. A page author who believes the
+    docstring renders "never" for every project, and nothing goes red.
+
+    So the field is gone from `Workspace`, and `project_last_activity` is the
+    only way to ask. The **column stays in the schema** (004 does not drop it):
+    dropping it is a table rebuild, and an unread column costs nothing.
+    """
+    fields = {field.name for field in dataclasses.fields(models.Workspace)}
+    assert "last_activity_at" not in fields
+    assert fields == {"id", "owner_id", "name", "description", "created_at"}
 
 
 def test_repo_counts_answers_every_project_in_one_statement(
@@ -818,8 +864,45 @@ def running_ids(connection: sqlite3.Connection, workspace_id: str) -> list[str]:
     ]
 
 
-def never_kills(session_id: str) -> None:
+def never_kills(session_id: str) -> bool:
     raise AssertionError(f"the kill path was reached for {session_id!r} and must not have been")
+
+
+def kills_cleanly(session_id: str) -> bool:
+    """A kill that lands. It answers **whether it did** — the thing the old
+    `Callable[[str], None]` could not, while the real kill path returns
+    `no_pane(session_id)` for any session without a runner handle."""
+    return True
+
+
+def delete_project(
+    connection: sqlite3.Connection,
+    *,
+    workspace_id: str,
+    on_running: models.OnRunning,
+    kill: typing.Callable[[str], bool] = never_kills,
+) -> models.DeleteOutcome:
+    """What a caller of the two halves does — and the only place these tests
+    put a kill.
+
+    Decide (a read), stop what the decision named (**outside** any
+    transaction), commit (a write). The store is never handed the kill: a
+    callable on a write verb runs on the writer thread inside `BEGIN
+    IMMEDIATE`, where the real kill path's own first store write can never be
+    reached, and where an effect that leaves the process cannot be rolled back
+    with the rows.
+    """
+    plan = reads.plan_project_delete(
+        connection, workspace_id=workspace_id, on_running=on_running
+    )
+    if plan.refusal is not None:
+        return plan.refusal
+    killed = (
+        tuple(session_id for session_id in plan.running if kill(session_id))
+        if on_running is models.OnRunning.KILL
+        else ()
+    )
+    return writes.commit_project_delete(connection, plan=plan, killed=killed)
 
 
 def test_two_projects_may_share_a_name(connection: sqlite3.Connection) -> None:
@@ -894,11 +977,10 @@ def test_unassigned_refuses_delete(connection: sqlite3.Connection) -> None:
     """E9 — and it answers with a `DeleteOutcome`, never a raise: the page
     renders the refusal, and an exception is not something a card can draw.
     """
-    outcome = writes.delete_project(
+    outcome = delete_project(
         connection,
         workspace_id=models.UNASSIGNED_PROJECT_ID,
         on_running=models.OnRunning.REFUSE,
-        kill=never_kills,
     )
     assert outcome.deleted is False
     assert outcome.refused is not None and "Unassigned" in outcome.refused
@@ -957,8 +1039,8 @@ def test_delete_refuses_by_default_and_names_the_running_sessions(
         ended_at="2026-01-01T01:00:00Z",
     )
 
-    outcome = writes.delete_project(
-        connection, workspace_id=project.id, on_running=models.OnRunning.REFUSE, kill=never_kills
+    outcome = delete_project(
+        connection, workspace_id=project.id, on_running=models.OnRunning.REFUSE
     )
     assert outcome.deleted is False
     assert outcome.running == ("s-live",)
@@ -978,14 +1060,19 @@ def test_delete_with_kill_stops_them_then_cascades(connection: sqlite3.Connectio
     )
     killed: list[str] = []
 
-    outcome = writes.delete_project(
+    def kill(session_id: str) -> bool:
+        killed.append(session_id)
+        return True
+
+    outcome = delete_project(
         connection,
         workspace_id=project.id,
         on_running=models.OnRunning.KILL,
-        kill=killed.append,
+        kill=kill,
     )
     assert (outcome.deleted, outcome.killed) == (True, ("s-live",))
     assert killed == ["s-live"]
+    assert outcome.destroyed == ("s-live",)
     assert reads.get_workspace(connection, project.id) is None
     assert connection.execute("SELECT COUNT(*) FROM mailbox_message").fetchone()[0] == 0
     assert connection.execute("SELECT COUNT(*) FROM session").fetchone()[0] == 0
@@ -1003,13 +1090,16 @@ def test_delete_with_orphan_moves_them_to_unassigned(connection: sqlite3.Connect
         ended_at="2026-01-01T01:00:00Z",
     )
 
-    outcome = writes.delete_project(
+    outcome = delete_project(
         connection,
         workspace_id=project.id,
         on_running=models.OnRunning.ORPHAN,
-        kill=never_kills,
     )
     assert (outcome.deleted, outcome.orphaned) == (True, ("s-live",))
+    # M2: the *ended* sessions are named too. A dialog that reports only
+    # `orphaned=('s-live',)` does not tell a person that every finished session
+    # in the project went with it.
+    assert outcome.destroyed == ("s-done",)
     assert reads.get_workspace(connection, project.id) is None
     survivors = reads.running_sessions_for(connection, models.UNASSIGNED_PROJECT_ID)
     assert [s.id for s in survivors] == ["s-live"]
@@ -1018,15 +1108,30 @@ def test_delete_with_orphan_moves_them_to_unassigned(connection: sqlite3.Connect
     assert connection.execute("SELECT COUNT(*) FROM session WHERE id='s-done'").fetchone()[0] == 0
 
 
+#: The fourth axis. `session` references itself twice (001:58,64), and a
+#: surviving row pointing into the doomed cohort is what made the cascade abort
+#: — an input the old three-axis product could not express, because
+#: `plant_session` had no parameter for either column.
+LINEAGE_SHAPES: tuple[str | None, ...] = (None, "parent_session_id", "retry_of")
+
+
 def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None:
-    """P1 — every `(exists, has_running, on_running)` triple has a defined
-    outcome and none of them is silent. The product is built at test time, so a
-    branch removed from `delete_project` cannot hide in an unwritten cell.
+    """P1 — every `(exists, has_running, lineage, on_running)` cell has a
+    defined outcome and none of them is silent. The product is built at test
+    time, so a branch removed from the delete cannot hide in an unwritten cell.
+
+    **Total over the axes it enumerates, and it was short one.** Seven of nine
+    `(lineage, on_running)` cells passed on the old code; the two that did not
+    were `orphan` with a surviving child, which raised `IntegrityError` and left
+    the project permanently undeletable. The axis is here now, and so is
+    `PRAGMA foreign_key_check` after **every** cell — asserted until now only
+    after the migration, never after the verb that carries the cascade, which is
+    the check that would have found this for free.
     """
     import itertools
 
-    for index, (exists, has_running, choice) in enumerate(
-        itertools.product((True, False), (True, False), tuple(models.OnRunning))
+    for index, (exists, has_running, lineage, choice) in enumerate(
+        itertools.product((True, False), (True, False), LINEAGE_SHAPES, tuple(models.OnRunning))
     ):
         if exists:
             project = writes.create_project(connection, name=f"p{index}", description=None)
@@ -1034,15 +1139,25 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         else:
             workspace_id = f"w-nope-{index}"
         if exists and has_running:
+            if lineage is not None:
+                # The ancestor has **ended**, so it is not in the running set:
+                # the cascade deletes it outright while the live row survives.
+                plant_session(
+                    connection, f"anc-{index}", workspace_id,
+                    started_at="2026-01-01T00:00:00Z", ended_at="2026-01-01T01:00:00Z",
+                )
             plant_session(
-                connection, f"s-{index}", workspace_id, started_at="2026-01-01T00:00:00Z"
+                connection, f"s-{index}", workspace_id,
+                started_at="2026-01-01T00:00:00Z",
+                parent_session_id=f"anc-{index}" if lineage == "parent_session_id" else None,
+                retry_of=f"anc-{index}" if lineage == "retry_of" else None,
             )
 
-        outcome = writes.delete_project(
-            connection, workspace_id=workspace_id, on_running=choice, kill=lambda _: None
+        outcome = delete_project(
+            connection, workspace_id=workspace_id, on_running=choice, kill=kills_cleanly
         )
 
-        cell = (exists, has_running, choice)
+        cell = (exists, has_running, lineage, choice)
         if not exists:
             assert outcome == models.DeleteOutcome(
                 deleted=False, refused=outcome.refused
@@ -1056,7 +1171,139 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         # Never silent: every cell says either *why not* or *what it did*.
         assert outcome.refused is not None or outcome.deleted is True, cell
 
+        # The severing is reported, never silent — and only where a row
+        # actually survived the cascade still pointing into it.
+        survives = exists and has_running and lineage is not None and (
+            choice is models.OnRunning.ORPHAN
+        )
+        assert outcome.severed == (
+            (models.SeveredLink(session_id=f"s-{index}", column=lineage),)
+            if survives and lineage is not None
+            else ()
+        ), cell
+
         orphans = connection.execute(
             "SELECT COUNT(*) FROM session WHERE workspace_id NOT IN (SELECT id FROM workspace)"
         ).fetchone()[0]
         assert orphans == 0, cell  # P2, after every cell of P1
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == [], cell
+
+
+def test_no_session_ever_points_at_a_deleted_project(connection: sqlite3.Connection) -> None:
+    """P2, and AC-4's second half — split out of the matrix on purpose.
+
+    It used to live only as two lines at the bottom of
+    `test_delete_is_total_over_its_matrix`, where a P1 failure masks it. That is
+    not hypothetical: the cell P1 raised on is exactly a cell where the delete
+    half-ran, and the property nobody got to check was this one. AC-4 names this
+    node id and, run verbatim, the command exited 4 — *"no tests ran"* — which is
+    the shape M4's verification caught: a clause whose command names a test
+    nobody built.
+
+    Every surviving session points at a workspace that exists, under all three
+    choices, and the referential net (`PRAGMA foreign_key_check`) is empty.
+    """
+    for choice in models.OnRunning:
+        project = writes.create_project(connection, name=f"api-{choice.value}", description=None)
+        other = writes.create_project(connection, name=f"kept-{choice.value}", description=None)
+        plant_session(
+            connection, f"live-{choice.value}", project.id, started_at="2026-01-01T00:00:00Z"
+        )
+        plant_session(
+            connection, f"done-{choice.value}", project.id,
+            started_at="2026-01-01T00:00:00Z", ended_at="2026-01-01T01:00:00Z",
+        )
+        # A session in *another* project descended from one in this one: the
+        # cross-project link fails the same way under any choice.
+        plant_session(
+            connection, f"cousin-{choice.value}", other.id,
+            started_at="2026-01-01T00:02:00Z", parent_session_id=f"done-{choice.value}",
+        )
+
+        outcome = delete_project(
+            connection, workspace_id=project.id, on_running=choice, kill=kills_cleanly
+        )
+        assert outcome.refused is not None or outcome.deleted is True, choice
+
+        dangling = connection.execute(
+            "SELECT COUNT(*) FROM session WHERE workspace_id NOT IN (SELECT id FROM workspace)"
+        ).fetchone()[0]
+        assert dangling == 0, choice
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == [], choice
+        if outcome.deleted:
+            assert reads.get_workspace(connection, project.id) is None, choice
+            # The cousin survives in its own project, having forgotten a parent
+            # that no longer exists — and the outcome says so.
+            assert outcome.severed == (
+                models.SeveredLink(
+                    session_id=f"cousin-{choice.value}", column="parent_session_id"
+                ),
+            ), choice
+            cousin = reads.get_session(connection, f"cousin-{choice.value}")
+            assert cousin is not None and cousin.parent_session_id is None, choice
+
+
+def test_a_fresh_install_holds_exactly_the_unassigned_project(tmp_path: Path) -> None:
+    """E21/N1, and AC-6 names this node id — which, run verbatim against the
+    code as shipped, exited 4: no test of that name existed.
+
+    A fresh database is no longer *empty* of projects: 004 seeds the reserved
+    `unassigned` row (D59), which is what every discovered session binds to. The
+    two "the store starts with no projects" assertions this milestone had to
+    change were changed against this statement, so it is written down rather
+    than living in the diff of the two that were edited.
+    """
+    db_path = tmp_path / "fresh" / "shepherd.db"
+    db_path.parent.mkdir(parents=True)
+    migrate(db_path)
+    opened = sqlite3.connect(db_path)
+    opened.row_factory = sqlite3.Row
+    try:
+        projects = reads.list_workspaces(opened)
+        assert [(w.id, w.name) for w in projects] == [
+            (models.UNASSIGNED_PROJECT_ID, "Unassigned")
+        ]
+        assert projects[0].description == "Work that matched no declared project."
+        # ...and nothing hangs off it: a seeded project with a seeded session
+        # would be a second surprise hiding behind the first.
+        assert reads.running_sessions_for(opened, models.UNASSIGNED_PROJECT_ID) == []
+        assert reads.repo_counts(opened) == {}
+        assert reads.project_last_activity(opened) == {}
+    finally:
+        opened.close()
+
+
+def test_no_store_verb_takes_a_callable_the_caller_must_run() -> None:
+    """Rule 4, and it is the deadlock T1's remediation removed.
+
+    `Store._write` enqueues onto the single writer thread and blocks on
+    `done.wait()` with no timeout, **after** `BEGIN IMMEDIATE`. A callable
+    parameter on a verb is therefore run by the writer thread while it holds
+    SQLite's exclusive write lock — and the one caller this system has for such
+    a parameter, the kill path, opens with `store.set_app_state(...)`
+    (`orchestration/lifecycle.py`: write the record, *then* kill, because that
+    is what survives a crash mid-way). That inner write queues behind a writer
+    that can never reach it, and every subsequent write in the process hangs
+    for good: the writer is a daemon thread and nothing times out.
+
+    The second failure is the one that survives even when the callback does not
+    write: an effect that leaves the process cannot be rolled back, so a later
+    failure in the same transaction undoes the row deletes while the panes stay
+    dead, and `running_sessions_for` answers with a session whose process was
+    destroyed.
+
+    So the shape, not a patch: the decision is a read, the commit is a write,
+    and the caller kills **between** them. Re-entrancy detection in `_write`
+    was considered and refused — it converts the hang into a raise, and
+    `delete_project` documents *"Never raises"*.
+    """
+    offenders: list[str] = []
+    for name, member in public_verbs():
+        hints = typing.get_type_hints(member)
+        for parameter, annotation in hints.items():
+            if parameter == "return":
+                continue
+            origin = typing.get_origin(annotation) or annotation
+            if origin is collections.abc.Callable or annotation is collections.abc.Callable:
+                offenders.append(f"Store.{name} accepts {parameter!r}, a callable")
+    assert offenders == []

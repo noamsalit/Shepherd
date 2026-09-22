@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Callable
 
 from shepherd.core.clock import utc_now
 from shepherd.core.fold_types import FoldDelta
@@ -35,13 +34,15 @@ from shepherd.store.models import (
     SESSION_COLUMNS,
     UNASSIGNED_PROJECT_ID,
     DeleteOutcome,
+    DeletePlan,
     OnRunning,
     Repo,
     Session,
+    SeveredLink,
     StoreError,
     Workspace,
 )
-from shepherd.store.reads import ANOMALY_KEY_PREFIX, get_workspace, running_sessions_for
+from shepherd.store.reads import ANOMALY_KEY_PREFIX, get_workspace, plan_project_delete
 from shepherd.store.rows import repo, session, workspace
 from shepherd.store.stops import write_verdict
 
@@ -157,56 +158,104 @@ def rename_project(
     return workspace(fresh)
 
 
-def delete_project(
+#: The two columns `session` uses on itself (001:58,64), both
+#: `REFERENCES session(id)`. Named once because a cascade that knows one and
+#: not the other is exactly the defect this constant exists to close.
+LINEAGE_COLUMNS: tuple[str, ...] = ("parent_session_id", "retry_of")
+
+
+def _sever_lineage(
+    connection: sqlite3.Connection, workspace_id: str
+) -> tuple[SeveredLink, ...]:
+    """Null every reference into the doomed cohort from a session outside it.
+
+    `DELETE FROM session WHERE workspace_id = ?` is safe only while every
+    referrer is *inside* the cohort. Under `ORPHAN` the running rows are moved
+    out first — so a survivor points at a row the next statement deletes, and
+    `PRAGMA foreign_keys=ON` aborts the whole transaction. A cross-project
+    parent does it under any choice. The reachable case needs nothing exotic: a
+    spawned child still running while its parent has stopped, and the user
+    picks *"move them to Unassigned"* — the dialog asks for the one answer that
+    threw, and the project became permanently undeletable.
+
+    The links are **nulled and reported** (`DeleteOutcome.severed`), not
+    silently dropped: D61 says a delete forgets, and a child whose parent was
+    forgotten honestly has no parent, but a person is owed the fact.
+    """
+    severed: list[SeveredLink] = []
+    for column in LINEAGE_COLUMNS:
+        predicate = (
+            f"workspace_id <> ? AND {column} IN"
+            " (SELECT id FROM session WHERE workspace_id = ?)"
+        )
+        rows = connection.execute(
+            f"SELECT id FROM session WHERE {predicate} ORDER BY id",
+            (workspace_id, workspace_id),
+        ).fetchall()
+        if not rows:
+            continue
+        connection.execute(
+            f"UPDATE session SET {column} = NULL WHERE {predicate}",
+            (workspace_id, workspace_id),
+        )
+        severed.extend(SeveredLink(session_id=str(row["id"]), column=column) for row in rows)
+    return tuple(severed)
+
+
+def commit_project_delete(
     connection: sqlite3.Connection,
     *,
-    workspace_id: str,
-    on_running: OnRunning,
-    kill: Callable[[str], None],
+    plan: DeletePlan,
+    killed: tuple[str, ...] = (),
 ) -> DeleteOutcome:
-    """D61's state machine, and the cascade lives here rather than in the schema
-    (ADR-P1).
+    """The second half of D61's delete: the rows, and only the rows.
 
-    **Never raises.** Every answer is a `DeleteOutcome`, because the page
-    renders the three choices out of the refusal itself, and an exception is not
-    something a card can draw.
+    The first half is `reads.plan_project_delete`, a pure read. Between the two
+    the caller stops whatever it decided to stop — **outside** this transaction,
+    because `Store._write` runs its work on the one writer thread inside
+    `BEGIN IMMEDIATE`, and a kill issued from there both deadlocks against its
+    own first statement and cannot be rolled back with the rows. `killed` is
+    what the caller reports it *actually* killed, which is a thing the old
+    `Callable[[str], None]` could not say.
+
+    The decision is re-derived here, against the same connection and inside the
+    same transaction, because the plan was read before the caller went away to
+    kill things: a project that acquired a session in the meantime is refused
+    rather than deleted out from under it.
 
     The cascade order is `mailbox_message -> session -> project_repo ->
-    workspace`, inside the one transaction `Store._write` already opened. `repo`
-    rows are **kept**: they carry D48's binding identity under `ux_repo_path`,
-    and minting them afresh would orphan every historical session's `repo_id`.
+    workspace`, preceded by the lineage severing. `repo` rows are **kept**:
+    they carry D48's binding identity under `ux_repo_path`, and minting them
+    afresh would orphan every historical session's `repo_id`.
 
-    `kill` is the caller's kill path, injected. `store/` does not learn about
-    runners — a verb that imported one would put a subprocess behind a
-    `sqlite3.Connection`.
+    **Never raises.** Every answer is a `DeleteOutcome`.
     """
-    if workspace_id == UNASSIGNED_PROJECT_ID:
-        return DeleteOutcome(
-            deleted=False, refused="the Unassigned project cannot be deleted"
-        )
-    if get_workspace(connection, workspace_id) is None:
-        return DeleteOutcome(
-            deleted=False, refused=f"there is no project {workspace_id!r} to delete"
-        )
+    workspace_id = plan.workspace_id
+    fresh = plan_project_delete(
+        connection, workspace_id=workspace_id, on_running=plan.on_running
+    )
+    if fresh.refusal is not None:
+        return fresh.refusal
 
-    running = tuple(s.id for s in running_sessions_for(connection, workspace_id))
-    if running and on_running is OnRunning.REFUSE:
-        return DeleteOutcome(
-            deleted=False,
-            refused=(
-                f"{len(running)} session(s) are still running in this project; "
-                f"choose whether to stop them or move them to Unassigned"
-            ),
-            running=running,
-        )
-
-    killed: tuple[str, ...] = ()
+    running = fresh.running
+    reported = tuple(session_id for session_id in running if session_id in set(killed))
     orphaned: tuple[str, ...] = ()
-    if running and on_running is OnRunning.KILL:
-        for session_id in running:
-            kill(session_id)
-        killed = running
-    elif running and on_running is OnRunning.ORPHAN:
+    if plan.on_running is OnRunning.KILL:
+        survived = tuple(session_id for session_id in running if session_id not in set(killed))
+        if survived:
+            # Not the plan's running set — *this* one. A session that arrived
+            # while the caller was killing was never killed, and deleting its
+            # row would leave a live agent with nothing to show for it.
+            return DeleteOutcome(
+                deleted=False,
+                refused=(
+                    f"{len(survived)} session(s) in this project are still running and "
+                    f"were not stopped; nothing was deleted"
+                ),
+                running=survived,
+                killed=reported,
+            )
+    elif plan.on_running is OnRunning.ORPHAN and running:
         # Before the cascade, so the rows this moves are not the rows it
         # deletes. P2: no session may be left pointing at a workspace that is
         # about to go, because `fleet()` is an INNER JOIN and it would vanish.
@@ -216,6 +265,14 @@ def delete_project(
         )
         orphaned = running
 
+    severed = _sever_lineage(connection, workspace_id)
+    destroyed = tuple(
+        str(row["id"])
+        for row in connection.execute(
+            "SELECT id FROM session WHERE workspace_id = ? ORDER BY started_at, id",
+            (workspace_id,),
+        ).fetchall()
+    )
     connection.execute(
         "DELETE FROM mailbox_message WHERE session_id IN"
         " (SELECT id FROM session WHERE workspace_id = ?)",
@@ -224,7 +281,13 @@ def delete_project(
     connection.execute("DELETE FROM session WHERE workspace_id = ?", (workspace_id,))
     connection.execute("DELETE FROM project_repo WHERE workspace_id = ?", (workspace_id,))
     connection.execute("DELETE FROM workspace WHERE id = ?", (workspace_id,))
-    return DeleteOutcome(deleted=True, killed=killed, orphaned=orphaned)
+    return DeleteOutcome(
+        deleted=True,
+        killed=reported if plan.on_running is OnRunning.KILL else (),
+        orphaned=orphaned,
+        severed=severed,
+        destroyed=destroyed,
+    )
 
 
 def upsert_repo(

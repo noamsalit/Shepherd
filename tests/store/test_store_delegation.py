@@ -491,9 +491,16 @@ def test_the_reexports_are_aliases_not_copies() -> None:
 #: Every verb D57 adds to `Store`. Named once so the two properties below —
 #: crosses the one writer thread, refused once closed — are total over the set
 #: rather than over whichever verbs someone remembered to list twice.
-PROJECT_WRITES = ("create_project", "rename_project", "delete_project", "add_repo", "remove_repo")
+PROJECT_WRITES = (
+    "create_project",
+    "rename_project",
+    "commit_project_delete",
+    "add_repo",
+    "remove_repo",
+)
 PROJECT_READS = (
     "get_workspace",
+    "plan_project_delete",
     "projects_for_repo",
     "project_last_activity",
     "repo_counts",
@@ -541,9 +548,11 @@ def test_every_project_write_crosses_the_one_writer_thread(project_store: Store)
     assert project_store.repo_counts() == {project.id: 1}
     assert project_store.projects_for_repo(added.id) == [project.id]
     assert project_store.remove_repo(workspace_id=project.id, repo_id=added.id) is True
-    assert project_store.delete_project(
-        workspace_id=project.id, on_running=models.OnRunning.REFUSE, kill=lambda _: None
-    ).deleted is True
+    plan = project_store.plan_project_delete(
+        workspace_id=project.id, on_running=models.OnRunning.REFUSE
+    )
+    assert plan.refusal is None
+    assert project_store.commit_project_delete(plan=plan).deleted is True
     assert project_store.get_workspace(project.id) is None
 
     idents = project_store.writer_thread_idents()
@@ -562,8 +571,10 @@ def test_every_project_verb_is_refused_once_the_store_is_closed(tmp_path: Path) 
     refused: list[typing.Callable[[], object]] = [
         lambda: closed.create_project(name="late", description=None),
         lambda: closed.rename_project(workspace_id=project.id, name="late"),
-        lambda: closed.delete_project(
-            workspace_id=project.id, on_running=models.OnRunning.REFUSE, kill=lambda _: None
+        lambda: closed.commit_project_delete(
+            plan=models.DeletePlan(
+                workspace_id=project.id, on_running=models.OnRunning.REFUSE
+            )
         ),
         lambda: closed.add_repo(
             workspace_id=project.id,
@@ -577,6 +588,9 @@ def test_every_project_verb_is_refused_once_the_store_is_closed(tmp_path: Path) 
             root_path="/srv/late", name="late", vcs_remote=None, git_common_dir="/srv/late/.git"
         ),
         lambda: closed.get_workspace(project.id),
+        lambda: closed.plan_project_delete(
+            workspace_id=project.id, on_running=models.OnRunning.REFUSE
+        ),
         lambda: closed.projects_for_repo("r-1"),
         lambda: closed.project_last_activity(),
         lambda: closed.repo_counts(),
@@ -586,3 +600,142 @@ def test_every_project_verb_is_refused_once_the_store_is_closed(tmp_path: Path) 
     for verb in refused:
         with pytest.raises(RuntimeError):
             verb()
+
+
+def test_a_kill_between_the_two_halves_may_write_to_the_store(project_store: Store) -> None:
+    """The deadlock the split exists to make unreachable, driven end to end.
+
+    `orchestration/lifecycle.record_and_terminate` opens with
+    `store.set_app_state(...)` — write the record, *then* kill, because that is
+    the order that survives a crash mid-way, so it cannot be reordered. While
+    the delete took a `kill` callable, that write was issued from inside
+    `_write`'s job: it enqueued behind the writer thread that was blocked on
+    `done.wait()` waiting for the job to finish, and **every subsequent write in
+    the process hung, permanently** — a daemon thread and no timeout anywhere.
+    Reproduced before the fix as *"DEADLOCK: delete_project did not return
+    within 10s"*.
+
+    Run on a thread so the failure is a failed assertion rather than a suite
+    that never ends. The `set_app_state` is not decoration: a kill that does not
+    touch the store cannot fail this test, and the real one always does.
+    """
+    project = project_store.create_project(name="api", description=None)
+    session = project_store.register_session(
+        engine_session_id="eng-live",
+        workspace_id=project.id,
+        repo_id=None,
+        cwd="/tmp/x",
+        started_at="2026-09-21T10:00:00Z",
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
+    )
+
+    answer: list[object] = []
+
+    def run() -> None:
+        plan = project_store.plan_project_delete(
+            workspace_id=project.id, on_running=models.OnRunning.KILL
+        )
+        killed: list[str] = []
+        for session_id in plan.running:
+            # Exactly what the kill path does first, and where it used to hang.
+            project_store.set_app_state(f"kill_record.{session_id}", {"recorded": True})
+            killed.append(session_id)
+        answer.append(
+            project_store.commit_project_delete(plan=plan, killed=tuple(killed))
+        )
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(timeout=10.0)
+    assert not worker.is_alive(), "the delete did not return within 10s: the writer deadlocked"
+
+    outcome = answer[0]
+    assert isinstance(outcome, models.DeleteOutcome)
+    assert (outcome.deleted, outcome.killed) == (True, (session.id,))
+    assert project_store.get_workspace(project.id) is None
+    # The kill's own record survives the delete: it was written in its own
+    # transaction, before the one that removed the rows.
+    assert project_store.get_app_state(f"kill_record.{session.id}") == {"recorded": True}
+
+
+def test_the_commit_half_refuses_a_session_that_arrived_after_the_kill(
+    project_store: Store,
+) -> None:
+    """The cost of splitting the verb, named and paid.
+
+    The decision is a read taken before the caller went away to kill things, so
+    the world can move underneath it. The commit re-derives the decision inside
+    its own transaction and **refuses** rather than deleting a session nobody
+    stopped — the control is the same call with the newcomer's id in `killed`,
+    which proceeds.
+    """
+    project = project_store.create_project(name="api", description=None)
+    plan = project_store.plan_project_delete(
+        workspace_id=project.id, on_running=models.OnRunning.KILL
+    )
+    assert plan.running == ()
+
+    latecomer = project_store.register_session(
+        engine_session_id="eng-late",
+        workspace_id=project.id,
+        repo_id=None,
+        cwd="/tmp/x",
+        started_at="2026-09-21T10:05:00Z",
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
+    )
+
+    refused = project_store.commit_project_delete(plan=plan, killed=())
+    assert refused.deleted is False
+    assert refused.running == (latecomer.id,)
+    assert project_store.get_workspace(project.id) is not None
+
+    proceeds = project_store.commit_project_delete(plan=plan, killed=(latecomer.id,))
+    assert (proceeds.deleted, proceeds.killed) == (True, (latecomer.id,))
+    assert project_store.get_workspace(project.id) is None
+
+
+def test_no_write_hangs_when_close_races_it(tmp_path: Path) -> None:
+    """`_write` used to check `self._closed` and *then* enqueue.
+
+    A `close()` landing between the two put its `None` sentinel, the writer
+    thread returned, and the job enqueued behind it was never taken — leaving
+    the caller on a `done.wait()` with no timeout that nobody would ever set
+    (probe P7). The check and the `put` are now one critical section under
+    `_close_lock`, so the interleaving cannot be constructed at all: the probe
+    that modelled it parked *inside* `put`, and a `queue.Queue` with no maximum
+    never blocks there.
+
+    **What this test is and is not.** It is a bound, not a proof of the window:
+    eight writers racing a `close()`, every one of which must finish — with a
+    result or with `RuntimeError("store is closed")` — and none of which may
+    still be alive after five seconds. It would not reliably have gone red
+    against the old code, whose window was a few instructions wide; what it
+    refuses is a *reintroduced* unbounded wait, which hangs every time.
+    """
+    store = open_store(tmp_path / "race" / "shepherd.db")
+    outcomes: list[object] = []
+    started = threading.Barrier(9)
+
+    def write(index: int) -> None:
+        started.wait()
+        try:
+            outcomes.append(store.create_project(name=f"p{index}", description=None))
+        except RuntimeError as refusal:
+            outcomes.append(refusal)
+
+    writers = [threading.Thread(target=write, args=(index,), daemon=True) for index in range(8)]
+    for writer in writers:
+        writer.start()
+    started.wait()
+    store.close()
+    for writer in writers:
+        writer.join(timeout=5.0)
+
+    alive = [writer.name for writer in writers if writer.is_alive()]
+    assert alive == [], f"a write never returned after close(): {alive}"
+    assert len(outcomes) == 8
+    assert all(
+        isinstance(outcome, (models.Workspace, RuntimeError)) for outcome in outcomes
+    ), outcomes

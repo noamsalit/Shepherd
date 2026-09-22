@@ -18,6 +18,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from project_fixture import the_project
 
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
@@ -93,20 +94,6 @@ def payload(name: str, args: dict[str, object]) -> dict[str, object]:
     assert result.ok is True, result.error
     assert isinstance(result.data, dict)
     return result.data
-
-
-def the_project(store: Store, name: str = "shepherd") -> str:
-    """The project of that name, created once.
-
-    `create_project` is no longer keyed by name (E1: `/work/api` and
-    `/personal/api` are two projects), so a helper that called it per session
-    used to return one row and now returns one per call. The fixture wants one
-    project, so it says so.
-    """
-    for workspace in store.list_workspaces():
-        if workspace.name == name:
-            return workspace.id
-    return store.create_project(name=name, description=None).id
 
 
 def seed(store: Store, engine_session_id: str) -> Session:

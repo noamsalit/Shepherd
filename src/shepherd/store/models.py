@@ -32,11 +32,13 @@ __all__ = [
     "SESSION_COLUMNS",
     "UNASSIGNED_PROJECT_ID",
     "DeleteOutcome",
+    "DeletePlan",
     "FleetRow",
     "OnRunning",
     "Repo",
     "ReplayTarget",
     "Session",
+    "SeveredLink",
     "StopCounts",
     "StoreError",
     "SubagentRollup",
@@ -86,8 +88,30 @@ class OnRunning(StrEnum):
 
 
 @dataclass(frozen=True)
+class SeveredLink:
+    """One lineage reference the delete had to null, and which column it was.
+
+    `session` references itself twice — `parent_session_id` and `retry_of`
+    (001:58,64) — and `PRAGMA foreign_keys` is ON. A session that survives the
+    cascade (orphaned, or living in another project) while the row it points at
+    is deleted would abort the whole statement, so the reference is severed
+    first. D61 says a delete **forgets**: a surviving child whose parent was
+    forgotten honestly has no parent. Refusing instead would mean telling
+    someone *"you cannot delete this project because a session in it once
+    spawned a child"*, which is not a thing to say to a person.
+
+    Nulling **silently** is the part that is not acceptable, which is why this
+    record exists and rides back on `DeleteOutcome.severed`.
+    """
+
+    session_id: str
+    column: str
+    """`"parent_session_id"` or `"retry_of"` — the two self-references."""
+
+
+@dataclass(frozen=True)
 class DeleteOutcome:
-    """What `delete_project` answers with — never a bare bool.
+    """What the delete's commit half answers with — never a bare bool.
 
     A refusal has to carry *why* and *which sessions*, because E13's dialog is
     built from this record: a caller that only learns `False` has to go and ask
@@ -100,10 +124,52 @@ class DeleteOutcome:
     running: tuple[str, ...] = ()
     """Session ids that stopped the delete, when `on_running` was `REFUSE`."""
     killed: tuple[str, ...] = ()
+    """The sessions the **caller reports it actually killed**, not the ones it
+    was asked to kill.
+
+    The verb used to take a `Callable[[str], None]` and report every id it had
+    called it with. That callable could not report failure, while the real kill
+    path answers `no_pane(session_id)` as a returned dict for any session
+    without a runner handle — which is every *attached* session. So the field
+    said "killed" over sessions that were still running. The caller kills
+    between the two halves and now knows which kills landed; this is that."""
     orphaned: tuple[str, ...] = ()
     """Sessions moved to `UNASSIGNED_PROJECT_ID`. They stay visible on Flock —
     `Store.fleet()` is an INNER JOIN, so a session pointing at a deleted
     workspace would vanish without trace (P2)."""
+    severed: tuple[SeveredLink, ...] = ()
+    """Lineage links nulled on **surviving** sessions so the cascade could run."""
+    destroyed: tuple[str, ...] = ()
+    """Session rows the cascade deleted — every ended session in the project,
+    plus the running ones under `KILL`. A person told `orphaned=('s-live',)`
+    and nothing else is not told that four hundred finished sessions went with
+    the project; `DeletePlan.doomed` is the same list **before** the button."""
+
+
+@dataclass(frozen=True)
+class DeletePlan:
+    """The delete's decision half: a pure read, and the whole of the refusal.
+
+    The verb is two halves because the middle of it — stopping the running
+    sessions — is a subprocess, and `Store._write` runs its callable on the one
+    writer thread inside `BEGIN IMMEDIATE`. The caller reads this plan, kills
+    what it decides to kill *outside* any transaction, and hands the plan back
+    to `commit_project_delete`. D33's line ("no runner behind a
+    `sqlite3.Connection`") is then structural rather than a promise.
+
+    `refusal` is the whole answer when it is not `None`: the page renders its
+    three choices out of that record.
+    """
+
+    workspace_id: str
+    on_running: OnRunning
+    running: tuple[str, ...] = ()
+    """What is alive in the project **now** — what the caller must kill under
+    `KILL`, and what is moved out under `ORPHAN`."""
+    doomed: tuple[str, ...] = ()
+    """Session rows this delete would destroy, so the dialog can say what it is
+    about to take **before** the button rather than in the outcome."""
+    refusal: DeleteOutcome | None = None
 
 SESSION_COLUMNS = (
     "id, owner_id, engine_session_id, workspace_id, repo_id, origin, ownership, ephemeral,"
@@ -132,10 +198,13 @@ class Workspace:
     name: str
     description: str | None
     created_at: str
-    last_activity_at: str | None
-    """Derived at read time from the project's sessions (ADR-P4), never
-    written: a column would need a writer on every session update and would be
-    wrong the moment one of them was missed."""
+    """`workspace.last_activity_at` is **not** here. The column exists in the
+    schema and nothing writes it (ADR-P4/RD-3): the value is derived per
+    project by `reads.project_last_activity`, and a field mapped off the dead
+    column would be permanently `None` under a docstring promising otherwise —
+    a page that believed it would render "never" for every project with no test
+    going red. The column stays in 001; dropping it is a table rebuild for a
+    field nothing reads."""
 
 
 @dataclass(frozen=True)

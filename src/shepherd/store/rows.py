@@ -93,7 +93,6 @@ def workspace(row: sqlite3.Row) -> Workspace:
         name=str(row["name"]),
         description=None if row["description"] is None else str(row["description"]),
         created_at=str(row["created_at"]),
-        last_activity_at=None if row["last_activity_at"] is None else str(row["last_activity_at"]),
     )
 
 

@@ -84,7 +84,15 @@ def run_git(args: list[str], cwd: str) -> GitResult:
             timeout=GIT_TIMEOUT_S,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError) as error:
+    except (OSError, subprocess.SubprocessError, ValueError) as error:
+        # `ValueError` is not decoration and not defensive: `subprocess.run`
+        # raises it — not `OSError`, not `SubprocessError` — for a `cwd`
+        # carrying an embedded NUL, and it walked straight out of a verb whose
+        # contract is *"Never raises"*. `admission.py` already refuses that
+        # exact input by name ("a cwd carrying a NUL byte … is refused, never
+        # guessed at") while `hook_lane._with_foreign_repos` feeds this
+        # function text derived from the engine's JSONL. The degradation path
+        # below is unchanged: `_UNREADABLE_RC`, and the anomaly is counted.
         return GitResult(rc=_UNREADABLE_RC, stdout="", stderr=str(error))
     return GitResult(rc=completed.returncode, stdout=completed.stdout, stderr=completed.stderr)
 

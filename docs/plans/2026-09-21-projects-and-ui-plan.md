@@ -471,7 +471,8 @@ Every test named here has an owning module and a building task in the
 
 | # | Property | Proved by | Mutation that reddens it |
 |---|---|---|---|
-| P1 | **Total over the delete matrix.** Every `(exists, has_running, on_running)` triple has a defined outcome and none is silent. | `test_delete_is_total_over_its_matrix`, building `itertools.product` at test time | Remove one branch from `delete_project`. |
+| P1 | **Total over the delete matrix.** Every `(exists, has_running, lineage, on_running)` cell has a defined outcome and none is silent, and `PRAGMA foreign_key_check` is empty after each. | `test_delete_is_total_over_its_matrix`, building `itertools.product` at test time | Remove one branch from the delete; remove the lineage severing. |
+| P1b | **The fourth axis, added by T1's remediation.** The first three axes made the matrix total over what `plant_session` could express — and it could express neither `parent_session_id` nor `retry_of`, the two columns `session` references itself with, so the input that aborted the cascade (`FOREIGN KEY constraint failed`, under `orphan`, 2 of 9 cells) was unreachable from the fixture. `foreign_key_check` was asserted after the migration and never after the verb that carries the cascade. | `test_delete_is_total_over_its_matrix` with `LINEAGE_SHAPES`; `plant_session(parent_session_id=…, retry_of=…)` | Return `()` from `_sever_lineage` — measured: both matrix tests red with `IntegrityError`. |
 | P2 | **No orphaned session row.** After any outcome, `SELECT COUNT(*) FROM session WHERE workspace_id NOT IN (SELECT id FROM workspace)` is 0. | `test_no_session_ever_points_at_a_deleted_project`, after every cell of P1 | Reorder the cascade to delete `workspace` first. |
 | P3 | **The FK graph is intact after 004.** | `test_migration_004_leaves_foreign_key_check_empty` | Drop the `project_repo` backfill. |
 | P4 | **Binding never raises**, over a matrix of cwd shapes. | `test_bind_cwd_to_repo_never_raises_over_the_cwd_matrix` | Let one branch propagate `OSError`. |
@@ -862,7 +863,12 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Consumes:** `project_repo`, `workspace.description`
 - **Produces:** `shepherd.store.models.UNASSIGNED_PROJECT_ID`,
   `shepherd.store.models.OnRunning`, `shepherd.store.models.DeleteOutcome`,
-  `Workspace(id, owner_id, name, description, created_at, last_activity_at)`,
+  `shepherd.store.models.DeletePlan`, `shepherd.store.models.SeveredLink`,
+  `Workspace(id, owner_id, name, description, created_at)` — **no
+  `last_activity_at`** (T1 remediation): the column stays unwritten in the
+  schema and the value is `reads.project_last_activity`'s. A field mapped off
+  the dead column is permanently `None` under a docstring promising it is
+  derived, and no test fails,
   `Repo(id, owner_id, name, root_path, git_common_dir, vcs_remote, active, added_at)`
 
 #### Task 1.3 — reads
@@ -910,9 +916,21 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   `add_repo`, `remove_repo`. `upsert_workspace` **deleted** (RD-1). `upsert_repo`
   keeps its name, loses `workspace_id`, and becomes the path-identity upsert
   `add_repo` builds on.
-- **Out-of-Scope Drift:** killing a session here —
-  `delete_project(on_running="kill")` **delegates** to the existing kill path;
-  the store does not learn about runners. Adding `ON DELETE CASCADE` anywhere.
+- **Out-of-Scope Drift:** killing a session here. **This line used to say
+  `delete_project(on_running="kill")` "delegates" to the existing kill path,
+  and that wiring deadlocks** — corrected by T1's remediation, 2026-09-22, and
+  recorded rather than quietly replaced. A `kill` callable handed to the verb
+  is run by `Store._write` on the single writer thread inside `BEGIN
+  IMMEDIATE`; the real kill path's first statement is `store.set_app_state(...)`
+  (`orchestration/lifecycle.py:126` — write the record, *then* kill, the order
+  that survives a crash), which then queues behind the writer waiting on it and
+  hangs every later write in the process. Reproduced: *"DEADLOCK: delete_project
+  did not return within 10s"*. The verb is therefore **two**: a decision
+  (`reads.plan_project_delete`, a pure read) and a commit
+  (`writes.commit_project_delete`), and the caller kills **between** them,
+  outside any transaction — which is also the only place an irreversible effect
+  can live, since a rollback would otherwise restore rows whose processes are
+  already dead. Also out of scope: adding `ON DELETE CASCADE` anywhere.
   **Any filesystem call** — `Path.resolve()` belongs to the tool (E10, and the
   purity map says so).
 - **Required Checks:** `.venv/bin/python -m pytest tests/store -q` ·
@@ -931,7 +949,9 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
 - **Produces:**
   `writes.create_project(connection, *, name: str, description: str | None) -> Workspace`
   `writes.rename_project(connection, *, workspace_id: str, name: str) -> Workspace | None`
-  `writes.delete_project(connection, *, workspace_id: str, on_running: OnRunning, kill: Callable[[str], None]) -> DeleteOutcome`
+  `reads.plan_project_delete(connection, *, workspace_id: str, on_running: OnRunning) -> DeletePlan`
+  `writes.commit_project_delete(connection, *, plan: DeletePlan, killed: tuple[str, ...] = ()) -> DeleteOutcome`
+  *(`writes.delete_project(..., kill=...)` is **withdrawn**: see Out-of-Scope Drift. `killed` is what the caller reports it actually stopped — the old `Callable[[str], None]` could not report a failed kill, and the real path answers `no_pane(session_id)` for every attached session.)*
   `writes.add_repo(connection, *, workspace_id: str, root_path: str, name: str, git_common_dir: str, vcs_remote: str | None) -> Repo`
   `writes.remove_repo(connection, *, workspace_id: str, repo_id: str) -> bool`
 
@@ -1126,7 +1146,7 @@ call sites (`hook_lane.py:165,179,203`) under load, only that each gets a
   clean** — this is the task that makes Phase 1's green boundary true;
   `test_the_project_list_issues_a_bounded_number_of_statements` passes.
 - **Consumes:** `Store.project_last_activity`, `Store.repo_counts`,
-  `Workspace(id, owner_id, name, description, created_at, last_activity_at)`
+  `Workspace(id, owner_id, name, description, created_at)`
 - **Produces:** `project_workspace(workspace, *, repo_count: int, last_activity_at: str | None) -> dict[str, object]`
   with keys `project_id`, `name`, `description`, `repo_count`, `last_activity_at`
 

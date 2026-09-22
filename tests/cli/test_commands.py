@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 
 from cli.conftest import NOW, register_tools, scripted_host
+from project_fixture import the_project
 
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
@@ -38,10 +39,9 @@ def seed(
     needs_you_reason: str | None = None,
     last_event_at: str = NOW,
 ) -> Session:
-    workspace = store.create_project(name="shepherd", description=None)
     session = store.register_session(
         engine_session_id=engine_session_id,
-        workspace_id=workspace.id,
+        workspace_id=the_project(store),
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-16T10:00:00Z",

@@ -26,7 +26,11 @@ from shepherd.core.states import FLEET_STATE_ORDER, Origin, SessionState
 from shepherd.core.stops import CONFIDENT_ENOUGH, Bucket, StopReason
 from shepherd.store.models import (
     SESSION_COLUMNS,
+    UNASSIGNED_PROJECT_ID,
+    DeleteOutcome,
+    DeletePlan,
     FleetRow,
+    OnRunning,
     Repo,
     ReplayTarget,
     Session,
@@ -72,7 +76,19 @@ def _rows(
 
 
 def find_repo_by_common_dir(connection: sqlite3.Connection, git_common_dir: str) -> Repo | None:
-    rows = _rows(connection, "SELECT * FROM repo WHERE git_common_dir = ?", (git_common_dir,))
+    """D48's binding key: the repo whose `.git` directory this is.
+
+    `ORDER BY root_path` for the reason `list_repos` two functions below says
+    out loud — an unordered read is a test that passes on one SQLite build and
+    not on the next — and the stakes went up with D57: two worktrees of one
+    clone share a `git_common_dir`, and the **project** a discovered session
+    lands in is now derived from whichever row this returns.
+    """
+    rows = _rows(
+        connection,
+        "SELECT * FROM repo WHERE git_common_dir = ? ORDER BY root_path",
+        (git_common_dir,),
+    )
     return repo(rows[0]) if rows else None
 
 
@@ -114,8 +130,11 @@ def list_workspaces(connection: sqlite3.Connection) -> list[Workspace]:
     predates it, and under BINARY collation the seeded `"Unassigned"` sorts
     ahead of every lower-case name — so `list_workspaces()[0]` is the reserved
     project and not the caller's (N2, E22). The repair belongs at the call
-    sites, which now select by name or by a captured id; a tiebreak added here
-    would read as a fix while changing nothing.
+    sites, which select the project **by the id the fixture captured** — not by
+    name, because names are not unique (E1: `/work/api` and `/personal/api` are
+    two projects, there is no unique index, and `create_project(name=
+    "Unassigned")` mints a second row that reads as the reserved one). A
+    tiebreak added here would read as a fix while changing nothing.
     """
     return [
         workspace(row) for row in _rows(connection, "SELECT * FROM workspace ORDER BY name")
@@ -190,6 +209,76 @@ def running_sessions_for(connection: sqlite3.Connection, workspace_id: str) -> l
         (workspace_id,),
     )
     return [session(row) for row in rows]
+
+
+def plan_project_delete(
+    connection: sqlite3.Connection, *, workspace_id: str, on_running: OnRunning
+) -> DeletePlan:
+    """D61's state machine, decided — and nothing written.
+
+    **The first of two halves, and the reason for the split.** The middle of a
+    project delete is *stopping the sessions*, which issues subprocesses. The
+    verb used to take that as a `kill` callable, and `Store._write` runs its
+    callable on the single writer thread inside `BEGIN IMMEDIATE`: the real
+    kill path's first statement is `store.set_app_state(...)`, so it enqueued
+    behind the writer that was waiting for it and the process hung for good.
+    Even when the callback did not write, an irreversible effect inside a
+    transaction that can roll back leaves the panes dead and the rows restored.
+
+    So: this half decides, the caller kills **between**, and
+    `writes.commit_project_delete` deletes. `refusal` is the whole answer when
+    it is not `None`.
+
+    **Never raises.** Every negative answer is a `DeleteOutcome` on `refusal`,
+    because the page renders the three choices out of the refusal itself and an
+    exception is not something a card can draw.
+    """
+    if workspace_id == UNASSIGNED_PROJECT_ID:
+        return DeletePlan(
+            workspace_id=workspace_id,
+            on_running=on_running,
+            refusal=DeleteOutcome(
+                deleted=False, refused="the Unassigned project cannot be deleted"
+            ),
+        )
+    if get_workspace(connection, workspace_id) is None:
+        return DeletePlan(
+            workspace_id=workspace_id,
+            on_running=on_running,
+            refusal=DeleteOutcome(
+                deleted=False, refused=f"there is no project {workspace_id!r} to delete"
+            ),
+        )
+
+    running = tuple(s.id for s in running_sessions_for(connection, workspace_id))
+    if running and on_running is OnRunning.REFUSE:
+        return DeletePlan(
+            workspace_id=workspace_id,
+            on_running=on_running,
+            running=running,
+            refusal=DeleteOutcome(
+                deleted=False,
+                refused=(
+                    f"{len(running)} session(s) are still running in this project; "
+                    f"choose whether to stop them or move them to Unassigned"
+                ),
+                running=running,
+            ),
+        )
+
+    survivors = frozenset(running) if on_running is OnRunning.ORPHAN else frozenset()
+    doomed = tuple(
+        str(row["id"])
+        for row in _rows(
+            connection,
+            "SELECT id FROM session WHERE workspace_id = ? ORDER BY started_at, id",
+            (workspace_id,),
+        )
+        if str(row["id"]) not in survivors
+    )
+    return DeletePlan(
+        workspace_id=workspace_id, on_running=on_running, running=running, doomed=doomed
+    )
 
 
 # ----- sessions --------------------------------------------------------------

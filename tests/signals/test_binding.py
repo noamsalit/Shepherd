@@ -286,6 +286,16 @@ def test_bind_cwd_to_repo_never_raises_over_the_cwd_matrix(
         "",
         "/",
         str(tmp_path / "with space"),
+        # The NUL. `subprocess.run(cwd=...)` answers it with **`ValueError`**,
+        # which is neither `OSError` nor `SubprocessError`, so it walked
+        # straight through `run_git`'s except clause and out of a verb that
+        # documents *"Never raises"*. Four other adversarial cwds return
+        # cleanly and counted, which is this row's control. The asymmetry is
+        # the tell: `admission.py` guards exactly this input by name — *"a cwd
+        # carrying a NUL byte … is refused, never guessed at"* — while
+        # `hook_lane._with_foreign_repos` feeds this verb text derived from the
+        # engine's JSONL and neither caller wraps it.
+        "/tmp\x00evil",
     )
     for cwd in matrix:
         binding = bind_cwd_to_repo(store, cwd)

@@ -48,6 +48,7 @@ from shepherd.store import writes
 from shepherd.store.migrate import migrate
 from shepherd.store.models import (
     DeleteOutcome,
+    DeletePlan,
     FleetRow,
     OnRunning,
     Repo,
@@ -174,9 +175,16 @@ class Store:
 
         The transaction is opened and closed here, so no caller ever writes
         `with store.transaction():` (D33 rule 3).
+
+        The closed-check and the `put` are **one** operation under
+        `_close_lock`, because they used not to be: a `close()` that landed in
+        the window between them wrote its `None` sentinel, the writer returned,
+        and the job enqueued after it was never taken — leaving the caller on a
+        `done.wait()` that nobody would ever set. Holding the lock across the
+        pair, rather than giving `wait()` a timeout, keeps the failure
+        impossible instead of merely bounded; `close()` holds the same lock only
+        to flip the flag, so this cannot deadlock against it.
         """
-        if self._closed:
-            raise RuntimeError("store is closed")
         result: list[T] = []
         failure: list[BaseException] = []
         done = threading.Event()
@@ -197,7 +205,10 @@ class Store:
             finally:
                 done.set()
 
-        self._queue.put(run)
+        with self._close_lock:
+            if self._closed:
+                raise RuntimeError("store is closed")
+            self._queue.put(run)
         done.wait()
         if failure:
             raise failure[0]
@@ -213,13 +224,27 @@ class Store:
             lambda c: writes.rename_project(c, workspace_id=workspace_id, name=name)
         )
 
-    def delete_project(
-        self, *, workspace_id: str, on_running: OnRunning, kill: Callable[[str], None]
+    def plan_project_delete(self, *, workspace_id: str, on_running: OnRunning) -> DeletePlan:
+        """The delete's decision half — a **read**. The caller stops whatever
+        the plan names, then hands the plan to `commit_project_delete`.
+
+        Two verbs rather than one with a `kill` callable, because `_write`'s
+        callable runs on the writer thread inside `BEGIN IMMEDIATE`: the real
+        kill path opens with a store write, which would queue behind the very
+        writer waiting on it, and no effect that leaves the process can be
+        rolled back with the rows.
+        """
+        return reads.plan_project_delete(
+            self._read(), workspace_id=workspace_id, on_running=on_running
+        )
+
+    def commit_project_delete(
+        self, *, plan: DeletePlan, killed: tuple[str, ...] = ()
     ) -> DeleteOutcome:
+        """The delete's commit half — the rows, and only the rows. `killed` is
+        what the caller reports it actually stopped."""
         return self._write(
-            lambda c: writes.delete_project(
-                c, workspace_id=workspace_id, on_running=on_running, kill=kill
-            )
+            lambda c: writes.commit_project_delete(c, plan=plan, killed=killed)
         )
 
     def add_repo(

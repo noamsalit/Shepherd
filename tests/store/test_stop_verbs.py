@@ -14,6 +14,7 @@ import typing
 from pathlib import Path
 
 import pytest
+from project_fixture import the_project
 
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
@@ -47,10 +48,18 @@ def store(db_path: Path) -> typing.Iterator[Store]:
 
 
 def seed(store: Store, engine_session_id: str = "eng-1") -> models.Session:
-    workspace = store.create_project(name="shepherd", description=None)
+    """One session in **the** project — `the_project`, not a fresh
+    `create_project` per call.
+
+    `create_project` stopped being keyed by name (E1), and this helper is
+    called up to four times in a single test: it was modelling "four projects,
+    one session each" where it means "one project, four sessions". Nothing was
+    red, and a grouping test written on this fixture would have passed while
+    proving nothing.
+    """
     return store.register_session(
         engine_session_id=engine_session_id,
-        workspace_id=workspace.id,
+        workspace_id=the_project(store),
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-17T10:00:00Z",
