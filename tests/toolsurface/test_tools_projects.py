@@ -42,6 +42,7 @@ import pytest
 from chokepoint_fixture import install_test_chokepoint
 from signals.conftest import git_env
 
+from shepherd.core.runner import RunnerRefusal
 from shepherd.core.states import Origin, Ownership
 from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict
 from shepherd.signals.binding import bind_cwd_to_repo
@@ -512,6 +513,64 @@ def test_delete_project_keeps_the_project_when_a_kill_does_not_land(
     assert answer["killed"] == []
     assert answer["running"] == [live]
     assert registered.get_workspace(project_id) is not None
+
+
+def test_delete_project_treats_a_raising_kill_as_did_not_land(
+    registered: Store, killer: Killer
+) -> None:
+    """A kill that **raises** must not escape the verb after real kills landed.
+
+    `orchestration/lifecycle.py` states the contract deliberately — a failed
+    kill's `RunnerRefusal` propagates, because a caller told "killed" over a
+    session that is still alive has been told a false thing — and
+    `runner/local.py` raises it for a **stale handle**: a row whose `ended_at`
+    is still NULL while its pane is gone. That is the orphan case Shepherd
+    exists to notice, and `plan.running` is exactly `ended_at IS NULL`, so such
+    a row is what this loop hands to `kill`.
+
+    Before the fix the exception left `delete_project` between the two store
+    calls: the first session was already dead, `commit_project_delete` never
+    ran, and `registry.py` flattened the escape to `GENERIC_ERROR` — a page
+    reading "request failed" for a call that had just stopped a live agent,
+    with no record of which sessions died.
+
+    So: caught per session, counted (principle 5 — an unknown is counted, and
+    `stop_failed` is the kind for a stop that did not), reported by name, and
+    the store's own `ended_at` fact decides the delete. Three sessions, the
+    second raising: the two that landed are named, the one that did not keeps
+    the project.
+    """
+    project_id = made(registered)
+    first = running_session(registered, project_id, "eng-1")
+    second = running_session(registered, project_id, "eng-2")
+    third = running_session(registered, project_id, "eng-3")
+
+    def lands(session_id: str) -> bool:
+        if session_id == second:
+            raise RunnerRefusal("tmux refused")
+        return True
+
+    killer.lands = lands
+
+    answer = data(
+        call(
+            "delete_project",
+            {"project_id": project_id, "on_running": OnRunning.KILL.value},
+        )
+    )
+
+    # Every session was asked, including the ones after the raise.
+    assert killer.asked == [first, second, third]
+    assert answer["deleted"] is False
+    assert answer["killed"] == [first, third]
+    assert answer["running"] == [second]
+    assert answer["kill_failures"] == [
+        {"session_id": second, "reason": "RunnerRefusal: tmux refused"}
+    ]
+    # The project is intact, and the one unknown is counted rather than
+    # swallowed.
+    assert registered.get_workspace(project_id) is not None
+    assert registered.list_anomaly_counts()["stop_failed"] == 1
 
 
 def test_delete_project_orphan_moves_the_living_and_severs_the_lineage(

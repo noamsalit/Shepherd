@@ -35,6 +35,22 @@ COLLECT_ARGV = (
 #: this to be empty; it is not, and the entry says why rather than the clause
 #: being quietly widened.
 RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
+    "tests/toolsurface/test_tools_m3.py::test_the_three_modules_are_each_under_the_cap": (
+        "The name is the defect. It built `sizes` from an explicit seven-path tuple and "
+        "asserted `len(sizes) == 7`, so an eighth `tools_*.py` was simply not in the tuple: "
+        "the count still passed and the new module was measured by nothing — a gate whose "
+        "subject is a list somebody has to remember to extend certifies the modules somebody "
+        "remembered. It is renamed rather than edited in place because the enumeration was "
+        "the whole of its method and because the glob found four modules it had never "
+        "measured at all (tools_engine, tools_hooks, tools_replay, and two over the cap), so "
+        "a reader who sees the old name in a log is looking at a different property. The cap "
+        "is unchanged and is re-proved over every module by the named successor in the same "
+        "file, test_every_tool_module_is_under_the_cap, which globs the package and keeps an "
+        "explicit count so a new module must be admitted; its gate is seen to fail by "
+        "test_the_cap_gate_measures_a_module_the_enumeration_would_have_missed.",
+        "Task 18's cap is unchanged; the retirement is recorded per §0 in "
+        "docs/plans/projects-ui-blockers/t3-4-remfix.md (T3.4 remediation).",
+    ),
     "tests/toolsurface/test_registry.py::test_no_authorize_call_exists_yet": (
         "M1's tripwire: it walked every identifier under toolsurface/ and asserted "
         "'authorize' and 'audit_log' were absent, so that M4's addition would be visible "

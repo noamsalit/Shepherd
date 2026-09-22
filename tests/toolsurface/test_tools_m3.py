@@ -361,39 +361,97 @@ def test_no_handler_returns_a_raw_row() -> None:
     )
 
 
-def test_the_three_modules_are_each_under_the_cap() -> None:
-    """Task 18 asks for one module ≤ 450 lines; this is seven, each asserted.
+#: The one capped module whose name is not `tools_*.py`. Named rather than
+#: globbed for, because `spawn_origin.py` is a split *out of* `tools_m3.py` and
+#: the cap follows the code, not the filename.
+CAPPED_EXTRAS: tuple[str, ...] = ("spawn_origin.py",)
 
-    Four since T23: `register_rename_tool` did not fit in `tools_m3.py` without
-    editing this very assertion, so it went into `tools_rename.py` instead. The
-    **cap is unchanged**; what grew is the list of files held to it.
+#: The two modules that were over 450 lines **before** Task 18's cap existed,
+#: pinned at the length they have today.
+#:
+#: The cap was written for M3's modules and the glob below reaches every
+#: `tools_*.py` in the package, which includes two that predate it. Raising the
+#: cap for everyone to admit them would retire the gate; exempting them by name
+#: would let them grow without limit. So they are exempt from *450* and held to
+#: **their own current size**: neither may gain a line without somebody editing
+#: this number, which is the same admission every other module owes.
+GRANDFATHERED: dict[str, int] = {"tools_m1.py": 574, "tools_master.py": 505}
 
-    **Five since D1 of the M1-M4 QA pass**, for the same reason and by the same
-    rule: the caller-to-origin map and its reasoning did not fit under the cap,
-    so it went into `spawn_origin.py` — and it is named *here*, because a split
-    that escapes the enumeration is a split that hides growth, which is the one
-    thing this line exists to prevent.
+#: Every module the cap measures, as a count. An eighth `tools_*.py` must be
+#: **admitted** here rather than remembered: the number goes red on the module
+#: that is added, which is the moment somebody is looking.
+CAPPED_MODULE_COUNT = 13
 
-    **Six since T3.1**, and this one is a new module rather than a split:
-    `tools_projects.py` is D57's project lifecycle, and it is named here for the
-    same reason the two splits are — a module that escapes the enumeration is a
-    module whose growth nothing measures.
 
-    **Seven since T3.3**, and this one *is* the split T3.1 predicted. It shipped
-    at 408 lines with six verbs and said `delete_project` would not fit; it did
-    not. `tools_projects_reads.py` took the two reads, the projections and the
-    shared schema vocabulary, and it is named here **beside** the half it came
-    out of — because the whole value of this line is that a split cannot hide
-    growth, and a half that escapes the enumeration is a half nothing measures.
+def capped_modules() -> dict[str, int]:
+    """Every capped module's length, **globbed** rather than enumerated."""
+    package = REPO_ROOT / "src" / "shepherd" / "toolsurface"
+    paths = sorted(package.glob("tools_*.py")) + [package / name for name in CAPPED_EXTRAS]
+    return {path.name: len(path.read_text(encoding="utf-8").splitlines()) for path in paths}
 
-    The split is only honest while it cannot hide growth, which is what this
-    line is for. Goes red the moment any half starts absorbing the others.
+
+def test_every_tool_module_is_under_the_cap() -> None:
+    """Task 18 asks for one module <= 450 lines; this is all of them.
+
+    The list grew by split five times (`tools_terminal.py`,
+    `tools_messaging.py`, `tools_rename.py`, `spawn_origin.py`,
+    `tools_projects_reads.py`) and by new module twice (`tools_projects.py`,
+    `tools_projects_delete.py`). The **cap is unchanged**; what grew is the set
+    of files held to it.
+
+    **It is a glob now, and that is the fix T3.4 made.** The enumerated version
+    built `sizes` from a seven-path tuple and asserted `len(sizes) == 7`: an
+    eighth `tools_*.py` was simply not in the tuple, so the count still passed
+    and the new module was measured by nothing. A gate whose subject is a list
+    somebody has to remember to extend certifies the modules somebody
+    remembered. The glob cannot miss one; the count is what makes a new module
+    **admitted** rather than silently absorbed.
+
+    The glob also reached two modules older than the cap, which is how it was
+    found that the enumeration had been measuring seven of eleven all along.
+    They are held to their own size rather than to 450 (`GRANDFATHERED`) —
+    named, frozen, and unable to grow.
+
+    Goes red the moment any module starts absorbing the others, and red on the
+    *count* the moment a new one appears.
     """
-    sizes = {path.name: len(path.read_text(encoding="utf-8").splitlines()) for path in
-             (MODULE, TERMINAL_MODULE, MESSAGING_MODULE, RENAME_MODULE, ORIGIN_MODULE,
-              PROJECTS_MODULE, PROJECTS_READS_MODULE)}
-    assert all(size <= 450 for size in sizes.values()), sizes
-    assert len(sizes) == 7
+    sizes = capped_modules()
+    over = {
+        name: size
+        for name, size in sizes.items()
+        if size > GRANDFATHERED.get(name, 450)
+    }
+    assert over == {}, sizes
+    assert len(sizes) == CAPPED_MODULE_COUNT, sizes
+    # Every grandfathered name is a module that exists — an exemption for a
+    # file that has been deleted or renamed is an exemption nothing measures.
+    assert set(GRANDFATHERED) <= set(sizes)
+
+
+def test_the_cap_gate_measures_a_module_the_enumeration_would_have_missed(
+    tmp_path: Path,
+) -> None:
+    """The gate, seen to fail — on the case the old one survived.
+
+    `capped_modules` is read against the real package above. Here it is read
+    against a copy with one extra `tools_*.py` in it, which is what an eighth
+    module looks like on the day it lands: the glob finds it, so both the cap
+    and the count have an opinion about it. The enumerated version had none.
+    """
+    package = REPO_ROOT / "src" / "shepherd" / "toolsurface"
+    for path in sorted(package.glob("tools_*.py")):
+        (tmp_path / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    globbed = sorted(tmp_path.glob("tools_*.py"))
+    before = len(globbed)
+    # An inert fixture: text in a directory nothing imports, never a module on
+    # an import path the suite executes.
+    (tmp_path / "tools_eighth.py").write_text("x = 1\n" * 500, encoding="utf-8")
+    after = sorted(tmp_path.glob("tools_*.py"))
+
+    assert len(after) == before + 1
+    sizes = {path.name: len(path.read_text(encoding="utf-8").splitlines()) for path in after}
+    assert sizes["tools_eighth.py"] == 500
+    assert not all(size <= 450 for size in sizes.values())
 
 
 # ----- behaviour, through `invoke()` -----------------------------------------

@@ -62,9 +62,18 @@ from pathlib import Path
 from shepherd.core.clock import utc_now
 from shepherd.signals.binding import probe_repo, repo_root, resolve_remote
 from shepherd.store.db import Store
-from shepherd.store.models import DeleteOutcome, OnRunning, StoreError
+from shepherd.store.models import StoreError
 from shepherd.toolsurface.registry import register
 from shepherd.toolsurface.tools_m1 import project_workspace
+from shepherd.toolsurface.tools_projects_delete import (
+    KillFailure,
+    KillSession,
+    build_delete_tool,
+    delete_outcome,
+    delete_project,
+    on_running_schema,
+    refuses_every_kill,
+)
 from shepherd.toolsurface.tools_projects_reads import (
     PROJECT_ID,
     STRING,
@@ -81,9 +90,15 @@ from shepherd.toolsurface.types import (
     arg_str,
 )
 
+#: `delete_project`'s half is re-exported here — an alias, never a copy — so the
+#: consumers that learned this module's name (the composition root, the route
+#: tests, `test_tools_m3.py`) keep one import site while the code lives where
+#: the cap put it.
 __all__ = [
     "PROJECT_TOOL_NAMES",
+    "KillFailure",
     "KillSession",
+    "build_delete_tool",
     "add_repo",
     "build_project_tools",
     "create_project",
@@ -94,15 +109,6 @@ __all__ = [
     "remove_repo",
     "rename_project",
 ]
-
-#: Stop one session, and answer **whether the kill landed**.
-#:
-#: `bool`, not `None`: `DeleteOutcome.killed` is what the caller reports it
-#: actually killed, and the shipped kill path answers `no_pane(session_id)` for
-#: any session it has no runner handle for — which is every *attached* one. A
-#: callable that cannot report failure makes "killed" a list of sessions that
-#: may still be running.
-KillSession = Callable[[str], bool]
 
 #: Spelled here **and** in `tools_projects_reads.py`, rather than imported from
 #: it. `tests/boundaries/test_session_audience.py` reads every `ToolDef`'s
@@ -125,22 +131,6 @@ PROJECT_TOOL_NAMES: tuple[str, ...] = (
     "list_repos",
     "get_project",
 )
-
-
-def on_running_schema() -> Mapping[str, object]:
-    """D61's three-way choice, **derived from `OnRunning`** and never typed out.
-
-    The plan carried `["refuse", "kill", "orphan"]` for five revisions while the
-    enum's middle member had become `kill_sessions` — a bare `kill` is a tmux
-    command-name prefix that resolves to `kill-server`, which
-    `tests/boundaries/test_tmux_blast_radius.py` refuses in `src/`. A
-    hand-written list is exactly how that drifts again.
-
-    **No `default` key.** Default-refuse has to be unskippable by omission, and
-    a schema default is a value a caller is handed without asking for it; the
-    fallback belongs in the handler, where a request cannot edit it out.
-    """
-    return {"type": "string", "enum": [member.value for member in OnRunning]}
 
 
 def _refused(key: str, reason: str, absent: str) -> dict[str, object]:
@@ -180,77 +170,6 @@ def rename_project(store: Store, *, project_id: str, name: str) -> dict[str, obj
         "project": project_workspace(renamed, repo_count=0, last_activity_at=None),
         "refused": None,
     }
-
-
-def delete_outcome(outcome: DeleteOutcome) -> dict[str, object]:
-    """D61's record, projected whole — every field, on refusals too.
-
-    Phase 9's dialog renders from these four lists and not from a second read:
-    `killed` (what the caller reports it actually stopped), `orphaned` (moved to
-    Unassigned, still on Flock), `severed` (lineage links nulled on sessions
-    that *survived*, which D61 says a person is owed) and `destroyed` (the
-    session rows the cascade took — a person told `orphaned=('s-live',)` and
-    nothing else is not told that four hundred finished sessions went with the
-    project).
-
-    `deleted`/`refused` are the same two keys the other verbs in this family
-    carry, so one consumer branch covers all of them.
-    """
-    return {
-        "deleted": outcome.deleted,
-        "refused": outcome.refused,
-        "running": list(outcome.running),
-        "killed": list(outcome.killed),
-        "orphaned": list(outcome.orphaned),
-        "severed": [
-            {"session_id": link.session_id, "column": link.column} for link in outcome.severed
-        ],
-        "destroyed": list(outcome.destroyed),
-    }
-
-
-def delete_project(
-    store: Store, kill: KillSession, *, project_id: str, on_running: str | None
-) -> dict[str, object]:
-    """Plan, kill **between**, commit.
-
-    The middle step is the whole reason this verb is three calls rather than
-    one: stopping a session issues subprocesses, and `Store._write` runs its
-    callable on the single writer thread inside `BEGIN IMMEDIATE`. So the kill
-    happens here, on the calling thread, holding no lock — and
-    `commit_project_delete` re-derives the decision in its own transaction, so a
-    session that started while the killing was going on refuses the delete
-    rather than being deleted out from under.
-
-    **`on_running` defaults to `REFUSE` here rather than in the schema** (D61,
-    E13): a schema default is a value a caller is handed without asking for it,
-    and default-refuse has to be unskippable by omission. A value outside the
-    enum is refused as a value — JSON Schema's `enum` is not something a binding
-    is guaranteed to carry through unchanged (D53), and the one fallback this
-    must never take is a destructive member.
-    """
-    try:
-        choice = OnRunning.REFUSE if on_running is None else OnRunning(on_running)
-    except ValueError:
-        return delete_outcome(
-            DeleteOutcome(
-                deleted=False,
-                refused=(
-                    f"{on_running!r} is not one of "
-                    f"{', '.join(member.value for member in OnRunning)}"
-                ),
-            )
-        )
-
-    plan = store.plan_project_delete(workspace_id=project_id, on_running=choice)
-    if plan.refusal is not None:
-        return delete_outcome(plan.refusal)
-    killed = (
-        tuple(session_id for session_id in plan.running if kill(session_id))
-        if choice is OnRunning.KILL
-        else ()
-    )
-    return delete_outcome(store.commit_project_delete(plan=plan, killed=killed))
 
 
 def add_repo(store: Store, *, project_id: str, root_path: str) -> dict[str, object]:
@@ -320,19 +239,6 @@ def remove_repo(store: Store, *, project_id: str, repo_id: str) -> dict[str, obj
 # ----- the definitions --------------------------------------------------------
 
 
-def refuses_every_kill(session_id: str) -> bool:
-    """The default injection: a kill that reports it did **not** land.
-
-    Not a no-op returning `True`. A `delete_project` registered without a real
-    kill path can still be *asked* to kill, and answering "yes" would let
-    `commit_project_delete` delete the rows of sessions that are still running.
-    Answering "no" makes the commit half refuse and say which sessions are
-    still alive, which is the only safe thing a process with no kill path can
-    say. `compose.py` injects the real one.
-    """
-    return False
-
-
 def build_project_tools(
     store: Store, kill: KillSession = refuses_every_kill, now: Clock = utc_now
 ) -> tuple[ToolDef, ...]:
@@ -368,27 +274,7 @@ def build_project_tools(
             ),
             audiences=MASTER_AND_HUMAN,
         ),
-        ToolDef(
-            name="delete_project",
-            description=(
-                "Forget a project and everything in it (D61). Sessions still running "
-                "refuse the delete unless the caller chooses otherwise."
-            ),
-            input_schema=object_schema(
-                {PROJECT_ID: STRING, "on_running": on_running_schema()}, [PROJECT_ID]
-            ),
-            blast_class=BlastClass.LOCAL_DESTRUCTIVE,
-            handler=lambda args, ctx: delete_project(
-                store,
-                kill,
-                project_id=arg_str(args, PROJECT_ID),
-                # Absent, never defaulted in the schema: `arg_optional_str`
-                # answers `None`, and `None` is what the handler turns into
-                # `REFUSE`. A request cannot edit that out.
-                on_running=arg_optional_str(args, "on_running"),
-            ),
-            audiences=MASTER_AND_HUMAN,
-        ),
+        build_delete_tool(store, kill),
         ToolDef(
             name="add_repo",
             description="Register a repo to a project. Widens §13's spawn allowlist (D22).",
