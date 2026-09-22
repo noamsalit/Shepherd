@@ -79,20 +79,50 @@ class Killer:
     The verb this replaced took `Callable[[str], None]`, which could not say,
     while the real kill path answers `no_pane(session_id)` for any session
     without a runner handle — which is every attached one.
+
+    **A kill that returns `True` and touches no row is a claim, not an effect**,
+    and the commit half refuses exactly that. So the default *lands* the kill
+    the way production does — through `apply_stop_verdict`, whose single
+    statement writes `ended_at` — and the store can then see for itself that
+    the session stopped, because `running_sessions_for` is `ended_at IS NULL`.
+
+    Set `lands` to a predicate returning `False` to drive the did-not-land
+    branch; that is the negative control, and
+    `test_delete_project_keeps_the_project_when_a_kill_does_not_land` uses it.
+    The previous default returned `True` and wrote nothing, which made every
+    KILL case here certify a world production never produces.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, store: Store | None = None) -> None:
         self.asked: list[str] = []
+        self.store = store
         self.lands: Callable[[str], bool] = lambda _session_id: True
 
     def __call__(self, session_id: str) -> bool:
         self.asked.append(session_id)
-        return self.lands(session_id)
+        landed = self.lands(session_id)
+        if landed and self.store is not None:
+            self.store.apply_stop_verdict(
+                session_id,
+                Verdict(
+                    stop_reason=StopReason.USER_EXITED,
+                    bucket=Bucket.FINISHED,
+                    why="the delete stopped it",
+                    confidence=1.0,
+                    decided_by=DecidedBy.MECHANICAL,
+                    next_actions=(),
+                    waiting_on=None,
+                    missing=(),
+                ),
+                "2026-01-01T02:00:00Z",
+                None,
+            )
+        return landed
 
 
 @pytest.fixture()
-def killer() -> Killer:
-    return Killer()
+def killer(store: Store) -> Killer:
+    return Killer(store)
 
 
 @pytest.fixture()
