@@ -1,582 +1,1950 @@
-/* Plain CSS, served from the package. No build step, no preprocessor (D51). */
+/* The shell's stylesheet — the port of `scratchpad/ui/shepherd-dark.html`.
+
+   Plain CSS, served from the package: no build step, no preprocessor, and
+   nothing pulled in that is not shipped beside it (D51). Single-theme by intent:
+   this design commits to dark, and every colour is painted explicitly so the
+   page holds on either host ground.
+
+   Three things in here are constraints rather than taste, and each says so at
+   its own site: the `[hidden]` reset (U18), the eight `.bucket-*` rules that
+   `tests/web/test_palette.py` parses back out, and the system font stack that
+   replaces the prototype's two Google-hosted webfonts. */
 
 :root {
-  color-scheme: light dark;
-  --gap: 0.5rem;
+  /* ground -> raised, blue-biased neutrals rather than pure grey */
+  --ink-900: #08090D;
+  --ink-850: #0C0E14;
+  --ink-800: #11141C;
+  --ink-750: #161A24;
+  --ink-700: #1C212D;
+  --line:    #242A38;
+  --line-soft: #1A1F2A;
+
+  --text:      #E8EAF0;
+  --text-soft: #939CB0;
+  --text-dim:  #616A7D;
+
+  /* the accent pair: a deep blue and the violet it leans into */
+  --blue:   #4C7DF0;
+  --violet: #7A5CF0;
+  --violet-soft: rgba(122, 92, 240, 0.14);
+  --blue-soft:   rgba(76, 125, 240, 0.12);
+
+  /* semantic — these eight are the product palette. They are *aliases*: the
+     hex each one carries is asserted against `core.stops.PALETTE` by
+     tests/web/test_shell.py, and the authoritative copy lives in the
+     `.bucket-*` block below, which tests/web/test_palette.py parses. Not ours
+     to retune, and not ours to spell a third time. */
+  --needs-you: #F59E0B;
+  --error:     #EF4444;
+  --unfinished:#8B5CF6;
+  --running:   #3B82F6;
+  --paused:    #06B6D4;
+  --blocked:   #64748B;
+  --finished:  #10B981;
+  --unclassified: #9CA3AF;
+
+  /* `--b` is the bucket colour in force for a subtree. A `.bucket-*` class
+     sets it; unset, it is the grey of a row nobody has classified, so a card
+     that arrives without a bucket is neither good news nor bad (D-4) rather
+     than an invalid `color-mix()` that paints nothing at all. */
+  --b: var(--unclassified);
+
+  /* `--b-text` is `--b` when the bucket colour is carrying *words* rather than
+     a glyph, a border or a wash. Measured against the `--ink-*` grounds above,
+     the raw palette fails WCAG AA (4.5:1) for small text in seven places:
+     `blocked` on all three grounds, `unfinished` on two, `running` and `error`
+     on the tooltip. Every site that paints it is uppercase mono well under
+     18.66px, so the small-text threshold is the one that applies — raising the
+     type helps a phone reader but does not move the bar, because WCAG's
+     "large" is 18.66px bold, not 14px bold.
+
+     Lightening the grounds was the other way out and is refused: `--ink-850`
+     is the second operand of the card wash, so moving it moves U16.
+
+     It is declared per-bucket rather than here, because a custom property
+     substitutes `var()` at the element it is *declared* on: written here it
+     would resolve against this block's `--b`, freeze, and every bucket would
+     inherit the same grey. This `:root` value is therefore only the
+     unclassified default, derived from the same alias the default `--b` is. */
+  --b-text: color-mix(in srgb, var(--unclassified) 78%, var(--text));
+
+  --rail-w: 244px;
+  --rail-w-collapsed: 62px;
+
+  /* No webfont. This server binds loopback and must work offline, and
+     `web/server.py` is byte-pinned to a content-type table of `.html`, `.js`
+     and `.css` — a font file could not be hosted here even locally. The
+     prototype's Instrument Sans / JetBrains Mono leave with their `<link>`;
+     the fallback chain the design already named is what remains. This
+     reverses a row of the approved design, deliberately. */
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-body {
-  margin: 0;
-  font: 14px/1.5 system-ui, sans-serif;
-}
+/* The eight buckets (§4, T14). **This block's shape is a contract**:
+   `tests/web/test_palette.py::_CSS_BUCKET` parses
+   `.bucket-<name> { … --bucket-colour: #RRGGBB }` straight back out and
+   compares it with `core.stops.PALETTE`, so the hex must be a literal here and
+   the class must keep this spelling. The `--b` alias is what the design's own
+   rules read; aliasing rather than repeating is what keeps one hex per
+   bucket.
 
-.masthead {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid currentColor;
+   `--b-text` is the AA-legible spelling of the same colour (see `:root`), and
+   it is a **derivation of `--bucket-colour`, never a second literal** — a
+   hand-picked lighter hex per bucket would be exactly the drift the notation
+   guard in `tests/web/test_shell.py` exists to catch, wearing a new name. One
+   mix percentage, applied eight times, clears 4.5:1 on all three grounds, with
+   the worst case (`blocked` on `--ink-700`) at 4.84. */
+.bucket-running {
+  --bucket-colour: #3B82F6;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
 }
-
-.masthead h1 {
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-.counts {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.count-value {
-  font-weight: 600;
-  margin-right: 0.25rem;
-}
-
-/* §12 / DP10: the `unknown` rate and, beside it, the cohort D34 calls the
-   residue — a clean stop the heuristics could not verify. `finished` is green
-   whatever the confidence, so a page without this number shows a green chip
-   claiming a verification nobody performed. */
-.stop-summary {
-  display: flex;
-  gap: 0.75rem;
-  opacity: 0.85;
-}
-
-.stop-summary-label {
-  margin-right: 0.25rem;
-  opacity: 0.7;
-}
-
-.stream {
-  margin-left: auto;
-  opacity: 0.7;
-}
-
-.stream-label {
-  margin-right: 0.35rem;
-}
-
-.empty-state {
-  margin: 2rem auto;
-  max-width: 34rem;
-  padding: 1.25rem;
-  border: 1px dashed currentColor;
-  border-radius: 6px;
-}
-
-.empty-state h2 {
-  margin-top: 0;
-  font-size: 1rem;
-}
-
-.empty-state-sources {
-  display: flex;
-  gap: 1rem;
-  font-family: ui-monospace, monospace;
-}
-
-.empty-state-hint {
-  opacity: 0.7;
-  margin-bottom: 0;
-}
-
-.workspace {
-  padding: 0.5rem 1rem;
-}
-
-.workspace-header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--gap);
-}
-
-.workspace-name {
-  font-size: 0.95rem;
-  margin: 0.5rem 0;
-}
-
-.workspace-count {
-  opacity: 0.7;
-}
-
-.sessions,
-.subagents {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.session {
-  padding: 0.4rem 0;
-  border-top: 1px solid rgba(128, 128, 128, 0.3);
-}
-
-.session-header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--gap);
-}
-
-.session-title {
-  font-weight: 600;
-}
-
-.session-ask {
-  opacity: 0.85;
-}
-
-.session-toggle {
-  margin-left: auto;
-  font: inherit;
-  background: none;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  padding: 0 0.4rem;
-  cursor: pointer;
-}
-
-.session-meta {
-  display: flex;
-  gap: var(--gap);
-  opacity: 0.7;
-}
-
-/* §4's eight buckets. Each carries a colour **and** a glyph (the glyph is in
-   `fleet.js`, beside the label), because amber and red are the two chips a
-   colourblind reader most needs to tell apart and in greyscale they are the
-   same grey. `tests/web/test_palette.py` reads these hexes back and compares
-   them to `core.stops.PALETTE`: a hand-copied hex is how a palette drifts. */
 
 .bucket-needs_you {
   --bucket-colour: #F59E0B;
-}
-
-.bucket-error {
-  --bucket-colour: #EF4444;
-}
-
-.bucket-unfinished {
-  --bucket-colour: #8B5CF6;
-}
-
-.bucket-running {
-  --bucket-colour: #3B82F6;
-}
-
-.bucket-paused {
-  --bucket-colour: #06B6D4;
-}
-
-/* Deliberately desaturated: a blocked session reads as *parked*, not as
-   demanding. It is real, it is visible, and it is not yours to act on. */
-.bucket-blocked {
-  --bucket-colour: #64748B;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
 }
 
 .bucket-finished {
   --bucket-colour: #10B981;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
 }
 
-/* D-4: a stopped row with no verdict is neither good news nor bad. */
+.bucket-unfinished {
+  --bucket-colour: #8B5CF6;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
+}
+
+.bucket-blocked {
+  --bucket-colour: #64748B;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
+}
+
+.bucket-paused {
+  --bucket-colour: #06B6D4;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
+}
+
+.bucket-error {
+  --bucket-colour: #EF4444;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
+}
+
 .bucket-unclassified {
   --bucket-colour: #9CA3AF;
+  --b: var(--bucket-colour);
+  --b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text));
 }
 
-.chip .chip-mark,
-.chip .chip-label,
-.count .count-mark {
-  color: var(--bucket-colour, currentColor);
+* { box-sizing: border-box; }
+
+/* The pages are switched with the `hidden` attribute, and every one of them
+   sets `display` from a class — `.scroll`, `.herd`, `.panes2`. An author class
+   rule beats the browser's own `[hidden] { display: none }`, so without this
+   line every "hidden" page renders on top of the visible one. It is invisible
+   inside the artifact wrapper, which injects the same rule, and it will not be
+   there in `web/static/index.html`. */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
-.chip-mark,
-.count-mark {
-  margin-right: 0.3rem;
-}
+button, input, textarea { font: inherit; color: inherit; }
 
-.subagents {
-  margin: 0.35rem 0 0 1.75rem;
-}
+::selection { background: var(--violet-soft); }
 
-.subagent {
-  display: flex;
-  gap: var(--gap);
-  opacity: 0.9;
-}
-
-.subagent-empty {
-  opacity: 0.6;
-}
-
-/* ----- §12's stopped row: the why line, the actions, the honest note ------- */
-
-.session-stop {
-  display: flex;
-  align-items: baseline;
-  gap: var(--gap);
-  margin-left: 1.75rem;
-}
-
-.session-why {
-  opacity: 0.9;
-}
-
-.session-no-action {
-  opacity: 0.6;
-}
-
-.action {
-  font: inherit;
-  background: none;
-  border: 1px solid currentColor;
+:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
   border-radius: 4px;
-  padding: 0 0.4rem;
-  cursor: pointer;
 }
 
-/* RD6: never silently dead. The capability lands at M3/M4, so the control says
-   so — visibly, and in its title — rather than looking live and doing nothing. */
-.action-not-yet {
-  cursor: not-allowed;
-  opacity: 0.55;
-  border-style: dashed;
+/* ===================== shell ============================================== */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  height: 100%;
+  transition: grid-template-columns 180ms ease;
 }
 
-.action-badge {
-  margin-left: 0.35rem;
-  font-size: 0.8em;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+.shell[data-rail="collapsed"] { grid-template-columns: var(--rail-w-collapsed) minmax(0, 1fr); }
 
-.action-link {
-  text-decoration: underline;
-}
+/* ===================== side pane ========================================= */
 
-/* N10: a disclosure, not a button. It expands evidence the row already has. */
-.why-note {
-  opacity: 0.8;
-}
-
-.why-summary {
-  cursor: pointer;
-}
-
-.why-evidence,
-.why-lane {
-  margin: 0.25rem 0 0;
-  max-width: 44rem;
-}
-
-.stop-expansion {
-  margin: 0.35rem 0 0 1.75rem;
-}
-
-.stop-actions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.stop-action {
+.pane {
+  background: var(--ink-850);
+  border-right: 1px solid var(--line-soft);
   display: flex;
-  align-items: baseline;
-  gap: var(--gap);
-  padding: 0.15rem 0;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.action-ordinal {
-  opacity: 0.6;
-  min-width: 1.2rem;
-}
-
-.action-source,
-.stop-sources {
-  opacity: 0.7;
-}
-
-/* ----- §12's Needs-You rail ------------------------------------------------ */
-
-.rail {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-/* Empty: a 4 px green line. Nothing is waiting on you, and the rail says that
-   by taking almost no room rather than by announcing a zero. The green is the
-   `finished` green from the one palette (T14), not a second one. */
-.rail-empty {
-  height: 4px;
-  background: #10B981;
-}
-
-/* Not read yet: the `unclassified` grey, never the green. */
-.rail-unknown {
-  height: 4px;
-  background: #9CA3AF;
-}
-
-.rail-active {
+.pane-top {
   display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.4rem 1rem;
-  /* The `needs_you` amber, from the same palette. */
-  background: #F59E0B;
-  color: #1f2937;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 0.75rem 0.85rem 0.9rem;
+  min-height: 56px;
 }
 
-.rail-count {
+.mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  background: linear-gradient(145deg, var(--violet), var(--blue));
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.mark svg { width: 15px; height: 15px; }
+
+.wordmark {
   font-weight: 600;
+  letter-spacing: -0.015em;
+  font-size: 0.95rem;
   white-space: nowrap;
+  overflow: hidden;
 }
 
-.rail-rows {
-  list-style: none;
+.pane-collapse {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+.pane-collapse:hover { color: var(--text); background: var(--ink-750); }
+.pane-collapse svg { width: 17px; height: 17px; }
+
+.pane-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0.9rem 0.9rem 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pane-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  margin: 0;
-  padding: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0.5rem;
 }
 
-.rail-row {
+.nav-item {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.55rem;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-soft);
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  position: relative;
 }
 
-.rail-title {
+.nav-item:hover { background: var(--ink-750); color: var(--text); }
+
+.nav-item[aria-current="page"] {
+  background: var(--violet-soft);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.nav-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  translate: 0 -50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--violet);
+}
+
+.nav-icon { flex: none; width: 18px; height: 18px; color: currentColor; }
+.nav-text { white-space: nowrap; overflow: hidden; }
+
+.nav-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--needs-you) 16%, transparent);
+  color: var(--needs-you);
+  flex: none;
+}
+
+.pane-foot {
+  margin-top: auto;
+  padding: 0.75rem;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.pane-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--finished); flex: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--finished) 15%, transparent);
+}
+
+.pane-foot-text {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* collapsed: icons only */
+.shell[data-rail="collapsed"] .wordmark,
+.shell[data-rail="collapsed"] .nav-text,
+.shell[data-rail="collapsed"] .nav-badge,
+.shell[data-rail="collapsed"] .pane-label,
+.shell[data-rail="collapsed"] .pane-foot-text { display: none; }
+
+.shell[data-rail="collapsed"] .pane-top { padding-inline: 0.85rem; }
+.shell[data-rail="collapsed"] .pane-collapse { display: none; }
+.shell[data-rail="collapsed"] .nav-item { justify-content: center; padding-inline: 0; }
+.shell[data-rail="collapsed"] .pane-foot { justify-content: center; }
+.shell[data-rail="collapsed"] .mark { cursor: pointer; }
+
+/* ===================== main =============================================== */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--ink-900);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.1rem;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line-soft);
+  flex: none;
+}
+
+.drawer-open {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 0.3rem;
+  margin-left: -0.3rem;
+}
+
+.drawer-open svg { width: 20px; height: 20px; }
+
+/* Both are flex children of `.topbar`. A flex item keeps its `min-content`
+   floor unless `min-width` is set or its overflow is not `visible`, so a long
+   title refuses to shrink and paints past the viewport — and because the
+   topbar is not itself a scroller, that is *document*-level horizontal scroll,
+   the one thing `tools/render_check.py` does measure (118px at 390, with the
+   harness's real path as the title). `.detail-title` and `.card-title` already
+   do this; these two were missed. */
+.topbar h1 {
+  font-size: 0.95rem;
   font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ---- §12's page 3 ------------------------------------------------------- */
-/* The terminal is xterm.js's own DOM (vendor/xterm.css sizes and colours it);
-   everything here is the band around it. A fixed-size pane deliberately: no
-   `fit` addon, because an addon is another vendored file and D51 has no build
-   step to justify one. */
-
-.session-view {
-  border-top: 1px solid #374151;
-  padding: 1rem;
+.topbar-sub {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.session-band {
+/* ===================== conversation ====================================== */
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.thread {
+  max-width: 47rem;
+  margin: 0 auto;
+  padding: 1.6rem 1.1rem 1.2rem;
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.turn { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.turn-you { align-items: flex-end; }
+
+.bubble {
+  background: var(--ink-750);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 4px 14px;
+  padding: 0.6rem 0.9rem;
+  max-width: 85%;
+  /* `.scroll` is `overflow-y: auto`, and an `overflow-x: visible` beside an
+     `auto` computes to `auto` — so one unbroken token in a pasted URL, path or
+     base64 blob makes the whole conversation pane scroll sideways at 390px.
+     `.path-text`, `.facts dd`, `.detail-why`, `.step-body`, `.approval-tool`
+     and `.decision-body` already say this; these two did not. */
+  overflow-wrap: anywhere;
+}
+
+.turn-shepherd { gap: 0.55rem; }
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.byline-mark {
+  width: 19px; height: 19px; border-radius: 6px; flex: none;
+  background: linear-gradient(145deg, var(--violet), var(--blue));
+  display: grid; place-items: center; color: #fff;
+}
+
+.byline-mark svg { width: 11px; height: 11px; }
+
+/* Verbatim engine prose, the same hazard as `.bubble` above. */
+.prose { margin: 0; overflow-wrap: anywhere; }
+.prose + .prose { margin-top: 0.7rem; }
+
+.prose strong { color: var(--text); font-weight: 600; }
+
+/* a tool step, folded */
+.step {
+  border: 1px solid var(--line);
+  background: var(--ink-850);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.step summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  list-style: none;
+}
+
+.step summary::-webkit-details-marker { display: none; }
+
+.step-chevron { width: 13px; height: 13px; color: var(--text-dim); flex: none; transition: rotate 150ms ease; }
+.step[open] .step-chevron { rotate: 90deg; }
+
+.step-tool {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--blue);
+}
+
+.step-time { margin-left: auto; font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); }
+
+.step-body {
+  border-top: 1px solid var(--line-soft);
+  padding: 0.6rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--text-soft);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* the approval, inline at the blocked turn */
+.approval {
+  border: 1px solid color-mix(in srgb, var(--needs-you) 40%, transparent);
+  background: color-mix(in srgb, var(--needs-you) 5%, transparent);
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
   gap: 0.6rem;
 }
 
-.session-title {
-  font-size: 1.05rem;
-  margin: 0;
+.approval-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--needs-you);
 }
 
-.session-rename {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
+.approval-head svg { width: 14px; height: 14px; flex: none; }
 
-/* D29: quiet, and never coloured like a failure. A rename that did not reach
-   the engine is a degrade we are telling the truth about, not an error. */
-.session-local-only {
-  color: #9CA3AF;
-  font-size: 0.8rem;
-}
-
-.session-meta {
-  color: #9CA3AF;
+.approval-tool {
+  font-family: var(--mono);
   font-size: 0.85rem;
+  color: var(--text);
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0.35rem 0.55rem;
+  overflow-x: auto;
+  white-space: pre;
 }
 
-.session-why {
-  color: #D1D5DB;
-  margin: 0.5rem 0;
-}
-
-.session-actions {
+.approval-meta {
+  font-size: 0.78rem;
+  color: var(--text-dim);
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.session-action {
-  background: #1F2937;
-  border: 1px solid #374151;
-  border-radius: 4px;
-  color: #E5E7EB;
+.approval-acts { display: flex; gap: 0.5rem; }
+
+.btn {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--ink-750);
+  color: var(--text);
+  padding: 0.35rem 0.85rem;
   cursor: pointer;
-  padding: 0.3rem 0.7rem;
+  font-size: 0.87rem;
 }
 
-/* §9's banner. It replaces the terminal; it never sits on top of one. */
-.session-banner {
-  background: #1F2937;
-  border-left: 3px solid #9CA3AF;
-  color: #D1D5DB;
-  padding: 0.6rem 0.8rem;
+.btn:hover { background: var(--ink-700); }
+
+.btn-primary {
+  background: var(--violet);
+  border-color: var(--violet);
+  color: #fff;
+  font-weight: 500;
 }
 
-.session-terminal {
-  background: #000;
-  min-height: 24rem;
-  margin-top: 0.6rem;
-}
+.btn-primary:hover { background: #8a6efa; }
 
-/* T19-a step 3's degrade, and T19-c's missing keystroke path. Both are states
-   a human is told about rather than left to infer from an empty box. */
-.terminal-degraded,
-.session-input-note {
-  color: #9CA3AF;
-  font-size: 0.85rem;
-  margin: 0.4rem 0;
-}
-
-.terminal-screen {
-  background: #000;
-  color: #E5E7EB;
-  margin: 0;
-  overflow: auto;
-  padding: 0.6rem;
-  white-space: pre;
-}
-
-/* D29's click-to-edit rename: the input that replaces the title, and the one
-   line that says a rename did not happen (principle 5). */
-.session-rename-input {
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 4px;
-  color: #E5E7EB;
-  font: inherit;
-  padding: 0.1rem 0.3rem;
-}
-
-.session-rename-status {
-  color: #F59E0B;
-  font-size: 0.85rem;
-}
-
-/* §12 page 3 is opened from a fleet row, so the row says so. */
-.session {
-  cursor: pointer;
-}
-
-/* §12's page 1. Two columns: the conversation on the left, the live sidebar on
-   the right, so you are never reading a stale claim while the chat is
-   turn-based. The nav above them is the only thing that moves between pages —
-   one document, one view revealed at a time. */
-.nav {
+.decided {
+  font-size: 0.82rem;
+  color: var(--finished);
   display: flex;
-  gap: var(--gap);
-  padding: 0.5rem 1rem 0;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.nav-entry {
-  font: inherit;
+.decided svg { width: 14px; height: 14px; }
+
+/* ===================== composer ========================================== */
+
+.composer-wrap {
+  flex: none;
+  padding: 0 1.1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--ink-900) 62%, transparent);
 }
 
-.chat-view {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  padding: 1rem;
-}
-
-.chat-log {
+.composer {
+  max-width: 47rem;
+  margin: 0 auto;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.55rem 0.6rem 0.5rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  min-height: 12rem;
+  gap: 0.4rem;
 }
 
-.chat-line {
-  margin: 0;
-  white-space: pre-wrap;
+.composer:focus-within { border-color: rgba(122, 92, 240, 0.55); }
+
+.composer textarea {
+  background: none;
+  border: none;
+  resize: none;
+  outline: none;
+  width: 100%;
+  max-height: 9rem;
+  color: var(--text);
+  padding: 0.25rem 0;
 }
 
-.chat-composer {
-  display: flex;
-  gap: var(--gap);
-  padding-top: 0.75rem;
+.composer textarea::placeholder { color: var(--text-dim); }
+
+.composer-row { display: flex; align-items: center; gap: 0.5rem; }
+
+.chip-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
 }
 
-.chat-input {
+.send {
+  margin-left: auto;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: var(--violet);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.send:hover { background: #8a6efa; }
+.send svg { width: 15px; height: 15px; }
+
+.status {
+  max-width: 47rem;
+  margin: 0.4rem auto 0;
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  min-height: 1.1rem;
+}
+
+
+/* ===================== the herd: three panes ============================= */
+
+.herd {
+  display: grid;
+  grid-template-columns: 212px 322px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   flex: 1;
-  font: inherit;
+  min-height: 0;
 }
 
-/* Principle 5 / §13: a refusal or a failure is one line, the generic literal
-   and the correlation id, in the colour the rest of the page uses for "this
-   did not happen". */
-.chat-status {
-  color: #F59E0B;
+.herd-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+
+.herd-col:last-child { border-right: none; }
+
+.col-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.8rem 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex: none;
+}
+
+.back {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 0.15rem;
+  margin-left: -0.25rem;
+  place-items: center;
+}
+
+.back svg { width: 16px; height: 16px; }
+
+
+.legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--ink-850);
+}
+
+.legend-key {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  /* U16: **the legend is the glyph plus coloured text.** The reviewed
+     prototype renders this label in `--text-soft` and colours only the glyph,
+     which is the one place its pixels and the decision disagree. The decision
+     wins, because it is what the owner asked for in the words that locked the
+     treatment -- "legend is like coloured text", then "I like the filled + tet
+     legend, let's lock this" -- and because the prototype's `filltext` variant
+     simply never got its legend rule written. The card wash came from that same
+     variant and did port.
+
+     The colour is `--b-text`, not `--b`: this is the bucket colour carrying
+     *words*, and `blocked` and `unfinished` fail AA against `--ink-850` raw.
+     The glyph beside it (`.legend-mark`) keeps `--b` — it is non-text content
+     at the 3:1 threshold, and its job is to be the undiluted swatch the key is
+     naming. */
+  color: var(--b-text);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0.1rem 0.3rem;
+  margin: -0.1rem -0.3rem;
+  cursor: help;
+  font-family: inherit;
+}
+
+.legend-key:hover,
+.legend-key[aria-expanded="true"] { background: var(--ink-750); color: var(--text); }
+
+.tip {
+  position: fixed;
+  z-index: 40;
+  width: 19rem;
+  max-width: calc(100vw - 24px);
+  background: var(--ink-700);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+.tip-head {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.87rem;
+}
+
+.tip-head span:first-child { color: var(--b); font-size: 0.8rem; line-height: 1; }
+
+.tip-who {
+  font-family: var(--mono);
+  /* `--ink-700` is the lightest ground in the stylesheet and so the worst case
+     for every bucket: four of the eight fail AA against it raw. */
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-text);
+  margin: 0.15rem 0 0.4rem;
+}
+
+.tip-body {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+.legend-mark { font-size: 0.75rem; line-height: 1; color: var(--b); }
+
+.legend-note {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ---- pane 1: projects --------------------------------------------------- */
+
+.project {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.8rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-soft);
+  text-align: left;
+  position: relative;
+}
+
+.project:hover { background: var(--ink-800); color: var(--text); }
+
+.project[aria-current="true"] { background: var(--violet-soft); color: var(--text); }
+
+.project[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 50%;
+  translate: 0 -50%;
+  width: 3px; height: 16px;
+  border-radius: 0 3px 3px 0;
+  background: var(--violet);
+}
+
+.project-name {
+  font-size: 0.87rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.project-n {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- pane 2: the session cards ------------------------------------------ */
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem 1rem;
+}
+
+/* **U16, the chosen label treatment.** The card takes a wash of its bucket
+   colour — ~16% over the card ground — and the legend is the glyph plus
+   coloured text. Chosen on 2026-09-21 by building six treatments and comparing
+   them on a real list, not by describing them; rejected were a coloured frame
+   with coloured text, a coloured left stripe, coloured text alone, a named
+   chip, and filled cards with filled legend pills. The prototype kept all six
+   alive behind `.cards[data-style="…"]`; only the winner ports, and it ports
+   unconditionally — a card that needs an attribute on its container to be
+   coloured is a treatment still being compared.
+
+   The ask stays neutral (below): the colour carries the state, the words carry
+   the content. */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.65rem 0.65rem;
+  background: color-mix(in srgb, var(--b) 16%, var(--ink-850));
+  border: 1px solid color-mix(in srgb, var(--b) 42%, transparent);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+}
+
+.card:hover {
+  background: color-mix(in srgb, var(--b) 24%, var(--ink-850));
+  border-color: color-mix(in srgb, var(--b) 65%, transparent);
+}
+
+.card[aria-current="true"] {
+  background: color-mix(in srgb, var(--b) 30%, var(--ink-800));
+  border-color: var(--b);
+}
+
+.card-top { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+
+.card-mark {
+  flex: none;
+  font-size: 0.78rem;
+  line-height: 1;
+  color: var(--b);
+}
+
+.card-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-age {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Neutral on a washed card, in both tones: on a `needs_you` card the amber is
+   already the ground, and amber text on amber ground reads as decoration. */
+.card-ask,
+.card-ask[data-tone="loud"] {
+  font-size: 0.79rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.card-bar span { display: block; height: 100%; background: var(--b); opacity: 0.75; }
+
+
+/* ---- the decision: a session sitting on its own prompt ------------------ */
+
+.decision {
+  flex: none;
+  margin: 0 1rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--needs-you) 45%, transparent);
+  background: color-mix(in srgb, var(--needs-you) 6%, transparent);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.decision-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--needs-you);
+}
+
+.decision-src {
+  margin-left: auto;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  text-transform: none;
+}
+
+.decision-ask { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.decision-tool {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--blue);
+  letter-spacing: 0.04em;
+}
+
+.decision-body {
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.decision-q { font-size: 0.85rem; color: var(--text); margin: 0; }
+
+.choices { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  color: var(--text-soft);
+}
+
+.choice:hover { border-color: color-mix(in srgb, var(--needs-you) 50%, transparent); color: var(--text); background: var(--ink-750); }
+
+.choice-n {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0 0.32rem;
+  line-height: 1.35;
+}
+
+.choice-text { font-size: 0.85rem; min-width: 0; }
+.choice-note { display: block; font-size: 0.76rem; color: var(--text-dim); }
+
+.choice-1 { border-color: color-mix(in srgb, var(--needs-you) 40%, transparent); }
+.choice-1 .choice-n { color: var(--needs-you); border-color: color-mix(in srgb, var(--needs-you) 45%, transparent); }
+
+.decision-done {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  color: var(--finished);
+}
+
+/* Shepherd has no keyboard for an attached session; the card says so rather
+   than offering buttons that would go nowhere. */
+.decision-readonly {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--line-soft);
+  padding-top: 0.5rem;
+}
+
+/* ---- pane 3: the session, shaped like Shepherd -------------------------- */
+
+.detail { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+.detail-band {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  padding: 0 1rem;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.detail-mark { flex: none; font-size: 0.85rem; color: var(--b); }
+
+.detail-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-state {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  flex: none;
+  margin-left: auto;
+}
+
+.detail-why {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: none;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--ink-850);
+  font-size: 0.84rem;
+  color: var(--text-soft);
+  overflow-x: auto;
+}
+
+.detail-why b { color: var(--text); font-weight: 500; white-space: nowrap; }
+
+.detail-act {
+  margin-left: auto;
+  flex: none;
+  background: var(--ink-750);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.detail-act[disabled] {
+  border-style: dashed;
+  color: var(--text-dim);
+  cursor: not-allowed;
+  background: none;
+}
+
+.detail-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+
+.detail-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.detail .composer-wrap { padding-inline: 1rem; }
+
+
+
+/* A visible error surface. Debugging from a phone otherwise means guessing. */
+.boom {
+  position: fixed;
+  left: 8px; right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 100;
+  background: #2a1113;
+  border: 1px solid var(--error);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: #FCA5A5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+/* ===================== projects ========================================== */
+
+.panes2 {
+  display: grid;
+  grid-template-columns: 286px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.proj-list { display: flex; flex-direction: column; gap: 2px; padding: 0 0.5rem 1rem; }
+
+.proj-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-soft);
+  position: relative;
+}
+
+.proj-row:hover { background: var(--ink-800); color: var(--text); }
+
+.proj-row[aria-current="true"] { background: var(--violet-soft); color: var(--text); }
+
+.proj-row[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 50%;
+  translate: 0 -50%;
+  width: 3px; height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--violet);
+}
+
+.proj-row[data-reserved="true"] {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--line-soft);
+  border-radius: 0 0 8px 8px;
+  padding-top: 0.65rem;
+}
+
+.proj-name { font-size: 0.9rem; color: var(--text); }
+.proj-row[data-reserved="true"] .proj-name { color: var(--text-soft); font-style: italic; }
+
+.proj-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.new-project {
+  margin: 0.5rem 0.6rem 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: none;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--text-soft);
+  cursor: pointer;
   font-size: 0.85rem;
-  min-height: 1.2rem;
 }
 
-.chat-sidebar {
-  border-left: 1px solid currentColor;
-  padding-left: 1rem;
+.new-project:hover { border-color: var(--violet); color: var(--text); }
+
+/* ---- the detail --------------------------------------------------------- */
+
+.proj-detail { display: flex; flex-direction: column; min-width: 0; overflow-y: auto; }
+
+.proj-band {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  padding: 0 1.1rem;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.chat-sidebar h2 {
+.proj-title { font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+
+.proj-acts { margin-left: auto; display: flex; gap: 0.4rem; }
+
+.ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+  border-radius: 7px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghost:hover { color: var(--text); border-color: var(--text-dim); }
+.ghost[data-danger="true"]:hover { color: var(--error); border-color: var(--error); }
+
+.proj-body {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  max-width: 52rem;
+}
+
+.field-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-label .ghost { margin-left: auto; }
+
+.section { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.desc {
   font-size: 0.9rem;
-  margin: 0.5rem 0 0.25rem;
+  color: var(--text-soft);
+  margin: 0;
+  max-width: 62ch;
 }
 
-/* The card is the thing a person decides on, so it is the loudest element in
-   the sidebar and its two buttons are side by side. */
-.approval-card {
-  border: 1px solid #F59E0B;
-  border-radius: 4px;
+.desc[data-empty="true"] { color: var(--text-dim); font-style: italic; }
+
+/* repo paths — full, because they ARE the allowlist */
+.paths { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.path {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--ink-850);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  min-width: 0;
+}
+
+.path-text {
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.path-shared {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  white-space: nowrap;
+}
+
+.path-drop {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+
+.path-drop:hover { color: var(--error); }
+
+.sess-mini { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.mini {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  min-width: 0;
+}
+
+.mini:hover { background: var(--ink-850); }
+.mini-mark { flex: none; font-size: 0.75rem; color: var(--b); }
+.mini-title { font-size: 0.85rem; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.mini-age { flex: none; font-size: 0.73rem; color: var(--text-dim); }
+
+.mini input[type="checkbox"] { accent-color: var(--violet); flex: none; }
+
+.claim-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.claim-bar select {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+
+.mini-open {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.mini-open:hover .mini-title { color: var(--text); text-decoration: underline; }
+
+.path-add { display: flex; gap: 0.4rem; }
+.path-add input { flex: 1; min-width: 0; }
+
+/* ---- dialogs ------------------------------------------------------------ */
+
+dialog {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--text);
+  padding: 0;
+  width: min(30rem, calc(100vw - 32px));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+}
+
+dialog::backdrop { background: rgba(4, 5, 8, 0.66); }
+
+.dlg { display: flex; flex-direction: column; gap: 0.85rem; padding: 1rem 1.1rem 1.1rem; }
+
+.dlg h3 { margin: 0; font-size: 0.98rem; letter-spacing: -0.01em; }
+.dlg p { margin: 0; font-size: 0.86rem; color: var(--text-soft); }
+
+.dlg label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dlg input[type="text"], .dlg textarea {
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.4rem 0.55rem;
+  font-size: 0.88rem;
+  font-family: var(--font);
+  letter-spacing: normal;
+  text-transform: none;
+  resize: vertical;
+}
+
+.dlg input.mono { font-family: var(--mono); font-size: 0.82rem; }
+
+.dlg input:focus, .dlg textarea:focus { outline: none; border-color: rgba(122, 92, 240, 0.6); }
+
+.dlg-warn {
+  display: flex;
+  gap: 0.55rem;
+  background: color-mix(in srgb, var(--needs-you) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--needs-you) 30%, transparent);
+  border-radius: 9px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.dlg-warn b { color: var(--needs-you); font-weight: 600; }
+
+.dlg-live {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-bottom: var(--gap);
-  padding: 0.5rem;
+  background: var(--ink-850);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  padding: 0.5rem 0.6rem;
 }
 
-.approval-tool {
-  font-weight: 600;
-  margin: 0;
-}
+.dlg-row { display: flex; gap: 0.5rem; align-items: center; font-size: 0.84rem; color: var(--text-soft); }
 
-.approval-summary,
-.approval-deadline {
-  font-size: 0.85rem;
-  margin: 0;
-}
+.dlg-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
 
-.approval-choice {
-  font: inherit;
-}
+.dlg-choices { display: flex; flex-direction: column; gap: 0.4rem; }
 
-/* D8's toggle, visible at all times — never a modal, never behind a menu. */
-.chat-autonomy {
-  align-items: baseline;
+.dlg-choice {
   display: flex;
-  gap: var(--gap);
-  padding-top: 0.75rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-align: left;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+  color: var(--text);
 }
 
-.chat-autonomy-value {
-  font-weight: 600;
+.dlg-choice:hover { border-color: var(--violet); background: var(--ink-750); }
+.dlg-choice[data-danger="true"]:hover { border-color: var(--error); }
+.dlg-choice small { color: var(--text-dim); font-size: 0.78rem; }
+
+@media (max-width: 760px) {
+  .panes2 { grid-template-columns: minmax(0, 1fr); }
+  .panes2 > * { display: none; }
+  .panes2[data-level="list"] .herd-col,
+  .panes2[data-level="detail"] .proj-detail { display: flex; }
 }
 
-/* D25's literal tail: monospace, because it is a log and reads like one. */
-.chat-audit {
-  font-family: ui-monospace, monospace;
-  font-size: 0.8rem;
-  max-height: 12rem;
+/* ===================== stub pages ======================================== */
+
+.stub {
+  max-width: 34rem;
+  margin: 3.5rem auto;
+  padding: 0 1.1rem;
+  text-align: center;
+}
+
+.stub-mark {
+  width: 46px; height: 46px; margin: 0 auto 1rem;
+  border-radius: 12px;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  display: grid; place-items: center;
+  color: var(--text-dim);
+}
+
+.stub-mark svg { width: 21px; height: 21px; }
+
+.stub h2 { font-size: 1.05rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+.stub p { color: var(--text-soft); margin: 0 0 1rem; font-size: 0.9rem; }
+
+.stub-list {
+  text-align: left;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--ink-850);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.stub-list div { padding: 0.35rem 0; }
+.stub-list div + div { border-top: 1px solid var(--line-soft); }
+.stub-list b { color: var(--text); font-weight: 500; }
+
+/* ===================== phone ============================================= */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 5, 8, 0.6);
+  z-index: 9;
+  border: none;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .shell, .shell[data-rail="collapsed"] { grid-template-columns: minmax(0, 1fr); }
+
+  .pane {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--rail-w);
+    z-index: 10;
+    translate: -100% 0;
+    transition: translate 200ms ease;
+    border-right: 1px solid var(--line);
+  }
+
+  .shell[data-drawer="open"] .pane { translate: 0 0; }
+
+  .shell[data-rail="collapsed"] .wordmark,
+  .shell[data-rail="collapsed"] .nav-text,
+  .shell[data-rail="collapsed"] .nav-badge,
+  .shell[data-rail="collapsed"] .pane-label,
+  .shell[data-rail="collapsed"] .pane-foot-text { display: revert; }
+
+  .shell[data-rail="collapsed"] .nav-item { justify-content: flex-start; padding-inline: 0.55rem; }
+  .shell[data-rail="collapsed"] .pane-collapse { display: grid; }
+  .shell[data-rail="collapsed"] .pane-foot { justify-content: flex-start; }
+
+  .drawer-open { display: grid; place-items: center; }
+  .thread { padding-top: 1.1rem; gap: 1.25rem; }
+  .bubble { max-width: 92%; }
+}
+
+
+@media (max-width: 900px) {
+  .herd { grid-template-columns: minmax(0, 1fr); }
+  .herd-col { display: none; border-right: none; }
+  .legend { gap: 0.3rem 0.8rem; padding: 0.5rem 0.8rem; }
+  .legend-note { display: none; }
+  .herd[data-level="projects"] .col-projects,
+  .herd[data-level="sessions"] .col-sessions,
+  .herd[data-level="detail"]   .col-detail { display: flex; }
+  .back { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* ===================== settings ========================================== */
+
+.set-nav { display: flex; flex-direction: column; padding: 0 0.5rem 1rem; }
+
+.set-group {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0.9rem 0.6rem 0.3rem;
+}
+
+.set-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.42rem 0.6rem;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-soft);
+  text-align: left;
+  font-size: 0.88rem;
+  position: relative;
+}
+
+.set-item:hover { background: var(--ink-800); color: var(--text); }
+.set-item[aria-current="true"] { background: var(--violet-soft); color: var(--text); }
+
+.set-item[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 50%;
+  translate: 0 -50%;
+  width: 3px; height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--violet);
+}
+
+.soon {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+.set-panel { display: flex; flex-direction: column; min-width: 0; overflow-y: auto; }
+
+.set-body {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 44rem;
+}
+
+.set-lead { margin: 0; font-size: 0.88rem; color: var(--text-soft); max-width: 62ch; }
+
+.notbuilt {
+  display: flex;
+  gap: 0.55rem;
+  background: var(--ink-850);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+}
+
+.notbuilt b { color: var(--text-soft); font-weight: 600; }
+
+.rows { display: flex; flex-direction: column; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  flex-wrap: wrap;
+}
+
+.row:last-child { border-bottom: none; }
+
+.row-text { flex: 1; min-width: 12rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.row-name { font-size: 0.89rem; color: var(--text); }
+.row-note { font-size: 0.79rem; color: var(--text-dim); }
+.row-ctl { flex: none; display: flex; align-items: center; gap: 0.5rem; }
+
+.row-value {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  width: 5.5rem;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  padding: 0.2rem 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.num:focus { outline: none; border-color: rgba(122, 92, 240, 0.6); }
+
+/* a switch that reads as a switch */
+.sw {
+  position: relative;
+  width: 36px; height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--ink-750);
+  cursor: pointer;
+  padding: 0;
+  flex: none;
+}
+
+.sw::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: left 140ms ease, background 140ms ease;
+}
+
+.sw[aria-checked="true"] { background: var(--violet-soft); border-color: var(--violet); }
+.sw[aria-checked="true"]::after { left: 18px; background: var(--violet); }
+.sw[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.3rem 1rem;
+  font-size: 0.83rem;
+}
+
+.facts dt { color: var(--text-dim); }
+.facts dd { margin: 0; font-family: var(--mono); color: var(--text-soft); overflow-x: auto; }
+
+.audit {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 18rem;
   overflow: auto;
 }
 
-.audit-line {
-  margin: 0;
-  white-space: pre;
+.audit-row { display: flex; gap: 0.9rem; padding: 0.2rem 0; color: var(--text-soft); }
+.audit-when { color: var(--text-dim); flex: none; }
+.audit-what { flex: 1; min-width: 0; }
+.audit-yes { color: var(--finished); flex: none; }
+.audit-no { color: var(--error); flex: none; }
+
+
+/* ---- work source (D63, D64) --------------------------------------------- */
+
+.src { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.src-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+
+.src-provider {
+  font-size: 0.9rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
+
+.src-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--text-dim); }
+.src-dot[data-on="true"] { background: var(--finished); box-shadow: 0 0 0 3px color-mix(in srgb, var(--finished) 15%, transparent); }
+
+.src-state {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.chip-f {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  background: var(--ink-850);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.79rem;
+  color: var(--text-soft);
+}
+
+.chip-f b { color: var(--text-dim); font-weight: 400; font-size: 0.72rem; }
+
+.src-count { font-size: 0.82rem; color: var(--text-soft); }
+.src-count b { color: var(--finished); font-weight: 600; }
+
+/* the filter editor */
+.filter-field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.filter-name {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.pick {
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.86rem;
+  width: 100%;
+}
+
+.pick:focus { outline: none; border-color: rgba(122, 92, 240, 0.6); }
+
+.opt {
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-soft);
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.opt[aria-pressed="true"] {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+  color: var(--text);
+}
+
+.advanced summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  list-style: none;
+}
+
+.advanced summary::-webkit-details-marker { display: none; }
+.advanced[open] summary { margin-bottom: 0.35rem; }
+
+
+/* ---- the legend sheet: one target, all eight at once (U1) --------------- */
+
+.legend-info {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-dim);
+  padding: 0.1rem 0.55rem 0.1rem 0.4rem;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-family: inherit;
+}
+
+.legend-info:hover { color: var(--text); border-color: var(--text-dim); }
+.legend-info svg { width: 13px; height: 13px; flex: none; }
+
+dialog.sheet { width: min(34rem, calc(100vw - 24px)); }
+
+.sheet-body { display: flex; flex-direction: column; gap: 0.9rem; padding: 1rem 1.1rem 1.15rem; }
+
+.sheet-head { display: flex; align-items: baseline; gap: 0.6rem; }
+.sheet-head h3 { margin: 0; font-size: 1rem; letter-spacing: -0.01em; }
+.sheet-head p { margin: 0; font-size: 0.8rem; color: var(--text-dim); }
+
+.sheet-list { display: flex; flex-direction: column; }
+
+.sheet-row {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr);
+  gap: 0.1rem 0.6rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.sheet-row:last-child { border-bottom: none; }
+
+.sheet-glyph { grid-row: 1 / 3; font-size: 0.9rem; line-height: 1.4; color: var(--b); text-align: center; }
+
+.sheet-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sheet-acts {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--b-text);
+  font-weight: 600;
+}
+
+.sheet-text { font-size: 0.83rem; line-height: 1.5; color: var(--text-soft); margin: 0.1rem 0 0; }
+
+@media (max-width: 600px) {
+  dialog.sheet {
+    width: 100vw;
+    max-width: 100vw;
+    margin: 0;
+    position: fixed;
+    inset: auto 0 0 0;
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    max-height: 86vh;
+  }
+  .sheet-body { padding-bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+}
+
+
+/* U16's wash lives on `.card` itself, up where the card is defined, and the
+   five rejected treatments — including the `.card-chip` pill — did not port.
+   This is where the prototype kept the comparison; nothing is left to keep. */
+
