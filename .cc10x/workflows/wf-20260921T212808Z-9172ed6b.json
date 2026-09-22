@@ -48,7 +48,9 @@
     "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed.",
     "Phase 9 RATIFIED: #dlg-project and #dlg-delete are built by mountProjects() inside #page-projects rather than declared in index.html. A departure from T9.1's Consumes line, forced by the contract-first mode and better regardless - one reader, one contract.",
     "Phase 9 RATIFIED: the first delete POST carries NO on_running key at all, not 'refuse'. A key that is absent cannot be edited out of the body; a key spelled 'refuse' can.",
-    "Phase 9 RATIFIED: the page confirms before it asks, because delete_project destroys on its first call and no dry-run route exists."
+    "Phase 9 RATIFIED: the page confirms before it asks, because delete_project destroys on its first call and no dry-run route exists.",
+    "GAP 3 RESOLVED as set_project_description, a new verb rather than a widened rename_project. A verb called rename that edits a description is a verb whose name is wrong, and a two-field verb would have to invent absent-means-unchanged beside null-means-clear at the one surface where clearing is real intent. Named set_project_description rather than set_description because the registry is flat and a description is a field more than one thing has.",
+    "The 450-line cap gate is now GLOBBED rather than a hand-written tuple. tools_m1.py (574) and tools_master.py (505) have been OVER the cap since M1 and were never measured, because the tuple never named them; three more modules were never measured at all. Both are grandfathered BY NAME and PINNED AT THEIR CURRENT SIZE rather than exempted - so they cannot grow, and the exemption is visible rather than structural."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -300,7 +302,11 @@
     "phase-1": "remediation_in_progress",
     "phase-5-T5.2": "in_progress",
     "phase-3": "partial_held_for_merge",
-    "phase-9": "built_held_for_integration"
+    "phase-9": "merged",
+    "phase-6": "merged",
+    "phase-7": "merged",
+    "backend-gaps-remfix": "completed",
+    "integration": "in_progress"
   },
   "deferred_findings": [
     {
@@ -386,6 +392,12 @@
       "phase_id": "phase-9",
       "severity": "minor",
       "finding": "GAP 5 destructive-first-call: delete_project destroys on its first call when nothing is running, so a 'probe for the refusal' would destroy any idle project. The page confirms before it asks. A dry-run would close it properly."
+    },
+    {
+      "source": "backend-gaps remfix",
+      "phase_id": "phase-3",
+      "severity": "minor",
+      "finding": "The kill catch is `except Exception` precisely because nothing proves the shipped kill raises only RunnerRefusal. A kill that HANGS still blocks the verb - no timeout was added. And `killable` means the kill path has a pane to address, not that the kill will land; a stale handle is still a refusal, which is the blocking item's own case."
     }
   ],
   "results": {
@@ -656,9 +668,13 @@
       "event": "phase_9_built",
       "ts": "2026-09-22T08:29:11Z",
       "detail": "all seven verbs driven end to end; five contract gaps found at the verb/consumer seam"
+    },
+    {
+      "event": "backend_gaps_closed",
+      "ts": "2026-09-22T09:24:40Z"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T08:29:11Z"
+  "updated_at": "2026-09-22T09:24:40Z"
 }
