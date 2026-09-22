@@ -333,6 +333,41 @@ The cheaper structural answer is the one already in use for the UI phases —
 give each parallel agent a worktree, which gives it its own index too — and to
 keep in-place parallelism only for agents whose file sets are provably disjoint.
 
+### A worktree is not cut from where you think, and presence alone cannot tell you (2026-09-22)
+
+Every agent worktree this harness creates was cut from the **same old commit**,
+25 behind the branch carrying the work it depended on. Phase 3's builder caught
+it at pre-flight, before writing a line, because its brief carried a one-line
+base check.
+
+**The decisive signal was the symbol that was still there, not the one that was
+missing.** The base lacked `create_project` — which on its own is equally
+consistent with "stale base", "verb renamed", and "verb lives in another
+module". What settled it was that `upsert_workspace` was **present**, and Phase 1
+had deleted it.
+
+So: **assert base validity with a presence check AND an absence check.**
+
+```
+git show HEAD:<file> | grep -c "def <new_symbol>"      # expect 1
+git show HEAD:<file> | grep -c "def <retired_symbol>"  # expect 0
+```
+
+Presence alone cannot distinguish a stale base from a partial one.
+
+Two more things worth keeping:
+
+- **Check the base before the work, not after.** The cost here was one agent
+  spin-up and no wasted code. The same gap discovered three tasks in would have
+  produced work built against verbs that do not exist, and a RED that is a
+  collection error rather than a behavioural failure — a **false RED**, which
+  the contract rejects anyway.
+- **Not every worktree is harmed by a stale base.** Two earlier ones were cut
+  from the same commit and were fine, verified rather than assumed: their inputs
+  (`core/stops.py`, `runner/pane.py`) were byte-identical across the gap. The
+  question is never "is the base current" but "is the base current **for what
+  this task reads**".
+
 ## Last Updated
 
 2026-09-21.
