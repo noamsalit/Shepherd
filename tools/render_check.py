@@ -18,7 +18,7 @@ data. Those are exactly the failures a local file cannot have.
 
     /root/Shepherd/.venv/bin/python tools/render_check.py --file shepherd-dark.html
     /root/Shepherd/.venv/bin/python tools/render_check.py --url http://127.0.0.1:8765/
-    /root/Shepherd/.venv/bin/python tools/render_check.py --url http://127.0.0.1:8765/ --fail-on-empty
+    /root/Shepherd/.venv/bin/python tools/render_check.py --url http://127.0.0.1:8765/ --fail-on-empty --must-fill
 
 A bare positional target still works and is still classified by its scheme, so
 every command already written down keeps running.
@@ -47,6 +47,40 @@ DRAWER_SELECTOR = "#drawer-open"
 # Every page root, so the loop can assert *exclusivity* rather than presence.
 PAGE_ROOT_SELECTOR = '[id^="page-"]'
 
+# How far a box may miss the edge of the viewport before it is called a defect.
+# One pixel, the same tolerance the horizontal-overflow gate uses.
+SLACK_PX = 1
+
+# How much of the viewport a page root must reach down to. Measured, not chosen:
+# **all twelve** healthy readings on the shipped page — six pages × two
+# viewports — put the root's bottom edge exactly on the bottom of the viewport,
+# and the one recorded defect of this shape (`.main > .detail` losing its
+# `flex: 1`, so the Shepherd page became a content-height box at the top of an
+# empty column) read 0.25 and 0.26. The floor sits between the two with a lot of
+# room on both sides, because this is a check for **collapsed**, not a pixel
+# comparison, and a gate that goes red when a font changes gets turned off.
+#
+# **Opt-in (`--must-fill`), unlike every other assertion here.** "Every page
+# root fills the column it is given" is a claim about *this* shell's layout
+# contract, not a property of web pages: a page whose root is a content-height
+# `<section>` is a perfectly good page, and four of this tool's own fixtures are
+# exactly that. Making it unconditional turned those four red — which would have
+# been a checker rejecting correct pages, the opposite of the defect it is here
+# to catch.
+FILL_FLOOR = 0.75
+
+# What the browser is asked for, per page root, in one round trip — one layout
+# pass, so the numbers cannot straddle a reflow and disagree about a page that
+# was never in either state.
+ROOT_METRICS = """
+(selector) => {
+  const el = document.querySelector(selector);
+  if (!el) return null;
+  const box = el.getBoundingClientRect();
+  return { top: box.top, bottom: box.bottom, height: box.height };
+}
+"""
+
 # (page, what must be visible once it is open)
 #
 # Six pages, in nav order (`docs/design/ui-decisions.md`). The `must_see` string
@@ -73,6 +107,7 @@ class Args:
     target: str
     shots: Path
     fail_on_empty: bool
+    must_fill: bool
 
 
 def target_url(target: str) -> str:
@@ -120,6 +155,12 @@ def parse_args(argv: list[str]) -> Args:
         action="store_true",
         help="fail when the origin hands over a page with no text at all",
     )
+    parser.add_argument(
+        "--must-fill",
+        action="store_true",
+        help="fail when a page root does not reach the bottom of the viewport "
+        "(this shell's contract; not every page's)",
+    )
     ns = parser.parse_args(argv)
 
     # `--url "$VAR"` with `VAR` unset hands argparse an empty string, and a
@@ -142,10 +183,72 @@ def parse_args(argv: list[str]) -> Args:
         parser.error(f"unexpected extra arguments: {' '.join(rest[1:])}")
 
     shots = Path(rest[0]) if rest else default_shots(target)
-    return Args(target=target, shots=shots, fail_on_empty=ns.fail_on_empty)
+    return Args(
+        target=target, shots=shots, fail_on_empty=ns.fail_on_empty, must_fill=ns.must_fill
+    )
 
 
-def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
+def viewport_faults(
+    page: object, target: str, viewport_height: float, must_fill: bool
+) -> list[str]:
+    """Is this page actually **on the screen**? The gate that did not exist.
+
+    Two of the five defects the first live drive found were pages that rendered
+    perfectly and could not be read, and this tool reported *12 pages checked ·
+    12 screenshots · 0 failures* over both: nothing overflowed horizontally,
+    nothing threw, exactly one root was visible and every page still named
+    itself. Reverting either fix turned nothing red in the whole tree except a
+    byte-freeze digest, which any changed byte trips and which says nothing
+    about the page. It took a person looking at a screenshot.
+
+    So the root is **measured** rather than inferred from what it contains:
+
+    * it has a height at all — a root laid out at zero height is a page nobody
+      can read, however correct its markup;
+    * it is inside the viewport, top and bottom, to the same one pixel the
+      horizontal gate allows;
+    * and it **reaches the bottom of the column it was given**. That is the one
+      that bites: `.main > .detail` carries `flex: 1` and losing it made the
+      Shepherd page a content-height box at the top of an empty column with its
+      composer unpinned, at `FILL_FLOOR`'s 0.25 against twelve healthy readings
+      of 1.00.
+
+    **What this deliberately does not try to see**, because a checker that
+    claims more than it measures is worse than one that claims less: anything
+    *inside* the root. `.herd` declaring two grid rows while carrying three
+    items crushed the three panes into a 99px strip — and the root's own box was
+    byte-identical to the healthy one (56 → 900 of a 900px viewport) in both
+    states. No per-root rectangle can distinguish those, and encoding the panes'
+    own selectors here would be a second spelling of
+    `tests/web/test_shell_live.py::test_each_page_root_fills_the_column_it_is_given`,
+    which already holds that claim with both mutations recorded against it. A
+    rule written down twice is a rule that drifts.
+    """
+    metrics = page.evaluate(ROOT_METRICS, f"#page-{target}")  # type: ignore[attr-defined]
+    if metrics is None:
+        return ["the page root vanished before it could be measured"]
+
+    faults: list[str] = []
+    screen = round(viewport_height)
+    if metrics["height"] <= 0:
+        faults.append("the page root is laid out with zero height")
+    if metrics["top"] < -SLACK_PX:
+        faults.append(f"the page root starts {round(-metrics['top'])}px above the viewport")
+    if metrics["bottom"] > viewport_height + SLACK_PX:
+        over = round(metrics["bottom"] - viewport_height)
+        faults.append(f"the page root is below the fold — it ends {over}px past a {screen}px viewport")
+    elif must_fill and metrics["bottom"] < viewport_height * FILL_FLOOR:
+        short = round(viewport_height - metrics["bottom"])
+        faults.append(
+            f"the page root is collapsed above the fold — it ends {short}px short of "
+            f"a {screen}px viewport, with an empty column beneath it"
+        )
+    return faults
+
+
+def check(
+    origin: str, shots: Path, fail_on_empty: bool = False, must_fill: bool = False
+) -> int:
     """Drive every page at every viewport. `origin` is a URL or a path."""
     url = target_url(origin)
     failures: list[str] = []
@@ -247,6 +350,11 @@ def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
                 if must_see not in view.inner_text():
                     failures.append(f"[{name}] {target} is missing {must_see!r}")
 
+                failures.extend(
+                    f"[{name}] {target}: {complaint}"
+                    for complaint in viewport_faults(page, target, height, must_fill)
+                )
+
                 if not shots_made:
                     # Lazily, so a run that never reached a page leaves no
                     # empty directory behind claiming it did.
@@ -284,4 +392,4 @@ if __name__ == "__main__":
     import sys
 
     args = parse_args(sys.argv[1:])
-    raise SystemExit(check(args.target, args.shots, args.fail_on_empty))
+    raise SystemExit(check(args.target, args.shots, args.fail_on_empty, args.must_fill))
