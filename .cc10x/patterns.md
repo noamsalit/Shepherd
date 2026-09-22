@@ -296,6 +296,43 @@ either drags the code down to the parser's era or quietly stops being run. It no
 parses in **chromium**, the engine the code actually runs in. Cost, recorded
 rather than absorbed: no line number for a module compile error.
 
+### Two agents on one branch share an INDEX, not just a tree (2026-09-22)
+
+Commit `09d3d5d`'s message is entirely about retiring an assumption in a plan.
+It also deletes `src/shepherd/signals/discovery.py` and its test — 125 lines —
+and says nothing about it.
+
+Nobody did anything unusual. A builder ran `git rm`, which **stages
+immediately**. The router then ran `git add -A docs/plans .cc10x && git commit`,
+and `git commit` commits **the whole index**, not the paths just added. So one
+agent's staged deletion rode into another's documentation commit.
+
+Nothing was lost and the tree is correct. What was lost is the *record*: a
+reader looking for when discovery was deleted finds it under a message about
+something else, and `git log -- <path>` points at the wrong intent.
+
+**The rule: when more than one agent can write to a branch, commit by path, not
+by index.**
+
+```
+git commit -m "…" -- docs/plans .cc10x      # only these paths, index ignored
+```
+
+not
+
+```
+git add -A docs/plans .cc10x && git commit  # everything staged, by anyone
+```
+
+The same session also saw `HEAD` move under a running builder twice, and a
+second `pytest` running concurrently with a builder's own run. None of those
+broke anything here, but they are the same family: **the branch is shared
+mutable state, and only the working tree feels private.**
+
+The cheaper structural answer is the one already in use for the UI phases —
+give each parallel agent a worktree, which gives it its own index too — and to
+keep in-place parallelism only for agents whose file sets are provably disjoint.
+
 ## Last Updated
 
 2026-09-21.
