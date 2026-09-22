@@ -21,6 +21,7 @@ import pytest
 from shepherd.core.clock import stamp
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
+from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict
 from shepherd.store import models, reads, writes
 from shepherd.store.db import Store, StoreError, open_store
 from shepherd.store.migrate import migrate
@@ -655,6 +656,8 @@ def plant_session(
     ended_at: str | None = None,
     parent_session_id: str | None = None,
     retry_of: str | None = None,
+    ownership: Ownership = Ownership.ATTACHED,
+    runner_handle: str | None = None,
 ) -> None:
     """A session row, including the two columns `session` points at itself with.
 
@@ -663,16 +666,24 @@ def plant_session(
     matrix cannot reach: `test_delete_is_total_over_its_matrix` called itself
     total while the input that made the cascade abort — a surviving child of a
     deleted parent — was unreachable from here.
+
+    `ownership` and `runner_handle` are parameters for the same reason one rung
+    up. They were hardcoded to `attached`/null, and the real kill path answers
+    `no_pane(session_id)` — a kill that cannot land — for exactly a session with
+    no runner handle. So the fixture could only express the session production
+    *cannot* kill, while the matrix's KILL cells were driven by a callable that
+    returned `True` and touched no row: a claim with no store effect, the one
+    input the commit half must refuse.
     """
     connection.execute(
         "INSERT INTO session (id, workspace_id, origin, ownership, engine, started_at,"
-        " state, last_event_at, ended_at, parent_session_id, retry_of)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " state, last_event_at, ended_at, parent_session_id, retry_of, runner_handle)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             session_id,
             workspace_id,
             str(Origin.EXTERNAL.value),
-            str(Ownership.ATTACHED.value),
+            str(ownership.value),
             "claude_code",
             started_at,
             str(SessionState.STOPPED.value if ended_at else SessionState.RUNNING.value),
@@ -680,6 +691,7 @@ def plant_session(
             ended_at,
             parent_session_id,
             retry_of,
+            runner_handle,
         ),
     )
 
@@ -1049,8 +1061,14 @@ def test_delete_refuses_by_default_and_names_the_running_sessions(
 
 
 def test_delete_with_kill_stops_them_then_cascades(connection: sqlite3.Connection) -> None:
-    """D61 — the kill happens **through the caller's kill path**, before the
-    cascade. `store/` does not learn about runners; it is handed a callable.
+    """D61 — the kill happens **through the caller's kill path**, between the
+    two halves. `store/` never learns about runners.
+
+    The kill here **stops the session** (`apply_stop_verdict`, which writes
+    `ended_at`), because that is the only kill production makes. It used to
+    only append to a list and return `True`, and the commit half accepted the
+    claim: this test passed over a world where the agent was still running and
+    its row was deleted anyway.
     """
     project = writes.create_project(connection, name="api", description=None)
     plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
@@ -1059,10 +1077,11 @@ def test_delete_with_kill_stops_them_then_cascades(connection: sqlite3.Connectio
         " VALUES ('m-1', 's-live', 'k1', 'hi', 'user_ui', '2026-01-01T00:00:00Z')"
     )
     killed: list[str] = []
+    stop = a_landed_kill(connection)
 
     def kill(session_id: str) -> bool:
         killed.append(session_id)
-        return True
+        return stop(session_id)
 
     outcome = delete_project(
         connection,
@@ -1112,7 +1131,16 @@ def test_delete_with_orphan_moves_them_to_unassigned(connection: sqlite3.Connect
 #: surviving row pointing into the doomed cohort is what made the cascade abort
 #: — an input the old three-axis product could not express, because
 #: `plant_session` had no parameter for either column.
-LINEAGE_SHAPES: tuple[str | None, ...] = (None, "parent_session_id", "retry_of")
+#: The two are **not** exclusive — a retry of a session that also had a parent
+#: sets both columns on the one row, and the old `None | parent | retry`
+#: spelling could not reach that cell. It is the shape that severs twice, and
+#: the only one that exercises `_sever_lineage`'s loop as a loop.
+LINEAGE_SHAPES: tuple[tuple[str, ...], ...] = (
+    (),
+    ("parent_session_id",),
+    ("retry_of",),
+    ("parent_session_id", "retry_of"),
+)
 
 
 def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None:
@@ -1127,6 +1155,17 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
     `PRAGMA foreign_key_check` after **every** cell — asserted until now only
     after the migration, never after the verb that carries the cascade, which is
     the check that would have found this for free.
+
+    **And the KILL cells were driven by a kill that cannot happen.** They used
+    `kills_cleanly`, which returns `True` and touches no row — a claim with no
+    store effect, which is the one input the commit half must now refuse. Every
+    KILL cell therefore certified a state production never produces. The kill
+    here is `a_landed_kill`: it writes `ended_at` through `apply_stop_verdict`,
+    the way `orchestration/lifecycle.py` does, and the session it stops carries
+    a `runner_handle` because a session without one is the case the real kill
+    path answers `no_pane` to. The *did-not-land* branch is driven by
+    `test_the_commit_half_reports_only_kills_the_store_saw_land`, which keeps
+    `kills_cleanly` as its negative control.
     """
     import itertools
 
@@ -1139,7 +1178,7 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         else:
             workspace_id = f"w-nope-{index}"
         if exists and has_running:
-            if lineage is not None:
+            if lineage:
                 # The ancestor has **ended**, so it is not in the running set:
                 # the cascade deletes it outright while the live row survives.
                 plant_session(
@@ -1149,12 +1188,17 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
             plant_session(
                 connection, f"s-{index}", workspace_id,
                 started_at="2026-01-01T00:00:00Z",
-                parent_session_id=f"anc-{index}" if lineage == "parent_session_id" else None,
-                retry_of=f"anc-{index}" if lineage == "retry_of" else None,
+                parent_session_id=f"anc-{index}" if "parent_session_id" in lineage else None,
+                retry_of=f"anc-{index}" if "retry_of" in lineage else None,
+                ownership=Ownership.OWNED,
+                runner_handle=f"pane-{index}",
             )
 
         outcome = delete_project(
-            connection, workspace_id=workspace_id, on_running=choice, kill=kills_cleanly
+            connection,
+            workspace_id=workspace_id,
+            on_running=choice,
+            kill=a_landed_kill(connection),
         )
 
         cell = (exists, has_running, lineage, choice)
@@ -1171,14 +1215,27 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         # Never silent: every cell says either *why not* or *what it did*.
         assert outcome.refused is not None or outcome.deleted is True, cell
 
+        # `killed` names the sessions the store **saw stop**, and only under
+        # KILL. It used to name the ones whose kill had *not* landed.
+        assert outcome.killed == (
+            (f"s-{index}",)
+            if exists and has_running and choice is models.OnRunning.KILL
+            else ()
+        ), cell
+
         # The severing is reported, never silent — and only where a row
-        # actually survived the cascade still pointing into it.
-        survives = exists and has_running and lineage is not None and (
+        # actually survived the cascade still pointing into it. Under KILL the
+        # live row is now ended, so the cascade takes it and nothing survives.
+        survives = exists and has_running and bool(lineage) and (
             choice is models.OnRunning.ORPHAN
         )
         assert outcome.severed == (
-            (models.SeveredLink(session_id=f"s-{index}", column=lineage),)
-            if survives and lineage is not None
+            tuple(
+                models.SeveredLink(session_id=f"s-{index}", column=column)
+                for column in writes.LINEAGE_COLUMNS
+                if column in lineage
+            )
+            if survives
             else ()
         ), cell
 
@@ -1307,3 +1364,124 @@ def test_no_store_verb_takes_a_callable_the_caller_must_run() -> None:
             if origin is collections.abc.Callable or annotation is collections.abc.Callable:
                 offenders.append(f"Store.{name} accepts {parameter!r}, a callable")
     assert offenders == []
+
+
+def a_landed_kill(connection: sqlite3.Connection) -> typing.Callable[[str], bool]:
+    """The only kind of kill production makes — one that writes `ended_at`.
+
+    `orchestration/lifecycle.py` stops a session through
+    `store.apply_stop_verdict(...)`, whose single statement sets `ended_at`. So
+    after a kill that landed the store can see for **itself** that the session
+    stopped: `running_sessions_for` is `ended_at IS NULL`, and the row is no
+    longer in it.
+
+    `kills_cleanly` returns `True` and touches no row. That is a *claim*, and a
+    claim with no store effect is exactly the state the commit half must refuse
+    — so every KILL cell driven by it was certifying a world production never
+    produces. It survives as the **negative control**: see
+    `test_the_commit_half_reports_only_kills_the_store_saw_land`, whose second
+    half drives the did-not-land branch with precisely that.
+    """
+
+    def kill(session_id: str) -> bool:
+        writes.apply_stop_verdict(
+            connection,
+            session_id,
+            Verdict(
+                stop_reason=StopReason.USER_EXITED,
+                bucket=Bucket.FINISHED,
+                why="the delete stopped it",
+                confidence=1.0,
+                decided_by=DecidedBy.MECHANICAL,
+                next_actions=(),
+                waiting_on=None,
+                missing=(),
+            ),
+            "2026-01-01T02:00:00Z",
+            None,
+        )
+        return True
+
+    return kill
+
+
+def test_the_commit_half_reports_only_kills_the_store_saw_land(
+    connection: sqlite3.Connection,
+) -> None:
+    """`killed` was populated exactly when the kill did **not** land.
+
+    The filter was `session_id in killed` over `fresh.running`, a set
+    re-derived *after* the caller went away to kill things. A session genuinely
+    killed has `ended_at` written, so it is not in `fresh.running` and was
+    filtered **out** of the report; a session the caller only *claimed* to have
+    killed is still running, so it survived the filter and was reported. Two
+    harms from one line: the dialog told a person nothing was killed after
+    their sessions' rows were destroyed, and the survivor gate —
+    `fresh.running - killed` — took the caller's word over the store's own
+    fact, so a mistaken caller could talk the one safety check on the one verb
+    that destroys data out of firing.
+
+    Both branches are driven here, because a gate not seen to fail is not a
+    gate. **Landed** (`a_landed_kill`, the production path) must be reported.
+    **Not landed** (`kills_cleanly`, a bare `True` over an untouched row) must
+    refuse the delete and leave the row alive, whatever the caller says.
+    """
+    landed = writes.create_project(connection, name="landed", description=None)
+    plant_session(connection, "s-landed", landed.id, started_at="2026-01-01T00:00:00Z")
+
+    outcome = delete_project(
+        connection,
+        workspace_id=landed.id,
+        on_running=models.OnRunning.KILL,
+        kill=a_landed_kill(connection),
+    )
+    assert (outcome.deleted, outcome.killed) == (True, ("s-landed",))
+    assert outcome.destroyed == ("s-landed",)
+    assert reads.get_workspace(connection, landed.id) is None
+
+    # The other branch. The caller says it killed the session; the store can
+    # see that `ended_at` is still null, and the store's own fact wins.
+    lying = writes.create_project(connection, name="lying", description=None)
+    plant_session(connection, "s-lying", lying.id, started_at="2026-01-01T00:00:00Z")
+
+    refused = delete_project(
+        connection,
+        workspace_id=lying.id,
+        on_running=models.OnRunning.KILL,
+        kill=kills_cleanly,
+    )
+    assert refused.deleted is False
+    assert refused.running == ("s-lying",)
+    assert refused.killed == ()
+    assert refused.refused is not None
+    assert reads.get_workspace(connection, lying.id) is not None
+    assert [s.id for s in reads.running_sessions_for(connection, lying.id)] == ["s-lying"]
+
+
+def test_lineage_columns_is_every_self_reference_the_schema_declares(
+    connection: sqlite3.Connection,
+) -> None:
+    """`LINEAGE_COLUMNS` was a hand copy of the FK graph with nothing asserting it.
+
+    The constant exists because *"a cascade that knows one and not the other is
+    exactly the defect this constant exists to close"* — and nothing closed the
+    **third** one. Add a `REFERENCES session(id)` column the cascade does not
+    know and `commit_project_delete` raises `IntegrityError: FOREIGN KEY
+    constraint failed`, in a verb documented *"Never raises"*, leaving the
+    project permanently undeletable. The per-cell `PRAGMA foreign_key_check`
+    cannot catch that: the transaction aborts before the assertion runs.
+
+    So the expected set is **derived from the migrated schema** rather than
+    restated — the same instinct as pinning a constant by parsing the document
+    that states it. It fails closed: a migration that adds a self-reference
+    turns this red before the cascade ever meets it.
+    """
+    declared = {
+        str(row["from"])
+        for row in connection.execute("PRAGMA foreign_key_list(session)")
+        if str(row["table"]) == "session"
+    }
+    assert declared == set(writes.LINEAGE_COLUMNS)
+    # The cascade iterates the constant, so the count has to agree too: a
+    # duplicated entry would pass a set comparison and sever twice.
+    assert len(writes.LINEAGE_COLUMNS) == len(set(writes.LINEAGE_COLUMNS)) == len(declared)
