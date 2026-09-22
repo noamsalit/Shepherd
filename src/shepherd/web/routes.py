@@ -25,15 +25,12 @@ from dataclasses import dataclass
 #: §12: the one stream. It is not in `API_ROUTES` because it is not a call.
 SSE_PATH = "/api/events"
 
+#: The one path-parameter name production code reads: `resolve_terminal`
+#: answers with it. Its sibling `PROJECT_ID` lived here for a **test** to read,
+#: and a constant nothing in `src/` pins is one typo away from making that test
+#: vacuous and green — so the guard derives each template's parameters from the
+#: template now, and the constant is gone rather than kept as a decoration.
 SESSION_ID = "session_id"
-
-#: The project key, in the one spelling every consumer-facing surface uses (M1).
-#: Named here, beside `SESSION_ID`, because `test_no_body_field_shadows_a_path
-#: _parameter` asserts that no POST route declares either of them as a **body**
-#: field — the route gate checks `BODY_ARGS` against the tool's schema and never
-#: looks at path parameters, so a shadowing field passes every gate and
-#: disagrees with the URL only at run time.
-PROJECT_ID = "project_id"
 
 #: path template -> tool name. The templates are the public shape of the API.
 API_ROUTES: Mapping[str, str] = {
@@ -194,16 +191,27 @@ def _ordered(table: Mapping[str, str]) -> list[str]:
 
 
 def resolve(path: str, query: Mapping[str, list[str]]) -> Resolved | None:
-    """The tool a GET path names, with its declared arguments — or `None` (404)."""
+    """The tool a GET path names, with its declared arguments — or `None` (404).
+
+    **The path parameter is applied last**, the same way `resolve_post` applies
+    it, so the table-wide invariant this module states — *a path parameter
+    always wins* — is structural on both verbs. It used to merge the query
+    **after** the captured path here, which made the sentence half true: no GET
+    template collides with its own `QUERY_ARGS` today, so nothing was
+    exploitable, but the property was being held by the absence of a collision
+    rather than by the code.
+    """
     for template in _ordered(API_ROUTES):
         captured = _match(template, path)
         if captured is None:
             continue
+        args: dict[str, object] = {}
         for name in QUERY_ARGS.get(template, ()):
             values = query.get(name)
             if values:
-                captured[name] = values[0]
-        return Resolved(tool=API_ROUTES[template], args=captured)
+                args[name] = values[0]
+        args.update(captured)
+        return Resolved(tool=API_ROUTES[template], args=args)
     return None
 
 

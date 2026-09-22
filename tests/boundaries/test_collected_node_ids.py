@@ -35,6 +35,21 @@ COLLECT_ARGV = (
 #: this to be empty; it is not, and the entry says why rather than the clause
 #: being quietly widened.
 RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
+    "tests/web/test_routes_m3.py::test_no_body_field_shadows_a_path_parameter": (
+        "The name says `body`, and the property is now both tables. It enumerated two "
+        "names — `routes.SESSION_ID` and `routes.PROJECT_ID` — and checked them against "
+        "every template's `BODY_ARGS`: two of the three path parameters this table has, "
+        "with `approval_id` covered by a comment and nothing else, and keyed on constants "
+        "no production code reads, so a typo in one of them made the assertion vacuous and "
+        "green. It is renamed rather than edited in place because the subject changed: the "
+        "successor derives each template's `{…}` segments from the template itself, so it "
+        "cannot miss a parameter or go vacuous, and it applies the same loop to "
+        "`QUERY_ARGS`, which nothing checked at all. Re-proved by the named successor in "
+        "the same file, test_no_declared_field_shadows_a_path_parameter, whose gate is seen "
+        "to fail by test_the_shadow_guard_catches_the_parameter_the_enumeration_missed.",
+        "P13/M1's invariant is unchanged; the retirement is recorded per §0 in "
+        "docs/plans/projects-ui-blockers/t3-4-remfix.md (T3.4 remediation).",
+    ),
     "tests/toolsurface/test_tools_m3.py::test_the_three_modules_are_each_under_the_cap": (
         "The name is the defect. It built `sizes` from an explicit seven-path tuple and "
         "asserted `len(sizes) == 7`, so an eighth `tools_*.py` was simply not in the tuple: "

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import socket
 import threading
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -231,29 +231,83 @@ def test_an_undeclared_body_field_is_dropped(
     assert resolved.args == {"session_id": session_id}
 
 
-def test_no_body_field_shadows_a_path_parameter() -> None:
-    """No POST route declares `session_id` — **or `project_id`** — as a body field.
+def path_parameters(template: str) -> tuple[str, ...]:
+    """The `{…}` segments of one template — the property's subject, **derived**.
 
-    This is the property that actually keeps a body from redirecting a kill
-    today, and it was found by mutation: reversing the merge order inside
+    The guard used to enumerate two names (`routes.SESSION_ID` and
+    `routes.PROJECT_ID`) and check them against every template's fields. Two of
+    the three path parameters this table has: `approval_id` was covered by a
+    comment and nothing else. Worse, the check was keyed on constants no
+    production code reads, so a typo in one of them made the assertion
+    **vacuous and green** — it would have gone on checking that a name nothing
+    uses is absent from every route.
+
+    Reading the parameters off the template cannot go vacuous and cannot miss
+    one: every present and future path parameter is in its own template.
+    """
+    return tuple(
+        part[1:-1]
+        for part in template.split("/")
+        if part.startswith("{") and part.endswith("}")
+    )
+
+
+def shadowing(table: Mapping[str, tuple[str, ...]]) -> list[tuple[str, str]]:
+    """Every (template, field) where a declared field is spelled like one of
+    that template's own path parameters."""
+    return [
+        (template, parameter)
+        for template, names in table.items()
+        for parameter in path_parameters(template)
+        if parameter in names
+    ]
+
+
+def test_no_declared_field_shadows_a_path_parameter() -> None:
+    """No route declares one of its **own** path parameters as a field.
+
+    This is the property that actually keeps a body from redirecting a kill,
+    and it was found by mutation: reversing the merge order inside
     `resolve_post` **survived**, because `BODY_ARGS` had already dropped the
     colliding field. The guard was held incidentally, so the property it was
     held by is asserted here by name (T11's method).
 
-    **`project_id` joins it at T4.2 (P13/M1).** Five of the Projects page's
-    routes take it as a path parameter, and the route gate one file over checks
-    `BODY_ARGS` against the tool's schema and **never looks at path
-    parameters** — so a body field spelled the same as a path parameter passes
-    every gate this repo has and only disagrees at run time, in Phase 9, in a
-    browser. Both spellings are checked here, where the table is.
+    **Both tables, and every parameter** (T3.4). The route gate one file over
+    checks `BODY_ARGS` against the tool's schema and never looks at path
+    parameters, so a shadowing field passes every gate this repo has and
+    disagrees with the URL only at run time, in a browser. `QUERY_ARGS` is the
+    same table with a different verb in front of it and is now checked the same
+    way.
+
+    The counts are stated so a route added without a declared body fails here
+    rather than shrinking the evidence silently.
     """
-    for template, names in routes.BODY_ARGS.items():
-        assert routes.SESSION_ID not in names, template
-        assert routes.PROJECT_ID not in names, template
-    # M3's seven, T24's three, and the Projects page's five. The count is stated
-    # so a route added without a declared body fails here rather than shrinking
-    # the evidence silently.
+    assert shadowing(routes.BODY_ARGS) == []
+    assert shadowing(routes.QUERY_ARGS) == []
+    # M3's seven, T24's three, and the Projects page's five.
     assert len(routes.BODY_ARGS) == 15
+    assert len(routes.QUERY_ARGS) == 3
+    # The derivation is not vacuous: the templates it reads really do carry
+    # path parameters, and one of them is the `approval_id` the enumeration
+    # never covered.
+    assert path_parameters("/api/approvals/{approval_id}") == ("approval_id",)
+    assert path_parameters("/api/projects") == ()
+
+
+def test_the_shadow_guard_catches_the_parameter_the_enumeration_missed() -> None:
+    """The gate, seen to fail — on the case the enumerated version survived.
+
+    `approval_id` was named in a comment and checked by nothing. A table that
+    declares it as a body field is flagged here; under the two-name enumeration
+    it was green, and `decide_approval` would have taken its target from the
+    body.
+    """
+    planted = {**routes.BODY_ARGS, "/api/approvals/{approval_id}": ("choice", "approval_id")}
+    assert shadowing(planted) == [("/api/approvals/{approval_id}", "approval_id")]
+    # …and the same loop bites on a query parameter, which nothing checked at all.
+    assert shadowing({"/api/sessions/{session_id}": ("session_id",)}) == [
+        ("/api/sessions/{session_id}", "session_id")
+    ]
 
 
 def test_the_path_parameter_wins_over_a_body_that_names_another_session(
@@ -278,6 +332,36 @@ def test_the_path_parameter_wins_over_a_body_that_names_another_session(
     )
     assert resolved is not None
     assert resolved.tool == "kill_session"
+    assert resolved.args == {"session_id": "wanted"}
+
+
+def test_the_path_parameter_wins_over_a_query_that_names_another_session(
+    monkeypatch: object,
+) -> None:
+    """The same property on the **GET** side, which is where it was half true.
+
+    `routes.py`'s own docstring states it table-wide — *"a path parameter always
+    wins"* — and only `resolve_post` held it: `resolve` merged the query
+    **after** the captured path, so a declared query parameter spelled like a
+    path one would overwrite the URL's value. Nothing was exploitable, because
+    no GET template collides with its own `QUERY_ARGS` today; an invariant that
+    holds by the absence of a collision is an invariant that ends the day
+    somebody declares one.
+
+    Declared here for one route and watched, exactly as the POST twin above
+    does, so reversing the merge inside `resolve` turns this red rather than
+    surviving on a field nobody declared.
+    """
+    import pytest as _pytest
+
+    assert isinstance(monkeypatch, _pytest.MonkeyPatch)
+    widened = dict(routes.QUERY_ARGS)
+    widened["/api/sessions/{session_id}"] = ("session_id",)
+    monkeypatch.setattr(routes, "QUERY_ARGS", widened)
+
+    resolved = routes.resolve("/api/sessions/wanted", {"session_id": ["somebody-else"]})
+    assert resolved is not None
+    assert resolved.tool == "get_session"
     assert resolved.args == {"session_id": "wanted"}
 
 
