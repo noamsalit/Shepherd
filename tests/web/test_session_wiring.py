@@ -281,6 +281,20 @@ REQUIRED_ASSIGNMENTS = {
     # would hold a `pipe-pane` open for the life of the tab.
     "attached = null",
     "attached = openTerminal(row.session_id, terminal)",
+    # T8.2 — U17's decision card. The card is **built**, not assigned into a
+    # slot, so what this enumeration sees of it is its three state writes: the
+    # host is cleared and hidden for every render, revealed only for a session
+    # that is actually waiting on you (E20), and `showing` records which
+    # session the pane is on.
+    #
+    # `showing` is not decoration. `renderDecision` awaits a read of a pane, and
+    # a second card click while that read is in flight would otherwise paint the
+    # first session's dialog into the second session's pane — a decision card
+    # showing the wrong session's ask is the worst thing this page can be wrong
+    # about, and it is the one race the card introduces.
+    "showing = row.session_id",
+    "host.hidden = true",
+    "host.hidden = false",
 }
 
 

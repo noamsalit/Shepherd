@@ -238,7 +238,7 @@
           </div>
 
           <!-- pane 3 — D67: §12's page 3 is this column, not a fourth page.
-               The fourteen `#session-*` slots below are `session.js`'s and are
+               The fifteen `#session-*` slots below are `session.js`'s and are
                unchanged by the move: its contracts did not change, only its
                mount point. It is **opened by clicking a card**: `app.js`
                listens on `#flock-cards`, reads the card's `data-session-id`,
@@ -273,6 +273,15 @@
                 <span id="session-ownership" class="session-meta">—</span>
                 <span id="session-model" class="session-meta">—</span>
               </div>
+
+              <!-- U17's decision card (T8.2). The fifteenth slot, and the one
+                   the shell owes `session.js` for this task: the card itself is
+                   built by the module from `GET /api/sessions/{id}/decision`,
+                   because its shape depends on which of the three degradations
+                   applies and a shell that declared the choices would be
+                   declaring a dialog nobody has read yet. Empty and hidden
+                   until a `needs you` session is opened (U11/E20). -->
+              <div id="session-decision" class="session-decision" hidden></div>
 
               <!-- The stopped band (D21): why it stopped, and its next actions
                    as buttons. Both are server-side derivations; the page

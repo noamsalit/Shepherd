@@ -742,3 +742,175 @@ def test_the_pane_builds_its_nodes_through_the_flocks_helper() -> None:
     assert "document.createElement(" not in body.replace(
         'document.createElement("input")', ""
     ), "every node but the rename input comes from the shared helper"
+
+
+# ----- T8.2: U17's decision card, in the pane it renders into -----------------
+#
+# **The structural half.** Three of these four are the bytes-on-disk half of a
+# claim whose other half is driven in a real browser
+# (`tests/web/test_decision_live.py`): a scan can say the branch is written and
+# cannot say it runs, and this repo has shipped eight assertions about a module
+# no browser ever loaded. Neither half is the proof on its own.
+
+#: §9's sentence for the *card*, not the terminal: an attached session has no
+#: pane of ours, so there is nothing here that could carry a keystroke.
+DECISION_READ_ONLY = "read-only"
+
+
+def test_a_needs_you_session_shows_the_engines_own_prompt() -> None:
+    """U11: the engine's numbered choices, verbatim — never flattened.
+
+    The flattening is the defect this test exists for. Choice 2 of the captured
+    permission dialog is *"Yes, and always allow access to /tmp/… from this
+    project"* — it carries the **scope**, it is usually the one you want, and a
+    card rendered as approve/reject cannot reach it at all. So the render walks
+    `data.choices` and paints each one's own `number` and `label`; a mapping
+    from a boolean to two fixed buttons would fail here.
+    """
+    body = session_function("decisionCard")
+    assert "choices" in body, "the card does not read the choices at all"
+    assert ".forEach(" in body or ".map(" in body
+    for truncating in (".slice(", "choices[0]", ".at(0)"):
+        assert truncating not in body, truncating
+
+    row = session_function("choiceRow")
+    assert "choice.number" in row, "the engine's own numbering is not rendered"
+    assert "choice.label" in row, "the engine's own label is not rendered"
+    assert "choice.selected" in row, "the cursor is not reported"
+    # …and the two words that would mean the card had decided what the cursor
+    # means. `read_decision` reports which line carries it and refuses to
+    # interpret it, because in the trust dialog it sits on the refusal.
+    for verdict in ("approve", "reject", "affirmative"):
+        assert verdict not in row.lower(), verdict
+
+
+def test_an_attached_session_renders_the_decision_read_only() -> None:
+    """E18: we have no pty of theirs, and the card says so in words.
+
+    Three buttons that go nowhere is worse than one sentence saying why — and
+    the branch is keyed on the row's own `ownership`, the same field the
+    terminal branch below it reads, rather than on the absence of a payload.
+    """
+    body = session_function("renderDecision")
+    assert '"attached"' in body, "the read-only branch is not keyed on ownership"
+    text = source("session.js")
+    marker = re.search(r'const DECISION_READ_ONLY\s*=\s*\n?\s*"([^"]+)"', text)
+    assert marker is not None, "the read-only sentence is a named constant"
+    assert DECISION_READ_ONLY in marker.group(1)
+    assert "readOnlyCard(" in code_only(text), "nothing renders the read-only card"
+
+
+def test_an_idle_session_gets_no_decision_card() -> None:
+    """E20: a card on an idle session is U11 upside down.
+
+    The guard is the **first** thing `renderDecision` does after clearing, and
+    it returns: a card built and then hidden is still a fetch of a pane nobody
+    asked about, and a hidden node is one CSS change away from being visible.
+    """
+    body = session_function("renderDecision")
+    assert "NEEDS_YOU" in body, "nothing decides whether this session is asking"
+    guard = body.index("NEEDS_YOU")
+    assert "fetch(" in body
+    assert guard < body.index("fetch("), "the pane is read before the guard runs"
+    assert re.search(r"NEEDS_YOU\s*\)\s*\{\s*\n\s*return", body), body[guard : guard + 200]
+
+
+def test_the_card_never_guesses_and_never_answers() -> None:
+    """U17's two refusals, asserted on the module rather than promised.
+
+    *Never guesses*: when the server says the screen could not be parsed, the
+    card renders the ask and a sentence saying the choices could not be read —
+    it does not synthesise approve/reject as though the engine had drawn them.
+
+    *Never answers*: nothing in this file posts to the permission route, and the
+    trust dialog is named so the card can say, in words, that Enter there
+    answers *"No, exit"*. A page that could answer the trust screen is the C15
+    incident with a mouse.
+    """
+    text = source("session.js")
+    body = code_only(text)
+    assert "DECISION_UNREADABLE" in body
+    assert "readable" in session_function("renderDecision") + session_function(
+        "decisionCard"
+    )
+    assert "/permission" not in body, "the card can answer a dialog"
+    assert "trust_dialog" in body, "the trust dialog is not named"
+    # Either quoting: the sentence carries `"No, exit"` in double quotes,
+    # which is the whole reason the constant is single-quoted, and a scan that
+    # only knew one spelling would pass on the file that dropped the warning.
+    trust = re.search(
+        r"const TRUST_WARNING\s*=\s*\n?\s*[\"'](.*?)[\"'];", text, re.DOTALL
+    )
+    assert trust is not None, "the trust warning is a named constant"
+    assert "No, exit" in trust.group(1), trust.group(1)
+
+
+# ----- the pane's stylesheet: fourteen slots that nothing painted ------------
+
+#: `app.css`'s own selectors, as a set of class names. Parsed rather than
+#: grepped so that a class named only inside a comment cannot satisfy the scan.
+_CSS_RULE = re.compile(r"(?m)^([^{}/@][^{}]*)\{")
+_CLASS_IN_SELECTOR = re.compile(r"\.([A-Za-z][A-Za-z0-9_-]*)")
+
+#: Where the pane's classes come from: the markup it is served as, and the
+#: module that builds the rest of it at runtime.
+_CLASS_ATTR = re.compile(r'class="([^"]+)"')
+_CLASS_ARG = re.compile(r'element\(\s*"[a-z]+"\s*,\s*"([^"]+)"')
+_CLASS_SET = re.compile(r'\.className\s*=\s*"([^"]+)"')
+_CLASS_ADD = re.compile(r'\.classList\.add\(\s*"([^"]+)"')
+#: `element("button", cond ? "a" : "a b", …)` — the class chosen at runtime.
+#: Without this the scan reads the *shape* of the call and silently learns
+#: nothing from it, which is how `action-not-yet` was worn by a button for a
+#: whole milestone with no rule anywhere and nothing able to say so.
+_CLASS_TERNARY = re.compile(r'element\(\s*"[a-z]+"\s*,\s*[^,]*\?[^,]*"([^"]+)"\s*:\s*"([^"]+)"')
+
+
+def styled_classes() -> set[str]:
+    text = (STATIC_ROOT / "app.css").read_text(encoding="utf-8")
+    return {
+        name
+        for selector in _CSS_RULE.findall(text)
+        for name in _CLASS_IN_SELECTOR.findall(selector)
+    }
+
+
+def pane_classes() -> set[str]:
+    """Every class the session pane wears, from both places it is dressed."""
+    markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+    view = markup[markup.index('id="session-view"') : markup.index('id="page-queues"')]
+    module = code_only(source("session.js"))
+    found: set[str] = set()
+    for pattern, text in (
+        (_CLASS_ATTR, view),
+        (_CLASS_ARG, module),
+        (_CLASS_SET, module),
+        (_CLASS_ADD, module),
+        (_CLASS_TERNARY, module),
+    ):
+        for value in pattern.findall(text):
+            for part in value if isinstance(value, tuple) else (value,):
+                found.update(part.split())
+    return found
+
+
+def test_the_stylesheet_owns_every_class_the_session_pane_wears() -> None:
+    """Part 2: after T5.2's port, `app.css` declared **no** `.session-*` rule.
+
+    The fourteen slots moved into `.col-detail` unchanged and rendered with the
+    browser's own defaults. Nothing was broken and nothing overflowed — it was
+    simply unowned, which is precisely the state no existing check could see:
+    `render_check.py` asserts overflow, console errors and `must_see`, and an
+    unstyled pane fails none of those.
+
+    So the property is **ownership**, asserted as a set difference: every class
+    the pane wears, from the markup it ships as and from the nodes the module
+    builds, has at least one rule in the shipped stylesheet. Arrival first —
+    both halves must have found classes, or an empty difference is an empty
+    scan.
+    """
+    worn = pane_classes()
+    styled = styled_classes()
+    assert len(worn) >= 20, sorted(worn)
+    assert "session-view" in worn and "choice" in worn, sorted(worn)
+    assert "bucket-needs_you" in styled, "the stylesheet scan found no rules"
+    assert sorted(worn - styled) == [], sorted(worn - styled)

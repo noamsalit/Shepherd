@@ -384,8 +384,16 @@ def test_expansion_reads_no_log_and_no_transcript() -> None:
     # the human asked for, declared in `POST_ROUTES`, and not a second read of
     # anything the row already carries. Counted rather than waved past: "the
     # pane may fetch" would retire the rule instead of bounding it.
-    assert _CODE_ONLY(session_js()).count("fetch(") == 1
+    # **Two since T8.2**, widened by hand and counted for the same reason: the
+    # second is U17's decision card, `GET /api/sessions/{id}/decision`. It is
+    # not a second read of anything the row already carries — no projection on
+    # this page carries what is on a pane's screen — and it reaches no log and
+    # no transcript: the route resolves to `get_decision`, which composes a pure
+    # parser over one pane observation. The bound is the point, so it moves by
+    # somebody editing this number.
+    assert _CODE_ONLY(session_js()).count("fetch(") == 2
     assert "RENAME_PATH" in function_body(session_js(), "commitRename")
+    assert "DECISION_PATH" in function_body(session_js(), "renderDecision")
     # T19: `TERMINAL_WS_PATH` joins the two paths that are deliberately not
     # calls. `routes.py` says it in words — "an upgrade is not a call, exactly
     # as `SSE_PATH` is not one" — and `terminal.js` is the page that opens it.

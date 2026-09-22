@@ -768,7 +768,12 @@ def test_the_shell_ships_every_slot_the_page_modules_reach_for() -> None:
     """
     owed = slots_owed_by_the_shell()
     assert len(owed["flock.js"]) >= 13, sorted(owed["flock.js"])
-    assert len(owed["session.js"]) == 14, sorted(owed["session.js"])
+    # **Fifteen since T8.2**, widened by hand: U17's decision card is the
+    # fifteenth slot the shell owes this module. The number is here rather than
+    # `>=` for the reason the docstring gives — a regex that silently stopped
+    # matching has to fail here — so the card's arrival is an admission
+    # somebody made, not a drift the count absorbed.
+    assert len(owed["session.js"]) == 15, sorted(owed["session.js"])
     assert len(owed["chat.js"]) >= 5, sorted(owed["chat.js"])
     assert len(owed["settings.js"]) >= 4, sorted(owed["settings.js"])
     # `projects.js` builds everything inside its root, so the shell owes it the

@@ -38,6 +38,7 @@ from shepherd.core.states import Ownership
 from shepherd.engines.claude_code.transcript import locate_transcript
 from shepherd.engines.claude_code.transcript_tail import read_tail
 from shepherd.runner.base import ByteStream, Runner
+from shepherd.runner.pane import DecisionPrompt, read_decision
 from pathlib import Path
 
 from shepherd.store.db import Store
@@ -56,6 +57,7 @@ __all__ = [
     "SNAPSHOT_SCROLLBACK",
     "TerminalStream",
     "build_terminal_tools",
+    "get_decision",
     "handle_for",
     "kill_landed",
     "no_pane",
@@ -278,6 +280,56 @@ def session_output(
     }
 
 
+def get_decision(store: Store, runner: Runner, session_id: str) -> dict[str, object]:
+    """U17's card, as a projection: what the screen is asking, or why not.
+
+    **A read that cannot answer.** It composes T8.1's pure `read_decision` over
+    one `runner.pane(...)` observation and returns a dict. There is no write
+    anywhere on this path, and that is the safety property rather than a style
+    note: on the trust screen the key that looks safe is the one that exits the
+    session (C15), so the module that reads that screen must not be able to
+    press anything on it.
+
+    **Three facts, not one verdict**, because the page has three different
+    things to render and cannot tell them apart from a single flag:
+
+    * `ok` — there was a pane of ours to read at all. `no_pane(...)` otherwise,
+      which is every **attached** session: we have no pty of theirs, and a card
+      with three buttons that go nowhere is worse than a sentence saying why.
+    * `asking` — the pane is one of the two dialog kinds. An idle session is
+      not asking anything and gets no card (U11/E20).
+    * `readable` — `read_decision` produced a prompt. When it did not, the ask
+      is still carried **verbatim** and `choices` is **empty**: an unrecognised
+      screen degrades, and inventing approve/reject as though the engine had
+      drawn them is the guess U17 forbids.
+
+    `pane_kind` is carried so a caller can refuse `trust_dialog` **by name**, and
+    the selected choice is reported as the line that carries the cursor — never
+    as a default, an affirmative or a recommendation. The numbers are the
+    engine's own labels, `None` where the engine drew none.
+    """
+    handle = handle_for(store, session_id)
+    if handle is None:
+        return no_pane(session_id)
+    state = runner.pane(handle)
+    prompt: DecisionPrompt | None = read_decision(state)
+    # When the parser degraded, no *part* of the screen is known to be the ask,
+    # so the screen itself goes out. Choosing a line here would be the guess
+    # moved one layer up from the parser that refused to make it.
+    return {
+        "session_id": session_id,
+        "ok": True,
+        "pane_kind": state.kind.value,
+        "asking": bool(state.dialog_text),
+        "readable": prompt is not None,
+        "text": prompt.text if prompt is not None else (state.dialog_text or None),
+        "choices": [
+            {"number": choice.number, "label": choice.label, "selected": choice.selected}
+            for choice in (prompt.choices if prompt is not None else ())
+        ],
+    }
+
+
 # ----- the tools --------------------------------------------------------------
 
 _SESSION_AND_SCROLLBACK: dict[str, object] = {
@@ -375,6 +427,18 @@ def build_terminal_tools(
                 arg_str(args, "session_id"),
                 _arg_optional_int(args, "scrollback", SNAPSHOT_SCROLLBACK),
             ),
+            audiences=HUMAN_ONLY,
+        ),
+        ToolDef(
+            name="get_decision",
+            description="What the pane is asking and the choices it offers, verbatim (U17).",
+            input_schema={
+                "type": "object",
+                "properties": {"session_id": {"type": "string"}},
+                "required": ["session_id"],
+            },
+            blast_class=BlastClass.LOCAL_READ,
+            handler=lambda args, ctx: get_decision(store, runner, arg_str(args, "session_id")),
             audiences=HUMAN_ONLY,
         ),
     )

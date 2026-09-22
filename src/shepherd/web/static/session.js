@@ -313,6 +313,8 @@ export function renderSession(row) {
   // `flock.js` owns the attribute — this module only says which level it is.
   showLevel("detail");
 
+  showing = row.session_id;
+
   fill("session-title", row.title);
   fill("session-chip", row.bucket);
   fill("session-state", row.state);
@@ -329,6 +331,11 @@ export function renderSession(row) {
   // (principle 5) — with the honest `[why?]` disclosure beside it.
   fill("session-why", row.why);
   slot("session-actions").replaceChildren(actionList(row), whyNote(row));
+
+  // U17's card. Not awaited: the terminal below is what this function returns,
+  // and a card that waited on the network would hold the pane's whole render
+  // behind one read of a pane.
+  renderDecision(row);
 
   const marker = slot("session-local-only");
   marker.textContent = localOnly(row) ? LOCAL_ONLY_MARKER : "";
@@ -352,4 +359,173 @@ export function renderSession(row) {
   note.textContent = INPUT_UNAVAILABLE;
   attached = openTerminal(row.session_id, terminal);
   return attached;
+}
+
+// ---- U17's decision card ----------------------------------------------------
+//
+// **The engine's own prompt, with its numbered choices, verbatim** (U11). Not
+// flattened to approve/reject: choice 2 of the captured permission dialog is
+// *"Yes, and always allow access to /tmp/… from this project"* — it carries the
+// **scope**, it is usually the one you want, and a flattened card cannot reach
+// it at all.
+//
+// Nothing here parses a screen. `read_decision` (`runner/pane.py`) is a pure
+// function over a real capture and the route is a read; this module renders the
+// answer it was given, and `textContent` is the only sink it uses.
+//
+// Three degradations, and they are the point rather than the edges:
+//
+//  1. an **attached** session renders read-only and says so — we have no pty of
+//     theirs, and three buttons that go nowhere is worse than one sentence;
+//  2. anything the parser could not read degrades to the ask **verbatim** plus
+//     the two universal options, labelled and inert, and says it could not read
+//     the choices. It never invents the engine's list;
+//  3. `trust_dialog` is named, and the card says in words that Enter there
+//     answers *"No, exit"*. `read_decision` reports the cursor and refuses to
+//     interpret it; this file does not interpret it either.
+const DECISION_PATH = "/api/sessions/{session_id}/decision";
+
+// U11's own word for the bucket that owes a card. Keyed on the bucket the
+// server derived — never re-derived here — so an idle session gets no card and
+// no pane read at all (E20).
+const NEEDS_YOU = "needs_you";
+
+// The trust screen, by the name the projection carries (`PaneKind.value`). It
+// is matched by name rather than by anything on the screen, because the whole
+// C15 lesson is that this dialog *looks* like the other one.
+const TRUST_DIALOG = "trust_dialog";
+
+const DECISION_READ_ONLY =
+  "read-only — this session wasn't started here, so Shepherd has no pane to answer on. Answer it in the terminal it was started in.";
+
+const DECISION_UNREADABLE =
+  "could not read the choices on this screen — the ask above is what the pane says, verbatim. Nothing here is guessed.";
+
+const TRUST_WARNING =
+  'workspace trust — Enter on this screen answers "No, exit" and ends the session. The cursor is reported, never interpreted.';
+
+// RD6's shape, for a capability that is not built: labelled and inert, with the
+// reason in words. `POST /api/sessions/{id}/permission` exists in the route
+// table and nothing on any page calls it; a card that pretended otherwise would
+// be the silent dead button one file over already refuses to ship.
+const DECISION_INERT =
+  "answering from Shepherd is not built in this build — press the option in the session's own terminal.";
+
+// The two options every dialog has whatever else is on it. They are rendered
+// **without numbers**, because a number is a key the engine drew and these are
+// not: sending `1` for an unparsed screen is positional, and positional is how
+// a digit reaches a tool nobody approved.
+const UNIVERSAL_CHOICES = [
+  { number: null, label: "approve", selected: false },
+  { number: null, label: "reject", selected: false },
+];
+
+const CURSOR_NOTE = "the cursor is on this line";
+const NO_DIALOG = "this session is waiting on you, but its pane is not showing a dialog right now.";
+const DECISION_FAILED = "could not read the decision";
+const DECISION_UNREACHABLE = "could not read the decision: the request did not reach the server";
+
+// The session whose card is on the page. A second `renderSession` while a fetch
+// is in flight would otherwise paint the first session's dialog into the second
+// session's pane — and a decision card showing the wrong session's ask is the
+// worst kind of wrong this page can be.
+let showing = null;
+
+function choiceRow(choice) {
+  const row = element("li", "choice choice-inert");
+  if (choice.selected) {
+    row.classList.add("choice-1");
+  }
+  const number = choice.number === null || choice.number === undefined;
+  row.appendChild(element("span", "choice-n", number ? "·" : String(choice.number)));
+  const label = element("span", "choice-text", choice.label);
+  if (choice.selected) {
+    label.appendChild(element("span", "choice-note", CURSOR_NOTE));
+  }
+  row.appendChild(label);
+  return row;
+}
+
+function decisionNote(text) {
+  return element("p", "decision-readonly", text);
+}
+
+function decisionCard(data) {
+  const card = element("section", "decision");
+  const head = element("div", "decision-head", "needs you");
+  head.appendChild(element("span", "decision-src", data.pane_kind || UNKNOWN));
+  card.appendChild(head);
+
+  const ask = element("div", "decision-ask");
+  ask.appendChild(element("pre", "decision-body", data.text === null ? UNKNOWN : data.text));
+  card.appendChild(ask);
+
+  if (data.pane_kind === TRUST_DIALOG) {
+    card.appendChild(decisionNote(TRUST_WARNING));
+  }
+
+  const list = element("ul", "choices");
+  const choices = data.readable && Array.isArray(data.choices) ? data.choices : UNIVERSAL_CHOICES;
+  choices.forEach((choice) => list.appendChild(choiceRow(choice)));
+  card.appendChild(list);
+  if (!data.readable) {
+    card.appendChild(decisionNote(DECISION_UNREADABLE));
+  }
+  card.appendChild(decisionNote(DECISION_INERT));
+  return card;
+}
+
+// E18. Built from the row's own `ownership`, the same field the terminal branch
+// reads, rather than from the absence of a payload: "we have no pane of theirs"
+// is a fact about the session, and asking the server for one we know is not
+// there would turn it into a failure message.
+function readOnlyCard(row) {
+  const card = element("section", "decision");
+  const head = element("div", "decision-head", "needs you");
+  head.appendChild(element("span", "decision-src", row.ownership || UNKNOWN));
+  card.appendChild(head);
+  card.appendChild(element("pre", "decision-body", row.needs_you_reason || UNKNOWN));
+  card.appendChild(decisionNote(DECISION_READ_ONLY));
+  return card;
+}
+
+async function renderDecision(row) {
+  const host = slot("session-decision");
+  host.replaceChildren();
+  host.hidden = true;
+  if (row.bucket !== NEEDS_YOU) {
+    return null;
+  }
+  host.hidden = false;
+  if (row.ownership === "attached") {
+    host.replaceChildren(readOnlyCard(row));
+    return null;
+  }
+  try {
+    const response = await fetch(path(DECISION_PATH, row.session_id), {
+      headers: { Accept: "application/json" },
+    });
+    const body = await response.json();
+    if (showing !== row.session_id) {
+      return null;
+    }
+    if (!body.ok) {
+      host.replaceChildren(decisionNote(`${DECISION_FAILED}: ${body.error} (${body.correlation_id})`));
+      return null;
+    }
+    if (!body.data.ok) {
+      host.replaceChildren(decisionNote(body.data.reason));
+      return null;
+    }
+    if (!body.data.asking) {
+      host.replaceChildren(decisionNote(NO_DIALOG));
+      return null;
+    }
+    host.replaceChildren(decisionCard(body.data));
+  } catch (unreachable) {
+    if (showing === row.session_id) {
+      host.replaceChildren(decisionNote(DECISION_UNREACHABLE));
+    }
+  }
+  return null;
 }

@@ -60,6 +60,12 @@ API_ROUTES: Mapping[str, str] = {
     # detail whose id is the empty string.
     "/api/projects/{project_id}": "get_project",
     "/api/projects/{project_id}/repos": "list_repos",
+    # U17's decision card (T8.2). The **fourteenth** GET, and a read in the
+    # strongest sense available here: `get_decision` composes a pure parser over
+    # one pane observation and there is no key it could send. That matters on
+    # this path more than on the others — the trust screen it can read is the
+    # one where a blind Enter answers "No, exit" (C15).
+    "/api/sessions/{session_id}/decision": "get_decision",
 }
 
 #: path template -> the query parameters it forwards. Anything else is dropped.

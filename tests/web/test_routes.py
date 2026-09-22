@@ -119,6 +119,13 @@ def test_every_api_route_names_a_registered_tool() -> None:
         # `list_projects`: two segments, never three.
         "/api/projects/{project_id}",
         "/api/projects/{project_id}/repos",
+        # The decision card (T8.2), widened by hand for the fourth time and for
+        # the fourth time on purpose. This literal is the **closed set**: the
+        # comment above called this one "the fourteenth route — Phase 8's" and
+        # named it before it existed, which is what a closed set is for. The
+        # fifteenth still has to be declared here rather than arriving
+        # unnoticed.
+        "/api/sessions/{session_id}/decision",
     }
 
 

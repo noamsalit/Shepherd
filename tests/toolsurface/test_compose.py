@@ -100,6 +100,13 @@ PROJECT_TOOL_NAMES_HERE: tuple[str, ...] = (
     "set_project_description",
 )
 
+#: What T8.2 adds: U17's decision card, registered with the terminal tools
+#: because that is where the pane is reached. Named on its own rather than
+#: appended to `M3_TOOL_NAMES` — that tuple is Task 18's table and is asserted
+#: at twelve, and a thirteenth smuggled into it would make "what M3 added" a
+#: sentence nobody can check.
+UI_TOOL_NAMES: tuple[str, ...] = ("get_decision",)
+
 ALL_TOOL_NAMES: tuple[str, ...] = tuple(
     sorted(
         M1_TOOL_NAMES
@@ -107,6 +114,7 @@ ALL_TOOL_NAMES: tuple[str, ...] = tuple(
         + M3_TOOL_NAMES
         + M4_TOOL_NAMES
         + PROJECT_TOOL_NAMES_HERE
+        + UI_TOOL_NAMES
     )
 )
 
