@@ -662,7 +662,15 @@ button, input, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 0.38rem;
   font-size: 0.78rem;
-  color: var(--text-soft);
+  /* U16: **the legend is the glyph plus coloured text.** The reviewed
+     prototype renders this label in `--text-soft` and colours only the glyph,
+     which is the one place its pixels and the decision disagree. The decision
+     wins, because it is what the owner asked for in the words that locked the
+     treatment -- "legend is like coloured text", then "I like the filled + tet
+     legend, let's lock this" -- and because the prototype's `filltext` variant
+     simply never got its legend rule written. The card wash came from that same
+     variant and did port. */
+  color: var(--b);
   white-space: nowrap;
   background: none;
   border: none;
