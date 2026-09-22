@@ -130,6 +130,32 @@ assertion.
 `escape.js` and `vendor/*` are byte-identical to the baseline, verified against
 the manifest's own digests, and `web/server.py` is byte-identical too.
 
+## The mutation run — eight planted, eight red, one survivor closed
+
+Committed first, planted, reverted with `git checkout -- <path>` (the tree was
+committed, which is the whole reason that command is safe here). Every planted
+edit is markup, CSS or a call site — nothing that leaves the process.
+
+| # | Planted | Red at |
+| --- | --- | --- |
+| M1 | `.stop-summary { display: none }` below 900px | the byte test **and** `test_the_stop_summary_survives_a_phone` |
+| M2 | `app.js` imports `mountSettings` and never calls it | `test_the_bootstrap_drives_every_page_it_loads` |
+| M3 | `#dlg-project` back in the shell | `test_the_projects_root_ships_empty` |
+| M4 | `#shepherd-status` dropped from `index.html` | `test_the_shell_ships_every_slot_the_page_modules_reach_for` |
+| M5 | `.herd` back to two grid rows | **survivor** — see below |
+| M6 | `.panes2 > *` back at its old specificity | `test_the_two_pane_pages_drill_down_on_a_phone` |
+| M5b | M5 again, after the survivor was closed | `test_each_page_root_fills_the_column_it_is_given` |
+| M7 | `.main > .detail` loses its `flex: 1` | `test_each_page_root_fills_the_column_it_is_given` |
+| M8 | `renderSession(answer)` — the envelope again | `test_a_card_click_opens_the_session_pane` and the Projects-link test |
+
+**M5 survived, and it is the one worth reading.** Reverting the grid fix turned
+nothing red but the byte-freeze digest — which any change to any byte trips, and
+which says nothing about the page. The whole suite, plus `render_check.py`'s
+twelve pages, was blind to a Flock whose three panes were off the bottom of the
+screen. `test_each_page_root_fills_the_column_it_is_given` closes it by
+**measuring** the panes and the composer against the viewport, and M5b and M7
+re-plant both original defects against it: both red.
+
 ## Checks
 
 Every exit code below was read from an **unpiped** run.
@@ -160,7 +186,7 @@ the modules fetched from `/static/`. Twelve screenshots at 390×844 and
 1280×900 were **looked at**, which is how defects 2, 3 and 4 were found; three
 of the twelve are the evidence for the fixes.
 
-Six committed live tests carry the same claims into the suite
+Seven committed live tests carry the same claims into the suite
 (`tests/web/test_shell_live.py`), skipping rather than failing where chromium is
 absent.
 

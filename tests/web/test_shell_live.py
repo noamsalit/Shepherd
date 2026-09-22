@@ -248,3 +248,41 @@ def test_the_two_pane_pages_drill_down_on_a_phone(phone) -> None:
             f"{target}: both panes are visible at 390px — the drill-down is a no-op"
         )
     assert errors == [], errors
+
+
+def test_each_page_root_fills_the_column_it_is_given(desktop) -> None:
+    """The survivor, closed: a page laid out **off the bottom of the screen**.
+
+    Two of the five defects this pass found were this shape, and the whole
+    existing suite was blind to both. `.herd` declared two grid rows while
+    carrying three full-width items, so the stop band took the flexible row and
+    the panes were pushed below the fold; `.detail` carries no `flex: 1`, so the
+    Shepherd page was a content-height box at the top of an empty column with
+    its composer unpinned. Reverting either mutation turns **nothing** red
+    except the byte-freeze digest — `render_check.py` reports 12 pages and 0
+    failures over both, because nothing overflows horizontally, nothing throws,
+    and each page still names itself.
+
+    So the property is measured rather than inferred: a page root's panes reach
+    the bottom of the viewport, and the composer sits at it. The thresholds are
+    deliberately loose — this is a check for *collapsed*, not a pixel
+    comparison, and 105px of 900 is what the defect looked like.
+    """
+    page, errors = desktop
+    height = page.viewport_size["height"]
+
+    _nav(page, "flock")
+    for pane in (".col-projects", ".col-sessions", ".col-detail"):
+        box = page.locator(f"#page-flock {pane}").bounding_box()
+        assert box is not None, pane
+        assert box["height"] > height * 0.6, (pane, box, "the panes are below the fold")
+        assert box["y"] + box["height"] <= height + 1, (pane, box)
+
+    _nav(page, "shepherd")
+    composer = page.locator("#page-shepherd .composer-wrap").bounding_box()
+    assert composer is not None
+    assert composer["y"] + composer["height"] > height * 0.8, (
+        composer,
+        "the composer is not pinned to the bottom of the page",
+    )
+    assert errors == [], errors
