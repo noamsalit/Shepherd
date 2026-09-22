@@ -54,6 +54,9 @@ MESSAGING_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_messa
 RENAME_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_rename.py"
 ORIGIN_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "spawn_origin.py"
 PROJECTS_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_projects.py"
+PROJECTS_READS_MODULE = (
+    REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_projects_reads.py"
+)
 
 #: `14-list-sessions-after-sigterm.txt`, `probe_a`: alive, alternate screen on.
 LIVE_FIELDS = "1|0||✳ shp-probe-title-1|160|45|4041880"
@@ -358,7 +361,7 @@ def test_no_handler_returns_a_raw_row() -> None:
 
 
 def test_the_three_modules_are_each_under_the_cap() -> None:
-    """Task 18 asks for one module ≤ 450 lines; this is five, each asserted.
+    """Task 18 asks for one module ≤ 450 lines; this is seven, each asserted.
 
     Four since T23: `register_rename_tool` did not fit in `tools_m3.py` without
     editing this very assertion, so it went into `tools_rename.py` instead. The
@@ -373,19 +376,23 @@ def test_the_three_modules_are_each_under_the_cap() -> None:
     **Six since T3.1**, and this one is a new module rather than a split:
     `tools_projects.py` is D57's project lifecycle, and it is named here for the
     same reason the two splits are — a module that escapes the enumeration is a
-    module whose growth nothing measures. It ships at 408 lines with six verbs,
-    so `delete_project` arriving with the store-side writer-thread split will
-    not fit, and the split into `tools_projects.py` + `tools_projects_reads.py`
-    the plan authorises has to name **both** halves on this line.
+    module whose growth nothing measures.
+
+    **Seven since T3.3**, and this one *is* the split T3.1 predicted. It shipped
+    at 408 lines with six verbs and said `delete_project` would not fit; it did
+    not. `tools_projects_reads.py` took the two reads, the projections and the
+    shared schema vocabulary, and it is named here **beside** the half it came
+    out of — because the whole value of this line is that a split cannot hide
+    growth, and a half that escapes the enumeration is a half nothing measures.
 
     The split is only honest while it cannot hide growth, which is what this
     line is for. Goes red the moment any half starts absorbing the others.
     """
     sizes = {path.name: len(path.read_text(encoding="utf-8").splitlines()) for path in
              (MODULE, TERMINAL_MODULE, MESSAGING_MODULE, RENAME_MODULE, ORIGIN_MODULE,
-              PROJECTS_MODULE)}
+              PROJECTS_MODULE, PROJECTS_READS_MODULE)}
     assert all(size <= 450 for size in sizes.values()), sizes
-    assert len(sizes) == 6
+    assert len(sizes) == 7
 
 
 # ----- behaviour, through `invoke()` -----------------------------------------

@@ -68,6 +68,7 @@ from shepherd.toolsurface.stream import publish, reset_stream
 from shepherd.toolsurface.tools_engine import register_engine_tools
 from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
+from shepherd.toolsurface.tools_m3 import kill as kill_session_now
 from shepherd.toolsurface.tools_m3 import register_m3_tools
 from shepherd.toolsurface.tools_master import autonomy_level, register_master_tools
 from shepherd.toolsurface.tools_projects import register_project_tools
@@ -435,13 +436,28 @@ def compose_tool_surface(
     register_rename_tool(
         store=store, runner=runner, now=utc_now, config_dir=engine_config_dir, capabilities=engine
     )
-    # D57's project lifecycle (T3.2). **No `kill` injection**: the plan's
-    # signature carries one for `delete_project`, and that verb is not
-    # registered — `writes.delete_project` calls its injected kill from inside
-    # the store's writer transaction, and the shipped kill path's first
-    # statement is itself a store write, so wiring the two together deadlocks
-    # every later write in this process. See `tools_projects.py`'s docstring.
-    register_project_tools(store=store, now=utc_now)
+    # D57's project lifecycle (T3.2, completed at T3.3).
+    #
+    # The `kill` injection is the shipped `kill_session` path — one
+    # implementation, so a session stopped by a project delete is recorded
+    # exactly the way a session stopped by the button is (`lifecycle.py`'s
+    # write-before-kill order, which is what survives a crash). It is passed to
+    # the **tool**, never to a `store/` verb: `delete_project` calls it between
+    # `plan_project_delete` and `commit_project_delete`, on the calling thread
+    # and inside no transaction. Handing it to a write verb instead is what
+    # deadlocked the writer thread and kept this verb out of T3.1.
+    #
+    # `kill_session_now` answers `no_pane(...)` — no `"killed"` key — for any
+    # session it has no runner handle for, which is every *attached* one. That
+    # `False` is the truth: the commit half then refuses rather than deleting a
+    # live session's rows.
+    def kill_for_delete(session_id: str) -> bool:
+        answer = kill_session_now(
+            store=store, runner=runner, now=utc_now, publish=_publish, session_id=session_id
+        )
+        return answer.get("killed") is True
+
+    register_project_tools(store=store, kill=kill_for_delete, now=utc_now)
 
     driver = TurnDriver(
         store=store,

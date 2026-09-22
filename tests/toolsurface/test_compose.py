@@ -83,13 +83,14 @@ M4_TOOL_NAMES: tuple[str, ...] = (
 #: `tools_projects.PROJECT_TOOL_NAMES` would agree with itself no matter which
 #: verbs the composition actually reached.
 #:
-#: **Six, not the plan's seven.** `delete_project` is not registered: its store
-#: verb calls the injected `kill` inside the writer transaction, and the shipped
-#: kill path writes to the store first, which deadlocks the writer thread. The
-#: seventh name arrives on this line with the store-side split.
+#: **All seven since T3.3.** `delete_project` was absent while its store verb
+#: ran the injected `kill` inside the writer transaction; the two-half seam
+#: (plan → kill outside any transaction → commit) replaced it, and the
+#: composition root injects the shipped `kill_session` path.
 PROJECT_TOOL_NAMES_HERE: tuple[str, ...] = (
     "add_repo",
     "create_project",
+    "delete_project",
     "get_project",
     "list_repos",
     "remove_repo",

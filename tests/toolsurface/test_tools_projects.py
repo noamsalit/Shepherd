@@ -7,18 +7,19 @@ shipped chokepoint installed, exactly as `web/` and `cli/` do (D19, D32, D35).
 A tool that works when its handler is called directly and is unregistered,
 mis-audienced or schema-mangled is red here rather than in a browser.
 
-**`delete_project` is deliberately absent, and it is not an oversight.**
-`writes.delete_project` calls its injected `kill` from inside the lambda
-`Store._write` runs on the single writer thread after `BEGIN IMMEDIATE`
-(`store/writes.py:207`), and the real kill path's first statement is itself a
-store write (`orchestration/lifecycle.py:126`) whose write-before-kill order is
-what survives a crash. Wiring the shipped kill path into that callable enqueues
-a job the blocked writer can never reach, and the writer thread has no timeout —
-so every later write in the process hangs permanently. Phase 1's suite is green
-only because every test there passes an inert stub, and a callback under test is
-a stub under test. The verb is blocked on the store-side split (decide → kill
-outside the transaction → commit) and is written up in
-`docs/plans/projects-ui-blockers/t3-1.md`.
+**`delete_project` is here now, and the seam it waited for is the reason.**
+It shipped absent at T3.1: `writes.delete_project` took a `kill` callable and
+called it from inside the lambda `Store._write` runs on the single writer thread
+after `BEGIN IMMEDIATE`, while the real kill path's first statement is itself a
+store write (`orchestration/lifecycle.py:126`). Phase 1's remediation withdrew
+that verb and replaced it with two halves — `Store.plan_project_delete` (a pure
+read, carrying the whole refusal) and `Store.commit_project_delete` (the commit,
+which re-derives the decision inside its own transaction). The kill happens
+**between** them, in this layer, against a callable injected at registration and
+never handed to a `store/` verb.
+`test_the_kill_runs_outside_the_store_transaction` is the load-bearing statement
+of that: its killer writes to the store, which is exactly what the shipped kill
+path does first, and which is what used to hang the process for good.
 
 **The git probe is real.** `add_repo` runs `git` in a subprocess because
 `git_common_dir` is D48's binding key (F5/E23): a repo registered through the UI
@@ -32,7 +33,8 @@ a fake probe would prove the fake. The trees here are throwaway ones under
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Iterator
+import threading
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -40,6 +42,8 @@ import pytest
 from chokepoint_fixture import install_test_chokepoint
 from signals.conftest import git_env
 
+from shepherd.core.states import Origin, Ownership
+from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict
 from shepherd.signals.binding import bind_cwd_to_repo
 from shepherd.store.db import Store, open_store
 from shepherd.store.models import UNASSIGNED_PROJECT_ID, OnRunning
@@ -66,8 +70,33 @@ def store(tmp_path: Path) -> Iterator[Store]:
         opened.close()
 
 
+class Killer:
+    """The injected kill, as a thing a test can both program and read back.
+
+    It answers **whether the kill landed** — `Callable[[str], bool]`, the same
+    shape `store/`'s own tests use — because the field it feeds
+    (`DeleteOutcome.killed`) is *what the caller reports it actually killed*.
+    The verb this replaced took `Callable[[str], None]`, which could not say,
+    while the real kill path answers `no_pane(session_id)` for any session
+    without a runner handle — which is every attached one.
+    """
+
+    def __init__(self) -> None:
+        self.asked: list[str] = []
+        self.lands: Callable[[str], bool] = lambda _session_id: True
+
+    def __call__(self, session_id: str) -> bool:
+        self.asked.append(session_id)
+        return self.lands(session_id)
+
+
 @pytest.fixture()
-def registered(store: Store) -> Store:
+def killer() -> Killer:
+    return Killer()
+
+
+@pytest.fixture()
+def registered(store: Store, killer: Killer) -> Store:
     """One registration per test, behind the shipped gate.
 
     `install_test_chokepoint` installs `build_authorizer` over a real
@@ -76,8 +105,44 @@ def registered(store: Store) -> Store:
     puts in front of them.
     """
     install_test_chokepoint()
-    register_project_tools(store=store, now=lambda: NOW)
+    register_project_tools(store=store, kill=killer, now=lambda: NOW)
     return store
+
+
+def running_session(store: Store, project_id: str, engine_session_id: str) -> str:
+    """A session that is alive by the only definition `store/` uses:
+    `ended_at IS NULL`, never `state = 'running'`."""
+    return store.register_session(
+        engine_session_id=engine_session_id,
+        workspace_id=project_id,
+        repo_id=None,
+        cwd="/tmp",
+        started_at=NOW,
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
+    ).id
+
+
+def ended_session(store: Store, project_id: str, engine_session_id: str) -> str:
+    """One finished session, so `destroyed` is a measurement of the cascade
+    rather than a list the running rows happen to fill."""
+    session_id = running_session(store, project_id, engine_session_id)
+    store.apply_stop_verdict(
+        session_id=session_id,
+        verdict=Verdict(
+            stop_reason=StopReason.COMPLETED,
+            bucket=Bucket.FINISHED,
+            why="done",
+            confidence=1.0,
+            decided_by=DecidedBy.HEURISTIC,
+            next_actions=(),
+            waiting_on=None,
+            missing=(),
+        ),
+        ended_at="2026-09-22T11:00:00.000Z",
+        exit_code=0,
+    )
+    return session_id
 
 
 def call(name: str, args: dict[str, object], ctx: CallerContext = HUMAN) -> ToolResult:
@@ -122,11 +187,12 @@ def test_the_project_verbs_register_with_the_blast_classes_d58_assigns(
     *"adding a repo widens that allowlist"*, and creating a project creates a
     thing that can hold one; the two that relabel or narrow are `local_write`;
     the two reads are `local_read`. Asserted as a mapping rather than as six
-    lines so a seventh verb is a failure here and not a silent addition.
+    lines so an eighth verb is a failure here and not a silent addition.
     """
     assert PROJECT_TOOL_NAMES == (
         "create_project",
         "rename_project",
+        "delete_project",
         "add_repo",
         "remove_repo",
         "list_repos",
@@ -136,6 +202,7 @@ def test_the_project_verbs_register_with_the_blast_classes_d58_assigns(
     assert {name: tools[name].blast_class for name in PROJECT_TOOL_NAMES} == {
         "create_project": BlastClass.LOCAL_DESTRUCTIVE,
         "rename_project": BlastClass.LOCAL_WRITE,
+        "delete_project": BlastClass.LOCAL_DESTRUCTIVE,
         "add_repo": BlastClass.LOCAL_DESTRUCTIVE,
         "remove_repo": BlastClass.LOCAL_WRITE,
         "list_repos": BlastClass.LOCAL_READ,
@@ -147,19 +214,22 @@ def test_the_project_verbs_register_with_the_blast_classes_d58_assigns(
     )
 
 
-def test_delete_project_is_not_registered_and_the_reason_is_the_writer_thread(
-    registered: Store,
-) -> None:
-    """The blocked verb, asserted as absent rather than left to be noticed.
+def test_delete_project_is_registered_and_reachable(registered: Store) -> None:
+    """The seventh verb, where T3.1 asserted an absence.
 
-    A phase that ships six of seven and says so in prose is a phase whose gap
-    lives in a document; this is the same fact where a consumer can trip over
-    it. It goes red the moment the verb is wired, which is the point: the next
-    builder has to come back here, read why it was absent, and delete this
-    test deliberately.
+    That test — `test_delete_project_is_not_registered_and_the_reason_is_the
+    _writer_thread` — was deleted deliberately rather than left to fail, which
+    is what it asked its reader to do. The absence it recorded was real: the
+    store verb it needed took a `kill` callable and ran it on the writer thread
+    inside `BEGIN IMMEDIATE`. That verb no longer exists. The two halves that
+    replaced it are what makes this line true, and the name is **reachable**
+    here rather than merely present in a tuple, because `PROJECT_TOOL_NAMES`
+    listing a name `registered_tools()` does not hold is a promise a consumer
+    can read and cannot call.
     """
-    assert "delete_project" not in registered_tools()
-    assert "delete_project" not in PROJECT_TOOL_NAMES
+    assert "delete_project" in PROJECT_TOOL_NAMES
+    assert "delete_project" in registered_tools()
+    assert set(PROJECT_TOOL_NAMES) <= set(registered_tools())
 
 
 def test_a_session_audience_cannot_reach_any_project_verb(registered: Store) -> None:
@@ -201,7 +271,7 @@ def test_every_project_schema_spells_project_id_and_never_workspace_id(
         assert "project_id" in required, name
 
 
-def test_the_on_running_enum_is_on_running_itself() -> None:
+def test_the_on_running_enum_is_on_running_itself(registered: Store) -> None:
     """The enum a `delete_project` schema must carry **is** `OnRunning`'s values.
 
     Typing the three strings is exactly how the plan's `["refuse", "kill",
@@ -211,14 +281,25 @@ def test_the_on_running_enum_is_on_running_itself() -> None:
     the *link*: it is the only thing that can tell you the schema and the enum
     have come apart.
 
-    It is asserted against the **helper**, not against a registered tool,
-    because the verb is blocked (see this module's docstring). The derivation
-    ships now so the split's builder inherits it rather than re-deriving it, and
-    the helper is used by nothing else — which this line also states.
+    T3.1 asserted this against the **helper**, because the verb was blocked.
+    It is now asserted against the schema `delete_project` actually carries —
+    the helper's only consumer — because a derivation that is correct and
+    unused proves nothing about the tool a binding reads.
+
+    `on_running` is **not required**: omitting it is a thing a caller may do,
+    and what it then gets is the handler's `REFUSE`, not a schema default.
     """
     from shepherd.toolsurface.tools_projects import on_running_schema
 
-    schema = on_running_schema()
+    definition = {tool.name: tool for tool in build_project_tools(registered)}["delete_project"]
+    properties = definition.input_schema["properties"]
+    required = definition.input_schema["required"]
+    assert isinstance(properties, dict)
+    assert isinstance(required, list)
+    assert required == ["project_id"]
+    schema = properties["on_running"]
+    assert isinstance(schema, dict)
+    assert schema == dict(on_running_schema())
     assert schema["enum"] == [member.value for member in OnRunning]
     # D61: **no schema default.** Default-refuse must be unskippable by
     # omission, and a schema default is a value a caller can be handed without
@@ -300,6 +381,222 @@ def test_rename_project_relabels_and_a_missing_one_is_refused_as_a_value(
     assert absent["renamed"] is False
     assert absent["project"] is None
     assert "nope" in str(absent["refused"])
+
+
+# ----- D61's delete: three choices, and the kill between the halves -----------
+
+
+def test_delete_project_with_no_on_running_refuses_a_running_project(
+    registered: Store, killer: Killer
+) -> None:
+    """E13's default-refuse, **unskippable by omission**.
+
+    The schema carries no `default`, so a caller that says nothing is not handed
+    a value — the handler falls back to `OnRunning.REFUSE`, where a request
+    cannot edit it out. The refusal carries the session ids because the dialog
+    in Phase 9 renders its other two choices out of this record; a caller told
+    only `False` has to ask a second question that can disagree with the first.
+    """
+    project_id = made(registered)
+    live = running_session(registered, project_id, "eng-live")
+
+    answer = data(call("delete_project", {"project_id": project_id}))
+
+    assert answer["deleted"] is False
+    assert answer["running"] == [live]
+    assert "still running" in str(answer["refused"])
+    assert killer.asked == [], "REFUSE must never reach the kill path"
+    assert registered.get_workspace(project_id) is not None
+
+
+def test_delete_project_deletes_a_project_with_no_running_sessions(
+    registered: Store, killer: Killer
+) -> None:
+    """The control for the refusal above — the other branch of the same gate.
+
+    Same call, same absent `on_running`; the only difference is that nothing is
+    running. Without it, `REFUSE` would be indistinguishable from a verb that
+    refuses everything. `destroyed` names the finished session, because a person
+    told nothing about the ended rows is not told what the delete took.
+    """
+    project_id = made(registered)
+    done = ended_session(registered, project_id, "eng-done")
+
+    answer = data(call("delete_project", {"project_id": project_id}))
+
+    assert answer["deleted"] is True
+    assert answer["refused"] is None
+    assert answer["destroyed"] == [done]
+    assert answer["killed"] == []
+    assert answer["orphaned"] == []
+    assert killer.asked == []
+    assert registered.get_workspace(project_id) is None
+
+
+def test_delete_project_kill_sessions_reports_what_the_kill_actually_did(
+    registered: Store, killer: Killer
+) -> None:
+    """`killed` is what the caller **reports it killed**, and the kill is this
+    layer's — never a callable handed to a `store/` verb."""
+    project_id = made(registered)
+    live = running_session(registered, project_id, "eng-live")
+    done = ended_session(registered, project_id, "eng-done")
+
+    answer = data(
+        call(
+            "delete_project",
+            {"project_id": project_id, "on_running": OnRunning.KILL.value},
+        )
+    )
+
+    assert killer.asked == [live]
+    assert answer["deleted"] is True
+    assert answer["killed"] == [live]
+    assert sorted(str(row) for row in answer["destroyed"]) == sorted([live, done])
+    assert registered.get_workspace(project_id) is None
+
+
+def test_delete_project_keeps_the_project_when_a_kill_does_not_land(
+    registered: Store, killer: Killer
+) -> None:
+    """The other branch of `KILL`, and the reason the callable returns a bool.
+
+    A kill that did not land leaves a live agent running; deleting its row would
+    leave it with nothing to show for itself. `commit_project_delete` re-derives
+    the decision inside its own transaction and refuses — so this is also the
+    statement that the commit half does not trust the plan it was handed.
+    """
+    project_id = made(registered)
+    live = running_session(registered, project_id, "eng-live")
+    killer.lands = lambda _session_id: False
+
+    answer = data(
+        call(
+            "delete_project",
+            {"project_id": project_id, "on_running": OnRunning.KILL.value},
+        )
+    )
+
+    assert killer.asked == [live]
+    assert answer["deleted"] is False
+    assert answer["killed"] == []
+    assert answer["running"] == [live]
+    assert registered.get_workspace(project_id) is not None
+
+
+def test_delete_project_orphan_moves_the_living_and_severs_the_lineage(
+    registered: Store, killer: Killer
+) -> None:
+    """P2 and the severed links, both projected.
+
+    The survivor is a session in **another** project whose `retry_of` points
+    into the doomed cohort — one of the two self-references `_sever_lineage`
+    covers. `PRAGMA foreign_keys` is ON, so the reference is nulled rather than
+    left to abort the cascade — and it is *reported*, because D61 says a delete
+    forgets and a person is still owed the fact.
+    """
+    project_id = made(registered, "doomed")
+    elsewhere = made(registered, "safe")
+    parent = ended_session(registered, project_id, "eng-parent")
+    live = running_session(registered, project_id, "eng-live")
+    retry = running_session(registered, elsewhere, "eng-retry")
+    registered.link_retry(retry, parent)
+
+    answer = data(
+        call(
+            "delete_project",
+            {"project_id": project_id, "on_running": OnRunning.ORPHAN.value},
+        )
+    )
+
+    assert killer.asked == [], "ORPHAN moves sessions; it never kills them"
+    assert answer["deleted"] is True
+    assert answer["orphaned"] == [live]
+    assert answer["destroyed"] == [parent]
+    assert answer["severed"] == [{"session_id": retry, "column": "retry_of"}]
+    survivor = registered.get_session(retry)
+    assert survivor is not None
+    assert survivor.retry_of is None
+    moved = registered.get_session(live)
+    assert moved is not None
+    assert moved.workspace_id == UNASSIGNED_PROJECT_ID
+
+
+def test_delete_project_refuses_the_reserved_project_as_a_value(
+    registered: Store,
+) -> None:
+    """E9, in the one refusal shape this whole family carries."""
+    answer = data(call("delete_project", {"project_id": UNASSIGNED_PROJECT_ID}))
+
+    assert answer["deleted"] is False
+    assert "Unassigned" in str(answer["refused"])
+    assert registered.get_workspace(UNASSIGNED_PROJECT_ID) is not None
+
+
+def test_delete_project_refuses_an_unknown_on_running_rather_than_guessing(
+    registered: Store,
+) -> None:
+    """A value outside `OnRunning` is a refusal a page can draw, not a crash.
+
+    JSON Schema's `enum` is not one of the two things a binding is guaranteed to
+    carry through unchanged (D53), so the closed set is enforced at the seam —
+    and the one thing it must never do is fall back to a destructive member.
+    """
+    project_id = made(registered)
+    running_session(registered, project_id, "eng-live")
+
+    answer = data(call("delete_project", {"project_id": project_id, "on_running": "kill"}))
+
+    assert answer["deleted"] is False
+    assert "kill" in str(answer["refused"])
+    assert registered.get_workspace(project_id) is not None
+
+
+def test_the_kill_runs_outside_the_store_transaction(
+    registered: Store, killer: Killer
+) -> None:
+    """The reason this verb waited a phase, stated as a test that can fail.
+
+    The killer here **writes to the store** — which is precisely what the
+    shipped kill path does first (`orchestration/lifecycle.py:126`, where the
+    write-before-kill order is what survives a crash). If the kill were reached
+    from inside `Store._write`'s callable it would enqueue a job on the writer
+    thread that is blocked waiting for it, and the writer has no timeout: the
+    call never returns and every later write in the process hangs. So this is
+    asserted on a **timeout**, not on an outcome — an assertion that cannot be
+    made on the calling thread, because a deadlocked call never reaches it.
+
+    It is the same reproduction the coordinator recorded against the old verb:
+    *"DEADLOCK: delete_project did not return within 10s"*.
+    """
+    project_id = made(registered)
+    live = running_session(registered, project_id, "eng-live")
+    killer.lands = lambda session_id: bool(
+        registered.set_app_state(f"kill.{session_id}", 1) or True
+    )
+
+    answer: dict[str, object] = {}
+
+    def run() -> None:
+        answer.update(
+            data(
+                call(
+                    "delete_project",
+                    {"project_id": project_id, "on_running": OnRunning.KILL.value},
+                )
+            )
+        )
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(timeout=10)
+
+    assert not worker.is_alive(), (
+        "delete_project did not return within 10s: the kill ran behind the writer"
+    )
+    assert answer["deleted"] is True
+    assert answer["killed"] == [live]
+    assert registered.get_app_state(f"kill.{live}") == 1
 
 
 # ----- the reserved project refuses, and says so ------------------------------
