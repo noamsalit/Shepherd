@@ -140,7 +140,7 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     # the path parameter, and the merge order means a body claiming another
     # project could not move the target even if it were declared — but a field
     # the table never forwards is the property that actually holds, so it is the
-    # one asserted (`test_no_body_field_shadows_a_path_parameter`).
+    # one asserted (`test_no_declared_field_shadows_a_path_parameter`).
     #
     # `on_running` carries **no default** on this side either. A body that omits
     # it forwards nothing, and `delete_project`'s handler turns that absence

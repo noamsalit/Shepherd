@@ -893,6 +893,54 @@ def test_a_ui_registered_repo_binds_a_discovered_session_to_that_project(
     assert binding.anomaly is None
 
 
+def test_a_repo_projection_names_every_project_that_holds_it(
+    registered: Store, tmp_path: Path
+) -> None:
+    """GAP 4 — D60 made readable.
+
+    The row says *"a repo path may belong to more than one project"*, and the
+    page could not show it: nothing on the wire answered **which** projects hold
+    this repo. `reads.projects_for_repo` has existed since T1.6 and had one
+    caller, inside `bind_cwd_to_repo`. A page that wanted the answer had to ask
+    per repo, which is the N+1 the projections were shaped to avoid — so it is
+    read once for every repo and carried on the projection itself.
+
+    Both read verbs carry it, because a detail page and a list are the same
+    repo and must not disagree about who it is shared with.
+    """
+    tree = make_repo(tmp_path / "work" / "payments-api")
+    work = made(registered, "work")
+    personal = made(registered, "personal")
+    for project_id in (work, personal):
+        assert data(call("add_repo", {"project_id": project_id, "root_path": str(tree)}))[
+            "added"
+        ] is True
+
+    listed = data(call("list_repos", {"project_id": work}))["repos"]
+    assert isinstance(listed, list) and len(listed) == 1
+    row = listed[0]
+    assert isinstance(row, dict)
+    # Every holder, this project included: "shared with" is the page's word for
+    # the rest of the list, and a projection that pre-subtracted the current
+    # project would make the same list mean two things in two places.
+    assert sorted(str(name) for name in row["projects"]) == sorted([work, personal])
+
+    detail = data(call("get_project", {"project_id": personal}))["project"]
+    assert isinstance(detail, dict)
+    repos = detail["repos"]
+    assert isinstance(repos, list)
+    assert sorted(str(name) for name in repos[0]["projects"]) == sorted([work, personal])
+
+    # The control: a repo only one project holds says exactly that, so the
+    # field is a measurement rather than a list that is always long.
+    alone = make_repo(tmp_path / "work" / "lonely")
+    data(call("add_repo", {"project_id": work, "root_path": str(alone)}))
+    after = data(call("list_repos", {"project_id": work}))["repos"]
+    assert isinstance(after, list)
+    lonely = [r for r in after if isinstance(r, dict) and r["name"] == "lonely"][0]
+    assert lonely["projects"] == [work]
+
+
 def test_add_repo_from_a_subdirectory_registers_the_repo_root(
     registered: Store, tmp_path: Path
 ) -> None:

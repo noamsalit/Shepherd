@@ -108,7 +108,7 @@ def test_the_path_parameter_wins_over_a_body_that_names_another_project(
 ) -> None:
     """P13's positive half: the merge order, declared and watched.
 
-    `test_no_body_field_shadows_a_path_parameter` says no route declares
+    `test_no_declared_field_shadows_a_path_parameter` says no route declares
     `project_id` as a body field **today**; that is the braces. This is the
     belt: declare it for one route and watch the path win anyway, so reversing
     the merge inside `resolve_post` turns this red rather than surviving on the

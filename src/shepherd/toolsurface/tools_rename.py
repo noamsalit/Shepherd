@@ -2,7 +2,7 @@
 
 The plan puts `register_rename_tool` in `toolsurface/tools_m3.py`. That module
 ships at **447 lines against its own 450-line guard**
-(`test_the_three_modules_are_each_under_the_cap`), and the handler, its
+(`test_every_tool_module_is_under_the_cap`), and the handler, its
 projection and its schema are ~110 — so appending it would have meant editing a
 size assertion to make a plan item fit, which is the K11/K17 failure T23 is most
 exposed to. This repo has answered that collision with a split ten times now

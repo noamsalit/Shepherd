@@ -156,6 +156,30 @@ def projects_for_repo(connection: sqlite3.Connection, repo_id: str) -> list[str]
     return [str(row["workspace_id"]) for row in rows]
 
 
+def projects_by_repo(connection: sqlite3.Connection) -> dict[str, list[str]]:
+    """`{repo_id: every project holding it}`, for **every** repo, in one
+    statement — D60 made readable.
+
+    `projects_for_repo` answers this for one repo and `bind_cwd_to_repo` asks it
+    one repo at a time, which is right there: a discovered session has exactly
+    one `cwd`. A **page** has a list, and asking per row is the N+1 that
+    `repo_counts` exists here rather than in the projection to avoid. Same
+    shape, same reason.
+
+    A repo no project holds is **absent** rather than present with an empty
+    list: the projection reads a missing key as none, and two spellings of
+    nothing is how a consumer comes to branch on one of them.
+    """
+    rows = _rows(
+        connection,
+        "SELECT repo_id, workspace_id FROM project_repo ORDER BY repo_id, workspace_id",
+    )
+    found: dict[str, list[str]] = {}
+    for row in rows:
+        found.setdefault(str(row["repo_id"]), []).append(str(row["workspace_id"]))
+    return found
+
+
 def project_last_activity(connection: sqlite3.Connection) -> dict[str, str]:
     """The latest activity per project, derived from its sessions (ADR-P4).
 

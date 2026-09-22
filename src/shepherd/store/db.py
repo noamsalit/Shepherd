@@ -297,6 +297,11 @@ class Store:
     def list_workspaces(self) -> list[Workspace]:
         return reads.list_workspaces(self._read())
 
+    def projects_by_repo(self) -> dict[str, list[str]]:
+        """Every repo's holders in one read — the population `projects_for_repo`
+        answers one at a time (D60)."""
+        return reads.projects_by_repo(self._read())
+
     def projects_for_repo(self, repo_id: str) -> list[str]:
         return reads.projects_for_repo(self._read(), repo_id)
 

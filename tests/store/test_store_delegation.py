@@ -501,6 +501,7 @@ PROJECT_WRITES = (
 PROJECT_READS = (
     "get_workspace",
     "plan_project_delete",
+    "projects_by_repo",
     "projects_for_repo",
     "project_last_activity",
     "repo_counts",
@@ -591,6 +592,7 @@ def test_every_project_verb_is_refused_once_the_store_is_closed(tmp_path: Path) 
         lambda: closed.plan_project_delete(
             workspace_id=project.id, on_running=models.OnRunning.REFUSE
         ),
+        lambda: closed.projects_by_repo(),
         lambda: closed.projects_for_repo("r-1"),
         lambda: closed.project_last_activity(),
         lambda: closed.repo_counts(),

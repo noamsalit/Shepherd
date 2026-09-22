@@ -1,7 +1,7 @@
 """The read half of D57's project lifecycle, and the vocabulary both halves share.
 
 **A split, not a new module** (T3.3). `tools_projects.py` shipped at 408 lines
-against the 450-line cap that `test_the_three_modules_are_each_under_the_cap`
+against the 450-line cap that `test_every_tool_module_is_under_the_cap`
 holds it to, and the seventh verb — `delete_project`, with D61's three-way
 choice and its four projected outcome fields — does not fit under it. The plan
 authorises exactly this split, and **both halves are named on that line**,
@@ -71,13 +71,22 @@ def object_schema(
 # ----- projections (§13's explicit whitelist) --------------------------------
 
 
-def project_repo_row(repo: Repo) -> dict[str, object]:
+def project_repo_row(repo: Repo, projects: Sequence[str] = ()) -> dict[str, object]:
     """One registered repo, as the Projects page reads it.
 
     `git_common_dir` is on the wire deliberately: it is the key that decides
     which project a discovered session lands in, and a page that cannot show it
     cannot explain why a session bound where it did. `owner_id` is not — §13's
     whitelist keeps it inside the process.
+
+    **`projects` is D60 made readable.** The row says *"a repo path may belong
+    to more than one project"* and no answer on the wire said which, so the page
+    could not show it at all. It carries **every** holder, this project
+    included: "shared with" is the page's word for the rest of the list, and a
+    projection that pre-subtracted the current project would make one list mean
+    two things in two places. The caller reads the whole map once
+    (`store.projects_by_repo()`) rather than asking per row, which is the N+1
+    these projections exist to avoid.
     """
     return {
         "repo_id": repo.id,
@@ -87,6 +96,7 @@ def project_repo_row(repo: Repo) -> dict[str, object]:
         "vcs_remote": repo.vcs_remote,
         "active": repo.active,
         "added_at": repo.added_at,
+        "projects": list(projects),
     }
 
 
@@ -95,6 +105,7 @@ def project_detail(
     repos: Sequence[Repo],
     sessions: Sequence[Mapping[str, object]],
     last_activity_at: str | None,
+    holders: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, object]:
     """One project with everything its page draws, over `project_workspace`.
 
@@ -112,7 +123,10 @@ def project_detail(
     return project_workspace(
         workspace, repo_count=len(repos), last_activity_at=last_activity_at
     ) | {
-        "repos": [project_repo_row(row) for row in repos],
+        "repos": [
+            project_repo_row(row, () if holders is None else holders.get(row.id, ()))
+            for row in repos
+        ],
         "sessions": list(sessions),
     }
 
@@ -121,8 +135,18 @@ def project_detail(
 
 
 def list_repos(store: Store, *, project_id: str) -> dict[str, object]:
-    """§13's allowlist for one project, as a population a page can show."""
-    return {"repos": [project_repo_row(row) for row in store.list_repos(project_id)]}
+    """§13's allowlist for one project, as a population a page can show.
+
+    The holders map is read **once** for the whole list (D60); asking per repo
+    is the N+1 the projections were shaped to avoid.
+    """
+    holders = store.projects_by_repo()
+    return {
+        "repos": [
+            project_repo_row(row, holders.get(row.id, ()))
+            for row in store.list_repos(project_id)
+        ]
+    }
 
 
 def get_project(store: Store, clock: Clock, *, project_id: str) -> dict[str, object]:
@@ -144,7 +168,11 @@ def get_project(store: Store, clock: Clock, *, project_id: str) -> dict[str, obj
     return {
         "found": True,
         "project": project_detail(
-            found, repos, sessions, store.project_last_activity().get(project_id)
+            found,
+            repos,
+            sessions,
+            store.project_last_activity().get(project_id),
+            store.projects_by_repo(),
         ),
     }
 
