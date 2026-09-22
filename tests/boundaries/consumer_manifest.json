@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-09-17T21:44:18Z",
   "generated_by": "step 0b",
-  "gate": "DP1 Gate A / D38 — no file in web/ or cli/ changes while L4 is completed.",
+  "gate": "DP1 Gate A / D38 \u2014 no file in web/ or cli/ changes while L4 is completed.",
   "enumeration": "every path under src/shepherd/web/ and src/shepherd/cli/ from rglob('*') that is_file() and whose parts contain no __pycache__, as {posix path relative to src/shepherd: sha256 hex}. Enumerated, never hand-listed (K19).",
   "ordering_claim": "UNVERIFIABLE IN THIS TREE. That this manifest was frozen BEFORE the registry work is transcript evidence only: `git log -- docs/plans/` is empty, everything is untracked on one baseline commit, and no ordering of edits is recoverable. A VCS baseline would fix it outright and is rejected on a standing instruction, not on merit (plan, Open decisions). M3 clause 16 is the precedent.",
   "rebase_rule": "`baseline` is the step-0b freeze and is NEVER rewritten. `files` is what Gate A compares the live tree against. T24 is the ONLY task permitted to re-base, exactly once: it updates `files`, sets rebase.regenerated_by to \"T24\" and lists every path it moved in rebase.regenerated_paths. test_a_rebase_declares_every_path_whose_digest_moved asserts moved_paths(baseline, files) == set(regenerated_paths), so a re-base that quietly absorbs an unrelated change is caught rather than blessed.",
@@ -50,15 +50,15 @@
     "web/routes.py": "badf670c3199f261c1b0c1b90a8d469595a343e4d1cee82716f10e5bdb0b69e2",
     "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
     "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
-    "web/static/app.css": "d4367a16bf7ea47150944bf88db596ccc37492f6a19940fd40c73b5156724971",
-    "web/static/app.js": "67d4de7ab9a2bc45f2016c64cf3935860df375b8c6c3498e3eaccd63b39419f8",
-    "web/static/chat.js": "0ec2d67ae8f18d6e86c1bb85055ee1a938d897fe67e20591b42b553828a1e438",
+    "web/static/app.css": "56d168eee7cbc712a852788a8cdf1ca0baa56c0a46b18560b4cbb9eecc02c94d",
+    "web/static/app.js": "93815a8adc74ac7ec3b91ff3aa93e55113d0a710289514a3f47110cb3b1c5ff3",
+    "web/static/chat.js": "2bceca9a928c62d670dfdaf33a41424926e0246b06a1c8561b59aa57850131ee",
     "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
     "web/static/flock.js": "247133f47b543d9cd54c728a1bf1a004a474b1d473e90e6f08b735f04c945da4",
-    "web/static/index.html": "aae4d344ee8eab6d0eb0c622ce24515a1d4ef9b1ec0cbd50265f4abad4f8ac2c",
-    "web/static/projects.js": "3cee5fd5b8603ba30cd1a409bd41d0202f86244ab5c915d47daf80d172b0d55b",
+    "web/static/index.html": "033e82745670effa8d0cc7e3fbb0e7769e20d270cd3783a2e70b634cd586950e",
+    "web/static/projects.js": "b60f3fcff998cd449f5fb98d018690ea54fb9122ea01236c7bc82a62286d566a",
     "web/static/session.js": "2fc4b67c2c245990b786e11b03851e35e328c358953c9dadf1397da9e4a2854f",
-    "web/static/settings.js": "93b279433d8755f3f1de01cbffb3f1e1ab4814c3c53322ab449db3ee063370e9",
+    "web/static/settings.js": "0f57db4d51805368369daa07f616cabf8805460dc6f90f108e86baa077b5c44d",
     "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
     "web/static/terminal.js": "ace78240d2b6255c50506502327062227f98349b0a98fa71244ace6a7be2c90c",
     "web/static/vendor/LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
@@ -68,37 +68,37 @@
     "web/ws.py": "a54d12cea53d518e1c64d335c42006baa625877515ffa6f7a24d75324ab403e5"
   },
   "post_milestone": {
-    "rule": "Edits made AFTER M4 closed, which D38 does not govern. D38's sentence is \"if M4 changes a file in web/ or cli/, the placeholder had the wrong shape\" — it is a claim about completing L4, and that milestone is closed and verified. This block is NOT a second re-base: `rebase` stays T24's, spent exactly once, and `baseline` is still never rewritten. Every entry names a path, a date, an agent and a reason; the paths here must be DISJOINT from rebase.regenerated_paths, so this block can never be used to relaunder a path T24 already moved; and moved_paths(baseline, files) must equal regenerated_paths + these paths exactly, so an unrelated change still cannot ride along in silence.",
+    "rule": "Edits made AFTER M4 closed, which D38 does not govern. D38's sentence is \"if M4 changes a file in web/ or cli/, the placeholder had the wrong shape\" \u2014 it is a claim about completing L4, and that milestone is closed and verified. This block is NOT a second re-base: `rebase` stays T24's, spent exactly once, and `baseline` is still never rewritten. Every entry names a path, a date, an agent and a reason; the paths here must be DISJOINT from rebase.regenerated_paths, so this block can never be used to relaunder a path T24 already moved; and moved_paths(baseline, files) must equal regenerated_paths + these paths exactly, so an unrelated change still cannot ride along in silence.",
     "edits": [
       {
         "path": "web/static/fleet.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Removed.** T6.1 renamed it to `flock.js`: the Flock page is the same page under §12's name, rebuilt as three panes with no HTML sink. A rename is a removal and an addition, declared as two entries, because the manifest is keyed by path and a path that stopped existing is a move this gate must see."
+        "why": "**Removed.** T6.1 renamed it to `flock.js`: the Flock page is the same page under \u00a712's name, rebuilt as three panes with no HTML sink. A rename is a removal and an addition, declared as two entries, because the manifest is keyed by path and a path that stopped existing is a move this gate must see."
       },
       {
         "path": "web/static/flock.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Added.** T6.1's Flock page — the legend, the three panes and D67's session column — and the other half of the `fleet.js` rename above."
+        "why": "**Added.** T6.1's Flock page \u2014 the legend, the three panes and D67's session column \u2014 and the other half of the `fleet.js` rename above."
       },
       {
         "path": "web/static/projects.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Added.** T9.1's Projects page — the first consumer of the seven project verbs, which is what made five gaps in them findable."
+        "why": "**Added.** T9.1's Projects page \u2014 the first consumer of the seven project verbs, which is what made five gaps in them findable."
       },
       {
         "path": "web/static/rail.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "T5.3 (projects-and-ui plan, Phase 5), superseding the 2026-09-20 publish scrub",
-        "why": "THE FILE IS DELETED. This entry is REWRITTEN rather than appended to, because post_milestone entries are per PATH and not per edit (post_milestone_paths asserts len(seen) == len(set(seen))), so a path can carry exactly one entry and it has to describe that path's WHOLE divergence from the step-0b baseline. The previous sentence said 'Comment text only: no statement, no selector and no behaviour changed' — true of the 2026-09-20 publish scrub, which renamed a repo name carrying a former employer's prefix to `payments-api` on the owner's instruction, and FALSE the moment the file stopped existing. Leaving it would have been a false record in the one gate whose entire purpose is an honest one. The deletion is D66: the Needs-You rail leaves the shell; §12's 'on every page' is reversed, and if the rail returns it lives on the Flock page alone (U2). The projection it rendered — `project_needs_you` and `fleet_summary`'s `needs_you` list — is untouched and is still asserted at tests/qa/test_s4_needs_you_rail.py; only the renderer went, with its seven frozen node ids retired by name in T5.1."
+        "why": "THE FILE IS DELETED. This entry is REWRITTEN rather than appended to, because post_milestone entries are per PATH and not per edit (post_milestone_paths asserts len(seen) == len(set(seen))), so a path can carry exactly one entry and it has to describe that path's WHOLE divergence from the step-0b baseline. The previous sentence said 'Comment text only: no statement, no selector and no behaviour changed' \u2014 true of the 2026-09-20 publish scrub, which renamed a repo name carrying a former employer's prefix to `payments-api` on the owner's instruction, and FALSE the moment the file stopped existing. Leaving it would have been a false record in the one gate whose entire purpose is an honest one. The deletion is D66: the Needs-You rail leaves the shell; \u00a712's 'on every page' is reversed, and if the rail returns it lives on the Flock page alone (U2). The projection it rendered \u2014 `project_needs_you` and `fleet_summary`'s `needs_you` list \u2014 is untouched and is still asserted at tests/qa/test_s4_needs_you_rail.py; only the renderer went, with its seven frozen node ids retired by name in T5.1."
       },
       {
         "path": "web/static/session.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Edited.** D67 moves §12's page 3 from a fourth page into the Flock's third pane (T6.3). Its fourteen slots and its contracts are unchanged; it imports `element` and `showLevel` from `flock.js` and walks the drill-down to `detail` when a session opens. It is a baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based."
+        "why": "**Edited.** D67 moves \u00a712's page 3 from a fourth page into the Flock's third pane (T6.3). Its fourteen slots and its contracts are unchanged; it imports `element` and `showLevel` from `flock.js` and walks the drill-down to `detail` when a session opens. It is a baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based."
       },
       {
         "path": "web/static/settings.js",

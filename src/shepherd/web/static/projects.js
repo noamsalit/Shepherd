@@ -39,6 +39,20 @@ const ALLOWLIST_WARNING =
 
 const UNASSIGNED = "unassigned";
 
+//: The sentence for a `fetch` that **rejected** — `controld` stopped, the
+//: socket refused, DNS gone. `envelope()` only ever ran on a *resolved*
+//: response, so before this pass a rejection walked past every refusal path
+//: this page has: the dialog stayed open, `#p-refusal` stayed hidden and empty,
+//: and the only trace was an unhandled `Failed to fetch` on the console. The
+//: copy is `session.js`'s, which had the pattern first and was one of two
+//: modules out of six that did.
+const UNREACHABLE =
+  "The request did not reach the server — Shepherd may not be running.";
+
+//: Principle 5 over `required`: the browser accepts a single space, and the
+//: handler then trimmed it to "" and returned with no message at all.
+const NEEDS_NAME = "A project needs a name — this one is only whitespace.";
+
 // Principle 5: a datum we do not have is shown as unknown, never invented.
 const NO_DESCRIPTION = "No description.";
 const NO_PATHS = "No paths yet — no session can be started here.";
@@ -61,6 +75,18 @@ function element(tag, className, text) {
   if (text !== undefined && text !== null) {
     node.textContent = String(text);
   }
+  return node;
+}
+
+// Defect 11. Every one of these is inside a fixed-width box with
+// `text-overflow: ellipsis`, and QA measured a 935px repo path in a 334px one:
+// the ellipsised half of a §13 allowlist path could not be read at all, by any
+// means the page offered. A `title` is the cheapest thing that is not a second
+// layout — no width, survives a phone, and it is the string the node already
+// holds, so it cannot disagree with what is on screen.
+function titled(tag, className, text) {
+  const node = element(tag, className, text);
+  node.title = node.textContent;
   return node;
 }
 
@@ -114,18 +140,32 @@ async function envelope(response) {
   return body.data;
 }
 
+// Both halves answer `null` for *every* failure and leave the sentence in
+// `view.status`, so a caller has one branch to write. A rejection is a failure
+// like a refusal is: the difference is which sentence, never whether there is
+// one.
 async function read(path) {
-  return envelope(await fetch(path, { headers: { Accept: "application/json" } }));
+  try {
+    return envelope(await fetch(path, { headers: { Accept: "application/json" } }));
+  } catch (unreachable) {
+    view.status = UNREACHABLE;
+    return null;
+  }
 }
 
 async function write(path, payload) {
-  return envelope(
-    await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-  );
+  try {
+    return envelope(
+      await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    );
+  } catch (unreachable) {
+    view.status = UNREACHABLE;
+    return null;
+  }
 }
 
 const idOf = (project) => encodeURIComponent(project.project_id);
@@ -168,6 +208,13 @@ function ordered(projects) {
     .concat(projects.filter((project) => project.project_id === UNASSIGNED));
 }
 
+//: Whether this project's name identifies it in the list that is on screen.
+function unique(project) {
+  return (
+    view.projects.filter((row) => row.name === project.name).length === 1
+  );
+}
+
 function countLabel(n, one, many) {
   return n === 1 ? `1 ${one}` : `${n} ${many}`;
 }
@@ -180,8 +227,15 @@ function projectRow(project) {
   }
   row.dataset.projectId = project.project_id;
   row.setAttribute("aria-current", project.project_id === view.openId ? "true" : "false");
-  row.appendChild(element("span", "proj-name", project.name));
+  row.appendChild(titled("span", "proj-name", project.name));
   const meta = element("div", "proj-meta");
+  // Defect 6. `create_project` is deliberately never keyed by name (E1), so two
+  // rows may read the same word and be different projects. The id is shown on
+  // exactly those rows: always would be noise, never was two rows separable
+  // only by "0 repos" and "no activity yet".
+  if (!unique(project)) {
+    meta.appendChild(titled("span", "proj-id", project.project_id));
+  }
   if (!reserved) {
     meta.appendChild(element("span", null, countLabel(project.repo_count, "repo", "repos")));
   }
@@ -245,7 +299,7 @@ function sessionLink(row) {
   link.dataset.page = "flock";
   link.dataset.sessionId = row.session_id;
   link.href = `#flock/session/${row.session_id}`;
-  link.appendChild(element("span", "mini-title", row.title || UNTITLED));
+  link.appendChild(titled("span", "mini-title", row.title || UNTITLED));
   link.appendChild(
     element("span", "mini-age", row.ended_at === null ? "running" : "ended")
   );
@@ -257,7 +311,7 @@ function pathRow(repo) {
   const row = element("div", "path");
   // §13's allowlist, in full: a basename or an ellipsis would hide exactly the
   // part of the string that decides where a session may be started.
-  row.appendChild(element("code", "path-text", repo.root_path));
+  row.appendChild(titled("code", "path-text", repo.root_path));
   return row;
 }
 
@@ -279,7 +333,7 @@ function renderDetail() {
 
   const band = element("div", "proj-band");
   band.appendChild(backButton());
-  band.appendChild(element("h2", "proj-title", project.name));
+  band.appendChild(titled("h2", "proj-title", project.name));
   if (!reserved) {
     // D59: the reserved project gets no `.proj-acts` at all. Absent, not
     // disabled — the store refuses rename, delete and add_repo on it (E7/E8/E9).
@@ -366,10 +420,18 @@ function errorLine(text) {
 //
 // Create and edit are one dialog because they are one form. They are **not**
 // one verb: `create_project` takes name and description, `rename_project`
-// takes a name, and the two repo verbs act one path at a time against a
-// project that already exists. So the paths section is live only when editing
-// — there is no id to add a path to before the project is made — and the
-// description is write-once, because no verb changes it (see the ledger).
+// takes a name, `set_project_description` takes a description, and the two
+// repo verbs act one path at a time against a project that already exists. So
+// the paths section is live only when editing — there is no id to add a path
+// to before the project is made — and Save issues **only the verbs whose field
+// changed**, because a rename is an audited write and re-issuing one for a
+// field nobody touched is a record of something that did not happen.
+//
+// **Defect 3.** The description field used to be `disabled` when editing,
+// under the note "no verb changes it in this build". That was false —
+// `set_project_description` is built (`tools_projects.py:177`), routed
+// (`routes.py:116`) and registered — and the sentence told a person that fixing
+// a typo meant deleting the project, which is the one destructive verb here.
 
 const draft = { project: null, repos: [] };
 
@@ -478,12 +540,11 @@ async function openProjectDialog(project) {
   document.getElementById("p-name").value = editing ? project.name : "";
   const desc = document.getElementById("p-desc");
   desc.value = editing ? project.description || "" : "";
-  // No verb changes a description after the create, so the field is inert here
-  // rather than a control that silently drops what was typed into it.
-  desc.disabled = editing;
+  desc.disabled = false;
   document.getElementById("p-desc-note").textContent = editing
-    ? "Set when the project was created; no verb changes it in this build."
+    ? "Saved by set_project_description when you press Save."
     : "";
+  duplicate.armed = null;
   document.getElementById("p-new-path").value = "";
   document.getElementById("p-paths-section").hidden = !editing;
   showRefusal("p-refusal", null);
@@ -551,22 +612,44 @@ async function removeDraftPath(repo) {
   await reload();
 }
 
+//: Defect 6's create-side half. A second project of the same name is a real
+//: intent the store supports on purpose (E1: keyed by id, never by name), so
+//: this is a **warning and not a refusal** — the first Create says what is
+//: about to happen, the second one does it. `armed` holds the name that was
+//: warned about, so changing the field after the warning re-arms it.
+const duplicate = { armed: null };
+
+function duplicateWarning(name) {
+  return (
+    `There is already a project named "${name}". A name is a label and not an ` +
+    "identity here, so this makes a second project. Press Create again to do it."
+  );
+}
+
 async function onProjectSubmit(event) {
   event.preventDefault();
   const name = document.getElementById("p-name").value.trim();
+  const description = document.getElementById("p-desc").value.trim();
   if (name === "") {
+    // Defect 10: `required` is satisfied by a space, so the browser submits and
+    // this used to `return` with nothing said at all.
+    showRefusal("p-refusal", NEEDS_NAME);
     return;
   }
   const editing = draft.project;
   if (editing === null) {
-    const answer = await write(API, {
-      name,
-      description: document.getElementById("p-desc").value.trim(),
-    });
+    const clashes = view.projects.some((row) => row.name === name);
+    if (clashes && duplicate.armed !== name) {
+      duplicate.armed = name;
+      showRefusal("p-refusal", duplicateWarning(name));
+      return;
+    }
+    const answer = await write(API, { name, description });
     if (answer === null || !answer.created) {
       showRefusal("p-refusal", answer === null ? view.status : answer.refused);
       return;
     }
+    duplicate.armed = null;
     document.getElementById("dlg-project").close();
     await loadList();
     root().dataset.level = "detail";
@@ -581,6 +664,19 @@ async function onProjectSubmit(event) {
       return;
     }
   }
+  if (description !== (editing.description || "")) {
+    // Absent **clears** it, exactly as it does at creation — so an emptied box
+    // sends no `description` rather than an empty string, and the one spelling
+    // of "there is no description" stays the store's.
+    const answer = await write(
+      `${API}/${idOf(editing)}/description`,
+      description === "" ? {} : { description }
+    );
+    if (answer === null || !answer.described) {
+      showRefusal("p-refusal", answer === null ? view.status : answer.refused);
+      return;
+    }
+  }
   document.getElementById("dlg-project").close();
   await reload();
 }
@@ -589,13 +685,18 @@ async function onProjectSubmit(event) {
 //
 // The flow, and why it is three steps rather than one button.
 //
-// 1. **Before any request**, the dialog says what the delete would take. The
-//    record cannot tell it: `DeletePlan.doomed` is computed and then discarded
-//    by `delete_project`, and the refusal carries `running` only. So the count
-//    comes from the detail already on screen — the project's sessions whose
-//    `ended_at` is set, which is `running_sessions_for`'s rule read the other
-//    way round. It is a copy of a store derivation and it is named as one in
-//    `docs/plans/projects-ui-blockers/t9-1.md`.
+// 1. **Before any request**, the dialog says what the delete would take, and
+//    what it says is *every session record in the project* — because
+//    `commit_project_delete` runs `DELETE FROM session WHERE workspace_id = ?`
+//    and the running rows go too.
+//
+//    This is defect 1, and it was the worst thing on the page. The dialog used
+//    to filter `ended_at !== null` and show the complement, which is the count
+//    for the **orphan** branch presented as the unconditional one: QA saw
+//    "6 session records" over a delete whose own record said `doomed: [8 ids]`.
+//    `store/reads.py:285-291` predicted the drift in a comment written before
+//    this page shipped. `DeletePlan.doomed` is now the only thing rendered the
+//    moment there is one, and `endedSessions` is gone rather than corrected.
 // 2. **The first POST carries no `on_running`.** Not `"refuse"` — nothing.
 //    Default-refuse has to be unskippable by omission, and a field that is
 //    never in the body cannot be edited out of it.
@@ -621,6 +722,14 @@ function deleteDialog() {
   body.id = "dlg-delete-body";
   panel.appendChild(body);
 
+  // Defect 6. The title said "Delete <name>" and nothing else, and two
+  // projects may share a name by design. The id is what the button acts on, so
+  // the id is on screen beside the description, which is the field a person
+  // actually wrote to tell them apart.
+  const identity = element("div", "dlg-identity");
+  identity.id = "dlg-delete-identity";
+  panel.appendChild(identity);
+
   const doomed = element("div", "dlg-live");
   doomed.id = "dlg-delete-doomed";
   panel.appendChild(doomed);
@@ -644,11 +753,19 @@ function deleteDialog() {
   return dialog;
 }
 
-function choice(key, text, note, danger) {
+function choice(key, text, note, danger, disabled) {
   const node = button("dlg-choice");
   node.dataset.choice = key;
   if (danger) {
     node.dataset.danger = "true";
+  }
+  // Defect 4. Absent would be wrong here and disabled is right, which is the
+  // opposite of D59's rule for the reserved project — and for the opposite
+  // reason. A stop *is* a thing you may do to a running session; this
+  // particular set of sessions has no pane Shepherd can reach, and a person who
+  // is not shown the choice cannot be told why it cannot work.
+  if (disabled) {
+    node.disabled = true;
   }
   node.appendChild(element("span", null, text));
   node.appendChild(element("small", null, note));
@@ -665,35 +782,54 @@ function idList(host, label, ids) {
   }
 }
 
-function endedSessions(project) {
-  // `running` is `ended_at IS NULL` in `store/reads.py`; this is the
-  // complement of that, over the same projected rows.
-  return project.sessions.filter((row) => row.ended_at !== null);
-}
-
+//: The sessions still going. This one stays a local filter and the count of
+//: what dies does not, and the difference is the point: this number is a
+//: *warning* that the delete will refuse, and the server corrects it on the
+//: very next line by answering `running` itself. The other was the number in
+//: front of the destructive button.
 function runningSessions(project) {
   return project.sessions.filter((row) => row.ended_at === null);
 }
 
+//: `doomed`, rendered — the server's list, never a filter over it.
+function renderDoomed(ids) {
+  const host = document.getElementById("dlg-delete-doomed");
+  host.replaceChildren();
+  idList(host, "These session records go with the project:", ids);
+}
+
+function destroysLabel(n) {
+  return `This deletes the project and ${countLabel(n, "session record", "session records")}`;
+}
+
+function renderIdentity(project) {
+  const host = document.getElementById("dlg-delete-identity");
+  host.replaceChildren();
+  host.appendChild(titled("div", "dlg-row mono", project.project_id));
+  host.appendChild(
+    titled("div", "dlg-row", project.description || NO_DESCRIPTION)
+  );
+  for (const repo of project.repos) {
+    host.appendChild(titled("div", "dlg-row mono", repo.root_path));
+  }
+}
+
 function openDeleteDialog(project) {
   const dialog = document.getElementById("dlg-delete");
-  const doomed = endedSessions(project);
+  // **Every** session record, not the ended ones: this is what `doomed` will
+  // say, computed the one way that agrees with the DELETE statement.
+  const all = project.sessions.map((row) => row.session_id);
   const live = runningSessions(project);
   document.getElementById("dlg-delete-title").textContent = `Delete ${project.name}`;
+  renderIdentity(project);
   document.getElementById("dlg-delete-body").textContent =
-    `This deletes the project and ${countLabel(doomed.length, "session record", "session records")}` +
+    destroysLabel(all.length) +
     (live.length === 0
       ? ". Nothing in it is running."
-      : `, and ${countLabel(live.length, "session", "sessions")} in it ` +
-        "are still running — the delete will refuse until you choose what happens to them.");
+      : `, including ${countLabel(live.length, "session", "sessions")} still ` +
+        "running — the delete will refuse until you choose what happens to them.");
 
-  const doomedHost = document.getElementById("dlg-delete-doomed");
-  doomedHost.replaceChildren();
-  idList(
-    doomedHost,
-    "These session records go with the project:",
-    doomed.map((row) => row.session_id)
-  );
+  renderDoomed(all);
   document.getElementById("dlg-delete-live").replaceChildren();
 
   const choices = document.getElementById("dlg-delete-choices");
@@ -702,7 +838,8 @@ function openDeleteDialog(project) {
     "delete",
     "Delete the project",
     "Asks the server. A session still running refuses it.",
-    true
+    true,
+    false
   );
   go.addEventListener("click", () => onDeleteAnswer(project, null));
   choices.appendChild(go);
@@ -713,8 +850,47 @@ function openDeleteDialog(project) {
 //: offer. A refusal that names none — the reserved project, a project deleted
 //: in another tab — is a sentence and nothing else, because there is no answer
 //: the page could give that would change it.
+//: Defect 7. Two rapid clicks used to issue two deletes: the first succeeded
+//: and the second raced it and lost, so the last sentence a person read was
+//: *"there is no project '<ULID>' to delete"* — a failure, naming a raw id,
+//: about a delete that had worked. One in two runs. The guard is a flag rather
+//: than a disabled button because the choices are rebuilt on every answer and
+//: a disabled node is replaced before the second click reaches it.
+const inFlight = { delete: false };
+
+//: The note under "Stop them, then delete", written out of the plan's own
+//: split. `killable` is `runner_handle IS NOT NULL` — the column the shipped
+//: kill path asks — so an empty one means the server has already decided this
+//: choice cannot work, and offering it as the primary danger choice made the
+//: user discover that by clicking it.
+function stopNote(answer) {
+  if (answer.killable.length === 0) {
+    return (
+      "Shepherd does not own any of these sessions — they were started " +
+      "outside it and there is no pane to stop. Use Unassigned instead."
+    );
+  }
+  if (answer.unkillable.length === 0) {
+    return "Ends the running work, then deletes the project.";
+  }
+  return (
+    `Ends ${countLabel(answer.killable.length, "session", "sessions")}. ` +
+    `Shepherd does not own ${answer.unkillable.join(", ")}, so the delete ` +
+    "will refuse again over those."
+  );
+}
+
 async function onDeleteAnswer(project, onRunning) {
-  const answer = await deleteProject(project.project_id, onRunning);
+  if (inFlight.delete) {
+    return;
+  }
+  inFlight.delete = true;
+  let answer;
+  try {
+    answer = await deleteProject(project.project_id, onRunning);
+  } finally {
+    inFlight.delete = false;
+  }
   const choices = document.getElementById("dlg-delete-choices");
   const live = document.getElementById("dlg-delete-live");
   choices.replaceChildren();
@@ -728,8 +904,20 @@ async function onDeleteAnswer(project, onRunning) {
     return;
   }
 
-  document.getElementById("dlg-delete-body").textContent = answer.refused;
-  document.getElementById("dlg-delete-doomed").replaceChildren();
+  // Defect 7's other half: the list behind the dialog is one delete out of
+  // date the moment a delete refuses for a reason that is about the world —
+  // a project another tab removed answers "there is no project '<ULID>'", and
+  // the row for it is still on screen. Re-read **before** anything in the
+  // dialog is written, because every line below is synchronous from here and
+  // an `await` between the sentence and the ids it explains is a frame in
+  // which the two disagree.
+  await loadList();
+  // The refusal's own count, which is the first moment `doomed` exists. The
+  // dialog said a number before the button; this is the server agreeing with
+  // it, or correcting it, in the same words.
+  document.getElementById("dlg-delete-body").textContent =
+    `${answer.refused} ${destroysLabel(answer.doomed.length)}.`;
+  renderDoomed(answer.doomed);
   // `killed` is shown on a refusal too, and this is the case that is easy to
   // miss: on a mixed project the owned sessions really were stopped before the
   // commit half refused over the ones that could not be.
@@ -741,9 +929,9 @@ async function onDeleteAnswer(project, onRunning) {
   const kill = choice(
     ON_RUNNING.kill,
     "Stop them, then delete",
-    "Ends the running work. A session Shepherd does not own has no pane to " +
-      "stop, so this can refuse again and say which.",
-    true
+    stopNote(answer),
+    true,
+    answer.killable.length === 0
   );
   kill.addEventListener("click", () => onDeleteAnswer(project, ON_RUNNING.kill));
   choices.appendChild(kill);
@@ -751,11 +939,14 @@ async function onDeleteAnswer(project, onRunning) {
     ON_RUNNING.orphan,
     "Move them to Unassigned, then delete",
     "The work keeps running; only the project goes.",
+    false,
     false
   );
   orphan.addEventListener("click", () => onDeleteAnswer(project, ON_RUNNING.orphan));
   choices.appendChild(orphan);
-  const wait = choice("cancel", "Wait — keep the project", "Nothing changes.", false);
+  const wait = choice(
+    "cancel", "Wait — keep the project", "Nothing changes.", false, false
+  );
   wait.addEventListener("click", () => document.getElementById("dlg-delete").close());
   choices.appendChild(wait);
 }
@@ -806,7 +997,7 @@ function scaffold(host) {
   // transform caught T7.2 on Settings, which is why that page's title is a
   // band too. Found in a browser, not by reading.
   const band = element("div", "proj-band");
-  band.appendChild(element("h2", "proj-title", "Projects"));
+  band.appendChild(titled("h2", "proj-title", "Projects"));
   listPane.appendChild(band);
   const list = element("div", "proj-list");
   list.id = "proj-list";

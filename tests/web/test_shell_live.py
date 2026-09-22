@@ -286,3 +286,140 @@ def test_each_page_root_fills_the_column_it_is_given(desktop) -> None:
         "the composer is not pinned to the bottom of the page",
     )
     assert errors == [], errors
+
+
+# ============================================================================
+# The QA remediation pass (workflow wf-20260921T212808Z-9172ed6b).
+#
+# Three defects live in `app.js` and in the shell's markup, and none of them is
+# visible from a fixture: they are about what the *stream* does to the page.
+# `publish` writes into the same ring `/api/events` serves, so an envelope here
+# arrives at the browser over the real transport.
+# ============================================================================
+
+
+def publish_events(count: int, kind: str = "qa.burst") -> None:
+    """`count` envelopes through the real ring, as the composition root does."""
+    from shepherd.core.clock import utc_now
+    from shepherd.core.stream import StreamEvent
+    from shepherd.toolsurface.stream import publish
+
+    for n in range(count):
+        publish(
+            StreamEvent(
+                kind=kind, session_id=None, payload={"n": n}, occurred_at=utc_now()
+            )
+        )
+
+
+def test_the_connection_state_is_not_destroyed_by_the_first_event(desktop) -> None:
+    """**Defect 5 (MEDIUM).** `#stream-status` had three writers and three
+    vocabularies: `sse.js` wrote `live`/`reconnecting`/`unreadable`, `app.js`
+    wrote the **raw event kind** on every envelope, and `app.js` also wrote
+    failures there. QA measured one page load going
+    `live` -> `no such session: …` -> `qa.burst`.
+
+    So the connection indicator — the one thing on the page that says whether
+    Shepherd is still there — was destroyed by the first event that arrived,
+    and replaced by a word from a different vocabulary. The slot is the
+    stream's state and only the stream writes it.
+    """
+    page, errors = desktop
+    status = page.locator("#stream-status")
+    assert status.inner_text() == "live", status.inner_text()
+
+    publish_events(3)
+    page.wait_for_timeout(600)
+
+    assert status.inner_text() == "live", status.inner_text()
+    assert errors == [], errors
+
+
+def test_an_error_persists_until_it_is_superseded_or_dismissed(desktop) -> None:
+    """The other half of defect 5, and the one that cost information.
+
+    The **only** place a `correlation_id` is ever shown to a person is a failed
+    read, and it was written into the same slot the next envelope overwrote —
+    measured at roughly 35ms under QA's burst. An id nobody can finish reading
+    is an id nobody can quote, which is the whole of what §13 leaves behind
+    after a failed tool call.
+    """
+    from shepherd.toolsurface.registry import GENERIC_ERROR
+
+    page, errors = desktop
+    page.route(
+        "**/api/fleet",
+        lambda route: route.fulfill(
+            status=400,
+            content_type="application/json",
+            body=(
+                '{"ok": false, "data": null, "error": "'
+                + GENERIC_ERROR
+                + '", "correlation_id": "cid-01JSHELL"}'
+            ),
+        ),
+    )
+    publish_events(1)
+    page.wait_for_selector("#stream-message:not([hidden])", timeout=5000)
+    assert "cid-01JSHELL" in page.locator("#stream-message").inner_text()
+
+    # Twenty more envelopes, none of them an error: the id is still readable.
+    publish_events(20)
+    page.wait_for_timeout(800)
+    assert "cid-01JSHELL" in page.locator("#stream-message").inner_text()
+
+    page.locator("#stream-message-dismiss").click()
+    # `state="attached"`: the node stays in the document and goes `hidden`, so
+    # the default `visible` wait would time out on the very thing being proved.
+    page.wait_for_selector("#stream-message[hidden]", state="attached", timeout=5000)
+    assert page.locator("#stream-status").inner_text() in ("live", "reconnecting")
+    assert all("400" in message for message in errors), errors
+
+
+def test_the_shell_says_when_a_read_never_reaches_the_server(desktop) -> None:
+    """**Defect 2 (HIGH)** at the second of the four modules that missed it.
+
+    `app.js`'s `read()` awaited `response.json()` on a `fetch` that may reject,
+    and nothing caught it. With `controld` stopped the page simply stopped
+    updating: no sentence, no indicator change, an unhandled `Failed to fetch`
+    on a console nobody has open.
+    """
+    page, errors = desktop
+    page.route("**/api/fleet/tree", lambda route: route.abort("failed"))
+
+    publish_events(1)
+
+    page.wait_for_selector("#stream-message:not([hidden])", timeout=5000)
+    assert "did not reach the server" in page.locator("#stream-message").inner_text()
+    assert [error for error in errors if "pageerror" in error] == [], errors
+
+
+def test_a_burst_of_envelopes_does_not_become_a_request_per_envelope(desktop) -> None:
+    """**Defect 8 (LOW, and the one that scales).** QA measured 1/10/100
+    envelopes producing 4/40/400 HTTP requests — perfectly linear, about 115
+    requests a second from a single tab, against a store with one writer
+    thread. Every envelope called `loadFleet()` (two reads) and
+    `projects.reload()` (two more), with nothing in flight and nothing merged.
+
+    The refresh is now coalesced: an envelope that arrives while a refresh is
+    running marks it stale instead of starting a second one, so a burst of N
+    costs two passes rather than N. The assertion is a **ceiling**, not a
+    count — the exact number depends on where in a pass each envelope lands,
+    and a test that pinned it would be pinning the scheduler.
+    """
+    page, errors = desktop
+    seen: list[str] = []
+    page.on(
+        "request",
+        lambda request: seen.append(request.url) if "/api/" in request.url else None,
+    )
+
+    publish_events(40)
+    page.wait_for_timeout(1500)
+
+    reads = [url for url in seen if "/api/events" not in url]
+    assert len(reads) <= 16, (len(reads), reads[:20])
+    # …and it really did refresh: a coalescer that dropped everything would
+    # also pass the line above.
+    assert len(reads) >= 2, reads
+    assert errors == [], errors

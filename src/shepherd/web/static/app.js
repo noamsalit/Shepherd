@@ -56,16 +56,59 @@ const view = {
   sessionId: null,
 };
 
+//: The sentence for a `fetch` that **rejected** rather than answered —
+//: `controld` stopped, the socket refused. `session.js` had this copy and this
+//: pattern; four of the six modules did not, and this was one of them: the
+//: `await response.json()` below ran only on a resolved response, so with the
+//: daemon down the page silently stopped updating and left an unhandled
+//: `Failed to fetch` on a console nobody has open (defect 2).
+const UNREACHABLE =
+  "The request did not reach the server — Shepherd may not be running.";
+
+// ---------------------------------------------------------------------------
+// Two slots, because they are two facts (defect 5).
+//
+// `renderStatus` is the **stream's** state and nothing else writes it. It is
+// handed to `connect()` and to no other caller: `live`, `reconnecting`,
+// `unreadable`, and `connecting` from the markup before the first frame.
+//
+// `#stream-message` is what a call had to say. It persists until another error
+// replaces it or the dismiss button clears it — an error is not superseded by
+// the fact that time passed, and the correlation id in it is the whole of what
+// §13 leaves behind after a failed tool call.
+// ---------------------------------------------------------------------------
+
+const message = document.getElementById("stream-message");
+
+function showError(text) {
+  document.getElementById("stream-message-text").textContent = text;
+  message.hidden = false;
+}
+
+document.getElementById("stream-message-dismiss").addEventListener("click", () => {
+  document.getElementById("stream-message-text").textContent = "";
+  message.hidden = true;
+});
+
 // Every body is `{ok, data, error, correlation_id}`. On a failure the page shows
 // the generic literal and the id — §13 gives it nothing else, deliberately.
 async function read(path) {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
-  const body = await response.json();
-  if (!body.ok) {
-    renderStatus(`${body.error} (${body.correlation_id})`);
+  // The **whole** call is inside the `try`, which is `session.js`'s shape and
+  // the one this tree already had twice: a body that is not JSON is a reply
+  // this page cannot read either, and splitting the two would mean two
+  // sentences for one fact — "Shepherd did not answer".
+  try {
+    const response = await fetch(path, { headers: { Accept: "application/json" } });
+    const body = await response.json();
+    if (!body.ok) {
+      showError(`${body.error} (${body.correlation_id})`);
+      return null;
+    }
+    return body.data;
+  } catch (unreachable) {
+    showError(UNREACHABLE);
     return null;
   }
-  return body.data;
 }
 
 function drawFlock() {
@@ -111,7 +154,7 @@ async function openSession(sessionId) {
     return;
   }
   if (!answer.found || answer.session === null) {
-    renderStatus(`no such session: ${sessionId}`);
+    showError(`no such session: ${sessionId}`);
     return;
   }
   view.sessionId = sessionId;
@@ -207,22 +250,57 @@ const NAV = {
   "nav-settings": "settings",
 };
 
+// The re-read every envelope causes, **coalesced** (defect 8).
+//
+// QA measured 1/10/100 envelopes producing 4/40/400 requests — perfectly
+// linear, about 115 a second from one tab, against a store with a single
+// writer thread. Every envelope started a fresh `loadFleet()` (two reads) and
+// `projects.reload()` (two more) with no idea that three were already in
+// flight, and the page rendered each answer in whatever order they landed.
+//
+// A refresh that arrives while one is running does not start a second one: it
+// marks the running one stale, and the loop goes round once more when it
+// finishes. So a burst of N costs two passes rather than N, the last pass is
+// always after the last envelope, and there is still **no timer** — §12's rule
+// is that nothing is on a schedule, not that nothing is merged.
+const refresh = { running: false, stale: false };
+
+async function refreshAll() {
+  if (refresh.running) {
+    refresh.stale = true;
+    return;
+  }
+  refresh.running = true;
+  try {
+    do {
+      refresh.stale = false;
+      await loadFleet();
+      if (projects !== null) {
+        // The Projects page lists each project's sessions, so it follows the
+        // same event rather than a timer of its own (§12: no polling).
+        // `mountProjects()` hands back the one function that re-reads.
+        await projects.reload();
+      }
+    } while (refresh.stale);
+  } finally {
+    refresh.running = false;
+  }
+}
+
 // An event says something changed; re-reading the tree is a response to it, not
 // a schedule.
 function onEnvelope(envelope) {
-  renderStatus(envelope.type);
   // §12's page 1 reads the same stream: `master.*` is the conversation and
   // `approval.*` is the card. One subscription, three views — Settings takes
   // the same envelope to say its numbers may be behind after a gap.
+  //
+  // **The envelope's `type` is not written to `#stream-status`.** It was, and
+  // it was the third vocabulary in a slot that already had two: the connection
+  // indicator was overwritten by the raw kind of whatever arrived last, which
+  // is a fact no reader of that line was looking for (defect 5).
   onShepherdEvent(envelope);
   onSettingsEvent(envelope);
-  loadFleet();
-  // The Projects page lists each project's sessions, so it follows the same
-  // event rather than a timer of its own (§12: no polling). `mountProjects()`
-  // hands back the one function that re-reads; nothing else re-reads at all.
-  if (projects !== null) {
-    projects.reload();
-  }
+  refreshAll();
 }
 
 document.getElementById("flock-cards").addEventListener("click", onCardClick);

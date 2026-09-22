@@ -335,6 +335,70 @@ button, input, textarea { font: inherit; color: inherit; }
   overflow: hidden;
 }
 
+/* The message slot beneath the stream's state (QA remediation, defect 5).
+   Two facts, two slots: `.pane-foot-text` is the connection and this is what a
+   call had to say. It wraps rather than ellipsising — the string it holds is a
+   correlation id a person has to be able to read to the end, which was the
+   whole cost of the two sharing one line. */
+.pane-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.75rem;
+  min-width: 0;
+}
+
+.pane-note-text {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--error, var(--text-dim));
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.pane-note-dismiss {
+  flex: none;
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.shell[data-rail="collapsed"] .pane-note { display: none; }
+
+/* A choice the server has already said cannot work is shown and greyed, never
+   hidden (QA remediation, defect 4): a person who is not shown it cannot be
+   told why. */
+.dlg-choice[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The id and the paths that say *which* project a delete is about, under the
+   title, because two projects may share a name by design (defect 6). */
+.dlg-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.35rem 0 0.6rem;
+}
+
+.dlg-identity .dlg-row {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The disambiguating id on a list row whose name is not unique. */
+.proj-id {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  opacity: 0.75;
+}
+
 /* collapsed: icons only */
 .shell[data-rail="collapsed"] .wordmark,
 .shell[data-rail="collapsed"] .nav-text,

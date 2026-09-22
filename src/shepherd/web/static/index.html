@@ -84,6 +84,23 @@
           <span class="pane-dot"></span>
           <span id="stream-status" class="pane-foot-text">connecting</span>
         </div>
+
+        <!-- The stream's state and a message about a call are two different
+             facts, and they shared one slot until the QA remediation pass
+             (defect 5). `#stream-status` above was written by `sse.js` with
+             one vocabulary, by the envelope handler with the raw event kind,
+             and by a failed read with an error and its correlation id — so the
+             connection indicator was destroyed by the first event that
+             arrived, and the only place a correlation id is ever shown
+             survived about 35ms. This slot holds the message. It persists
+             until another error replaces it or the button dismisses it,
+             because an id nobody can finish reading is an id nobody can
+             quote. -->
+        <div class="pane-note" id="stream-message" hidden>
+          <span class="pane-note-text" id="stream-message-text"></span>
+          <button class="pane-note-dismiss" id="stream-message-dismiss"
+                  type="button" aria-label="Dismiss this message">×</button>
+        </div>
       </nav>
 
       <!-- ===================== the main column ========================== -->

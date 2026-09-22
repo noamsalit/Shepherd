@@ -199,26 +199,47 @@ function control(tag, className, text) {
   return element;
 }
 
+//: A `fetch` that **rejected** rather than answered. `await response.json()`
+//: below only ever runs on a resolved response, so a stopped daemon used to
+//: leave this page showing its last numbers with nothing saying they were
+//: last week's (QA defect 2; the gate over all six modules is
+//: `tests/web/test_frontend_unreachable_daemon.py`). `#settings-note` is the
+//: slot this page already uses to say its numbers may be behind after a
+//: stream gap, which is the same claim with a different cause.
+const UNREACHABLE =
+  "The request did not reach the server — Shepherd may not be running, so " +
+  "these numbers are whatever was last read.";
+
 async function read(path) {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
-  const body = await response.json();
-  if (!body.ok) {
+  try {
+    const response = await fetch(path, { headers: { Accept: "application/json" } });
+    const body = await response.json();
+    if (!body.ok) {
+      return null;
+    }
+    return body.data;
+  } catch (unreachable) {
+    fill("settings-note", UNREACHABLE);
     return null;
   }
-  return body.data;
 }
 
 async function write(path, payload) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json();
-  if (!body.ok) {
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (!body.ok) {
+      return null;
+    }
+    return body.data;
+  } catch (unreachable) {
+    fill("settings-note", UNREACHABLE);
     return null;
   }
-  return body.data;
 }
 
 // ----- the nav ----------------------------------------------------------------

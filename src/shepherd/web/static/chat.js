@@ -120,30 +120,51 @@ function control(tag, className, text) {
   return element;
 }
 
+//: A `fetch` that **rejected** rather than answered — `controld` stopped, the
+//: socket refused. `await response.json()` below only ever runs on a resolved
+//: response, so without this the rejection walks past every refusal path this
+//: module has and the page silently does nothing (QA defect 2, the systemic
+//: one: four of six modules had the same hole, and
+//: `tests/web/test_frontend_unreachable_daemon.py` is now the gate over all of
+//: them). This is the page where it is worst: a prompt that was typed, sent
+//: nowhere, and not reported.
+const UNREACHABLE =
+  "The request did not reach the server — Shepherd may not be running.";
+
 // Every body is `{ok, data, error, correlation_id}`, and §13 gives a failure
 // the generic literal plus the id and nothing else.
 async function read(path) {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
-  const body = await response.json();
-  if (!body.ok) {
-    fill("shepherd-status", `${body.error} (${body.correlation_id})`);
+  try {
+    const response = await fetch(path, { headers: { Accept: "application/json" } });
+    const body = await response.json();
+    if (!body.ok) {
+      fill("shepherd-status", `${body.error} (${body.correlation_id})`);
+      return null;
+    }
+    return body.data;
+  } catch (unreachable) {
+    fill("shepherd-status", UNREACHABLE);
     return null;
   }
-  return body.data;
 }
 
 async function post(path, payload) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json();
-  if (!body.ok) {
-    fill("shepherd-status", `${body.error} (${body.correlation_id})`);
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (!body.ok) {
+      fill("shepherd-status", `${body.error} (${body.correlation_id})`);
+      return null;
+    }
+    return body.data;
+  } catch (unreachable) {
+    fill("shepherd-status", UNREACHABLE);
     return null;
   }
-  return body.data;
 }
 
 // ----- the conversation ------------------------------------------------------

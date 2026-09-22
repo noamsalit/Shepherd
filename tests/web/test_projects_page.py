@@ -609,9 +609,18 @@ def test_a_kill_that_does_not_land_keeps_the_project_and_says_so(
     project and refuses. That is not a bug in the page and the page must not
     round it up to a delete: the project is still there afterwards and the
     dialog says which sessions are still running.
+
+    **The session is `owned_session` rather than `running_session` since the QA
+    remediation pass.** Defect 4 made "Stop them, then delete" a choice the page
+    only offers when the server's `killable` split says the stop can reach
+    something, and `killable` is `runner_handle IS NOT NULL`. Every session in
+    this file used to be attached, so the choice was offered over a plan that
+    already said it could not work — and this test clicked it. It is the
+    *injected* kill that refuses here, which is a different thing from having no
+    pane, and the handle is what separates the two.
     """
     project = store.create_project(name="payments", description=None)
-    live = running_session(store, project.id, "eng-live")
+    live = owned_session(store, project.id, "eng-live")
     projects_page.reload()
     projects_page.click('.nav-item[data-page="projects"]')
     open_delete(projects_page, "payments")
@@ -696,9 +705,14 @@ def test_a_partly_landed_kill_shows_what_it_stopped_on_the_refusal(
     of a session that is still running is the one thing this verb must never do.
     But one session really was stopped, and a dialog that showed `killed` only
     on success would tell a person "nothing happened" about a stopped agent.
+
+    `owned` now carries a `runner_handle`, so the name is true of the row and
+    not only of the fixture's dict: the server's `killable` split reads that
+    column, and the QA remediation pass made the page render the choice out of
+    it (defect 4).
     """
     project = store.create_project(name="payments", description=None)
-    owned = running_session(store, project.id, "eng-owned")
+    owned = owned_session(store, project.id, "eng-owned")
     attached = running_session(store, project.id, "eng-attached")
     kills_the_owned_one.append(owned)
     projects_page.reload()
@@ -763,3 +777,408 @@ def test_the_page_renders_the_correlation_id_when_a_call_fails(
     # chromium logs every non-2xx as a console error, so this is the one test
     # in the file whose console is not empty — and it is that, and nothing else.
     assert all("400" in message for message in console.messages), console.messages
+
+
+# ============================================================================
+# The QA remediation pass (workflow wf-20260921T212808Z-9172ed6b).
+#
+# Every test below was written against a defect a QA agent found by driving a
+# *seeded* product — several projects, sessions in all eight buckets, long
+# paths, long titles, duplicate names — and none of which any committed test
+# could see, because everything above this line seeds one project and at most
+# two sessions. The seeding helpers come first, then one test per defect, each
+# naming the defect it closes.
+#
+# `docs/plans/projects-ui-blockers/qa-remfix.md` is the ledger.
+# ============================================================================
+
+
+def owned_session(store: Store, project_id: str, engine_session_id: str) -> str:
+    """A running session Shepherd **owns** — `runner_handle IS NOT NULL`.
+
+    This is the distinction `DeletePlan.killable` is: `reads.py:283` splits the
+    running set on that column because the shipped kill path asks `handle_for`
+    and answers `no_pane(...)` for the rest. Every running session in this file
+    before this helper was *attached*, so `killable` was empty in every test and
+    the page's "Stop them, then delete" choice was never exercised against a
+    plan that said the stop could actually work.
+    """
+    from shepherd.core.runner import RunnerHandle
+
+    session_id = running_session(store, project_id, engine_session_id)
+    store.set_runner_handle(
+        session_id,
+        RunnerHandle(runner="tmux", socket="shepherd", session_name=f"shp_{engine_session_id}"),
+    )
+    return session_id
+
+
+def seed_several_projects(store: Store) -> dict[str, str]:
+    """Four projects, two of them sharing a name, and sessions on three.
+
+    The shape is QA's harness seed, narrowed to what this page can show: a
+    project with more session records than the page's old local filter counted,
+    a project with nothing in it, and **two projects with the same name** —
+    which `create_project` permits by design (E1, keyed by id, never by name)
+    and which no committed test had ever put on screen together.
+    """
+    made: dict[str, str] = {}
+    made["busy"] = store.create_project(name="payments", description="the api").id
+    made["quiet"] = store.create_project(name="docs-site", description=None).id
+    made["twin_a"] = store.create_project(name="twin", description="the first one").id
+    made["twin_b"] = store.create_project(name="twin", description="the second one").id
+    for n in range(3):
+        ended_session(store, made["busy"], f"eng-done-{n}")
+    made["live"] = running_session(store, made["busy"], "eng-live")
+    return made
+
+
+# ----- defect 1: the dialog undercounted what the delete destroys ------------
+
+
+def test_the_delete_dialog_counts_every_session_record_the_delete_takes(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 1 (HIGH).** The dialog said "6 session records" over a delete
+    that took 8.
+
+    `commit_project_delete` runs `DELETE FROM session WHERE workspace_id = ?`:
+    the running rows go too. The page filtered `ended_at !== null` and showed
+    the complement, which is the count for the **orphan** branch presented as
+    the unconditional one — so the sentence in front of the one destructive
+    verb on this page understated it by exactly the number of live sessions.
+
+    `DeletePlan.doomed` is the server's own answer to the same question and
+    `reads.py:285-291` was written in anticipation of this drift. The page now
+    renders the whole session list before the button (which is what `doomed` is
+    for `refuse` and for `kill_sessions`) and `answer.doomed` after it.
+    """
+    project = store.create_project(name="payments", description=None)
+    for n in range(3):
+        ended_session(store, project.id, f"eng-done-{n}")
+    live = running_session(store, project.id, "eng-live")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+
+    body = projects_page.locator("#dlg-delete-body").inner_text()
+    assert "4 session records" in body, body
+    assert "3 session records" not in body, body
+
+    projects_page.click('.dlg-choice[data-choice="delete"]')
+    projects_page.wait_for_selector('.dlg-choice[data-choice="orphan"]', timeout=5000)
+
+    # The server's list, rendered as the server's list: four ids, the live one
+    # among them, on the refusal where `doomed` first becomes readable.
+    doomed = projects_page.locator("#dlg-delete-doomed").inner_text()
+    assert live in doomed, doomed
+    assert doomed.count("\n") >= 4, doomed
+    assert console.messages == []
+
+
+# ----- defect 2: an unreachable daemon was swallowed -------------------------
+
+
+def test_a_create_that_never_reaches_the_server_says_so(
+    projects_page: Page, console: Console
+) -> None:
+    """**Defect 2 (HIGH).** With `controld` stopped, Create did nothing at all:
+    the dialog stayed open, `#p-refusal` stayed hidden and empty, and the only
+    trace was an unhandled `Failed to fetch` on the console.
+
+    `envelope()` runs on a *resolved* response, so a rejected `fetch` walked
+    past every refusal path this page has. The element built for exactly this
+    case (`projects.js:443-447`) was never reached. `session.js` already had
+    the sentence; four of six modules had not caught the rejection at all.
+    """
+    projects_page.route("**/api/projects", lambda route: route.abort("failed"))
+
+    projects_page.click("#proj-new")
+    projects_page.fill("#p-name", "payments")
+    projects_page.click("#p-save")
+
+    refusal = projects_page.locator("#p-refusal")
+    refusal.wait_for(timeout=5000)
+    assert "did not reach the server" in refusal.inner_text(), refusal.inner_text()
+    assert projects_page.locator("#dlg-project[open]").count() == 1
+    assert [m for m in console.messages if "pageerror" in m] == [], console.messages
+
+
+# ----- defect 3: the page lied about a verb that exists ----------------------
+
+
+def test_the_edit_dialog_changes_the_description(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 3 (MEDIUM).** `set_project_description` is built, routed and
+    registered — QA drove it over HTTP — and the page disabled the field with
+    "no verb changes it in this build".
+
+    That sentence told a person the only way to fix a typo in a description was
+    to delete the project, which is the one destructive verb on the page. Eight
+    of D57's nine verbs had a caller here; this was the ninth.
+    """
+    project = store.create_project(name="payments", description="the api")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_project(projects_page, "payments")
+
+    projects_page.click("#proj-edit")
+    assert projects_page.locator("#p-desc").is_enabled()
+    projects_page.fill("#p-desc", "the billing api, renamed")
+    projects_page.click("#p-save")
+
+    projects_page.wait_for_selector(
+        "#proj-detail .desc:text-is('the billing api, renamed')", timeout=5000
+    )
+    described = store.get_workspace(project.id)
+    assert described is not None
+    assert described.description == "the billing api, renamed"
+    assert console.messages == []
+
+
+# ----- defect 4: the killable split was computed, shipped and thrown away ----
+
+
+def test_the_stop_choice_is_refused_in_advance_when_nothing_is_killable(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 4 (MEDIUM).** On the refusal the server sends `killable: []`
+    and `unkillable: [ids]` — it already knows the stop cannot work. The page
+    offered "Stop them, then delete" as the primary danger choice anyway, and
+    the click was refused a second time.
+
+    `tools_projects_delete.py:122` states the intent: *the split of `running`
+    is what lets it gray a choice that cannot work rather than discovering that
+    by click.* Every running session here is attached, so `runner_handle` is
+    NULL on both and `killable` is empty.
+    """
+    project = store.create_project(name="payments", description=None)
+    running_session(store, project.id, "eng-attached-a")
+    running_session(store, project.id, "eng-attached-b")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+    projects_page.click('.dlg-choice[data-choice="delete"]')
+    projects_page.wait_for_selector('.dlg-choice[data-choice="orphan"]', timeout=5000)
+
+    stop = projects_page.locator('.dlg-choice[data-choice="kill_sessions"]')
+    assert stop.is_disabled(), stop.inner_text()
+    assert "Shepherd does not own" in stop.inner_text(), stop.inner_text()
+    assert projects_page.locator('.dlg-choice[data-choice="orphan"]').is_enabled()
+    assert console.messages == []
+
+
+def test_the_stop_choice_is_offered_when_the_server_says_one_is_killable(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """The other branch of the same gate, named because a control that only
+    exercised the disabled side would certify half of it.
+
+    One owned session (`runner_handle` set) and one attached: `killable` is
+    non-empty, so the choice is live — and the note says which sessions it
+    cannot reach rather than letting the click discover them.
+    """
+    project = store.create_project(name="payments", description=None)
+    owned_session(store, project.id, "eng-owned")
+    attached = running_session(store, project.id, "eng-attached")
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+    projects_page.click('.dlg-choice[data-choice="delete"]')
+    projects_page.wait_for_selector('.dlg-choice[data-choice="orphan"]', timeout=5000)
+
+    stop = projects_page.locator('.dlg-choice[data-choice="kill_sessions"]')
+    assert stop.is_enabled(), stop.inner_text()
+    assert attached in projects_page.locator("#dlg-delete-live").inner_text()
+    assert console.messages == []
+
+
+# ----- defect 6: duplicate names, and a dialog titled by name alone ----------
+
+
+def test_the_delete_dialog_names_the_project_by_more_than_its_name(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 6 (MEDIUM).** `create_project` is deliberately never keyed by
+    name (E1). Two projects called `twin` therefore sit in the list
+    distinguishable only by "0 repos" and "no activity yet", and the delete
+    dialog read "Delete twin" — no id, no description, nothing on screen saying
+    which of the two the button destroys.
+    """
+    made = seed_several_projects(store)
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+
+    # The list disambiguates the two rows that share a name, and only those.
+    ids = projects_page.locator('.proj-row:has(.proj-name:text-is("twin")) .proj-id')
+    assert ids.count() == 2, ids.all_inner_texts()
+    shown = set(ids.all_inner_texts())
+    assert shown == {made["twin_a"], made["twin_b"]}, shown
+    assert (
+        projects_page.locator(
+            '.proj-row:has(.proj-name:text-is("payments")) .proj-id'
+        ).count()
+        == 0
+    )
+
+    projects_page.click(f'.proj-row[data-project-id="{made["twin_b"]}"]')
+    projects_page.wait_for_selector("#proj-detail .proj-title", timeout=5000)
+    projects_page.click("#proj-delete")
+    projects_page.wait_for_selector("#dlg-delete[open]", timeout=5000)
+
+    identity = projects_page.locator("#dlg-delete-identity").inner_text()
+    assert made["twin_b"] in identity, identity
+    assert made["twin_a"] not in identity, identity
+    assert console.messages == []
+
+
+def test_a_duplicate_name_is_warned_about_before_a_second_project_is_made(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """The other half of defect 6: the create side.
+
+    A second project of the same name is a real intent the store supports, so
+    this is a warning and not a refusal — the first Create says what is about
+    to happen, the second one does it. Nothing is written by the first click,
+    which is the assertion that makes it a warning rather than a message shown
+    after the fact.
+    """
+    store.create_project(name="payments", description=None)
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+
+    projects_page.click("#proj-new")
+    projects_page.fill("#p-name", "payments")
+    projects_page.click("#p-save")
+
+    refusal = projects_page.locator("#p-refusal")
+    refusal.wait_for(timeout=5000)
+    assert "already a project named" in refusal.inner_text(), refusal.inner_text()
+    assert len([r for r in store.list_workspaces() if r.name == "payments"]) == 1
+
+    projects_page.click("#p-save")
+
+    projects_page.wait_for_selector("#dlg-project[open]", state="detached", timeout=5000)
+    assert len([r for r in store.list_workspaces() if r.name == "payments"]) == 2
+    assert console.messages == []
+
+
+# ----- defect 7: the double submit that ended on a raw ULID ------------------
+
+
+def test_a_second_delete_click_cannot_race_the_first(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 7 (MEDIUM).** Two rapid clicks: the first delete succeeded, the
+    second raced it and lost, and the last sentence on screen was *"there is no
+    project '<ULID>' to delete"* — a failure message, naming a raw id, about a
+    delete that had worked. Non-deterministic, one run in two.
+
+    The in-flight guard is asserted on the wire rather than on the text: the
+    claim is that the second click issues no second request at all.
+    """
+    project = store.create_project(name="payments", description=None)
+    ended_session(store, project.id, "eng-done")
+    posted: list[str] = []
+    projects_page.on(
+        "request",
+        lambda request: posted.append(request.url)
+        if request.method == "POST" and "/delete" in request.url
+        else None,
+    )
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_delete(projects_page, "payments")
+
+    choice = projects_page.locator('.dlg-choice[data-choice="delete"]')
+    choice.dispatch_event("click")
+    choice.dispatch_event("click")
+
+    projects_page.wait_for_selector("#dlg-delete-outcome", timeout=5000)
+    assert len(posted) == 1, posted
+    assert store.get_workspace(project.id) is None
+    assert console.messages == []
+
+
+# ----- defect 10: a whitespace-only name returned silently -------------------
+
+
+def test_a_whitespace_only_name_is_refused_with_a_sentence(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 10 (LOW).** `required` is satisfied by a space, so the browser
+    let the form submit; `onProjectSubmit` then trimmed it to `""` and returned
+    with no message at all. A control that accepts a click and says nothing is
+    the one thing principle 5 forbids.
+    """
+    projects_page.click("#proj-new")
+    projects_page.fill("#p-name", "   ")
+    projects_page.click("#p-save")
+
+    refusal = projects_page.locator("#p-refusal")
+    refusal.wait_for(timeout=5000)
+    assert "needs a name" in refusal.inner_text(), refusal.inner_text()
+    assert store.list_workspaces() != []
+    assert [row.name for row in store.list_workspaces()] == ["Unassigned"]
+    assert console.messages == []
+
+
+# ----- defect 11: an ellipsised value that cannot be read at all -------------
+
+
+def test_every_value_that_can_be_truncated_carries_its_full_text_as_a_title(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """**Defect 11 (LOW).** QA measured a 935px repo path in a 334px box and a
+    1366px title in a 266px one, neither carrying a `title` attribute — so the
+    ellipsised half of a §13 allowlist path could not be read at all, by any
+    means the page offered.
+
+    A `title` is the cheapest thing that is *not* a second layout: it needs no
+    width, it survives a phone, and it is the same string the element already
+    holds. The assertion is `title == textContent` on every candidate, so a
+    later element that truncates and forgets is caught by the same line.
+    """
+    long_path = (
+        "/srv/engineering/platform/monorepo/services/billing/"
+        "invoice-reconciliation-worker/vendor/third-party/acme-payments-sdk-fork"
+    )
+    project = store.create_project(
+        name="platform-billing-reconciliation-worker-and-its-friends", description=None
+    )
+    store.add_repo(
+        workspace_id=project.id,
+        root_path=long_path,
+        name="acme-payments-sdk-fork",
+        git_common_dir=f"{long_path}/.git",
+        vcs_remote=None,
+    )
+    session_id = running_session(store, project.id, "eng-long")
+    store.apply_title(
+        session_id,
+        "Please take the invoice reconciliation worker and make it idempotent "
+        "under at-least-once delivery from the upstream broker",
+        "engine",
+    )
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    open_project(projects_page, "platform-billing-reconciliation-worker-and-its-friends")
+
+    mismatched = projects_page.evaluate(
+        """() => {
+          const selectors = ['.proj-name', '.proj-title', '.path-text', '.mini-title'];
+          const bad = [];
+          for (const selector of selectors) {
+            for (const node of document.querySelectorAll('#page-projects ' + selector)) {
+              const text = node.textContent.trim();
+              if (text !== '' && node.getAttribute('title') !== text) {
+                bad.push(selector + ': ' + JSON.stringify(node.getAttribute('title')));
+              }
+            }
+          }
+          return bad;
+        }"""
+    )
+    assert mismatched == [], mismatched
+    assert console.messages == []
