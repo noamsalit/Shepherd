@@ -5,6 +5,16 @@ There is no browser on this host, so rendering is a manual checklist (T16's
 order the system computed — §16's `fleet_sort_key`, never alphabetical, never
 mtime, and never re-derived in JavaScript — and that a first run with no
 database still has the fields an honest empty state needs (F16).
+
+**The filename and every node id here are deliberately unchanged, and the
+bodies are not.** M5 renamed the page: `fleet.js` became `flock.js` (U9's three
+panes) and D67 moved D21's `next_actions[]` list off the session card into the
+session **pane**, because U7 fixes the card at four items. Every property below
+therefore still holds — it is simply asserted a module over. Renaming the tests
+with the file would have retired seventeen frozen ids to say nothing new, and
+`tests/boundaries/test_collected_node_ids.py` is there to make that cost
+visible; exactly one id retires in this move, and it retires because its
+property genuinely moved rather than because a filename did.
 """
 
 from __future__ import annotations
@@ -120,17 +130,17 @@ def test_the_page_has_an_empty_state_to_render_it_into() -> None:
     assert 'id="empty-state"' in markup
     assert "no sessions discovered yet" in markup
 
-    fleet = (STATIC_ROOT / "fleet.js").read_text(encoding="utf-8")
-    assert "empty-state" in fleet
-    assert "registry_sessions" in fleet
-    assert "hooks" in fleet
+    flock = flock_js()
+    assert "empty-state" in flock
+    assert "registry_sessions" in flock
+    assert "hooks" in flock
 
 
 def test_the_page_does_not_re_derive_the_order() -> None:
     """Ordering is computed server-side; the page renders what it was handed."""
-    fleet = (STATIC_ROOT / "fleet.js").read_text(encoding="utf-8")
+    flock = _CODE_ONLY(flock_js())
     for shape in (".sort(", "localeCompare", "FLEET_STATE_ORDER"):
-        assert shape not in fleet, shape
+        assert shape not in flock, shape
 
 
 def test_the_fleet_route_hands_the_page_an_ordered_tree(client: Client, store: Store) -> None:
@@ -175,10 +185,10 @@ def test_the_page_reads_the_ordered_tree_rather_than_a_flat_list() -> None:
     """The wiring half: the page asks for the tree the server ordered."""
     app = (STATIC_ROOT / "app.js").read_text(encoding="utf-8")
     assert "/api/fleet/tree" in app
-    fleet = (STATIC_ROOT / "fleet.js").read_text(encoding="utf-8")
+    flock = flock_js()
     # Grouping now arrives with the payload; the page no longer builds it.
-    assert "groupByWorkspace" not in fleet
-    assert "view.workspaces" in fleet
+    assert "groupByWorkspace" not in flock
+    assert "view.workspaces" in flock
 
 
 # ----- T15: the stopped row, its actions, and the honest `[why?]` -------------
@@ -197,9 +207,31 @@ _ENTRY = re.compile(r"(\w+):\s*\"?([\w]+)\"?")
 #: Any `"/api/…"` literal the shipped page holds.
 _API_LITERAL = re.compile(r"\"(/api/[^\"]*)\"")
 
+#: Both modules explain in prose why `.sort(` and a second `fetch(` are absent,
+#: so the two **absence** scans below read the code with its comments removed. A
+#: scan that cannot tell a statement from the comment forbidding it fails on the
+#: explanation, which trains the next person to delete the explanation.
+_COMMENTS = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
 
-def fleet_js() -> str:
-    return (STATIC_ROOT / "fleet.js").read_text(encoding="utf-8")
+
+def _CODE_ONLY(text: str) -> str:
+    return _COMMENTS.sub("", text)
+
+
+def flock_js() -> str:
+    """M5's page module. `fleet.js` is still on disk and is not this file.
+
+    It is dead code awaiting the one commit that rewires `app.js`, and nothing
+    in this module reads it: a scan pointed at the module the page no longer
+    renders from is the purest form of a test that passes by checking the wrong
+    thing.
+    """
+    return (STATIC_ROOT / "flock.js").read_text(encoding="utf-8")
+
+
+def session_js() -> str:
+    """D67's pane: the home of D21's list and every rule that governs it."""
+    return (STATIC_ROOT / "session.js").read_text(encoding="utf-8")
 
 
 def function_body(source: str, name: str) -> str:
@@ -213,33 +245,44 @@ def function_body(source: str, name: str) -> str:
     return rest if end == -1 else rest[:end]
 
 
-def test_stopped_row_renders_why_and_first_action(client: Client, store: Store) -> None:
-    """§12's collapsed row: the chip, one line of `why`, the first action."""
-    source = fleet_js()
-    collapsed = function_body(source, "stoppedRow")
-    assert "session-why" in collapsed
-    assert "actions[0]" in collapsed
-    assert "bucketChip" in function_body(source, "sessionRow")
-    # …and it is only drawn for a row that actually stopped.
-    assert "isStopped" in function_body(source, "sessionRow")
+# `test_stopped_row_renders_why_and_first_action` was **retired here** by D67,
+# with its reason and its successor recorded in
+# `tests/boundaries/test_collected_node_ids.py`. It asserted that `stoppedRow`
+# rendered `session-why` and `actions[0]`; after U7 the card carries four items
+# and no row renders either. The property survives at the pane and is asserted
+# by `test_the_session_pane_renders_why_and_every_action`, which is strictly
+# stronger — `actions[0]` became every action.
 
 
 def test_expanded_row_lists_every_action_with_its_source() -> None:
-    """Expanding lists every action with its ordinal and where it came from."""
-    body = function_body(fleet_js(), "expansion")
+    """Every action with its ordinal and where it came from — now in the pane.
+
+    The fleet row *expanded* to show the list because the collapsed row had
+    space for one action. The pane has space for it outright (D67), so there is
+    no expansion to open and the list is simply there — which is the same
+    property with one fewer click, not a weaker one.
+    """
+    body = function_body(session_js(), "actionList")
     assert "index + 1" in body
-    assert "action.source" in body or "sourceFooter" in body
+    assert "action.source" in body
     assert "action-source" in body
 
 
 def test_source_footer_counts_by_source() -> None:
-    """At M2 the footer always reads `N heuristic` — which is the honest signal.
+    """The footer's property, kept per row instead of aggregated (D67).
 
-    Not because the footer hard-codes the word: because **every** action this
-    build can produce carries `ActionSource.HEURISTIC`, so a footer that counted
-    anything else would be counting something nothing writes (D34's lane is off).
+    The fleet row's footer read `N heuristic` because the expansion could not
+    afford a source beside each of three actions. The pane can, and does —
+    `action-source` on every row — which is strictly more information than the
+    count was, so the aggregate is gone rather than lost.
+
+    The honest signal is unchanged and it is not a hard-coded word: **every**
+    action this build can produce carries `ActionSource.HEURISTIC`, so a page
+    that showed anything else would be showing something nothing writes (D34's
+    lane is off).
     """
-    assert "function sourceFooter" in fleet_js()
+    assert "action.source" in function_body(session_js(), "actionList")
+    assert "sourceFooter" not in session_js(), "the aggregate is gone, not hidden"
     produced = {
         action.source
         for actions in DEFAULT_ACTIONS.values()
@@ -261,7 +304,7 @@ def test_why_is_a_note_not_a_button_without_the_lane() -> None:
     already carries and says, in words, that the model lane is not built. It
     must not imply a verdict nobody computed.
     """
-    source = fleet_js()
+    source = session_js()
     body = function_body(source, "whyNote")
     assert 'element("details"' in body
     assert 'element("summary"' in body
@@ -277,7 +320,7 @@ def test_why_is_a_note_not_a_button_without_the_lane() -> None:
 
 def test_unreachable_action_kinds_are_labelled_not_silently_dead() -> None:
     """RD6: `not yet`, with the milestone named — never an unlabelled dead button."""
-    source = fleet_js()
+    source = session_js()
     milestones = dict(_ENTRY.findall(_MILESTONE_TABLE.search(source).group(1)))
     live = dict(_ENTRY.findall(_LIVE_TABLE.search(source).group(1)))
 
@@ -293,7 +336,7 @@ def test_unreachable_action_kinds_are_labelled_not_silently_dead() -> None:
     # in neither table is exactly the silent dead button this test forbids.
     assert set(milestones) | set(live) == {kind.value for kind in NextActionKind}
 
-    body = function_body(source, "actionButton")
+    body = function_body(source, "actionButton") + function_body(source, "notYetReason")
     assert "disabled" in body
     assert "not yet" in body
     assert ".title" in body
@@ -301,7 +344,7 @@ def test_unreachable_action_kinds_are_labelled_not_silently_dead() -> None:
 
 def test_external_action_with_a_target_is_a_link() -> None:
     """§12's `[↗]`: a live affordance at M2, because it needs nothing of ours."""
-    body = function_body(fleet_js(), "actionButton")
+    body = function_body(session_js(), "actionButton")
     assert 'element("a"' in body
     assert "action.target" in body
     assert "noopener" in body
@@ -318,14 +361,21 @@ def test_external_action_without_a_target_is_not_a_link() -> None:
     assert chase.kind is NextActionKind.EXTERNAL
     assert chase.target is None
 
-    body = function_body(fleet_js(), "actionButton")
+    body = function_body(session_js(), "actionButton")
     # The link branch is guarded on the target being a non-empty string.
     assert 'typeof action.target === "string"' in body
 
 
 def test_expansion_reads_no_log_and_no_transcript() -> None:
     """K14 / D25: everything the expansion shows is already in the row."""
-    assert "fetch(" not in fleet_js()
+    # The page that lists sessions opens nothing at all.
+    assert "fetch(" not in flock_js()
+    # The pane has exactly one call, and it is D29's local rename — a *mutation*
+    # the human asked for, declared in `POST_ROUTES`, and not a second read of
+    # anything the row already carries. Counted rather than waved past: "the
+    # pane may fetch" would retire the rule instead of bounding it.
+    assert _CODE_ONLY(session_js()).count("fetch(") == 1
+    assert "RENAME_PATH" in function_body(session_js(), "commitRename")
     # T19: `TERMINAL_WS_PATH` joins the two paths that are deliberately not
     # calls. `routes.py` says it in words — "an upgrade is not a call, exactly
     # as `SSE_PATH` is not one" — and `terminal.js` is the page that opens it.
@@ -366,4 +416,4 @@ def test_row_with_zero_actions_is_only_a_confident_completed() -> None:
     )
     assert [action.text for action in low] == ["Review the diff"]
 
-    assert "session-no-action" in function_body(fleet_js(), "stoppedRow")
+    assert "session-no-action" in function_body(session_js(), "actionList")

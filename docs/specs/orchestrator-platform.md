@@ -31,7 +31,7 @@ reading before planning.
 You have everything you need. Do this, in order:
 
 1. Read §1–§4. §3 (Decision log) is the most important section in the document —
-   **66 decisions** (D1–D66, plus D38.1, an amendment) with their reasoning. If
+   **67 decisions** (D1–D67, plus D38.1, an amendment) with their reasoning. If
    implementation pressure pushes against one, say so and re-decide out loud; do
    not quietly reverse it.
 2. Note §2 — the product name (`shepherd`) and repo location are settled.
@@ -182,6 +182,8 @@ re-decide.
 | D65 | **The autonomy toggle lives in Settings and nowhere else. Revises §12.** One control, one place. §12 previously placed it on the master page *"visible at all times"* so a reader never had to remember which level they were on; that is reversed. What the level *means* is still shown where it is felt — an approval card exists **because** the level asked for one, and a turn that ran on is a turn the level permitted. | Owner decision, 2026-09-21. The original reasoning solved a real problem — not knowing which level you are on — but solved it by putting a mode switch on the page you use most, where it is both permanent clutter and an easy mis-tap with a real blast radius: flipping to auto-approve is exactly the action you least want to take by accident while reaching for something else. The information it carried is not lost, because the level is **observable from behaviour**: at the asking level you get cards, at the auto level you do not. A setting that is inferable from what the system does needs to be *changeable* in one findable place, not *displayed* in every place. Recorded rather than applied quietly, per §0. |
 
 | D66 | **The Needs-You rail leaves the shell. §12's "on every page" is reversed; if the rail returns it lives on the Flock page alone (U2).** §12 previously fixed the rail to the top of every page — *"not a page you navigate to"* — and `tests/web/test_rail.py::test_rail_is_on_every_page` encoded that by asserting the `id="rail"` slot sits in `index.html` before `<main>`. That test is retired with this row. **The projection is not retired**: `tools_m1.py::project_needs_you` and `fleet_summary`'s `needs_you` list stay exactly as they are, approval rows included — only the renderer goes, and what it displayed is the data the Flock page will need. | Owner decision, 2026-09-21, recorded 2026-09-22. The rail has **no home in the new shell**: the redesign gives every page a single scrolling column under one header, and a fixed bar above it is the one element that belongs to no page and is therefore nobody's to maintain. The intent is that it lives on the **Flock page only**, if it returns at all — the Flock is where the sessions it names already are, so a row that says *payments-api · permission: Bash(git push)* is one tap from the thing it is about instead of being a permanent banner over pages that have nothing to do with it. This is the same shape as D65: a thing that was put on every page so it could never be missed became permanent clutter, and the information is not lost, because a blocked session is legible on the page that lists sessions. Recorded rather than applied quietly, per §0, and written in the same task that deletes the assertion. |
+
+| D67 | **The session view relocates into the Flock's third pane. It is not deleted: `session.js`, `terminal.js` and `web/static/vendor/xterm.js` are retained and reachable from that pane. §12's Page 3 is rewritten as a pane rather than a page. D21's `next_actions` list renders in that pane's header, which is where §12 already placed it — the session **card** carries U7's four items and no more.** | Owner decision, 2026-09-21, recorded 2026-09-22. U9 makes the Flock three panes — projects → session cards → the session — and the third of those *is* the session view, so keeping it as a separate page would mean shipping the same screen twice and choosing between them at navigation time. The relocation is deliberately **not** a deletion, and the distinction is the whole of the row: the terminal is the one part of this product that cannot be re-derived from a projection, and a redesign that quietly dropped it would cost M3's entire vendoring and WebSocket lane. `terminal.js` and `sse.js` are byte-unchanged by the move, which is asserted rather than asked for. What *does* move is D21's `next_actions[]`: U7 fixes the card at four items — bucket glyph and colour, title, the ask verbatim, relative time — so the list has nowhere on the card to be, and §12's own Page 3 mock already drew it in the header band. One frozen node id retires with this row, `tests/web/test_fleet_page.py::test_stopped_row_renders_why_and_first_action`, and its successor `test_the_session_pane_renders_why_and_every_action` is strictly stronger: the collapsed row rendered `actions[0]` because it had space for one, and the pane renders every action with its ordinal and its source. Every rule the list carried travels with it — RD6's labelled-and-inert kinds, N10's honest `[why?]`, §14's `nothing to do`, G-M2-7's targetless `external` — because a relocation that loses the rules is a deletion with a better name. On a phone the three panes are a drill-down, one level at a time, with a back chevron (U9). Recorded rather than applied quietly, per §0, and written in the same task that performs the relocation. |
 
 ---
 
@@ -2038,7 +2040,29 @@ One `GROUP BY outcome, status_class` over `session` ⟗ `work_item`, recomputed
 on SSE invalidation. Ships with **M5**, not M2: its columns are work-item
 status, which does not exist before the mirror.
 
-### Page 3 — Session view
+### The session pane — the Flock's third column (D67)
+
+**D67 rewrites this section as a pane rather than a page.** What follows was
+written as *Page 3* and is unchanged in substance: it is the same screen, with
+the same header band, the same terminal and the same rename affordance. What
+changed is where it is mounted. U9 makes the Flock three panes — projects →
+session cards → the session — and the third of those *is* this view, so it is
+reached by tapping a card rather than by navigating to a page of its own. On a
+phone the three panes are a drill-down, one level at a time, with a back
+chevron; on a wide screen all three are up at once and opening a session changes
+only which card is current.
+
+`session.js`, `terminal.js` and `web/static/vendor/xterm.js` are **retained**.
+The relocation is not a deletion, and the terminal is the reason the distinction
+matters: it is the one part of this product that cannot be re-derived from a
+projection.
+
+**D21's `next_actions[]` renders in this pane's header**, which is where the
+mock below has always drawn it. That is now the *only* place it renders: U7
+fixes the session card at four items — bucket glyph and colour, title, the ask
+verbatim, relative time — so the collapsed fleet row that used to carry
+`actions[0]` is gone, and with it the truncation. The pane renders **every**
+action, with its ordinal and the source it came from.
 
 ```
 ┌───────────────────────────────────────────────┬────────────────────────┐

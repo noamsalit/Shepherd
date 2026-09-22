@@ -29,17 +29,34 @@ STATIC_ROOT = Path(__file__).resolve().parents[2] / "src" / "shepherd" / "web" /
 #: `.bucket-<name> { --bucket-colour: #RRGGBB; }` — one class per bucket.
 _CSS_BUCKET = re.compile(r"\.bucket-([a-z_]+)\s*\{[^}]*?--bucket-colour:\s*(#[0-9A-Fa-f]{6})")
 
-#: The two tables `fleet.js` ships, read out of the source rather than trusted.
-_JS_TABLE = re.compile(r"const\s+BUCKET_(LABEL|MARK)\s*=\s*\{(.*?)\n\}", re.DOTALL)
+#: The three tables `flock.js` ships, read out of the source rather than trusted.
+#: `ACTS` joins them at M5: U10's legend carries an `acts:` line and `who_acts`
+#: is a `PALETTE` field, so it is compared rather than hand-copied for exactly
+#: the reason the other two are.
+_JS_TABLE = re.compile(r"const\s+BUCKET_(ACTS|LABEL|MARK)\s*=\s*\{(.*?)\n\}", re.DOTALL)
 _JS_ENTRY = re.compile(r"(\w+):\s*\"([^\"]+)\"")
+
+#: `flock.js`'s header names `.sort(` and `BUCKET_ORDER` in prose, explaining
+#: why neither may appear. A scan that cannot tell a statement from the comment
+#: forbidding it fails on the explanation, which trains the next reader to
+#: delete the explanation.
+_COMMENTS = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
 
 
 def css() -> str:
     return (STATIC_ROOT / "app.css").read_text(encoding="utf-8")
 
 
-def fleet_js() -> str:
-    return (STATIC_ROOT / "fleet.js").read_text(encoding="utf-8")
+def flock_js() -> str:
+    """M5's page module (U9). **This changed with the page, in one task.**
+
+    The old helper read `fleet.js`, which is still on disk and is no longer the
+    module the Flock renders from — `app.js`'s import is the shell's and the
+    integration pass rewires it. Leaving the scan pointed at the dead module
+    would have left every assertion below green against bytes no page renders,
+    which is the failure this file exists to prevent one layer up.
+    """
+    return (STATIC_ROOT / "flock.js").read_text(encoding="utf-8")
 
 
 def css_colours() -> dict[str, str]:
@@ -47,7 +64,7 @@ def css_colours() -> dict[str, str]:
 
 
 def js_table(which: str) -> dict[str, str]:
-    for kind, body in _JS_TABLE.findall(fleet_js()):
+    for kind, body in _JS_TABLE.findall(flock_js()):
         if kind == which:
             return dict(_JS_ENTRY.findall(body))
     return {}
@@ -72,14 +89,35 @@ def test_every_bucket_has_a_colour_and_a_glyph() -> None:
 
 
 def test_palette_matches_core_stops() -> None:
-    """One source of truth: a hand-copied hex is how a palette drifts."""
+    """One source of truth: a hand-copied hex is how a palette drifts.
+
+    **U5's three renames land here, in `PALETTE`, and nowhere else** —
+    `unfinished` reads *stranded*, `paused` reads *limit exceeded* and
+    `unclassified` reads *unknown*. This test is why a UI-side label table is
+    not an option: it compares the page's tables against `PALETTE`, so a second
+    table would either be checked against the first (and be redundant) or not be
+    (and be the drift). The bucket **values** do not move, so `stop_rules.py`,
+    the store and the 90-day stop log are untouched by the rename.
+    """
     colours = css_colours()
     marks = js_table("MARK")
     labels = js_table("LABEL")
+    acts = js_table("ACTS")
     for bucket, style in PALETTE.items():
         assert colours[bucket.value] == style.colour.upper(), bucket
         assert marks[bucket.value] == style.glyph, bucket
         assert labels[bucket.value] == style.label, bucket
+        assert acts[bucket.value] == style.who_acts, bucket
+
+    # U5, asserted on the values rather than only on the agreement above: two
+    # tables that agree on the wrong word still agree, and the three renames are
+    # the whole of T6.2.
+    assert labels["unfinished"] == "stranded"
+    assert labels["paused"] == "limit exceeded"
+    assert labels["unclassified"] == "unknown"
+    # …and the values themselves are untouched, which is what keeps the rename
+    # off `stop_rules.py`, the store and the stop log.
+    assert {bucket.value for bucket in Bucket} >= {"unfinished", "paused", "unclassified"}
 
 
 def test_unclassified_chip_renders_and_is_not_green_or_red() -> None:
@@ -94,8 +132,8 @@ def test_unclassified_chip_renders_and_is_not_green_or_red() -> None:
 
 def test_the_page_does_not_re_derive_the_order() -> None:
     """The order is the server's (`fleet_bucket_sort_key`); the page renders it."""
-    for name in ("fleet.js", "app.js", "rail.js"):
-        source = (STATIC_ROOT / name).read_text(encoding="utf-8")
+    for name in ("flock.js", "app.js", "session.js"):
+        source = _COMMENTS.sub("", (STATIC_ROOT / name).read_text(encoding="utf-8"))
         for shape in (".sort(", "localeCompare", "BUCKET_ORDER", "FLEET_STATE_ORDER"):
             assert shape not in source, f"{name}: {shape}"
     # …and the order itself is a real order, so "renders what it was handed" has
@@ -109,7 +147,7 @@ def test_unknown_rate_renders() -> None:
     markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
     assert 'id="unknown-rate"' in markup
     app = (STATIC_ROOT / "app.js").read_text(encoding="utf-8")
-    assert "unknown_rate" in app or "unknown_rate" in fleet_js()
+    assert "unknown_rate" in app or "unknown_rate" in flock_js()
 
 
 def test_low_confidence_completions_render_beside_the_unknown_rate() -> None:
@@ -125,7 +163,7 @@ def test_low_confidence_completions_render_beside_the_unknown_rate() -> None:
     # …beside it, not somewhere else on the page: the same summary element.
     summary = markup[markup.index('id="stop-summary"') :]
     assert summary.index('id="unknown-rate"') < summary.index('id="low-confidence"')
-    joined = (STATIC_ROOT / "app.js").read_text(encoding="utf-8") + fleet_js()
+    joined = (STATIC_ROOT / "app.js").read_text(encoding="utf-8") + flock_js()
     assert "completed_low_confidence" in joined
     assert "unclassified" in joined
 
@@ -146,5 +184,5 @@ def test_page_renders_with_every_field_null(client: Client, store: Store) -> Non
         assert row[field] is None, field
     assert row["next_actions"] == []
 
-    source = fleet_js()
+    source = flock_js()
     assert "in BUCKET_LABEL" in source

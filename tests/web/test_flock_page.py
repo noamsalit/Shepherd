@@ -422,3 +422,29 @@ def test_unassigned_sessions_render_on_the_flock_page(client: Client, store: Sto
     source = flock_js()
     assert "for (const workspace of view.workspaces)" in source
     assert "Unassigned" not in flock_code(), "the page never special-cases it"
+
+
+def test_the_page_never_mints_a_seventh_page_root() -> None:
+    """`PAGE_ROOT_SELECTOR` is `[id^="page-"]`, so the prefix is a namespace.
+
+    `tools/render_check.py` counts visible page roots by that selector and fails
+    a width on "N page roots visible at once". Any element this page *creates*
+    with an id beginning `page-` therefore becomes a seventh root — and a
+    permanently-visible one, like the prototype's `id="page-title"` heading,
+    reports as a routing failure on every page at both widths, with a message
+    about routing that is not about routing.
+
+    The shipped shell owns the six roots and nothing else may claim one, so this
+    module reads `#page-flock` and never writes a `page-` id. The assertion is
+    on **assignment and creation**, not on the string: reading the root by name
+    is exactly what the page is supposed to do.
+    """
+    for name in ("flock.js", "session.js"):
+        body = code_only((STATIC_ROOT / name).read_text(encoding="utf-8"))
+        for shape in ('.id = "page-', ".id = `page-", 'setAttribute("id", "page-'):
+            assert shape not in body, f"{name}: {shape}"
+        # Arrival: the scan read a file that really does name the root, so it is
+        # not passing because it opened something with no ids in it at all.
+    assert 'getElementById("page-flock")' in (STATIC_ROOT / "flock.js").read_text(
+        encoding="utf-8"
+    )
