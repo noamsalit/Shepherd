@@ -43,7 +43,9 @@
     "Phase 3 RATIFIED: delete_project is not registered, and test_delete_project_is_not_registered_and_the_reason_is_the_writer_thread asserts the absence so it goes red the moment someone wires it. A name a consumer can read but cannot call is worse than a gap that is stated.",
     "Phase 3 RATIFIED: the three store-side refusal conventions are adapted to ONE record at the tool surface, not by changing store/. The reason is sharper than consistency - registry.py:69 turns any handler exception into GENERIC_ERROR = 'request failed', so a guard that RAISES reaches the page with no reason at all, and the reserved-project refusal is precisely the case a page must explain.",
     "Phase 3 RATIFIED: T3.2's test lives in test_compose_m4.py rather than the plan's test_composition_root.py, which composes nothing (114 lines of AST rules, no store, host or SocketPlan). The seam is the plan's; only the file differs.",
-    "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path."
+    "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path.",
+    "T8.1 remfix RATIFIED: the degrade reason is NOT exposed on the return value. The interface stays DecisionPrompt | None so no caller can route on WHY a screen was unreadable; the branch tags are source comments read by the test through sys.settrace. Keeps degrade-never-guess a property rather than a protocol.",
+    "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -290,7 +292,7 @@
     "plan-review-gap-2": "completed",
     "plan-review-amendment": "completed",
     "phase-0": "completed",
-    "phase-8-T8.1": "remediation_in_progress",
+    "phase-8-T8.1": "completed",
     "w6-docs": "completed",
     "phase-1": "remediation_in_progress",
     "phase-5-T5.2": "in_progress",
@@ -338,6 +340,18 @@
       "phase_id": "phase-3",
       "severity": "minor",
       "finding": "add_repo refusal completeness: absent, not-a-repo and bare are proved; an unreadable path, a submodule, and a filesystem vanishing mid-probe are not. get_project's session ordering is unpinned."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-8",
+      "severity": "minor",
+      "finding": "No capture exists of a dialog with more than three choices, a WRAPPED choice label, a subagent dialog, or the Tab-to-amend screen the permission footer advertises. A wrapped label is the likeliest breaker: a continuation line sits at the same label column and would be read as an extra choice, silently."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-8",
+      "severity": "minor",
+      "finding": "In 06-permission-dialog.ansi the command lines sit at column 3 - the choice column - and are kept out of the block only by the indent-1 question line above them. An engine drawing its question at column 3 would have it read as a choice. Structural residual; the standing reason the degrade rule must stay structural."
     }
   ],
   "results": {
@@ -435,7 +449,8 @@
     "builder": [
       "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open.",
       "T8.1: A8 gate passed (dialog_text carries the numbered option lines); 17 tests; four degradation branches each with a positive control; tests/runner 82 passed.",
-      "W6 docs: six spec defects closed; router independently re-derived 12 Runner members, 10 omitted columns and the Scripted* list against source."
+      "W6 docs: six spec defects closed; router independently re-derived 12 Runner members, 10 omitted columns and the Scripted* list against source.",
+      "T8.1 remfix (3b0743e): 82 -> 128 tests. Eight '# degrade:' branches, eight rows, no branch shared, traced with sys.settrace IN-SUITE - test_every_degradation_branch_is_driven_by_a_row fails if the source grows a branch no row reaches. Floor mutation-proved red at 1 / green at 2, router-verified independently."
     ],
     "investigator": [],
     "reviewer": [
@@ -598,9 +613,13 @@
       "event": "phase_3_partial",
       "ts": "2026-09-22T05:56:40Z",
       "detail": "six of seven verbs; delete_project blocked on the Phase 1 split"
+    },
+    {
+      "event": "t8_1_remediated",
+      "ts": "2026-09-22T06:13:03Z"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T05:56:40Z"
+  "updated_at": "2026-09-22T06:13:03Z"
 }
