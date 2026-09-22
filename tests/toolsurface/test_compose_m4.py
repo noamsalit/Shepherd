@@ -500,7 +500,9 @@ def test_the_project_tools_are_registered_by_the_composition(world: World) -> No
     # `local_destructive` verb driven at this autonomy level would park the test
     # on the real approval deadline. `tests/toolsurface/test_tools_projects.py`
     # is where the kill's two branches are proved.
-    register_project_tools(store=world.store, kill=lambda _session_id: False)
+    register_project_tools(
+        store=world.store, kill=lambda _session_id: False, publish=lambda event: None
+    )
     expected = set(registered_tools())
     assert expected == set(PROJECT_TOOL_NAMES), sorted(expected)
     reset_registry()
@@ -518,4 +520,6 @@ def test_the_project_tools_are_registered_by_the_composition(world: World) -> No
     # late one that merely happened to work. A second `register` after the
     # composition is the refusal ADR-7 exists for.
     with pytest.raises(RegistryFrozen):
-        register_project_tools(store=world.store, kill=lambda _session_id: False)
+        register_project_tools(
+        store=world.store, kill=lambda _session_id: False, publish=lambda event: None
+    )

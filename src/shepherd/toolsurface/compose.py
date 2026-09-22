@@ -465,7 +465,13 @@ def compose_tool_surface(
             )
         )
 
-    register_project_tools(store=store, kill=kill_for_delete, now=utc_now)
+    # `_publish` is the same adapter M3's set and the approval store are handed
+    # (D7): a project mutation that reaches no ring is a project mutation no
+    # second tab ever learns about, which is what QA run 4 measured — six 200s,
+    # zero frames, with the reader proved live first.
+    register_project_tools(
+        store=store, kill=kill_for_delete, publish=_publish, now=utc_now
+    )
 
     driver = TurnDriver(
         store=store,

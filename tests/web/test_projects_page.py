@@ -691,7 +691,9 @@ def kills_the_owned_one(store: Store, projects_root: Path) -> list[str]:
         clock=lambda: NOW,
         pending_approvals=lambda: (),
     )
-    register_project_tools(store=store, kill=kill, now=lambda: NOW)
+    register_project_tools(
+        store=store, kill=kill, publish=lambda event: None, now=lambda: NOW
+    )
     return killable
 
 
@@ -1224,7 +1226,9 @@ def the_kill_raises(store: Store, projects_root: Path) -> None:
         clock=lambda: NOW,
         pending_approvals=lambda: (),
     )
-    register_project_tools(store=store, kill=kill, now=lambda: NOW)
+    register_project_tools(
+        store=store, kill=kill, publish=lambda event: None, now=lambda: NOW
+    )
 
 
 #: The tmux argv a real `RunnerRefusal` carries. It is long on purpose: the
@@ -1357,7 +1361,9 @@ def the_kill_ends_the_session_then_raises(store: Store, projects_root: Path) -> 
         clock=lambda: NOW,
         pending_approvals=lambda: (),
     )
-    register_project_tools(store=store, kill=kill, now=lambda: NOW)
+    register_project_tools(
+        store=store, kill=kill, publish=lambda event: None, now=lambda: NOW
+    )
 
 
 def test_a_delete_that_succeeded_still_says_which_stop_did_not_land(

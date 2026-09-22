@@ -381,7 +381,7 @@ GRANDFATHERED: dict[str, int] = {"tools_m1.py": 574, "tools_master.py": 505}
 #: Every module the cap measures, as a count. An eighth `tools_*.py` must be
 #: **admitted** here rather than remembered: the number goes red on the module
 #: that is added, which is the moment somebody is looking.
-CAPPED_MODULE_COUNT = 13
+CAPPED_MODULE_COUNT = 14
 
 
 def capped_modules() -> dict[str, int]:
@@ -396,9 +396,10 @@ def test_every_tool_module_is_under_the_cap() -> None:
 
     The list grew by split five times (`tools_terminal.py`,
     `tools_messaging.py`, `tools_rename.py`, `spawn_origin.py`,
-    `tools_projects_reads.py`) and by new module twice (`tools_projects.py`,
-    `tools_projects_delete.py`). The **cap is unchanged**; what grew is the set
-    of files held to it.
+    `tools_projects_reads.py`) and by new module three times
+    (`tools_projects.py`, `tools_projects_delete.py`, and
+    `tools_projects_events.py` — D7's producer, admitted here by the count
+    below). The **cap is unchanged**; what grew is the set of files held to it.
 
     **It is a glob now, and that is the fix T3.4 made.** The enumerated version
     built `sizes` from a seven-path tuple and asserted `len(sizes) == 7`: an
@@ -888,7 +889,7 @@ def test_every_post_route_resolves_to_a_registered_tool(world: World, tmp_path: 
     # root does would report a gap the shipped tree does not have. The kill is
     # the safe default — nothing here calls a project verb.
     register_project_tools(
-        store=world.store, kill=refuses_every_kill, now=world.now
+        store=world.store, kill=refuses_every_kill, publish=lambda event: None, now=world.now
     )
 
     registered = registered_tools()

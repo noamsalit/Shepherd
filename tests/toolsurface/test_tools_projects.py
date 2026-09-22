@@ -136,7 +136,9 @@ def registered(store: Store, killer: Killer) -> Store:
     puts in front of them.
     """
     install_test_chokepoint()
-    register_project_tools(store=store, kill=killer, now=lambda: NOW)
+    register_project_tools(
+        store=store, kill=killer, publish=lambda event: None, now=lambda: NOW
+    )
     return store
 
 

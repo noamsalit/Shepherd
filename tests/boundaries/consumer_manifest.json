@@ -57,10 +57,10 @@
     "web/static/flock.js": "ab30606b7d5143d9f75eccd57fffa65367ea66afd991a1d4b419715fa0a9f3b7",
     "web/static/index.html": "2fcbda41d6a16611932480a546bf344bc4507bf8b448b690ece2241e4adcb503",
     "web/static/projects.js": "f309fdf90fce6026de265ba1a06242c798766d651bd23cd41646281caa32fd89",
-    "web/static/session.js": "2fc4b67c2c245990b786e11b03851e35e328c358953c9dadf1397da9e4a2854f",
+    "web/static/session.js": "393b7f6bb50303074c9c63bd72bbf7b12e3eeda340bca5042691409791838d26",
     "web/static/settings.js": "0f57db4d51805368369daa07f616cabf8805460dc6f90f108e86baa077b5c44d",
     "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
-    "web/static/terminal.js": "ace78240d2b6255c50506502327062227f98349b0a98fa71244ace6a7be2c90c",
+    "web/static/terminal.js": "781bed86a4092e0f8df0f1811ed754d7c2fdcf2b39020c35d05501d880942017",
     "web/static/vendor/LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
     "web/static/vendor/VERSION.txt": "dfb265b144056ce4e444d6cc84dd362fbc93a0461122f5e0213156d845f31e9e",
     "web/static/vendor/xterm.css": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6",
@@ -105,6 +105,12 @@
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
         "why": "**Added.** T7.2's Settings page: ten sections, D65's autonomy control, and D25's audit tail rendered from four fields of a record and never its `args`."
+      },
+      {
+        "path": "web/static/terminal.js",
+        "at": "2026-09-22T00:00:00Z",
+        "by": "QA run 4 remediation, lane B (D6)",
+        "why": "**Changed.** D6: the emulator was constructed with no `cols` and no `rows`, so it drew at xterm's default 80x24 at every viewport from 390 to 2560 for a 160x45 pane, inside a container that is `overflow: hidden` on both axes \u2014 366px of pane unreachable at 390, and a rendered right edge of 1517 in a 1440 window. It is now fitted to its container at open and on every resize, and the one residual the fit cannot close (the pane keeps its own geometry, so a window narrower than it re-wraps) is declared on the page beside T19-c's sentence. Measured in a real browser by `tests/web/test_terminal_fit_live.py`."
       }
     ]
   }
