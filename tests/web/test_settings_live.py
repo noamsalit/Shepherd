@@ -223,6 +223,42 @@ def test_the_audit_tail_shows_four_fields_of_a_real_record_and_never_its_args(
     assert errors == [], errors
 
 
+def test_every_unbuilt_section_says_why_in_pixels(browser_page) -> None:
+    """U13, in the only place it is a promise to a person: on the screen.
+
+    The static test reads the `SECTIONS` table; this opens all ten panels in a
+    browser and requires that each chipped entry paints a `.notbuilt` block
+    with real sentences in it, and that no *built* entry paints one. Mutating
+    one reason to `"TODO"` reddens the static test on its length floor — and
+    would redden this one too, which is the point of having both: the table is
+    where the reason is written and the panel is where it is read.
+    """
+    page, errors = browser_page
+    chipped_without_reason: list[str] = []
+    built_with_excuse: list[str] = []
+    seen = 0
+
+    for index in range(10):
+        item = page.locator("#settings-nav .set-item").nth(index)
+        title = item.inner_text().split("\n")[0]
+        chipped = item.locator(".soon").count() == 1
+        item.click()
+        page.wait_for_timeout(60)
+        seen += 1
+
+        reason = page.locator("#settings-panel .notbuilt")
+        if chipped:
+            if reason.count() != 1 or len(reason.inner_text().strip()) < 50:
+                chipped_without_reason.append(title)
+        elif reason.count() != 0:
+            built_with_excuse.append(title)
+
+    assert seen == 10, seen
+    assert chipped_without_reason == [], chipped_without_reason
+    assert built_with_excuse == [], built_with_excuse
+    assert errors == [], errors
+
+
 def test_the_autonomy_write_goes_through_the_real_route(
     browser_page, client: Client
 ) -> None:
