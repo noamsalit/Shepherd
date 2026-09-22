@@ -69,6 +69,7 @@ from shepherd.toolsurface.tools_engine import register_engine_tools
 from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
 from shepherd.toolsurface.tools_m3 import kill as kill_session_now
+from shepherd.toolsurface.tools_terminal import kill_landed
 from shepherd.toolsurface.tools_m3 import register_m3_tools
 from shepherd.toolsurface.tools_master import autonomy_level, register_master_tools
 from shepherd.toolsurface.tools_projects import register_project_tools
@@ -451,11 +452,18 @@ def compose_tool_surface(
     # session it has no runner handle for, which is every *attached* one. That
     # `False` is the truth: the commit half then refuses rather than deleting a
     # live session's rows.
+    #
+    # Reading that answer is `kill_landed`'s job and it lives **beside the
+    # producer** (T3.4). It was spelled here, inside this closure: a string key
+    # in two files, in a function no test could reach, so a rename on the
+    # producer side would have left this adapter answering `False` forever and
+    # silently.
     def kill_for_delete(session_id: str) -> bool:
-        answer = kill_session_now(
-            store=store, runner=runner, now=utc_now, publish=_publish, session_id=session_id
+        return kill_landed(
+            kill_session_now(
+                store=store, runner=runner, now=utc_now, publish=_publish, session_id=session_id
+            )
         )
-        return answer.get("killed") is True
 
     register_project_tools(store=store, kill=kill_for_delete, now=utc_now)
 

@@ -40,6 +40,7 @@ from shepherd.toolsurface.approvals import ApprovalStore
 from shepherd.toolsurface.tools_master import register_master_tools
 from shepherd.toolsurface.registry import invoke, registered_tools
 from shepherd.toolsurface.tools_m3 import M3_TOOL_NAMES, register_m3_tools
+from shepherd.toolsurface.tools_terminal import kill_landed, no_pane
 from shepherd.toolsurface.tools_projects import refuses_every_kill, register_project_tools
 from shepherd.toolsurface.tools_rename import register_rename_tool
 from shepherd.toolsurface.types import Audience, BlastClass, CallerContext, ToolResult
@@ -606,6 +607,36 @@ def test_a_tier_two_session_cannot_kill_anything(world: World, store: Store) -> 
     allowed = payload("kill_session", {"session_id": OWNED_ID}, HUMAN)
     assert allowed["killed"] is True
     assert "terminate" in world.runner.calls
+
+
+def test_kill_landed_reads_both_answers_the_kill_path_gives(
+    world: World, store: Store
+) -> None:
+    """The adapter the composition root needs, over **both real answers**.
+
+    It lived in `compose.py` as a closure inside `register_all` — untestable,
+    and spelling the string key `"killed"` in a second file. Rename it on the
+    producer side and the adapter answers `False` forever, silently: every
+    `kill_sessions` project delete would refuse, and nothing in the suite could
+    have said why, because nothing could reach the closure to ask.
+
+    It lives in `tools_terminal.py` beside `no_pane` rather than beside `kill`
+    here, for one measured reason: `tools_m3.py` is at 445 of the 450-line cap
+    and the docstring does not fit under it. The test stays here, where the
+    `kill` it reads is driven.
+
+    Asserted here against the answers `kill_session` actually returns — the one
+    that killed, and `no_pane(...)`, which is what the kill path gives for any
+    session it has no runner handle for. A fake dict would prove the fake, and
+    the fake is exactly what a renamed key stops resembling.
+    """
+    owned_row(store, world)
+    killed = payload("kill_session", {"session_id": OWNED_ID}, HUMAN)
+    assert kill_landed(killed) is True
+    # The negative control is the shipped shape, not a literal: `no_pane` has
+    # no `"killed"` key at all, which is the case the adapter exists for.
+    assert kill_landed(no_pane("s-1")) is False
+    assert kill_landed(payload("kill_session", {"session_id": "no-such-session"})) is False
 
 
 def test_interrupt_and_kill_answer_with_a_value_for_a_session_we_do_not_own(

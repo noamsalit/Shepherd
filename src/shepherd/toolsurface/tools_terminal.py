@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import base64
 import binascii
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 
 from shepherd.core.runner import RunnerHandle
@@ -57,6 +57,7 @@ __all__ = [
     "TerminalStream",
     "build_terminal_tools",
     "handle_for",
+    "kill_landed",
     "no_pane",
     "session_output",
 ]
@@ -102,6 +103,30 @@ def no_pane(session_id: str) -> dict[str, object]:
             " handle is gone (an orphan)"
         ),
     }
+
+
+def kill_landed(answer: Mapping[str, object]) -> bool:
+    """Did that `kill(...)` answer say the session stopped?
+
+    **One reader, spelled beside the answers it reads.** This was a closure in
+    the composition root reading `answer.get("killed")` — a string key spelled
+    in two files, in a function no test could reach. Renaming the key on the
+    producer's side would have left the adapter answering `False` **forever and
+    silently**: every `kill_sessions` project delete would refuse, and the suite
+    would have had nothing to say about it.
+
+    `False` for `no_pane(...)` above, which carries no `"killed"` key at all and
+    is what the kill path answers for any session it has no runner handle for —
+    which is every *attached* one. That `False` is the truth, and
+    `commit_project_delete` refuses on it rather than deleting a live session's
+    rows.
+
+    **Here rather than in `tools_m3.py`, beside `kill` itself**, for one
+    measured reason: that module is at 445 of the 450-line cap and this
+    docstring does not fit under it. `no_pane` — the answer with no key, and the
+    branch this predicate exists for — is the thing it is now beside.
+    """
+    return answer.get("killed") is True
 
 
 @dataclass(frozen=True)
