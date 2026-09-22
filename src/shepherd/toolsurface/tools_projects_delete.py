@@ -30,6 +30,7 @@ from collections.abc import Callable, Mapping, Sequence
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.store.db import Store
 from shepherd.store.models import DeleteOutcome, DeletePlan, OnRunning
+from shepherd.toolsurface.tools_projects_events import Announce
 from shepherd.toolsurface.tools_projects_reads import PROJECT_ID, STRING, object_schema
 from shepherd.toolsurface.types import (
     Audience,
@@ -40,6 +41,7 @@ from shepherd.toolsurface.types import (
 )
 
 __all__ = [
+    "Announce",
     "KillFailure",
     "KillSession",
     "build_delete_tool",
@@ -243,10 +245,18 @@ def refuses_every_kill(session_id: str) -> bool:
     return False
 
 
-def build_delete_tool(store: Store, kill: KillSession) -> ToolDef:
-    """The one definition this module owns, with the store and the kill closed
-    over — concatenated into `build_project_tools`'s tuple, so the registration
-    stays one loop over one tuple and the split cannot lose a verb."""
+def _announces_nothing(project_id: str, record: dict[str, object]) -> dict[str, object]:
+    """The default: a delete tool built without a ring, announcing to nobody."""
+    return record
+
+
+def build_delete_tool(
+    store: Store, kill: KillSession, announced: Announce = _announces_nothing
+) -> ToolDef:
+    """The one definition this module owns, with the store, the kill and the
+    announcement closed over — concatenated into `build_project_tools`'s tuple,
+    so the registration stays one loop over one tuple and the split cannot lose
+    a verb."""
     return ToolDef(
         name="delete_project",
         description=(
@@ -257,14 +267,17 @@ def build_delete_tool(store: Store, kill: KillSession) -> ToolDef:
             {PROJECT_ID: STRING, "on_running": on_running_schema()}, [PROJECT_ID]
         ),
         blast_class=BlastClass.LOCAL_DESTRUCTIVE,
-        handler=lambda args, ctx: delete_project(
-            store,
-            kill,
-            project_id=arg_str(args, PROJECT_ID),
-            # Absent, never defaulted in the schema: `arg_optional_str`
-            # answers `None`, and `None` is what the handler turns into
-            # `REFUSE`. A request cannot edit that out.
-            on_running=arg_optional_str(args, "on_running"),
+        handler=lambda args, ctx: announced(
+            arg_str(args, PROJECT_ID),
+            delete_project(
+                store,
+                kill,
+                project_id=arg_str(args, PROJECT_ID),
+                # Absent, never defaulted in the schema: `arg_optional_str`
+                # answers `None`, and `None` is what the handler turns into
+                # `REFUSE`. A request cannot edit that out.
+                on_running=arg_optional_str(args, "on_running"),
+            ),
         ),
         audiences=MASTER_AND_HUMAN,
     )

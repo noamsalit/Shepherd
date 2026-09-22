@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 from chokepoint_fixture import install_test_chokepoint
 
+from shepherd.core.stream import StreamEvent
 from shepherd.core.states import Origin, Ownership
 from shepherd.orchestration.master_turn import TurnRefused, TurnStarted
 from shepherd.orchestration.dialog_keys import SidecarState
@@ -26,6 +27,7 @@ from shepherd.store.db import Store, open_store
 from shepherd.testkit.scripted_runner import ScriptedRunner
 from shepherd.store.models import Session
 from shepherd.toolsurface.registry import reset_registry
+from shepherd.toolsurface.stream import publish as stream_publish
 from shepherd.toolsurface.stream import reset_stream
 from shepherd.toolsurface.tools_m1 import register_read_tools
 from shepherd.toolsurface.approvals import ApprovalStore
@@ -55,6 +57,15 @@ def _no_fork(argv: list[str], *, timeout_ms: int) -> NoReturn:
 
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "src" / "shepherd" / "web" / "static"
+
+
+def _ring(event: StreamEvent) -> None:
+    """`stream.publish` returns how many subscribers took the event; the seam a
+    capability is handed says `None`. The count is dropped here, exactly as
+    `compose.py::_publish` drops it in the shipped composition — a `lambda`
+    would forward it and disagree with the type at the one place this fixture
+    exists to stand in for."""
+    stream_publish(event)
 
 
 @pytest.fixture(autouse=True)
@@ -170,7 +181,17 @@ def tools(
     # a running session, and a fixture that answered "killed" for a session it
     # never touched would let a delete take a live session's rows. The kill's
     # two branches are proved in `tests/toolsurface/test_tools_projects.py`.
-    register_project_tools(store=store, kill=refuses_every_kill, now=lambda: NOW)
+    #
+    # The publish is the **real ring** (D7, QA run 4), not a recorder: the
+    # defect this fixture now covers is that a mutation tells a second *client*,
+    # and the only surface a second client has is `/api/events` over a socket.
+    # A double here would move the assertion back to the seam that never saw it.
+    register_project_tools(
+        store=store,
+        kill=refuses_every_kill,
+        publish=_ring,
+        now=lambda: NOW,
+    )
     return None
 
 

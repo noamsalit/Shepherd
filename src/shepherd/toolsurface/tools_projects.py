@@ -52,6 +52,13 @@ why the callable answers `bool` where the withdrawn one answered `None`.
 **The module is split** (T3.3): `tools_projects_reads.py` holds the two reads,
 the projections and the shared schema vocabulary, because the seventh verb does
 not fit under the 450-line cap. Both halves are named on that cap's line.
+
+**Every mutation announces itself** (D7, QA run 4: six 200s, zero frames at a
+second client). The producer is **not here** — `tools_projects_events.py` is the
+third module of this family and owns the one rule that decides whether anything
+happened, the record's own positive key, for all six verbs. It is wrapped around
+each handler below rather than called from inside one, so the handlers stay what
+this docstring says they are.
 """
 
 from __future__ import annotations
@@ -74,6 +81,13 @@ from shepherd.toolsurface.tools_projects_delete import (
     on_running_schema,
     refuses_every_kill,
 )
+from shepherd.toolsurface.tools_projects_events import (
+    PROJECT_EVENT_KINDS,
+    Publish,
+    announce,
+    created_project_id,
+    drops_every_event,
+)
 from shepherd.toolsurface.tools_projects_reads import (
     PROJECT_ID,
     STRING,
@@ -95,9 +109,11 @@ from shepherd.toolsurface.types import (
 #: tests, `test_tools_m3.py`) keep one import site while the code lives where
 #: the cap put it.
 __all__ = [
+    "PROJECT_EVENT_KINDS",
     "PROJECT_TOOL_NAMES",
     "KillFailure",
     "KillSession",
+    "Publish",
     "build_delete_tool",
     "add_repo",
     "build_project_tools",
@@ -280,10 +296,25 @@ def remove_repo(store: Store, *, project_id: str, repo_id: str) -> dict[str, obj
 
 
 def build_project_tools(
-    store: Store, kill: KillSession = refuses_every_kill, now: Clock = utc_now
+    store: Store,
+    kill: KillSession = refuses_every_kill,
+    now: Clock = utc_now,
+    publish: Publish = drops_every_event,
 ) -> tuple[ToolDef, ...]:
-    """The definitions, with the store and the kill closed over, so a consumer
-    names a capability and never a dependency (D32)."""
+    """The definitions, with the store, the kill and the ring closed over, so a
+    consumer names a capability and never a dependency (D32)."""
+
+    def announced(
+        tool: str, project_id: str | None, record: dict[str, object]
+    ) -> dict[str, object]:
+        """One call site per verb, so each one names the tool it is announcing
+        and nothing else about the publishing is spelled twice."""
+        return announce(record, tool=tool, project_id=project_id, publish=publish, now=now)
+
+    def announced_create(record: dict[str, object]) -> dict[str, object]:
+        """The one verb that learns its project id from its own answer."""
+        return announced("create_project", created_project_id(record), record)
+
     return (
         ToolDef(
             name="create_project",
@@ -293,10 +324,12 @@ def build_project_tools(
             # thing §13's allowlist is keyed by: creating one creates a scope
             # that repos can be added to.
             blast_class=BlastClass.LOCAL_DESTRUCTIVE,
-            handler=lambda args, ctx: create_project(
-                store,
-                name=arg_str(args, "name"),
-                description=arg_optional_str(args, "description"),
+            handler=lambda args, ctx: announced_create(
+                create_project(
+                    store,
+                    name=arg_str(args, "name"),
+                    description=arg_optional_str(args, "description"),
+                )
             ),
             audiences=MASTER_AND_HUMAN,
         ),
@@ -307,10 +340,14 @@ def build_project_tools(
                 {PROJECT_ID: STRING, "name": STRING}, [PROJECT_ID, "name"]
             ),
             blast_class=BlastClass.LOCAL_WRITE,
-            handler=lambda args, ctx: rename_project(
-                store,
-                project_id=arg_str(args, PROJECT_ID),
-                name=arg_str(args, "name"),
+            handler=lambda args, ctx: announced(
+                "rename_project",
+                arg_str(args, PROJECT_ID),
+                rename_project(
+                    store,
+                    project_id=arg_str(args, PROJECT_ID),
+                    name=arg_str(args, "name"),
+                ),
             ),
             audiences=MASTER_AND_HUMAN,
         ),
@@ -323,17 +360,25 @@ def build_project_tools(
             # `local_write`, with `rename_project`: it relabels, and it widens
             # nothing. §13's allowlist is untouched by a sentence.
             blast_class=BlastClass.LOCAL_WRITE,
-            handler=lambda args, ctx: set_project_description(
-                store,
-                project_id=arg_str(args, PROJECT_ID),
-                # Absent is a **value** here: `None` clears the description,
-                # which is the whole of what sending nothing can mean for a
-                # nullable field.
-                description=arg_optional_str(args, "description"),
+            handler=lambda args, ctx: announced(
+                "set_project_description",
+                arg_str(args, PROJECT_ID),
+                set_project_description(
+                    store,
+                    project_id=arg_str(args, PROJECT_ID),
+                    # Absent is a **value** here: `None` clears the description,
+                    # which is the whole of what sending nothing can mean for a
+                    # nullable field.
+                    description=arg_optional_str(args, "description"),
+                ),
             ),
             audiences=MASTER_AND_HUMAN,
         ),
-        build_delete_tool(store, kill),
+        build_delete_tool(
+            store,
+            kill,
+            lambda project_id, record: announced("delete_project", project_id, record),
+        ),
         ToolDef(
             name="add_repo",
             description="Register a repo to a project. Widens §13's spawn allowlist (D22).",
@@ -341,10 +386,14 @@ def build_project_tools(
                 {PROJECT_ID: STRING, "root_path": STRING}, [PROJECT_ID, "root_path"]
             ),
             blast_class=BlastClass.LOCAL_DESTRUCTIVE,
-            handler=lambda args, ctx: add_repo(
-                store,
-                project_id=arg_str(args, PROJECT_ID),
-                root_path=arg_str(args, "root_path"),
+            handler=lambda args, ctx: announced(
+                "add_repo",
+                arg_str(args, PROJECT_ID),
+                add_repo(
+                    store,
+                    project_id=arg_str(args, PROJECT_ID),
+                    root_path=arg_str(args, "root_path"),
+                ),
             ),
             audiences=MASTER_AND_HUMAN,
         ),
@@ -355,10 +404,14 @@ def build_project_tools(
                 {PROJECT_ID: STRING, "repo_id": STRING}, [PROJECT_ID, "repo_id"]
             ),
             blast_class=BlastClass.LOCAL_WRITE,
-            handler=lambda args, ctx: remove_repo(
-                store,
-                project_id=arg_str(args, PROJECT_ID),
-                repo_id=arg_str(args, "repo_id"),
+            handler=lambda args, ctx: announced(
+                "remove_repo",
+                arg_str(args, PROJECT_ID),
+                remove_repo(
+                    store,
+                    project_id=arg_str(args, PROJECT_ID),
+                    repo_id=arg_str(args, "repo_id"),
+                ),
             ),
             audiences=MASTER_AND_HUMAN,
         ),
@@ -369,7 +422,9 @@ def build_project_tools(
     )
 
 
-def register_project_tools(*, store: Store, kill: KillSession, now: Clock = utc_now) -> None:
+def register_project_tools(
+    *, store: Store, kill: KillSession, publish: Publish, now: Clock = utc_now
+) -> None:
     """Register the lifecycle, before the composition root freezes the registry.
 
     `kill` is the plan's injection, and it arrives now that there is a verb that
@@ -381,6 +436,13 @@ def register_project_tools(*, store: Store, kill: KillSession, now: Clock = utc_
     root is the only place that knows how; `refuses_every_kill` is a safe answer
     for a caller that only wants to read the schemas, and a silent one for a
     composition that forgot. Here mypy refuses the omission instead.
+
+    `publish` arrives on the same terms and for the same reason (D7). A process
+    that registers these verbs can be asked to change a project, and only the
+    composition root knows where the ring is; `drops_every_event` is a safe
+    answer for a caller that only wants to read the schemas, and a **silent**
+    one for a composition that forgot — which is precisely the defect QA run 4
+    found, six 200s and zero frames. Here mypy refuses the omission instead.
     """
-    for tool in build_project_tools(store, kill, now):
+    for tool in build_project_tools(store, kill, now, publish):
         register(tool)
