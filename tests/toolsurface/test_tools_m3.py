@@ -53,6 +53,7 @@ TERMINAL_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_termin
 MESSAGING_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_messaging.py"
 RENAME_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_rename.py"
 ORIGIN_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "spawn_origin.py"
+PROJECTS_MODULE = REPO_ROOT / "src" / "shepherd" / "toolsurface" / "tools_projects.py"
 
 #: `14-list-sessions-after-sigterm.txt`, `probe_a`: alive, alternate screen on.
 LIVE_FIELDS = "1|0||✳ shp-probe-title-1|160|45|4041880"
@@ -369,13 +370,22 @@ def test_the_three_modules_are_each_under_the_cap() -> None:
     that escapes the enumeration is a split that hides growth, which is the one
     thing this line exists to prevent.
 
+    **Six since T3.1**, and this one is a new module rather than a split:
+    `tools_projects.py` is D57's project lifecycle, and it is named here for the
+    same reason the two splits are — a module that escapes the enumeration is a
+    module whose growth nothing measures. It ships at 408 lines with six verbs,
+    so `delete_project` arriving with the store-side writer-thread split will
+    not fit, and the split into `tools_projects.py` + `tools_projects_reads.py`
+    the plan authorises has to name **both** halves on this line.
+
     The split is only honest while it cannot hide growth, which is what this
     line is for. Goes red the moment any half starts absorbing the others.
     """
     sizes = {path.name: len(path.read_text(encoding="utf-8").splitlines()) for path in
-             (MODULE, TERMINAL_MODULE, MESSAGING_MODULE, RENAME_MODULE, ORIGIN_MODULE)}
+             (MODULE, TERMINAL_MODULE, MESSAGING_MODULE, RENAME_MODULE, ORIGIN_MODULE,
+              PROJECTS_MODULE)}
     assert all(size <= 450 for size in sizes.values()), sizes
-    assert len(sizes) == 5
+    assert len(sizes) == 6
 
 
 # ----- behaviour, through `invoke()` -----------------------------------------
