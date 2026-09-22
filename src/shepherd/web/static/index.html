@@ -388,10 +388,25 @@
          The Projects page's two dialogs are **not** here: `mountProjects()`
          builds them inside `#page-projects`, and a second copy in the shell
          would be the one `getElementById` handed back. See page root 4. -->
-    <dialog id="dlg-legend" class="sheet">
+    <!-- QA run 4's D4. This sheet shipped with no button at all, while
+         `flock.js` looped over `[data-close="dlg-legend"]` to wire a close
+         handler — an attribute that was nowhere in the document, so the loop
+         was dead code and the wiring waited for markup that never arrived. A
+         native `<dialog>` with no `closedby` does not light-dismiss either, so
+         the eight legend keys and the ⓘ all opened a sheet whose only exit was
+         a keyboard `Escape`: on a phone, a page reload.
+
+         Two exits, deliberately, because they fail differently. The button is
+         the one that works in every browser and is what the fix rests on;
+         `closedby="any"` is the platform's own light-dismiss, which is what a
+         phone reader reaches for first, and it is verified in this tree's
+         chromium rather than assumed (`'closedBy' in dialog`). -->
+    <dialog id="dlg-legend" class="sheet" closedby="any">
       <div class="sheet-body">
         <div class="sheet-head">
           <h3>What the colours mean</h3>
+          <button class="sheet-close" type="button" data-close="dlg-legend"
+                  aria-label="Close">×</button>
         </div>
         <div class="sheet-list" id="dlg-legend-list"></div>
       </div>

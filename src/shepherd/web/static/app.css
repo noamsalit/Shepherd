@@ -771,6 +771,22 @@ button, input, textarea { font: inherit; color: inherit; }
   flex: none;
 }
 
+/* QA run 4's D8 and D9, which are one defect with two shapes.
+ *
+ * This rule had `place-items: center` and **no size of its own**, so the
+ * chevron's box was whatever its parent imposed. In a flex *row* — Projects'
+ * `.proj-band`, the Flock's `.col-head` — it collapsed to its 16px glyph plus
+ * padding: 21x21, below WCAG 2.2 AA 2.5.8's 24x24 minimum. In a flex *column*
+ * — Settings' `.proj-detail.set-panel` — it stretched to the full 394px and
+ * `place-items: center` put the glyph at x=193, the dead centre of a 390px
+ * screen with nothing beside it: an ornament where the only way out of a
+ * drill-down should be.
+ *
+ * So the button is given a size rather than borrowing one, and `align-self`
+ * stops a column parent from stretching it. 44px is the project's own target
+ * (`.nav-item { min-width: 44px }`) and not merely the 24px floor: on a phone
+ * these chevrons are the *only* way back out of a drill-down, which is the one
+ * place where clearing the minimum is not the same as being reachable. */
 .back {
   display: none;
   background: none;
@@ -780,6 +796,10 @@ button, input, textarea { font: inherit; color: inherit; }
   padding: 0.15rem;
   margin-left: -0.25rem;
   place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  flex: none;
+  align-self: start;
 }
 
 .back svg { width: 16px; height: 16px; }
@@ -1819,6 +1839,10 @@ button, input, textarea { font: inherit; color: inherit; }
   cursor: pointer;
   color: inherit;
   text-align: left;
+  /* QA run 4's D9: these rows measured 320x21 on a phone — the 2.5.8 floor is
+   * 24. The row is `align-items: center`, so a minimum height grows the target
+   * without moving anything inside it. */
+  min-block-size: 24px;
 }
 
 .mini-open:hover .mini-title { color: var(--text); text-decoration: underline; }
@@ -2386,6 +2410,28 @@ dialog.sheet { width: min(34rem, calc(100vw - 24px)); }
 
 .sheet-head { display: flex; align-items: baseline; gap: 0.6rem; }
 .sheet-head h3 { margin: 0; font-size: 1rem; letter-spacing: -0.01em; }
+
+/* QA run 4's D4: the sheet's way out. Pushed to the trailing edge by
+ * `margin-inline-start: auto` and sized past the 24px target minimum, because
+ * the reader who needs it most is the one holding a phone with no keyboard. */
+.sheet-close {
+  margin-inline-start: auto;
+  align-self: flex-start;
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.sheet-close:hover { color: var(--text); background: var(--ink-750); }
 .sheet-head p { margin: 0; font-size: 0.8rem; color: var(--text-dim); }
 
 .sheet-list { display: flex; flex-direction: column; }
