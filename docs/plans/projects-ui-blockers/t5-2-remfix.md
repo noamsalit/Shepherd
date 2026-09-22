@@ -138,6 +138,14 @@ second operand of the card wash (`:815`), so moving it moves U16.
 
 → `12 pages checked · 12 screenshots · 0 failures`, exit 0, at **390** and 1280.
 
+**`tools/` is not on this branch.** T5.2's base (`9d4682e`) predates
+`tools/render_check.py`, which lives on `integration` and arrives when the two
+meet. The runs recorded here used `integration:tools/render_check.py`, byte for
+byte, from outside the tree — so the command above is the one a reader will run
+after the merge, and is not the literal one that produced these numbers. The
+thing that had to be committed for the evidence to be regenerable is the page,
+and it is.
+
 Two things about the harness, because the previous one had neither:
 
 - **It is out of the static tree.** `server.py` is byte-pinned to a
@@ -201,6 +209,21 @@ This is the same shape as the two rules already in `CLAUDE.md` — isolating the
 | rgb guard, planted `rgba(245, 158, 11, 0.16)` | red, exit 1; removed, exit 0 |
 | webfont guard, planted `image-set("shepherd.woff2" 1x)` | red, exit 1; removed, exit 0 |
 | contrast guard, against the pre-fix stylesheet | red on all three rules — it was one of the five REDs the cycle opened with |
+| `pytest tests/web -q --ignore=tests/web/test_rail.py` | **151 passed**, exit 0 |
+
+**Two things are red and were red at `8cf0e4d`, before a line of this was
+written.** Neither is touched here.
+
+- `tests/web/test_rail.py::test_empty_rail_collapses_to_a_line` and
+  `::test_rail_says_unknown_before_the_fleet_has_been_read` — T5.2 dropped the
+  `.rail-*` rules; `grep -c rail-unknown` is **0** on the base's `app.css` and
+  0 on mine. All seven of that module's frozen ids retire under `§3 D66` in
+  T5.3.
+- `tests/boundaries/test_consumer_surface_frozen.py` names exactly one extra
+  path, `web/static/app.css`. The base already differs from the manifest
+  baseline (`35e7dc92…` vs `e7641e25…`) and `post_milestone.edits` carries no
+  `app.css` entry. That declaration is **T5.1's**, and Phase 5 declares this
+  boundary red internally. My commit changes the digest, not the category.
 
 `__pycache__` cleared before every mutation run. No tmux. Nothing written under
 `~/.claude/` or `docs/probes/`. Committed by path.
