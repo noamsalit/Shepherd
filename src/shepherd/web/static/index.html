@@ -108,59 +108,42 @@
         </header>
 
         <!-- ========== page root 1 of 6: Shepherd ========== -->
-        <!-- §12's page 1, the conversation. The heading is outside
-             `#chat-view` on purpose: the section ships hidden and is revealed
-             by `mountChat()`, and `render_check.py` asserts each page renders
-             its **own name** inside its own root, which a hidden subtree does
-             not. -->
-        <div class="scroll" id="page-shepherd" hidden>
-          <p class="col-head">Shepherd</p>
+        <!-- §12's page 1, the conversation, in the shape T7.1 rebuilt it: a
+             scroller **plus** a pinned composer, which is why the root is
+             `.detail` and not `.scroll`. A `.scroll` root would put the
+             composer inside the scroller and let it scroll away.
 
-          <!-- Static markup, filled with textContent: the master's output
-               contains tool results and is untrusted in exactly the way §13
-               means, so there is no HTML sink on this page and
-               `test_the_chat_page_has_no_html_sink` is what keeps it that
-               way. -->
-          <section id="chat-view" class="chat-view" hidden>
-            <div class="chat-conversation">
-              <!-- The conversation. One line per `MasterEvent`, plus the
-                   approval card inline at the blocked turn (§12). -->
-              <div id="chat-log" class="chat-log" aria-live="polite"></div>
-              <div class="chat-composer">
-                <input id="chat-input" class="chat-input" type="text"
-                       aria-label="say something to the orchestrator" />
-                <button id="chat-send" class="chat-send" type="button">send</button>
+             Both containers ship empty — `chat.js` fills `#shepherd-thread`
+             and the module is what draws every turn — so the page's own name
+             has to be in static markup for `tools/render_check.py` to see it
+             before the daemon answers. `.chip-hint` carries it, untransformed.
+
+             Static markup filled with `textContent`: the master's output
+             contains tool results and is untrusted in exactly the way §13
+             means, so there is no HTML sink on this page. -->
+        <div class="detail" id="page-shepherd" hidden>
+          <div class="detail-scroll" id="shepherd-scroll">
+            <div class="thread" id="shepherd-thread"></div>
+          </div>
+
+          <div class="composer-wrap">
+            <div class="composer">
+              <textarea id="shepherd-input" rows="1"
+                        placeholder="Tell Shepherd what to do"></textarea>
+              <div class="composer-row">
+                <span class="chip-hint">Shepherd · one turn at a time</span>
+                <button class="send" id="shepherd-send" type="button" aria-label="send">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
               </div>
-              <!-- Principle 5 / §13: a refusal, a failure or a decision says so
-                   here, with the correlation id and nothing else. -->
-              <p id="chat-status" class="chat-status"></p>
             </div>
-
-            <aside class="chat-sidebar">
-              <h2>Pending approval</h2>
-              <span id="chat-approval-count" class="chat-approval-count">—</span>
-              <!-- Filled from `approval.created` as it arrives on the one
-                   stream. §12 forbids polling and a card discovered on a timer
-                   is a turn left blocked until the timer comes round. -->
-              <div id="chat-approvals" class="chat-approvals"></div>
-
-              <!-- D8's toggle, visible at all times (§12: "you should never
-                   have to remember which level you are on"). The em dash is
-                   the level before anybody has read one. -->
-              <div class="chat-autonomy">
-                <span class="chat-autonomy-label">autonomy</span>
-                <span id="chat-autonomy-level" class="chat-autonomy-value">—</span>
-                <button id="chat-autonomy-next" class="chat-autonomy-next" type="button">—</button>
-              </div>
-
-              <!-- D25's single exception, as a literal tail and nothing else:
-                   no query surface, no filter, and no `args` — those are
-                   redacted for a log, and a page is a wider audience than a
-                   log. -->
-              <h2>Audit</h2>
-              <div id="chat-audit" class="chat-audit"></div>
-            </aside>
-          </section>
+            <!-- Principle 5 / §13: a refusal, a failure or a decision says so
+                 here, with the correlation id and nothing else. -->
+            <p class="status" id="shepherd-status"></p>
+          </div>
         </div>
 
         <!-- ========== page root 2 of 6: Flock ========== -->
@@ -169,36 +152,74 @@
              orchestrator — rather than an empty conversation frame claiming a
              master that never answered. `app.js` navigates to Shepherd on the
              first paint (§12 page 1 is the default landing), so the static
-             attribute is the honest degrade and not the intended arrival. -->
-        <div class="herd" id="page-flock" data-level="projects">
-          <div id="fleet-view" class="fleet-view">
-            <header class="masthead">
-              <h1>Flock</h1>
-              <div id="counts" class="counts" aria-label="sessions by bucket"></div>
+             attribute is the honest degrade and not the intended arrival.
 
-              <!-- Principle 5's headline metric, and DP10's residue beside it.
-                   The three numbers mean three different things and none is
-                   folded into another: *we could not map this stop*, *we never
-                   saw this stop*, and *the turn ended cleanly and no heuristic
-                   could tell us whether it finished*. The last is the largest
-                   cohort, and D34 names it as the trigger for building the
-                   model lane that is deferred. The prototype omits this strip;
-                   the prototype is a mock, and the shipped page wins (B3). -->
-              <div id="stop-summary" class="stop-summary" aria-label="stop classification">
-                <span class="stop-stat">
-                  <span class="stop-summary-label">unknown</span>
-                  <span id="unknown-rate" class="stop-value">—</span>
-                </span>
-                <span class="stop-stat">
-                  <span class="stop-summary-label">unverified completions</span>
-                  <span id="low-confidence" class="stop-value">—</span>
-                </span>
-                <span class="stop-stat">
-                  <span class="stop-summary-label">never classified</span>
-                  <span id="unclassified" class="stop-value">—</span>
-                </span>
-              </div>
-            </header>
+             T6's three panes, and D67's third one. The slot ids below are the
+             ones `flock.js` and `session.js` reach for by name; they were
+             written first in `tests/web/fixtures/shell_harness.html`, in a
+             worktree that was forbidden to touch this file, and this is where
+             that contract lands. -->
+        <div class="herd" id="page-flock" data-level="projects">
+          <!-- Filled by `flock.js::renderLegend`, which calls
+               `replaceChildren()` on it — so **nothing static may live here**.
+               The harness carried `#flock-heading` inside this strip and got
+               away with it because the harness runs no module; the shipped
+               page would have lost the page's own name on the first render. -->
+          <div class="legend" id="flock-legend"></div>
+
+          <!-- Principle 5's headline metric, and DP10's residue beside it. The
+               three numbers mean three different things and none is folded
+               into another: *we could not map this stop*, *the turn ended
+               cleanly and no heuristic could tell us whether it finished*, and
+               *we never classified it at all*. D34 names the second as the
+               trigger for the model lane this milestone defers.
+
+               **It carries `.stop-summary` and not `.legend-note`.** That
+               class is hidden below 900px, which took the whole strip off the
+               phone — the primary client, on the one page that ships visible.
+               Principle 5 says unknown is counted *and displayed*, never
+               hidden, so the strip has a class of its own rather than an
+               exemption inside a decorative one.
+
+               It is also where the page says its own name: `.legend` above is
+               cleared by the module, `.col-head` is `text-transform:
+               uppercase` and `inner_text()` returns transformed text, so this
+               band — full width, present at every level of U9's drill-down and
+               at every width — is the one place the literal survives. -->
+          <div class="stop-summary" id="stop-summary" aria-label="stop classification">
+            <span class="stop-name" id="flock-heading">Flock</span>
+            <span class="stop-stat">
+              <span class="stop-summary-label">unknown</span>
+              <span id="unknown-rate" class="stop-value">—</span>
+            </span>
+            <span class="stop-stat">
+              <span class="stop-summary-label">unverified completions</span>
+              <span id="low-confidence" class="stop-value">—</span>
+            </span>
+            <span class="stop-stat">
+              <span class="stop-summary-label">never classified</span>
+              <span id="unclassified" class="stop-value">—</span>
+            </span>
+          </div>
+
+          <!-- pane 1: the projects, E21's `Unassigned` among them. -->
+          <div class="herd-col col-projects">
+            <div class="col-head">Flock</div>
+            <div id="flock-projects"></div>
+          </div>
+
+          <!-- pane 2: the session cards, and F16's empty state behind them. -->
+          <div class="herd-col col-sessions">
+            <div class="col-head">
+              <button class="back" type="button" data-level="projects" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <span id="flock-sessions-head">Sessions</span>
+            </div>
+            <div class="cards" id="flock-cards"></div>
 
             <!-- F16: a fresh install with no database and no sessions sees
                  this, not a blank area and not an error. It names what
@@ -214,25 +235,27 @@
                 Start a session, or install the hooks, and this page updates itself.
               </p>
             </section>
+          </div>
 
-            <main id="fleet" class="fleet"></main>
+          <!-- pane 3 — D67: §12's page 3 is this column, not a fourth page.
+               The fourteen `#session-*` slots below are `session.js`'s and are
+               unchanged by the move: its contracts did not change, only its
+               mount point. It is **opened by clicking a card**: `app.js`
+               listens on `#flock-cards`, reads the card's `data-session-id`,
+               reads that session through the API and hands the projection to
+               `renderSession`. Without that edge this whole section,
+               `session.js`, `terminal.js` and the vendored emulator are code
+               the page never loads. -->
+          <div class="herd-col col-detail detail" id="flock-detail">
+            <div class="detail-band">
+              <button class="back" type="button" data-level="sessions" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+            </div>
 
-            <!-- §12's page 3, which D67 relocates into the Flock's third pane
-                 rather than deleting. Static markup, filled by `session.js`
-                 with textContent — the same rule the rest of the page keeps,
-                 and the reason §13's escaping rule has no exception to make
-                 here either. Hidden until a session is opened: an empty
-                 terminal frame beside the cards would be a pane nobody asked
-                 for, and `renderSession` is what clears the attribute.
-
-                 It is **opened by clicking a fleet row**: `app.js` listens on
-                 `#fleet`, reads the row's `data-session-id`, reads that session
-                 through the API and hands the projection to `renderSession`.
-                 Without that edge this whole section, `session.js`,
-                 `terminal.js` and the vendored emulator are unreachable code —
-                 which is what shipped, and what
-                 `tests/web/test_session_wiring.py` now walks the module graph
-                 to prevent. -->
             <section id="session-view" class="session-view" hidden>
               <div class="session-band">
                 <span id="session-chip" class="session-chip">—</span>
@@ -281,15 +304,15 @@
         </div>
 
         <!-- ========== page root 4 of 6: Projects ========== -->
-        <!-- The body is T9.1's. The root, the nav entry and the name are the
-             shell's, so the page the nav points at exists before it has
-             content — a nav entry that opens nothing is the nav lying. -->
-        <div class="panes2" id="page-projects" data-level="list" hidden>
-          <div class="herd-col">
-            <div class="col-head">Projects</div>
-          </div>
-          <div class="proj-detail"></div>
-        </div>
+        <!-- **Empty, deliberately.** `mountProjects()` calls
+             `replaceChildren()` on this root and builds both panes and both
+             dialogs inside it, with the ids it is the only reader of. A shell
+             that also shipped `#dlg-project` and `#dlg-delete` would put a
+             second element with each of those ids in the document, outside the
+             root the page clears — and `getElementById` returns the first in
+             document order, so every dialog the page opened would be the
+             shell's empty one. One contract, one file (T9.1). -->
+        <div class="panes2" id="page-projects" data-level="list" hidden></div>
 
         <!-- ========== page root 5 of 6: Kanban ========== -->
         <div class="scroll" id="page-kanban" hidden>
@@ -300,46 +323,51 @@
         </div>
 
         <!-- ========== page root 6 of 6: Settings ========== -->
-        <!-- The body is T7.2's; D65 makes the autonomy toggle a Settings
-             control and nothing else. -->
-        <div class="scroll" id="page-settings" hidden>
-          <div class="stub">
-            <h2>Settings</h2>
-            <p>One autonomy control and nothing else (D65).</p>
+        <!-- T7.2's contract. `settings.js` fills `#settings-nav` and
+             `#settings-panel` and wires `#settings-back`; both containers ship
+             empty, so the page's own name is in static markup for
+             `tools/render_check.py` to see before the daemon answers.
+
+             The root is `.panes2` — the same two-pane grid the Projects page
+             uses — because `app.css`'s one phone rule for it is a drill-down
+             keyed on `data-level`, and Settings wants exactly that. The title
+             is a `.proj-band` and **not** a `.col-head`: `.col-head` carries
+             `text-transform: uppercase`, and `inner_text()` returns the
+             transformed text, so the checker would read `SETTINGS` there. -->
+        <div class="panes2" id="page-settings" data-level="list" hidden>
+          <div class="herd-col">
+            <div class="proj-band"><h2 class="proj-title">Settings</h2></div>
+            <div class="set-nav" id="settings-nav"></div>
+          </div>
+          <div class="proj-detail set-panel">
+            <button class="back" id="settings-back" type="button" aria-label="back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </button>
+            <p class="status" id="settings-note"></p>
+            <div id="settings-panel"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- The three sheets the pages open. They sit outside `.shell` because a
+    <!-- The one sheet the shell owns. It sits outside `.shell` because a
          `<dialog>` in the top layer is not laid out by the grid, and outside
          every `#page-*` root because a dialog owned by a hidden page is a
-         dialog that cannot open. Their bodies are filled by the pages that own
-         them — the legend by `flock.js` (T6.1), the other two by `projects.js`
-         (T9.1) — with textContent, like everything else here. -->
+         dialog that cannot open. Its body is filled by `flock.js` (T6.1) with
+         textContent, like everything else here.
+
+         The Projects page's two dialogs are **not** here: `mountProjects()`
+         builds them inside `#page-projects`, and a second copy in the shell
+         would be the one `getElementById` handed back. See page root 4. -->
     <dialog id="dlg-legend" class="sheet">
       <div class="sheet-body">
         <div class="sheet-head">
           <h3>What the colours mean</h3>
         </div>
         <div class="sheet-list" id="dlg-legend-list"></div>
-      </div>
-    </dialog>
-
-    <dialog id="dlg-project">
-      <div class="dlg">
-        <h3 id="dlg-project-title">New project</h3>
-        <div id="dlg-project-body"></div>
-        <div class="dlg-acts" id="dlg-project-acts"></div>
-      </div>
-    </dialog>
-
-    <dialog id="dlg-delete">
-      <div class="dlg">
-        <h3 id="dlg-delete-title">Delete project</h3>
-        <p id="dlg-delete-body"></p>
-        <div class="dlg-live" id="dlg-delete-live"></div>
-        <div class="dlg-choices" id="dlg-delete-choices"></div>
       </div>
     </dialog>
 

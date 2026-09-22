@@ -62,74 +62,6 @@ UNREACHABLE_BY_DESIGN = {
     ),
 }
 
-#: **Debt, not design** — and kept in a second list for exactly that reason.
-#:
-#: Phases 5-9 of the Projects-and-UI plan are built contract-first, each in its
-#: own worktree, because what made them serial was four shared files and not the
-#: dependency. `index.html` and `app.js` belong to Phase 5; a page module built
-#: in another worktree therefore ships before the shell that imports it, and
-#: this walk — correctly — reports it dead.
-#:
-#: The integration pass wires the shell and **empties this list**. It is not
-#: merged into `UNREACHABLE_BY_DESIGN`: that list means *this module is not
-#: supposed to be loaded*, which is the opposite of what is true here, and an
-#: entry that said so would make the page permanently dead by definition. The
-#: test below asserts the list's exact contents, so it cannot grow quietly and
-#: cannot be forgotten while it is non-empty.
-PENDING_SHELL_WIRING = {
-    "settings.js": (
-        "U13's Settings page (T7.2), built in the Phase 7 worktree. It is"
-        " imported by the shell Phase 5 is writing; until those two merge, the"
-        " walk from the shipped `index.html` cannot reach it."
-    ),
-}
-
-
-def test_the_pending_wiring_list_is_exactly_what_is_owed() -> None:
-    """A debt list that can grow silently is a permission slip, not a debt.
-
-    When the integration pass lands the shell, `PENDING_SHELL_WIRING` empties
-    and this test is deleted with it. While it is non-empty it names every
-    module the shipped page does not yet load, one line each, with the reason.
-    """
-    assert set(PENDING_SHELL_WIRING) == {"settings.js"}, sorted(PENDING_SHELL_WIRING)
-    assert not set(PENDING_SHELL_WIRING) & set(UNREACHABLE_BY_DESIGN)
-    for name, reason in PENDING_SHELL_WIRING.items():
-        assert len(reason) >= 60, name
-
-
-#: The shell's **debt**, named rather than disguised, with the one line that
-#: pays each entry. This is emphatically **not** `UNREACHABLE_BY_DESIGN`: that
-#: constant means *not meant to be reachable*, and folding a module the shell
-#: simply has not wired yet into it asserts the opposite of what is true and
-#: makes the page permanently dead by definition — the exact laundering that
-#: turns a temporary red into a permanent green.
-#:
-#: **The integration pass empties this dict and deletes
-#: `test_the_pending_shell_wiring_is_exactly_what_is_owed`.** The test pins the
-#: contents as a whole set precisely so the dict cannot be added to quietly: a
-#: debt list that grows without anyone noticing is not a debt list.
-PENDING_SHELL_WIRING = {
-    "app.js": (
-        "T6.1 renamed `fleet.js` to `flock.js`, and `app.js` line 9 still reads"
-        " `import { render, renderStatus } from \"./fleet.js\"`. `app.js` is the"
-        " shell's file and Phase 6 owns only its own modules, so the rename"
-        " landed and the import did not. **One line pays it:**"
-        " `import { renderFlock as render, renderStatus } from \"./flock.js\";`"
-        " — planted on a committed tree, observed at 178 passed across"
-        " `tests/web`, and reverted. Two things are wrong until it lands: the"
-        " shell names a module that does not ship, and the Flock's renderer is"
-        " reached only through `rail.js`, which D66 takes off the shell and the"
-        " integration pass deletes. Both are asserted below."
-    ),
-}
-
-#: The specifiers the shell still names that no longer resolve to a file. Every
-#: one is the other half of a `PENDING_SHELL_WIRING` entry, and the walk skips
-#: **only** these — a missing module that is not declared here is still a hard
-#: failure, which is what keeps this from becoming "the walk tolerates absence".
-STALE_SPECIFIERS = frozenset({"fleet.js"})
-
 
 def reachable_modules(markup: str, read: Callable[[str], str]) -> set[str]:
     """Every module the page really loads, walked from `index.html`'s scripts.
@@ -152,55 +84,10 @@ def reachable_modules(markup: str, read: Callable[[str], str]) -> set[str]:
         seen.add(name)
         if name.startswith(VENDOR_PREFIX):
             continue
-        if name in STALE_SPECIFIERS and not (STATIC_ROOT / name).is_file():
-            # A specifier the shell still names for a file that no longer
-            # ships. It is *recorded as reached* — the page really does ask for
-            # it, and pretending otherwise would hide the dead edge — but there
-            # is nothing to descend into.
-            continue
         here = posixpath.dirname(name)
         for specifier in module_specifiers(read(name)):
             queue.append(posixpath.normpath(posixpath.join(here, specifier)))
     return seen
-
-
-def test_the_pending_shell_wiring_is_exactly_what_is_owed() -> None:
-    """**Delete this test when the dict is empty.** That is the point of it.
-
-    Two halves, and the second is the one that stops this becoming an excuse
-    list. The first pins the contents as a whole set, so nothing joins quietly.
-    The second asserts the debt is **currently real** — so an entry that has
-    silently been paid fails here rather than sitting as a permanent exemption
-    for something that is wired after all. Every assertion in it fails with
-    *"the debt is paid — delete this test"*, which is the instruction.
-
-    The debt is an **import line**, not a module: `flock.js` is reached (through
-    `session.js`) and the page still never draws it, because `app.js` calls the
-    `render` it imported from a module that no longer ships. A reachability walk
-    cannot see that, which is exactly why this is not folded into one.
-    """
-    assert set(PENDING_SHELL_WIRING) == {"app.js"}, sorted(PENDING_SHELL_WIRING)
-    assert set(STALE_SPECIFIERS) == {"fleet.js"}, sorted(STALE_SPECIFIERS)
-    for owed, why in PENDING_SHELL_WIRING.items():
-        assert len(why) > 80, owed
-
-    app = code_only(source("app.js"))
-    # Half one: the shell names a module that does not ship.
-    assert 'from "./fleet.js"' in app, "the debt is paid — delete this test"
-    assert 'from "./flock.js"' not in app, "the debt is paid — delete this test"
-    assert not (STATIC_ROOT / "fleet.js").is_file(), "fleet.js is back; the entry is stale"
-
-    # Half two, and the one a reachability walk alone calls green. `flock.js`
-    # **is** reached — `session.js` imports `element` and `showLevel` from it,
-    # and `session.js` is on the graph — so the walk is satisfied and the page
-    # still never draws. **Loaded is not driven.** The bootstrap holds no
-    # reference to the Flock's renderer at all, which is the actual missing
-    # line, and it is asserted separately because the walk structurally cannot
-    # see it.
-    markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
-    assert "flock.js" in reachable_modules(markup, source), "loaded"
-    assert "renderFlock" not in app, "the debt is paid — delete this test"
-    assert 'from "./flock.js"' in code_only(source("session.js")), "…and only via here"
 
 
 def test_every_shipped_module_is_reachable_from_the_page() -> None:
@@ -217,9 +104,7 @@ def test_every_shipped_module_is_reachable_from_the_page() -> None:
     shipped = {path.name for path in STATIC_ROOT.glob("*.js")}
     assert len(shipped) >= 7, shipped
 
-    assert shipped - reached == set(UNREACHABLE_BY_DESIGN) | set(
-        PENDING_SHELL_WIRING
-    ), sorted(shipped - reached)
+    assert shipped - reached == set(UNREACHABLE_BY_DESIGN), sorted(shipped - reached)
     # Named rather than merely implied by the set difference: these three are
     # what the review found dead, and the vendored emulator is what page 3 is.
     assert {"session.js", "terminal.js"} <= reached, sorted(reached)
@@ -640,3 +525,101 @@ def test_every_test_the_vendor_record_names_actually_exists() -> None:
     # asserted to name files that exist, which is all a `path:line` can promise.
     for relative in set(re.findall(r"(tests/[\w/]+\.py):\d", text)):
         assert (repo_root / relative).is_file(), relative
+
+
+# ----- loaded is not driven --------------------------------------------------
+#
+# The integration pass's own rule, and the subtlest thing the parallel build
+# found. `flock.js` was **reached** — `session.js` imports `element` and
+# `showLevel` from it, and `session.js` is on the graph — so the walk above was
+# satisfied, and the page still never drew, because the bootstrap called a
+# `render` it had imported from a module that no longer shipped.
+#
+# A module-graph walk structurally cannot see that difference: it answers *did
+# the browser fetch this file*, and the question here is *does anything call
+# it*. The half that can see it is an assertion on `app.js` itself, which is
+# what this section is. It replaces `PENDING_SHELL_WIRING` and
+# `STALE_SPECIFIERS` — two debt lists, each with a pinning test, both emptied
+# and deleted by this pass, which is what they were for.
+
+#: Per page, the entry points the shell must both import and call. A page whose
+#: module is fetched and whose mount is never called is the exact defect above,
+#: and it is invisible to every other check in this file.
+PAGE_ENTRY_POINTS = {
+    "./flock.js": ("mountFlock", "renderFlock"),
+    "./chat.js": ("mountShepherd", "loadShepherd", "onShepherdEvent"),
+    "./settings.js": ("mountSettings", "loadSettings", "onSettingsEvent"),
+    "./projects.js": ("mountProjects",),
+    "./session.js": ("renderSession",),
+}
+
+#: Names the shell must **not** carry. `fleet.js` was renamed by T6.1 and
+#: `hideChat` was dropped by T7.1 — the shell owns `hidden` on the page roots —
+#: so a bootstrap still naming either is one that did not follow the rename.
+RETIRED_NAMES = ("fleet.js", "rail.js", "hideChat", "hideShepherd")
+
+
+def test_the_bootstrap_drives_every_page_it_loads() -> None:
+    """Imported **and called**, per page, because the walk can only see the first.
+
+    Arrival: the five specifiers are asserted present before anything is
+    asserted about the calls, so a bootstrap that imported nothing at all fails
+    with "the shell imports no page module" rather than with five call
+    assertions that are vacuously about an empty file.
+    """
+    app = code_only(source("app.js"))
+    assert 'from "./' in app, "arrival: the shell imports no page module"
+
+    missing_imports = [
+        specifier for specifier in PAGE_ENTRY_POINTS if f'from "{specifier}"' not in app
+    ]
+    assert missing_imports == [], missing_imports
+
+    uncalled = [
+        f"{specifier}:{name}"
+        for specifier, names in PAGE_ENTRY_POINTS.items()
+        for name in names
+        if re.search(rf"\b{name}\s*\(", app) is None
+    ]
+    assert uncalled == [], uncalled
+
+    present = [name for name in RETIRED_NAMES if name in app]
+    assert present == [], present
+
+
+def test_the_driving_check_bites() -> None:
+    """B1 again: the rule above is a gate only if an uncalled import trips it.
+
+    Two synthetic bootstraps over the same import line. The first is exactly the
+    defect this pass existed to close — the module is imported and the name is
+    never applied — and the second differs from it by one pair of parentheses.
+    """
+    imported_only = 'import { mountFlock } from "./flock.js";\nconst held = mountFlock;'
+    driven = 'import { mountFlock } from "./flock.js";\nmountFlock({});'
+    assert re.search(r"\bmountFlock\s*\(", imported_only) is None
+    assert re.search(r"\bmountFlock\s*\(", driven) is not None
+    for text in (imported_only, driven):
+        assert 'from "./flock.js"' in text
+
+
+def test_a_session_link_on_another_page_reaches_the_flock() -> None:
+    """T9.1's contract point 5, asserted on the two files that have to agree.
+
+    The Projects page renders each session as a real anchor — `focus`,
+    middle-click, a visible target — and performs no navigation of its own. The
+    shell is what turns the click into a page change, and it must treat a
+    `[data-page]` anchor the way it treats a `.nav-item`: show that page, and
+    select the session the anchor names.
+
+    Both halves are asserted, because either alone passes while the link is
+    dead: the anchor without the handler is a link to nowhere, and the handler
+    without the anchor is a listener nothing ever matches.
+    """
+    projects = code_only(source("projects.js"))
+    assert '"mini-open"' in projects, "the page renders no session link"
+    assert "data-page" in projects or "dataset.page" in projects, "the link names no page"
+    assert "dataset.sessionId" in projects or "data-session-id" in projects
+
+    app = code_only(source("app.js"))
+    assert "[data-page]" in app, "the shell does not listen for a page link"
+    assert "openSession(" in app, "the shell never opens the session the link names"

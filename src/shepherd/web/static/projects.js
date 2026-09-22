@@ -799,7 +799,15 @@ function scaffold(host) {
   host.replaceChildren();
 
   const listPane = element("div", "herd-col");
-  listPane.appendChild(element("div", "col-head", "Projects"));
+  // A `.proj-band` and **not** a `.col-head`: `.col-head` carries
+  // `text-transform: uppercase`, and Playwright's `inner_text()` returns the
+  // transformed text, so `tools/render_check.py`'s "every page shows its own
+  // name" reads `PROJECTS` there and reports the page as unnamed. The same
+  // transform caught T7.2 on Settings, which is why that page's title is a
+  // band too. Found in a browser, not by reading.
+  const band = element("div", "proj-band");
+  band.appendChild(element("h2", "proj-title", "Projects"));
+  listPane.appendChild(band);
   const list = element("div", "proj-list");
   list.id = "proj-list";
   listPane.appendChild(list);

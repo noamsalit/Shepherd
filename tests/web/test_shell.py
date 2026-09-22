@@ -594,20 +594,46 @@ def test_exactly_one_page_root_ships_visible() -> None:
     assert visible == ["page-flock"], visible
 
 
+#: The one page root whose name is **not** in static markup, named with its
+#: reason rather than dropped from the rule. `mountProjects()` calls
+#: `replaceChildren()` on `#page-projects` and builds both panes and both
+#: dialogs inside it (T9.1), so anything the shell wrote there would be deleted
+#: on the first mount — a title in that root would be a promise the page
+#: silently breaks. The claim still holds; it is simply only observable once
+#: the module has run, which is
+#: `test_shell_live.py::test_every_page_opens_and_shows_its_own_name`.
+BUILT_BY_ITS_MODULE = {"projects"}
+
+
 def test_each_page_root_renders_its_own_name_inside_itself() -> None:
     """The `must_see` contract Phase 0 fixed, asserted where it is cheap.
 
     It is each page's *own name* rather than one of the prototype's strings
     because `"payments-api"` is seeded data: a checker keyed on it fails on an
     empty install, which is the one install a fresh reader has.
+
+    Five of the six are checkable here, on bytes. The sixth is excluded **by
+    name and with the reason stated** — an exclusion list with no reason per
+    entry is how a missing page quietly becomes permanent — and the exclusion
+    itself is asserted to be real below, so a root that starts shipping a title
+    fails here rather than sitting exempt for something it no longer needs.
     """
     roots = page_roots(shell())
     missing = [
         (name, must_see)
         for name, must_see in render_check_constant("PAGES")
-        if must_see not in roots[f"page-{name}"].visible_text()
+        if name not in BUILT_BY_ITS_MODULE
+        and must_see not in roots[f"page-{name}"].visible_text()
     ]
     assert missing == [], missing
+
+    # The exemption is currently earned: the root really is empty, and the
+    # module really does supply the name.
+    for name in BUILT_BY_ITS_MODULE:
+        assert roots[f"page-{name}"].visible_text().strip() == "", name
+    assert '"proj-title", "Projects"' in (STATIC_ROOT / "projects.js").read_text(
+        encoding="utf-8"
+    ), "the module no longer names the page it was exempted for"
 
 
 def test_the_shell_carries_the_stop_summary_strip() -> None:
@@ -686,3 +712,123 @@ def test_the_markup_scans_bite() -> None:
 
     bare = parse('<button class="card"><span class="card-title">x</span></button>')
     assert cards(bare)[0].classes() == {"card"}
+
+
+# ==============================================================================
+# The integration pass: the shell's half of the contract four page modules were
+# built against, in four separate worktrees, and none of them could assert.
+#
+# Each module reaches for slots by id. Until this pass, every one of those ids
+# was proved against `fixtures/shell_harness.html` — a file the modules' own
+# tests could write. The shipped `index.html` is the one that matters, and the
+# rule below derives what it owes from **the modules themselves** rather than
+# from a list somebody typed twice: a slot added to a module and forgotten in
+# the shell fails here, which is the failure the parallel build made possible.
+# ==============================================================================
+
+#: The three shapes a page module uses to reach a slot it did not build. All
+#: three take a literal id; a computed one would be invisible here and is
+#: asserted against separately below.
+_SLOT_READS = re.compile(
+    r'(?:getElementById|slot|fill)\(\s*"([A-Za-z][A-Za-z0-9_-]*)"'
+)
+#: …and the ids a module **mints** rather than reads. `projects.js` builds both
+#: of its panes and both of its dialogs, so every id it reads it also writes,
+#: and the shell owes it nothing but the empty root.
+_SLOT_MINTS = re.compile(r'\.id\s*=\s*"([A-Za-z][A-Za-z0-9_-]*)"')
+
+#: The four pages built in parallel plus the session pane D67 moved into the
+#: Flock. Named, not globbed: `app.js` reads the shell's own controls and is the
+#: file being checked *against*, and a glob that swept it in would compare the
+#: shell to itself.
+PAGE_MODULES = ("flock.js", "session.js", "chat.js", "settings.js", "projects.js")
+
+
+def slots_owed_by_the_shell() -> dict[str, set[str]]:
+    """Per module, the ids it reads and does not build."""
+    owed: dict[str, set[str]] = {}
+    for name in PAGE_MODULES:
+        source = (STATIC_ROOT / name).read_text(encoding="utf-8")
+        owed[name] = set(_SLOT_READS.findall(source)) - set(_SLOT_MINTS.findall(source))
+    return owed
+
+
+def shell_ids() -> set[str]:
+    return {node.attrs["id"] for node in shell().walk() if "id" in node.attrs}
+
+
+def test_the_shell_ships_every_slot_the_page_modules_reach_for() -> None:
+    """The contract the four parallel worktrees agreed and none could check.
+
+    Arrival first, because a scan that found no slot would pass this whole
+    rule: each module is asserted to reach for at least one id, and the two
+    biggest — the Flock's three panes and the session pane's fourteen — are
+    asserted at their real sizes, so a regex that silently stopped matching
+    fails here rather than reporting a clean shell.
+    """
+    owed = slots_owed_by_the_shell()
+    assert len(owed["flock.js"]) >= 13, sorted(owed["flock.js"])
+    assert len(owed["session.js"]) == 14, sorted(owed["session.js"])
+    assert len(owed["chat.js"]) >= 5, sorted(owed["chat.js"])
+    assert len(owed["settings.js"]) >= 4, sorted(owed["settings.js"])
+    # `projects.js` builds everything inside its root, so the shell owes it the
+    # root and nothing else. That is T9.1's contract, stated as a number.
+    assert owed["projects.js"] == {"page-projects"}, sorted(owed["projects.js"])
+
+    ids = shell_ids()
+    missing = sorted(
+        f"{module}:{slot}"
+        for module, slots in owed.items()
+        for slot in slots
+        if slot not in ids
+    )
+    assert missing == [], missing
+
+
+def test_the_projects_root_ships_empty() -> None:
+    """T9.1's contract point 1, and the reason its dialogs are not in the shell.
+
+    `mountProjects()` calls `replaceChildren()` on `#page-projects` and builds
+    both panes and both dialogs inside it. A shell that also declared
+    `#dlg-project` and `#dlg-delete` would put a **second** element with each of
+    those ids in the document, outside the root the page clears — and
+    `getElementById` returns the first in document order, so every dialog the
+    page opened would be the shell's empty one. One contract, one file.
+    """
+    root = page_roots(shell())["page-projects"]
+    assert list(root.kids) == [], [kid.tag for kid in root.kids]
+    assert root.attrs.get("data-level") == "list", root.attrs
+    ids = shell_ids()
+    assert "dlg-project" not in ids
+    assert "dlg-delete" not in ids
+
+
+def test_the_stop_summary_strip_is_not_a_decorative_note() -> None:
+    """Principle 5, in the stylesheet: the three numbers survive a phone.
+
+    `#stop-summary` carried `class="legend-note"`, and `app.css` hides
+    `.legend-note` below 900px — so the unknown rate, the low-confidence count
+    and the never-classified count were absent on the primary client. The strip
+    gets its own class rather than an exemption, because `.legend-note` really
+    is a decorative right-aligned note and the strip really is not one.
+
+    This is the byte half. The half that would have caught it is the live one,
+    in `test_shell_live.py`, which measures the element in a 390px browser.
+    """
+    strip = next(
+        node for node in shell().walk() if node.attrs.get("id") == "stop-summary"
+    )
+    assert "legend-note" not in strip.classes(), strip.attrs
+    assert "stop-summary" in strip.classes(), strip.attrs
+
+    stylesheet = (STATIC_ROOT / "app.css").read_text(encoding="utf-8")
+    assert ".stop-summary" in stylesheet, "the strip's own class has no rule at all"
+    # …and no rule anywhere hides it. Every rule in the file is read, rather
+    # than only the one media query that had it, because the defect is "hidden
+    # somewhere", not "hidden at line 1587".
+    hiding = [
+        rule
+        for rule in re.findall(r"([^{}]*)\{([^{}]*)\}", stylesheet)
+        if "stop-summary" in rule[0] and "display" in rule[1] and "none" in rule[1]
+    ]
+    assert hiding == [], hiding

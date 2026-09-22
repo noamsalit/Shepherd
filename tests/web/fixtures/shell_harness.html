@@ -190,19 +190,14 @@
                                                                             -->
     <div class="herd" id="page-flock" data-level="projects" hidden>
       <div class="legend" id="flock-legend">
-        <!-- The page says its own name, inside its own root, at every level of
-             U9's drill-down. `tools/render_check.py` requires the literal
-             `Flock` in `#page-flock`'s rendered text, and before this line the
-             only source of it was a card title — so the check passed at desktop
-             width (three columns up) and failed at phone width (one). The
-             projects pane's head cannot supply it either: `.col-head` is
-             `text-transform: uppercase`, so it renders FLOCK and the literal
-             comparison misses. It sits inside `.legend` because that strip is
-             the one part of the page visible at every level of the drill-down;
-             it carries **no class**, deliberately, because `app.css` is another
-             agent's file this milestone and inventing a rule name it does not
-             define would be a contract nobody agreed to. -->
-        <span id="flock-heading">Flock</span>
+        <!-- **`#flock-heading` is not here any more, and the move is a
+             finding.** It was in this strip, where it satisfied
+             `tools/render_check.py`'s literal `Flock` — and it did so only
+             because this harness loads no module. `flock.js::renderLegend`
+             calls `replaceChildren()` on `#flock-legend`, so on the shipped
+             page the heading would have been deleted on the first render, and
+             a harness that runs no JavaScript cannot see that. It now lives in
+             the stop-summary band below, which nothing clears. -->
         <button class="legend-key bucket-needs_you" type="button"><span class="legend-mark">⏸</span>needs you</button>
         <button class="legend-key bucket-error" type="button"><span class="legend-mark">✕</span>error</button>
         <button class="legend-key bucket-unfinished" type="button"><span class="legend-mark">◑</span>stranded</button>
@@ -222,11 +217,27 @@
 
       <!-- B3 / principle 5: three numbers, three meanings, none folded into
            another. `#unknown-rate` sits before `#low-confidence`, which
-           `test_palette.py` asserts on the shipped markup. -->
-      <div class="legend-note" id="stop-summary">
-        <span>unknown rate <b id="unknown-rate">14%</b></span>
-        <span>low-confidence completions <b id="low-confidence">31</b></span>
-        <span>never classified <b id="unclassified">4</b></span>
+           `test_palette.py` asserts on the shipped markup.
+
+           **`.stop-summary`, not `.legend-note`.** That class was
+           `display: none` below 900px, so all three numbers were absent on a
+           phone — the primary client, on the page that ships visible. The
+           strip has a class of its own now rather than an exemption inside a
+           decorative one. -->
+      <div class="stop-summary" id="stop-summary" aria-label="stop classification">
+        <span class="stop-name" id="flock-heading">Flock</span>
+        <span class="stop-stat">
+          <span class="stop-summary-label">unknown</span>
+          <span id="unknown-rate" class="stop-value">14%</span>
+        </span>
+        <span class="stop-stat">
+          <span class="stop-summary-label">unverified completions</span>
+          <span id="low-confidence" class="stop-value">31</span>
+        </span>
+        <span class="stop-stat">
+          <span class="stop-summary-label">never classified</span>
+          <span id="unclassified" class="stop-value">4</span>
+        </span>
       </div>
 
       <div class="herd-col col-projects">

@@ -9,10 +9,22 @@
 // the shell and was drawn on every page; the owner reversed that, and if it
 // returns it lives on the Flock page alone (U2). `project_needs_you` and
 // `fleet_summary`'s `needs_you` list are untouched — only the renderer left.
+//
+// **Four pages were built in parallel worktrees and this file is the join.**
+// Each of them ships a `mount…` that wires its own controls once, and most of
+// them a `load…` that performs the one read its first paint needs. Importing a
+// page module is not enough and the reachability walk cannot tell the
+// difference: `flock.js` was *reached* through `session.js` for a whole phase
+// while the page never drew, because this file called a `render` it had
+// imported from a module that no longer shipped. **Loaded is not driven**, and
+// `tests/web/test_session_wiring.py::test_the_bootstrap_drives_every_page_it_
+// loads` is the assertion that can see it.
 
-import { hideChat, loadChat, mountChat, onChatEvent } from "./chat.js";
-import { render, renderStatus } from "./fleet.js";
+import { loadShepherd, mountShepherd, onShepherdEvent } from "./chat.js";
+import { mountFlock, renderFlock, renderStatus, showLevel } from "./flock.js";
+import { mountProjects } from "./projects.js";
 import { renderSession } from "./session.js";
+import { loadSettings, mountSettings, onSettingsEvent } from "./settings.js";
 import { connect } from "./sse.js";
 
 const FLEET = "/api/fleet";
@@ -28,16 +40,20 @@ const SESSIONS = "/api/sessions";
 // names, which is how a nav entry ends up pointing at a root that is not there.
 const PAGE_ROOT = '[id^="page-"]';
 const NAV_ITEM = ".nav-item";
+const PAGE_LINK = "[data-page]";
 const DEFAULT_PAGE = "shepherd";
 
 const shell = document.getElementById("shell");
 
+// What the Flock is currently showing. `projectId` and `sessionId` are the
+// selection — `flock.js` reads both to mark the open project and the open card
+// with `aria-current`, and neither is derived from DOM order.
 const view = {
   fleet: null,
   workspaces: [],
   sessionCount: 0,
-  subagents: new Map(),
-  expanded: new Set(),
+  projectId: null,
+  sessionId: null,
 };
 
 // Every body is `{ok, data, error, correlation_id}`. On a failure the page shows
@@ -52,6 +68,10 @@ async function read(path) {
   return body.data;
 }
 
+function drawFlock() {
+  renderFlock(view, handlers, Date.now());
+}
+
 async function loadFleet() {
   const [fleet, tree] = await Promise.all([read(FLEET), read(TREE)]);
   if (fleet) {
@@ -61,52 +81,58 @@ async function loadFleet() {
     view.workspaces = tree.workspaces;
     view.sessionCount = tree.session_count;
   }
-  render(view, onExpand);
-}
-
-async function loadSubagents(sessionId) {
-  const rollup = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}/subagents`);
-  if (rollup) {
-    view.subagents.set(sessionId, rollup);
+  // The first payload decides the opening project: a three-pane page whose
+  // middle column is empty until somebody clicks is a page that looks broken on
+  // arrival. It is the payload's own first workspace, never a sorted one (§16).
+  if (view.projectId === null && view.workspaces.length > 0) {
+    view.projectId = view.workspaces[0].project_id;
   }
-  render(view, onExpand);
+  drawFlock();
 }
 
-function onExpand(sessionId) {
-  if (view.expanded.has(sessionId)) {
-    view.expanded.delete(sessionId);
-    render(view, onExpand);
-    return;
-  }
-  view.expanded.add(sessionId);
-  render(view, onExpand);
-  loadSubagents(sessionId);
-}
-
-// D67's third pane, and the edge the plan never assigned to a task: without it
-// `session.js`, `terminal.js` and the vendored emulator are code the page never
-// loads. The id comes off the row's own `data-session-id` rather than a closure
-// or a position, because `fleet.js` builds the rows and this file owns the
-// navigation.
+// D67's third pane. The id comes off the card's own `data-session-id` rather
+// than a closure or a position, because `flock.js` builds the cards and this
+// file owns the navigation.
+//
+// **`get_session` answers `{found, session, subagents}`, not a row**, and the
+// bootstrap handed the whole envelope to `renderSession` — so every field it
+// read was `undefined` and `openTerminal` opened a socket at
+// `/api/sessions/undefined/terminal`. That is what the shipped page did before
+// this pass too; nothing could see it, because no test had ever executed
+// `renderSession`. It took a browser on the served page to find, which is the
+// whole reason this pass drives one.
+//
+// `found: false` is a real answer and not an error: a session that has been
+// swept while its card was on screen is principle 5's unknown, and the page
+// says so on the stream line rather than throwing.
 async function openSession(sessionId) {
-  const row = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}`);
-  if (row) {
-    renderSession(row);
+  const answer = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}`);
+  if (answer === null) {
+    return;
   }
+  if (!answer.found || answer.session === null) {
+    renderStatus(`no such session: ${sessionId}`);
+    return;
+  }
+  view.sessionId = sessionId;
+  drawFlock();
+  renderSession(answer.session);
 }
 
-function onFleetClick(event) {
-  // The row's own controls — the subagent toggle, D21's action buttons and
-  // links — have handlers of their own, and a click on one of them is not a
-  // request to open the session.
-  if (event.target.closest("button, a, summary") !== null) {
+function openProject(projectId) {
+  view.projectId = projectId;
+  showLevel("sessions");
+  drawFlock();
+}
+
+const handlers = { onOpenProject: openProject, onOpenSession: openSession };
+
+function onCardClick(event) {
+  const card = event.target.closest("[data-session-id]");
+  if (card === null) {
     return;
   }
-  const row = event.target.closest("li.session[data-session-id]");
-  if (row === null) {
-    return;
-  }
-  openSession(row.dataset.sessionId);
+  openSession(card.dataset.sessionId);
 }
 
 // ---------------------------------------------------------------------------
@@ -114,17 +140,20 @@ function onFleetClick(event) {
 //
 // **U18, and it is the reason `app.css` carries `[hidden] { display: none
 // !important }`.** Every root sets `display` from a class (`.scroll`, `.herd`,
-// `.panes2`) and an author class rule beats the browser's own `[hidden]`, so
-// without that line this function hides nothing and all six render on top of
-// one another. The shipped page had that bug before the redesign:
-// `.chat-view` was `display: grid` and stayed hidden only because the script
-// also set a class.
+// `.panes2`, `.detail`) and an author class rule beats the browser's own
+// `[hidden]`, so without that line this function hides nothing and all six
+// render on top of one another.
 //
-// There is no router and no second page load. **Chat is the default landing**
-// (§12 page 1); the static markup ships the *Flock* visible instead, so a page
-// whose module graph failed to load shows the M1 surface that needs no
-// orchestrator rather than an empty conversation frame — the honest degrade,
+// There is no router and no second page load. **Shepherd is the default
+// landing** (§12 page 1); the static markup ships the *Flock* visible instead,
+// so a page whose module graph failed to load shows the M1 surface that needs
+// no orchestrator rather than an empty conversation frame — the honest degrade,
 // and the direction `hidden` should fail in.
+//
+// Every page is mounted once, before any of them is shown, so nothing may
+// depend on being visible at mount time. `hidden` is the shell's and the
+// shell's alone: no page module has a `hide…` of its own, which is why T7.1
+// dropped `hideChat` rather than renaming it.
 // ---------------------------------------------------------------------------
 
 function navItemFor(name) {
@@ -153,16 +182,6 @@ function showPage(name) {
   const item = navItemFor(name);
   document.getElementById("topbar-title").textContent = item === null ? "" : item.textContent.trim();
 
-  // §12's page 1 and the Flock keep the pairing they have always had, and the
-  // conversation is mounted only while it is on screen.
-  if (name === DEFAULT_PAGE) {
-    mountChat();
-    document.getElementById("fleet-view").hidden = true;
-  } else {
-    hideChat();
-    document.getElementById("fleet-view").hidden = false;
-  }
-
   shell.removeAttribute("data-drawer");
 }
 
@@ -189,22 +208,43 @@ const NAV = {
 };
 
 // An event says something changed; re-reading the tree is a response to it, not
-// a schedule. The expanded rollups are dropped so a re-read cannot show a stale
-// subagent line beside a fresh session row.
+// a schedule.
 function onEnvelope(envelope) {
   renderStatus(envelope.type);
   // §12's page 1 reads the same stream: `master.*` is the conversation and
-  // `approval.*` is the card. One subscription, two views.
-  onChatEvent(envelope);
-  view.subagents.clear();
-  loadFleet().then(() => {
-    for (const sessionId of view.expanded) {
-      loadSubagents(sessionId);
-    }
-  });
+  // `approval.*` is the card. One subscription, three views — Settings takes
+  // the same envelope to say its numbers may be behind after a gap.
+  onShepherdEvent(envelope);
+  onSettingsEvent(envelope);
+  loadFleet();
+  // The Projects page lists each project's sessions, so it follows the same
+  // event rather than a timer of its own (§12: no polling). `mountProjects()`
+  // hands back the one function that re-reads; nothing else re-reads at all.
+  if (projects !== null) {
+    projects.reload();
+  }
 }
 
-document.getElementById("fleet").addEventListener("click", onFleetClick);
+document.getElementById("flock-cards").addEventListener("click", onCardClick);
+
+// T9.1's contract point 5. The Projects page renders each session as a real
+// anchor — `focus`, middle-click, a visible target — and performs no navigation
+// of its own, so a click on a `[data-page]` link is the shell's to honour and
+// it is honoured exactly the way a nav entry is: show that page, then select
+// what the link named. Delegated on the document because the links are built by
+// a module, on a root this file clears and rebuilds.
+document.addEventListener("click", (event) => {
+  const link = event.target.closest(PAGE_LINK);
+  if (link === null || link.classList.contains("nav-item")) {
+    return;
+  }
+  event.preventDefault();
+  showPage(link.dataset.page);
+  if (link.dataset.sessionId) {
+    openSession(link.dataset.sessionId);
+  }
+});
+
 for (const entry of Object.keys(NAV)) {
   document.getElementById(entry).addEventListener("click", () => showPage(NAV[entry]));
 }
@@ -228,9 +268,19 @@ document.getElementById("mark").addEventListener("click", () => {
   }
 });
 
+// Mount every page before any of them is shown, then route. A page mounted on
+// first reveal would make the arrival order part of its contract.
+mountFlock(handlers);
+mountShepherd();
+mountSettings();
+const projects = mountProjects();
+
 showPage(DEFAULT_PAGE);
-// Both pages read on the first paint: the Flock because its counts are the
-// shell's headline numbers, the chat because it is the one being shown.
+
+// Each page's first read, caused by the first paint and by nothing else. The
+// Flock reads even though it is not the landing page: its counts are the
+// shell's headline numbers and principle 5's unknown rate is on that strip.
 loadFleet();
-loadChat();
+loadShepherd();
+loadSettings();
 connect(onEnvelope, renderStatus);
