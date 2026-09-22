@@ -27,6 +27,14 @@ SSE_PATH = "/api/events"
 
 SESSION_ID = "session_id"
 
+#: The project key, in the one spelling every consumer-facing surface uses (M1).
+#: Named here, beside `SESSION_ID`, because `test_no_body_field_shadows_a_path
+#: _parameter` asserts that no POST route declares either of them as a **body**
+#: field — the route gate checks `BODY_ARGS` against the tool's schema and never
+#: looks at path parameters, so a shadowing field passes every gate and
+#: disagrees with the URL only at run time.
+PROJECT_ID = "project_id"
+
 #: path template -> tool name. The templates are the public shape of the API.
 API_ROUTES: Mapping[str, str] = {
     "/api/fleet": "fleet_summary",
@@ -49,6 +57,12 @@ API_ROUTES: Mapping[str, str] = {
     "/api/approvals": "list_approvals",
     "/api/audit": "get_audit_log",
     "/api/autonomy": "get_autonomy_level",
+    # The Projects page (T4.1). `/api/projects` above is **unchanged** and still
+    # names `list_projects`: it has two segments and these have three, and
+    # `_ordered` puts static templates first, so the list is never read as a
+    # detail whose id is the empty string.
+    "/api/projects/{project_id}": "get_project",
+    "/api/projects/{project_id}/repos": "list_repos",
 }
 
 #: path template -> the query parameters it forwards. Anything else is dropped.
@@ -82,6 +96,19 @@ POST_ROUTES: Mapping[str, str] = {
     "/api/master/send": "master_send",
     "/api/approvals/{approval_id}": "decide_approval",
     "/api/autonomy": "set_autonomy_level",
+    # The Projects page's five mutations (T4.1). `POST /api/projects` creates
+    # and `GET /api/projects` lists: one path, two methods, two tables — which
+    # is why the tables are separate and neither one has to encode a verb.
+    #
+    # `delete` and `rename` are path suffixes rather than HTTP methods for the
+    # same reason every other mutation here is: the table maps a path to a tool
+    # name, and a `DELETE` verb would put a second dimension into a lookup that
+    # is deliberately one.
+    "/api/projects": "create_project",
+    "/api/projects/{project_id}/rename": "rename_project",
+    "/api/projects/{project_id}/delete": "delete_project",
+    "/api/projects/{project_id}/repos/add": "add_repo",
+    "/api/projects/{project_id}/repos/remove": "remove_repo",
 }
 
 #: path template -> the **body** fields it forwards, and the same rule as
@@ -112,6 +139,20 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     # even if it were declared.
     "/api/approvals/{approval_id}": ("choice",),
     "/api/autonomy": ("level",),
+    # The Projects page (T4.1). **`project_id` is declared nowhere here**: it is
+    # the path parameter, and the merge order means a body claiming another
+    # project could not move the target even if it were declared — but a field
+    # the table never forwards is the property that actually holds, so it is the
+    # one asserted (`test_no_body_field_shadows_a_path_parameter`).
+    #
+    # `on_running` carries **no default** on this side either. A body that omits
+    # it forwards nothing, and `delete_project`'s handler turns that absence
+    # into `REFUSE` — D61's default-refuse, unskippable by omission.
+    "/api/projects": ("name", "description"),
+    "/api/projects/{project_id}/rename": ("name",),
+    "/api/projects/{project_id}/delete": ("on_running",),
+    "/api/projects/{project_id}/repos/add": ("root_path",),
+    "/api/projects/{project_id}/repos/remove": ("repo_id",),
 }
 
 #: §12's page 3. Not in `API_ROUTES`: an upgrade is not a call, exactly as

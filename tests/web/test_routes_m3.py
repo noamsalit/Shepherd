@@ -107,9 +107,11 @@ def test_the_route_table_declares_every_query_and_body_field() -> None:
         for field in routes.BODY_ARGS[template]:
             assert field in properties, (template, field)
         checked += 1
-    # Arrival: the loop really checked the nine that exist today — M3's six,
-    # plus T24's three, minus `rename_session`, whose schema is T20's.
-    assert checked == len(routes.POST_ROUTES) - 1 == 9
+    # Arrival: the loop really checked the fourteen that exist today — M3's
+    # six, plus T24's three, plus the Projects page's five (T4.1), minus
+    # `rename_session`, whose schema is T20's. Recomputed from the table rather
+    # than copied: fifteen POST routes, one of them unregistered here.
+    assert checked == len(routes.POST_ROUTES) - 1 == 14
 
 
 def test_every_api_and_query_field_is_a_property_of_its_tool() -> None:
@@ -230,19 +232,28 @@ def test_an_undeclared_body_field_is_dropped(
 
 
 def test_no_body_field_shadows_a_path_parameter() -> None:
-    """No POST route declares `session_id` as a **body** field.
+    """No POST route declares `session_id` — **or `project_id`** — as a body field.
 
     This is the property that actually keeps a body from redirecting a kill
     today, and it was found by mutation: reversing the merge order inside
     `resolve_post` **survived**, because `BODY_ARGS` had already dropped the
     colliding field. The guard was held incidentally, so the property it was
     held by is asserted here by name (T11's method).
+
+    **`project_id` joins it at T4.2 (P13/M1).** Five of the Projects page's
+    routes take it as a path parameter, and the route gate one file over checks
+    `BODY_ARGS` against the tool's schema and **never looks at path
+    parameters** — so a body field spelled the same as a path parameter passes
+    every gate this repo has and only disagrees at run time, in Phase 9, in a
+    browser. Both spellings are checked here, where the table is.
     """
     for template, names in routes.BODY_ARGS.items():
         assert routes.SESSION_ID not in names, template
-    # M3's seven plus T24's three. The count is stated so a route added without
-    # a declared body fails here rather than shrinking the evidence silently.
-    assert len(routes.BODY_ARGS) == 10
+        assert routes.PROJECT_ID not in names, template
+    # M3's seven, T24's three, and the Projects page's five. The count is stated
+    # so a route added without a declared body fails here rather than shrinking
+    # the evidence silently.
+    assert len(routes.BODY_ARGS) == 15
 
 
 def test_the_path_parameter_wins_over_a_body_that_names_another_session(

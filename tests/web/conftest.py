@@ -30,6 +30,7 @@ from shepherd.toolsurface.tools_m1 import register_read_tools
 from shepherd.toolsurface.approvals import ApprovalStore
 from shepherd.toolsurface.tools_m3 import register_m3_tools
 from shepherd.toolsurface.tools_master import register_master_tools
+from shepherd.toolsurface.tools_projects import refuses_every_kill, register_project_tools
 from shepherd.web import server as web_server
 
 NOW = "2026-09-16T10:00:30Z"
@@ -148,6 +149,18 @@ def tools(
         interrupt_master=master_doubles.interrupt,
         now=lambda: NOW,
     )
+    # …and D57's seven (T4.1). Same reason again: seven of the route table's
+    # templates name these tools, and `test_every_api_route_names_a_registered
+    # _tool` asserts every route names a tool the registry actually has — a
+    # fixture that registered none of them would make that check pass on a tree
+    # where seven routes 500.
+    #
+    # The kill is `refuses_every_kill`, the same safe default
+    # `build_project_tools` carries: no web test drives a project delete against
+    # a running session, and a fixture that answered "killed" for a session it
+    # never touched would let a delete take a live session's rows. The kill's
+    # two branches are proved in `tests/toolsurface/test_tools_projects.py`.
+    register_project_tools(store=store, kill=refuses_every_kill, now=lambda: NOW)
     return None
 
 

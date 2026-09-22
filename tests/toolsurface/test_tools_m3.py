@@ -40,6 +40,7 @@ from shepherd.toolsurface.approvals import ApprovalStore
 from shepherd.toolsurface.tools_master import register_master_tools
 from shepherd.toolsurface.registry import invoke, registered_tools
 from shepherd.toolsurface.tools_m3 import M3_TOOL_NAMES, register_m3_tools
+from shepherd.toolsurface.tools_projects import refuses_every_kill, register_project_tools
 from shepherd.toolsurface.tools_rename import register_rename_tool
 from shepherd.toolsurface.types import Audience, BlastClass, CallerContext, ToolResult
 
@@ -791,6 +792,14 @@ def test_every_post_route_resolves_to_a_registered_tool(world: World, tmp_path: 
         send_turn=lambda text: TurnRefused(reason="no driver in this world"),
         interrupt_master=lambda: False,
         now=world.now,
+    )
+    # …and T4.1 added five more, naming D57's project verbs. Same reason as the
+    # block above: this rule asks whether the **name** a route resolves to is
+    # registered, so a world that registered fewer sets than the composition
+    # root does would report a gap the shipped tree does not have. The kill is
+    # the safe default — nothing here calls a project verb.
+    register_project_tools(
+        store=world.store, kill=refuses_every_kill, now=world.now
     )
 
     registered = registered_tools()

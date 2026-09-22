@@ -111,6 +111,14 @@ def test_every_api_route_names_a_registered_tool() -> None:
         "/api/approvals",
         "/api/audit",
         "/api/autonomy",
+        # The Projects page (T4.1), widened by hand for the third time and for
+        # the third time on purpose: this is a **closed set**, so the fourteenth
+        # route — Phase 8's — still has to be declared here rather than arriving
+        # unnoticed. Two reads; the project's own detail and its registered
+        # repos. `/api/projects` above is unchanged and still names
+        # `list_projects`: two segments, never three.
+        "/api/projects/{project_id}",
+        "/api/projects/{project_id}/repos",
     }
 
 

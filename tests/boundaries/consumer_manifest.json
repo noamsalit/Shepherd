@@ -47,7 +47,7 @@
     "cli/main.py": "230b0a63816cef83915ad529d38d0e9bd2c64d95c1c30c1ea09262e4adfa4dfd",
     "cli/replay.py": "549e6338516437491f9cf219d7691122cdc8e0ea381569367f9685e7b49b2165",
     "web/__init__.py": "36cfe6af65288827e42513d33d10a35bfba014c36146f1eaa7edf22e7b006d08",
-    "web/routes.py": "08e90cc742f00955464bd6cff0e11bf080e9245cde8d9c91230691ed428dcdf3",
+    "web/routes.py": "0314b8ee836f901b81631c05b8e84ca4fe4425f3fa462d652c6df003ffbbafaa",
     "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
     "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
     "web/static/app.css": "537fe059fc095d2867540a3ad3f76498d77ac65a3c120ef27002f11a6709cb38",
