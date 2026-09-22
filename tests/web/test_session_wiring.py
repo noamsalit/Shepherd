@@ -150,10 +150,16 @@ def test_a_fleet_row_click_reaches_the_session_page() -> None:
     `app.js` reads that session through the API it already knows, and hands the
     projection to `renderSession`.
 
-    The id comes off the row's `data-session-id` rather than out of a closure,
-    because `fleet.js` builds the rows and `app.js` owns the navigation; a
+    The id comes off the card's `data-session-id` rather than out of a closure,
+    because `flock.js` builds the cards and `app.js` owns the navigation; a
     positional match between DOM order and payload order would be the kind of
     implicit coupling that breaks silently when either side re-orders.
+
+    **M5 moved the row and kept the chain.** `fleet.js`'s `li.session` is now
+    `flock.js`'s `.card`, and the identity it carries is the same field read the
+    same way — which is the point of asserting the field rather than the
+    selector. What the card no longer does is render D21's list: D67 puts that
+    in the pane, and U7 fixes the card at four items.
     """
     app = code_only(source("app.js"))
     assert re.search(r'import\s*\{[^}]*\brenderSession\b[^}]*\}\s*from\s*"\./session\.js"', app)
@@ -163,12 +169,12 @@ def test_a_fleet_row_click_reaches_the_session_page() -> None:
     assert "data-session-id" in app or "dataset.sessionId" in app, app
     assert "renderSession(" in app, app
 
-    # …and `fleet.js` really puts that identity on the row (arrival: without
+    # …and `flock.js` really puts that identity on the card (arrival: without
     # this the selector above matches nothing at runtime and the page is dead
     # again, with every scan still green).
-    fleet = code_only(source("fleet.js"))
-    assert re.search(r"\w+\.dataset\.sessionId\s*=\s*\w+\.session_id", fleet), (
-        "no fleet row carries its session id"
+    flock = code_only(source("flock.js"))
+    assert re.search(r"\w+\.dataset\.sessionId\s*=\s*\w+\.session_id", flock), (
+        "no session card carries its session id"
     )
 
     # §16: the click opens a row, it does not re-derive an order.
@@ -320,6 +326,12 @@ def test_the_pages_read_only_fields_the_projection_emits() -> None:
     fallback, no unknown was counted either. `fleet.js` got the same payload
     right *with* a fallback, so the two pages disagreed about one payload.
 
+    **D67 collapses the disagreement rather than policing it.** The list renders
+    in the pane now and nowhere else, so `session.js` is the only reader of an
+    action — and the loops below are over one module, which is an honest count
+    and not a narrowing: `flock.js` reads no `action.` field at all, and that is
+    asserted rather than assumed.
+
     The expected names come from the **producer**, called on a real shipped
     action, not from anyone's memory of the payload.
     """
@@ -334,19 +346,20 @@ def test_the_pages_read_only_fields_the_projection_emits() -> None:
         emitted |= set(project_action(action))
     assert emitted == {"text", "kind", "target", "source"}, emitted
 
-    read: set[str] = set()
-    for name in ("session.js", "fleet.js"):
-        read |= set(re.findall(r"\baction\.(\w+)", code_only(source(name))))
+    read = set(re.findall(r"\baction\.(\w+)", code_only(source("session.js"))))
     assert "text" in read, "arrival: no page reads an action's label at all"
     assert read <= emitted, sorted(read - emitted)
 
-    # Principle 5: the unknown is a value, displayed — both pages the same way.
-    for name in ("session.js", "fleet.js"):
-        text = code_only(source(name))
-        assert re.search(
-            r'typeof action\.text === "string" && action\.text !== "" \? action\.text : UNKNOWN',
-            text,
-        ), name
+    # …and the page that lists sessions reads none of them, which is U7's card
+    # rule expressed at the payload rather than at the markup.
+    assert re.findall(r"\baction\.(\w+)", code_only(source("flock.js"))) == []
+
+    # Principle 5: the unknown is a value, displayed.
+    text = code_only(source("session.js"))
+    assert re.search(
+        r'typeof action\.text === "string" && action\.text !== "" \? action\.text : UNKNOWN',
+        text,
+    )
 
 
 def test_every_id_in_the_session_view_is_wired_by_the_scripts() -> None:
