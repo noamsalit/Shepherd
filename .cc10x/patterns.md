@@ -244,6 +244,58 @@ here because this is the file a cc10x session loads first.
   not for the sentence.
 - **Freeze a baseline on a quiet tree**, never while builders are writing.
 
+### A control that exercises one gate certifies one gate (Phase 0, 2026-09-21)
+
+Phase 0 built `tools/render_check.py` specifically so that later phases could not
+claim verification they did not have — and shipped it with **two CRITICAL holes**,
+both found by a review and a failure hunt run against the same diff.
+
+The builder demonstrated a negative control: a page with a heading removed, which
+failed correctly. That proved the **DOM assertion** bites. It was read — by the
+builder and by me — as proving *the checker*. Four other gates in the same
+function had never been driven at all.
+
+1. **Drain the observation buffer after the observation, not before it.**
+   `page.on("console", …)` registered at load and appended for the whole run, but
+   the single read sat *above* the loop that opens the six pages. Every error the
+   checker's own clicks provoked was collected and discarded at `page.close()`.
+   The tool's stated contract — *"a console error is a failure"* — held for the
+   first 700 ms, which is before it does any work. Registration is not
+   observation: **grep for the read, not the subscribe.**
+2. **Asserting presence is not asserting exclusivity.** The loop asserted the
+   clicked page root was visible and never that the others were not. A page with
+   no routing script at all scored `0 failures` and wrote twelve screenshots —
+   *which is U18, the exact bug the tool was written for.* Verified against a
+   faithful reproduction.
+3. **The fix needs a fixture only the new branch can see.** Checking exclusivity
+   at arrival alone made the reproduction fail while leaving the per-click branch
+   dead code. The builder built a page that arrives clean and un-hides one root
+   on every click, then deleted the branch in a scratch copy: mutant 0 failures
+   exit 0, repo 10 failures exit 1.
+4. **A missing locator must be reported, never clicked.** A missing
+   `#drawer-open` raised a 30 s `TimeoutError`, losing every failure already
+   collected *plus* the summary line — while a missing nav entry three lines
+   above was handled correctly. The asymmetry was the tell.
+5. **Report what was checked, not only what failed.** `0 failures` was
+   byte-identical whether twelve assertions ran or none. This is the M2-T12
+   *"counter reading 0 because its path never ran"* shape, one level up.
+6. **A one-definition-site guard keyed on one spelling is defeated by the other
+   quote style** — and single quotes were that module's own house style. Second
+   recorded instance of this shape in this repo. Strip the definition lines and
+   assert the token is *absent* from the remainder: quote-agnostic,
+   order-agnostic, fails closed.
+7. **`sys.modules` before `exec_module` has two halves.** Register before (or
+   `dataclasses` cannot resolve annotations) *and* unregister on failure (or the
+   next importer gets a half-initialised module).
+
+**And a tool can silently constrain the product.** `esprima` 4.0.1 is an **ES2017**
+parser — it rejects `?.`, `??`, class fields, `#private`, `||=`, optional catch
+binding, `import.meta` and numeric separators — and it was a Required Check in six
+later tasks that write three new modules. A gate that fails browser-correct code
+either drags the code down to the parser's era or quietly stops being run. It now
+parses in **chromium**, the engine the code actually runs in. Cost, recorded
+rather than absorbed: no line number for a module compile error.
+
 ## Last Updated
 
 2026-09-21.

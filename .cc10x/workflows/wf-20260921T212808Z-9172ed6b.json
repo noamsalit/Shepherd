@@ -35,7 +35,8 @@
     "F13 DECIDED: tests/tools/test_render_check_args.py opens with pytest.importorskip('playwright'), and T0.1's exit asserts the suite still collects and passes without playwright installed. Same rule A6 states for esprima; marker deselection does not help because -m deselects after import.",
     "Router: pass-2 findings are applied as a diff-scoped AMENDMENT rather than escalated. The two-pass fresh-review cap is spent, but all 15 findings carry named mechanical fixes and none is an owner decision. The amendment lane is uncapped and exists for exactly this case.",
     "F6 pushback ACCEPTED: the planner's sink-to-module walk is right and the review's was not. Verified independently - 2520 renderLegend, 2858 BACK_BUTTON (flock.js); 2688 bylineMark, 2796/2814/2837 renderDetail (session.js, per D67); 3101 BACK_BUTTON_P (projects.js); 3617 panelHead (settings.js). T5.3 and T7.1 rewrite no sinks at all, so this removes work rather than moving it.",
-    "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33."
+    "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33.",
+    "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -43,7 +44,7 @@
   "execution_mode": "subagent_dispatch",
   "inline_fallback_reason": "task_primitive_unavailable: this harness exposes no TaskCreate/TaskList/TaskGet. The task graph is tracked in this artifact; every cc10x gate still runs.",
   "verification_rigor": "critical_path",
-  "proof_status": "gaps_found",
+  "proof_status": "passed",
   "traceability": {
     "requirements": [],
     "phases": [],
@@ -248,7 +249,7 @@
       ]
     }
   ],
-  "phase_cursor": "phase-0",
+  "phase_cursor": "phase-1",
   "capabilities": {
     "brightdata_available": "unknown",
     "octocode_available": "unknown",
@@ -280,7 +281,8 @@
     "plan-review-gap-1": "completed",
     "re-plan": "completed",
     "plan-review-gap-2": "completed",
-    "plan-review-amendment": "completed"
+    "plan-review-amendment": "completed",
+    "phase-0": "completed"
   },
   "deferred_findings": [
     {
@@ -300,6 +302,18 @@
       "phase_id": "plan-review-amendment",
       "severity": "minor",
       "finding": "Revision 4 states 19 sites for grep -rn '== 3\\b' over the three migration test modules; that pattern returns 16 (union with EXPECTED_SCHEMA_VERSION and [1,2,3] is 22). Conclusion unaffected - far more than the seven originally listed, and the plan carries the grep rather than a hand list. Fourth stated count in this plan to disagree with its source."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-0",
+      "severity": "minor",
+      "finding": "The plan's T0.1 exit criterion still greps for esprima, and a risk row still names it as an undeclared suite dependency. Both are now vacuous rather than wrong - the grep passes, nothing is red. Plan-owner edit."
+    },
+    {
+      "source": "builder",
+      "phase_id": "phase-0",
+      "severity": "minor",
+      "finding": "js_syntax_check.py now needs playwright, as render_check.py already did. Neither is declared in pyproject.toml. The suite reaches the JS gate only by subprocess and the whole test file is behind pytest.importorskip, so a machine without playwright still collects and passes."
     }
   ],
   "results": {
@@ -320,12 +334,30 @@
         "master"
       ]
     },
-    "git_base_sha": null,
+    "git_base_sha": "1e735b2",
     "target_repo": null,
-    "builder": null,
+    "builder": {
+      "phase": "phase-0",
+      "status": "PASS",
+      "remediated": true,
+      "suite": "1897 passed, 2 skipped",
+      "tests_tools": 31
+    },
     "investigator": null,
-    "reviewer": null,
-    "hunter": null,
+    "reviewer": {
+      "phase": "phase-0",
+      "status": "CHANGES_REQUESTED",
+      "critical": 2,
+      "high": 3,
+      "resolved": true
+    },
+    "hunter": {
+      "phase": "phase-0",
+      "status": "ISSUES_FOUND",
+      "critical": 2,
+      "high": 1,
+      "resolved": true
+    },
     "verifier": null,
     "planner": {
       "status": "PLAN_CREATED",
@@ -358,10 +390,16 @@
     }
   },
   "evidence": {
-    "builder": [],
+    "builder": [
+      "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open."
+    ],
     "investigator": [],
-    "reviewer": [],
-    "hunter": [],
+    "reviewer": [
+      "Phase 0: routing-exclusivity gap reproduced (a page with no script scores 0 failures); esprima ES2017 ceiling probed across 8 constructs."
+    ],
+    "hunter": [
+      "Phase 0: 10 probes with controls; 2 CRITICAL proven with exit-0 reproductions (console drain window, .boom window); 6 gates confirmed honest."
+    ],
     "verifier": [],
     "planning_reviewer": [],
     "qa_executor": []
@@ -412,7 +450,7 @@
       "planner": 0
     },
     "loop_counts": {
-      "re_review": 0,
+      "re_review": 1,
       "re_hunt": 0,
       "re_verify": 0
     },
@@ -501,9 +539,14 @@
       "event": "plan_trust_gate_passed",
       "ts": "2026-09-21T22:59:04Z",
       "phase": "phase-0"
+    },
+    {
+      "event": "phase_0_completed",
+      "ts": "2026-09-22T00:49:12Z",
+      "phase": "phase-0"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-21T22:59:04Z"
+  "updated_at": "2026-09-22T00:49:12Z"
 }
