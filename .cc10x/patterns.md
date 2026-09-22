@@ -368,6 +368,44 @@ Two more things worth keeping:
   question is never "is the base current" but "is the base current **for what
   this task reads**".
 
+### A mutation proof needs a commit to return to (2026-09-22)
+
+A builder proving a new guard bites planted the regression into the live
+`app.css` and reverted with `git checkout -- src/shepherd/web/static/app.css`.
+The tree was **uncommitted**, so that reverted to `HEAD` — and every edit of the
+session went with the plant. Recovered by re-applying as one scripted pass, but
+the rule is cheap and absolute:
+
+**Commit first, then plant, then revert.** On an uncommitted tree
+`git checkout -- <path>` and "undo my plant" are the same command with very
+different blast radii. Same shape as the two rules already in `CLAUDE.md`:
+isolating the *name* (one planted line) is not isolating the *effect* (one
+whole-file revert).
+
+### A custom property freezes where it is declared, not where it is used (2026-09-22)
+
+`--b-text: color-mix(in srgb, var(--bucket-colour) 78%, var(--text))` has to be
+declared in **all eight** `.bucket-*` blocks. Written once at `:root` it would
+resolve against `:root`'s own `--b` — the unclassified grey — freeze there, and
+inherit down unchanged, so **every bucket would render the same grey with every
+test still green.**
+
+`var()` substitutes at the element the property is *declared* on. A derived
+token that must track an inherited one has to be declared wherever that one is
+set. The per-bucket repetition looks like the duplication the palette contract
+forbids and is the opposite: the derivation is identical in all eight, and a
+hand-picked hex in any of them fails its own test.
+
+### WCAG's large-text bar is 18.66px bold, not 14px (2026-09-22)
+
+The router directed "raise the type size and weight" as the contrast fix. That
+could never have worked: `0.82rem/500` is nowhere near the threshold that
+relaxes 4.5:1 to 3:1, so the derived text colour was always going to carry the
+compliance. The builder did the type raise anyway — it helps a phone reader —
+and **recorded it as not the fix**, which is the part worth keeping. A change
+that improves the thing but does not move the threshold should say so, or the
+next reader credits it with the compliance.
+
 ## Last Updated
 
 2026-09-21.
