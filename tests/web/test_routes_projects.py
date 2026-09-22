@@ -1,4 +1,4 @@
-"""T4.2: the Projects page's seven routes, and the two things a table can get
+"""T4.2: the Projects page's eight routes (seven at T4.2, plus T3.4's description), and the two things a table can get
 wrong that nothing else catches.
 
 **Two seams, both the plan's.** `resolve` / `resolve_post` are read over literal
@@ -35,6 +35,7 @@ PROJECT_ROUTES: dict[str, str] = {
 PROJECT_POST_ROUTES: dict[str, str] = {
     "/api/projects": "create_project",
     "/api/projects/{project_id}/rename": "rename_project",
+    "/api/projects/{project_id}/description": "set_project_description",
     "/api/projects/{project_id}/delete": "delete_project",
     "/api/projects/{project_id}/repos/add": "add_repo",
     "/api/projects/{project_id}/repos/remove": "remove_repo",
@@ -82,6 +83,10 @@ def test_the_project_post_routes_carry_their_declared_bodies() -> None:
     of them, because it is the path parameter."""
     assert routes.BODY_ARGS["/api/projects"] == ("name", "description")
     assert routes.BODY_ARGS["/api/projects/{project_id}/rename"] == ("name",)
+    # A path suffix, like every other mutation here: the table maps a path to a
+    # tool name, and a second HTTP verb would put a second dimension into a
+    # lookup that is deliberately one.
+    assert routes.BODY_ARGS["/api/projects/{project_id}/description"] == ("description",)
     assert routes.BODY_ARGS["/api/projects/{project_id}/delete"] == ("on_running",)
     assert routes.BODY_ARGS["/api/projects/{project_id}/repos/add"] == ("root_path",)
     assert routes.BODY_ARGS["/api/projects/{project_id}/repos/remove"] == ("repo_id",)

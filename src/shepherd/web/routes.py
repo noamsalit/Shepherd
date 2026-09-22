@@ -103,6 +103,11 @@ POST_ROUTES: Mapping[str, str] = {
     # is deliberately one.
     "/api/projects": "create_project",
     "/api/projects/{project_id}/rename": "rename_project",
+    # T3.4's eighth verb. A description was write-once at creation until it
+    # existed, and it is a path suffix for the same reason `rename` and
+    # `delete` are: this table maps a path to a tool name, and a second HTTP
+    # verb would put a second dimension into a lookup that is deliberately one.
+    "/api/projects/{project_id}/description": "set_project_description",
     "/api/projects/{project_id}/delete": "delete_project",
     "/api/projects/{project_id}/repos/add": "add_repo",
     "/api/projects/{project_id}/repos/remove": "remove_repo",
@@ -147,6 +152,11 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     # into `REFUSE` — D61's default-refuse, unskippable by omission.
     "/api/projects": ("name", "description"),
     "/api/projects/{project_id}/rename": ("name",),
+    # No default and no requirement: a body that omits `description` forwards
+    # nothing, and the handler reads that absence as `None`, which **clears**
+    # it. That is the whole of what sending nothing can mean for a nullable
+    # field, and it is the same shape `create_project` already accepts.
+    "/api/projects/{project_id}/description": ("description",),
     "/api/projects/{project_id}/delete": ("on_running",),
     "/api/projects/{project_id}/repos/add": ("root_path",),
     "/api/projects/{project_id}/repos/remove": ("repo_id",),

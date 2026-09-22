@@ -83,7 +83,7 @@ M4_TOOL_NAMES: tuple[str, ...] = (
 #: `tools_projects.PROJECT_TOOL_NAMES` would agree with itself no matter which
 #: verbs the composition actually reached.
 #:
-#: **All seven since T3.3.** `delete_project` was absent while its store verb
+#: **All seven since T3.3, and eight since T3.4.** `delete_project` was absent while its store verb
 #: ran the injected `kill` inside the writer transaction; the two-half seam
 #: (plan → kill outside any transaction → commit) replaced it, and the
 #: composition root injects the shipped `kill_session` path.
@@ -95,6 +95,9 @@ PROJECT_TOOL_NAMES_HERE: tuple[str, ...] = (
     "list_repos",
     "remove_repo",
     "rename_project",
+    # T3.4's eighth: a description was write-once at creation, so a mistyped
+    # one meant deleting the project.
+    "set_project_description",
 )
 
 ALL_TOOL_NAMES: tuple[str, ...] = tuple(

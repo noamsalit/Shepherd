@@ -107,11 +107,12 @@ def test_the_route_table_declares_every_query_and_body_field() -> None:
         for field in routes.BODY_ARGS[template]:
             assert field in properties, (template, field)
         checked += 1
-    # Arrival: the loop really checked the fourteen that exist today — M3's
-    # six, plus T24's three, plus the Projects page's five (T4.1), minus
-    # `rename_session`, whose schema is T20's. Recomputed from the table rather
-    # than copied: fifteen POST routes, one of them unregistered here.
-    assert checked == len(routes.POST_ROUTES) - 1 == 14
+    # Arrival: the loop really checked the fifteen that exist today — M3's
+    # six, plus T24's three, plus the Projects page's six (five at T4.1 and
+    # `set_project_description` at T3.4), minus `rename_session`, whose schema
+    # is T20's. Recomputed from the table rather than copied: sixteen POST
+    # routes, one of them unregistered here.
+    assert checked == len(routes.POST_ROUTES) - 1 == 15
 
 
 def test_every_api_and_query_field_is_a_property_of_its_tool() -> None:
@@ -284,8 +285,8 @@ def test_no_declared_field_shadows_a_path_parameter() -> None:
     """
     assert shadowing(routes.BODY_ARGS) == []
     assert shadowing(routes.QUERY_ARGS) == []
-    # M3's seven, T24's three, and the Projects page's five.
-    assert len(routes.BODY_ARGS) == 15
+    # M3's seven, T24's three, and the Projects page's six.
+    assert len(routes.BODY_ARGS) == 16
     assert len(routes.QUERY_ARGS) == 3
     # The derivation is not vacuous: the templates it reads really do carry
     # path parameters, and one of them is the `approval_id` the enumeration

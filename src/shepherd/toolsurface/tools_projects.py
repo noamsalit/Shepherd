@@ -108,6 +108,7 @@ __all__ = [
     "register_project_tools",
     "remove_repo",
     "rename_project",
+    "set_project_description",
 ]
 
 #: Spelled here **and** in `tools_projects_reads.py`, rather than imported from
@@ -125,6 +126,7 @@ MASTER_AND_HUMAN = frozenset({Audience.MASTER, Audience.HUMAN})
 PROJECT_TOOL_NAMES: tuple[str, ...] = (
     "create_project",
     "rename_project",
+    "set_project_description",
     "delete_project",
     "add_repo",
     "remove_repo",
@@ -168,6 +170,44 @@ def rename_project(store: Store, *, project_id: str, name: str) -> dict[str, obj
     return {
         "renamed": True,
         "project": project_workspace(renamed, repo_count=0, last_activity_at=None),
+        "refused": None,
+    }
+
+
+def set_project_description(
+    store: Store, *, project_id: str, description: str | None
+) -> dict[str, object]:
+    """A new description — the verb D57's family did not have (GAP 3).
+
+    `create_project` takes one and `rename_project` takes `name` alone, so a
+    description was **write-once at creation**: the only way to fix a typo in
+    one was to delete the project. `rename_project` is not widened, because a
+    verb called *rename* that edits a description is a verb whose name is wrong,
+    and a two-field verb has to invent a spelling for "leave this one alone" —
+    absent-means-unchanged beside null-means-clear, at the one surface where
+    clearing is a real intent.
+
+    **The name is `set_project_description`, not `set_description`.** The
+    registry is flat and global: `rename_session` and `rename_project` are both
+    in it, and a description is a field more than one thing can have. A name
+    that does not say what it describes is a name a caller has to look up.
+
+    Absent **clears** it, as it does at creation. Both negative answers become
+    this family's one record.
+    """
+    try:
+        described = store.set_project_description(
+            workspace_id=project_id, description=description
+        )
+    except StoreError as refusal:
+        return _refused("described", str(refusal), "project")
+    if described is None:
+        return _refused(
+            "described", f"there is no project {project_id!r} to describe", "project"
+        )
+    return {
+        "described": True,
+        "project": project_workspace(described, repo_count=0, last_activity_at=None),
         "refused": None,
     }
 
@@ -271,6 +311,25 @@ def build_project_tools(
                 store,
                 project_id=arg_str(args, PROJECT_ID),
                 name=arg_str(args, "name"),
+            ),
+            audiences=MASTER_AND_HUMAN,
+        ),
+        ToolDef(
+            name="set_project_description",
+            description="Change a project's description. Write-once at creation until now.",
+            input_schema=object_schema(
+                {PROJECT_ID: STRING, "description": STRING}, [PROJECT_ID]
+            ),
+            # `local_write`, with `rename_project`: it relabels, and it widens
+            # nothing. §13's allowlist is untouched by a sentence.
+            blast_class=BlastClass.LOCAL_WRITE,
+            handler=lambda args, ctx: set_project_description(
+                store,
+                project_id=arg_str(args, PROJECT_ID),
+                # Absent is a **value** here: `None` clears the description,
+                # which is the whole of what sending nothing can mean for a
+                # nullable field.
+                description=arg_optional_str(args, "description"),
             ),
             audiences=MASTER_AND_HUMAN,
         ),

@@ -218,11 +218,13 @@ def test_the_project_verbs_register_with_the_blast_classes_d58_assigns(
     *"adding a repo widens that allowlist"*, and creating a project creates a
     thing that can hold one; the two that relabel or narrow are `local_write`;
     the two reads are `local_read`. Asserted as a mapping rather than as six
-    lines so an eighth verb is a failure here and not a silent addition.
+    lines so a ninth verb is a failure here and not a silent addition — which
+    is exactly how `set_project_description` arrived: the eighth, admitted.
     """
     assert PROJECT_TOOL_NAMES == (
         "create_project",
         "rename_project",
+        "set_project_description",
         "delete_project",
         "add_repo",
         "remove_repo",
@@ -233,6 +235,7 @@ def test_the_project_verbs_register_with_the_blast_classes_d58_assigns(
     assert {name: tools[name].blast_class for name in PROJECT_TOOL_NAMES} == {
         "create_project": BlastClass.LOCAL_DESTRUCTIVE,
         "rename_project": BlastClass.LOCAL_WRITE,
+        "set_project_description": BlastClass.LOCAL_WRITE,
         "delete_project": BlastClass.LOCAL_DESTRUCTIVE,
         "add_repo": BlastClass.LOCAL_DESTRUCTIVE,
         "remove_repo": BlastClass.LOCAL_WRITE,
@@ -415,6 +418,73 @@ def test_rename_project_relabels_and_a_missing_one_is_refused_as_a_value(
 
 
 # ----- D61's delete: three choices, and the kill between the halves -----------
+
+
+def test_set_project_description_changes_only_the_description(
+    registered: Store,
+) -> None:
+    """GAP 3 through the registry — the verb that did not exist.
+
+    `create_project` took a description and `rename_project` takes `name` only,
+    so a description was write-once: the only way to fix a typo in one was to
+    delete the project. A separate verb rather than a widened `rename_project`,
+    because a verb called *rename* that edits a description is a verb whose name
+    is wrong, and a two-field verb has to invent a spelling for "leave this one
+    alone" at the one surface where clearing is a real intent.
+
+    Omitting the field **clears** it. The schema requires `project_id` alone,
+    and the handler reads an absent `description` as `None` — the same shape
+    `create_project` already accepts for a project declared without one.
+    """
+    created = data(call("create_project", {"name": "api", "description": "the old one"}))
+    project = created["project"]
+    assert isinstance(project, dict)
+    project_id = str(project["project_id"])
+
+    changed = data(
+        call(
+            "set_project_description",
+            {"project_id": project_id, "description": "the payments api"},
+        )
+    )
+    assert changed["described"] is True
+    assert changed["refused"] is None
+    described = changed["project"]
+    assert isinstance(described, dict)
+    assert described["description"] == "the payments api"
+    # The name is untouched — the half a widened rename risks.
+    assert described["name"] == "api"
+
+    cleared = data(call("set_project_description", {"project_id": project_id}))
+    assert cleared["described"] is True
+    assert isinstance(cleared["project"], dict)
+    assert cleared["project"]["description"] is None
+
+
+def test_set_project_description_refuses_the_reserved_and_the_missing_as_values(
+    registered: Store,
+) -> None:
+    """Both negative answers in this family's one refusal shape.
+
+    `store/` raises for the reserved project and answers `None` for a missing
+    one; a raised `StoreError` reaches a page as "request failed", which is not
+    a reason anything can draw (principle 5).
+    """
+    reserved = data(
+        call(
+            "set_project_description",
+            {"project_id": UNASSIGNED_PROJECT_ID, "description": "Inbox"},
+        )
+    )
+    assert reserved["described"] is False
+    assert reserved["project"] is None
+    assert "Unassigned" in str(reserved["refused"])
+
+    missing = data(
+        call("set_project_description", {"project_id": "w-nope", "description": "x"})
+    )
+    assert missing["described"] is False
+    assert "w-nope" in str(missing["refused"])
 
 
 def test_delete_project_with_no_on_running_refuses_a_running_project(
