@@ -243,7 +243,7 @@ def test_the_legend_sheet_explains_all_eight_at_once() -> None:
     """
     source = flock_js()
     sheet = function_body(source, "openLegendSheet")
-    assert "sheet-list" in sheet
+    assert "dlg-legend-list" in sheet
     assert "dlg-legend" in sheet
     assert "showModal()" in sheet
 

@@ -266,7 +266,10 @@ function showTip(anchor, bucket) {
 
 function openLegendSheet() {
   hideTip();
-  const host = document.getElementById("sheet-list");
+  // `dlg-legend-list`, not `sheet-list`: the shipped shell spells it that way
+  // and the dialog is the shell's, not this page's. Aligning to the id that
+  // exists is a smaller contract than asking for a rename of one that does.
+  const host = document.getElementById("dlg-legend-list");
   host.replaceChildren();
   for (const bucket of Object.keys(BUCKET_LABEL)) {
     const row = element("div", `sheet-row bucket-${bucket}`);
