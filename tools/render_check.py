@@ -33,8 +33,25 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
-# Phone first, because that is the primary client, then a laptop width.
-VIEWPORTS = [("phone", 390, 844), ("desktop", 1280, 900)]
+# Phone first, because that is the primary client, then a tablet, then a laptop
+# width.
+#
+# **The tablet is 820x1180 and it is here because of what two widths could not
+# see.** Every browser-driving test in this tree read its viewports from this
+# list or re-spelled these same two, so the whole suite drove exactly 390 and
+# 1280 — and QA run 3, sweeping nine widths against the shipped page, found two
+# pages losing their only means of navigation across the entire band **761px to
+# 900px inclusive** (`.herd-col { display: none }`, written for the Flock,
+# applied to the Projects list column and the Settings nav column, with the
+# rescue that re-shows them living in a `max-width: 760px` block). A defect
+# 140px wide, covering every iPad in portrait, sat between the two widths the
+# gates used as bounds and was therefore invisible to all of them.
+#
+# 820 is iPad portrait and sits inside that band. It is not a third arbitrary
+# number: the rule for this list is that a width is added when a *class* of
+# real client falls between the ones already here, and a tablet was the class
+# nothing drove.
+VIEWPORTS = [("phone", 390, 844), ("tablet", 820, 1180), ("desktop", 1280, 900)]
 
 # The two selectors this tool drives, each with exactly one definition site.
 # The shell (`index.html` / `app.js`) and this checker have to agree on them,

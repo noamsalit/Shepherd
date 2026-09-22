@@ -1,5 +1,13 @@
 """T10.1 — `tools/render_check.py` driven over a **real `controld`**, and the
-twelve screenshots a person looks at.
+screenshots a person looks at.
+
+**They were twelve, and they are eighteen**: `rc.VIEWPORTS` gained a tablet
+(820×1180) after QA run 3 found two pages with no navigation at all across
+761–900px, a band that sat between the only two widths this tree ever drove.
+Every count below is derived from `rc.VIEWPORTS` × `rc.PAGES` rather than
+written down, so the next width to be added is a width this module runs. The
+readings quoted in this docstring are the ones taken at the time and are left
+as they were taken.
 
 **Why this module exists at all.** The integration pass drove the shipped
 `index.html` over a real `controld` and got *12 pages · 12 screenshots ·
@@ -15,12 +23,12 @@ real tool surface frozen before the bind, the real discovery loop, and the real
 `ThreadingHTTPServer` on an ephemeral loopback port. The page is the shipped
 `src/shepherd/web/static/index.html` fetched from `/`; the modules come off
 `/static/` from that server; the rows are written through the shipped `Store`.
-The browser is chromium at 390×844 and 1280×900. The only thing this test
+The browser is chromium at every width `rc.VIEWPORTS` declares. The only thing this test
 supplies is the clicks, and it does not even supply those — `render_check.check`
 does.
 
 **Where the screenshots land:** `scratchpad/render-live/shots/` in the repo,
-twelve files named `<viewport>-<page>.png`. The path is printed by the run and
+one file per viewport per page, named `<viewport>-<page>.png`. The path is printed by the run and
 asserted below, because "the human checkpoint is a directory nobody can find"
 is the same defect as no checkpoint at all. `scratchpad/` is ignored by git:
 the *driver* is the committed evidence, the pixels are derived from it.
@@ -228,7 +236,12 @@ def test_the_viewport_check_passes_a_page_laid_out_inside_the_screen(tmp_path: P
     """
     code, out = run_over(control_html(layout="healthy"), tmp_path, "healthy")
     assert code == 0, out
-    assert "12 pages checked · 12 screenshots · 0 failures" in out, out
+    # Counted off `rc.VIEWPORTS` and `rc.PAGES`, not written as `12`. The
+    # literal was one of three places a width could be added to that constant
+    # without a gate noticing whether it ran — which is how QA run 3's D1 sat
+    # 140px wide between the only two widths anything drove.
+    expected = len(rc.PAGES) * len(rc.VIEWPORTS)
+    assert f"{expected} pages checked · {expected} screenshots · 0 failures" in out, out
 
 
 @pytest.mark.parametrize(
@@ -347,13 +360,13 @@ def test_every_page_renders_at_both_widths(live_controld: controld.Controld) -> 
     before a person looks at the pixels:
 
     * not a phone's real browser, not a tunnel, not a slow network — six pages
-      at two viewports in headless chromium on this host;
+      at every width `rc.VIEWPORTS` declares, in headless chromium on this host;
     * not the terminal: no owned session's WebSocket is driven;
     * not the Shepherd conversation against a real master;
     * not *correctness* of any layout — the checks are console errors, the
       `must_see` string, page-root exclusivity, horizontal overflow and now the
       viewport. A page can satisfy all five and still be ugly, mislabelled or
-      wrong. That is what the twelve screenshots are for, and why this task's
+      wrong. That is what the screenshots are for, and why this task's
       checkpoint is a human one.
     """
     before = settings_digest()

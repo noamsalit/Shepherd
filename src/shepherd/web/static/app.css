@@ -833,6 +833,23 @@ button, input, textarea { font: inherit; color: inherit; }
 .tip {
   position: fixed;
   z-index: 40;
+  /* A tooltip is something to read, never something to hit. Without this, the
+     19rem box took every tap inside it: `flock.js` binds `focus` → `showTip`,
+     `<dialog>.close()` restores focus to the key that opened the sheet, so
+     closing the bucket explainer put the tooltip back on screen with no
+     pointer near it — blocking two controls at 1280 and four at 390, one of
+     them `.legend-info`, U1's documented way into that same explainer. QA run
+     3, D3.
+
+     `pointer-events: none` and not a second `hideTip` on the sheet's close:
+     the tip carries no control of its own, so there is nothing in it that
+     wants a pointer, and the re-show is *correct* — the key really does have
+     focus, and a tooltip for a focused control is what a tooltip is for. It
+     leaves with that focus: the tap that used to be swallowed now reaches the
+     control under it and blurs the key, which removes the tip. Driven at every
+     width in `render_check.VIEWPORTS` by
+     `test_shell_live.py::test_the_legend_tooltip_never_swallows_a_click`. */
+  pointer-events: none;
   width: 19rem;
   max-width: calc(100vw - 24px);
   background: var(--ink-700);
@@ -1931,9 +1948,29 @@ dialog::backdrop { background: rgba(4, 5, 8, 0.66); }
      silently outranks goes unnoticed. Driven at 390px by
      `test_shell_live.py::test_the_two_pane_pages_drill_down_on_a_phone`, on
      both pages rather than on the one that was broken. */
-  .panes2[data-level] > * { display: none; }
+  /* `:not(dialog)`. Both of the Projects page's dialogs are children of
+     `#page-projects` — deliberately, for the reason `index.html`'s shell
+     comment gives: `mountProjects()` builds them there, and a second copy
+     declared at shell level would be the one `getElementById` handed back.
+     This rule then hid them, and an author `display: none` beats the UA's
+     `dialog[open] { display: block }`, so on a phone `showModal()` opened a
+     modal that was 0x0 and invisible while its backdrop swallowed every tap on
+     the page: no visible button in the dialog, and the only way out a keyboard
+     Escape, on the device the spec names as the primary client. QA run 3, D2.
+
+     Exempting rather than relocating, because the comment that put them here
+     still holds. A closed dialog is still hidden — by the UA's
+     `dialog:not([open])`, which is what should have been hiding them all
+     along. Driven at 390px by
+     `test_shell_live.py::test_the_projects_dialogs_are_on_screen_on_a_phone`. */
+  .panes2[data-level] > *:not(dialog) { display: none; }
   .panes2[data-level="list"] .herd-col,
   .panes2[data-level="detail"] .proj-detail { display: flex; }
+  /* The drill-down's way back, on the two pages that drill down. It used to
+     come from the Flock's `max-width: 900px` block — a rule for a different
+     page, reaching 140px past where these pages want it, so both showed a back
+     chevron beside a list they had never left. */
+  .panes2 .back { display: grid; }
 }
 
 /* ===================== stub pages ======================================== */
@@ -2017,14 +2054,35 @@ dialog::backdrop { background: rgba(4, 5, 8, 0.66); }
 }
 
 
+/* The Flock's drill-down, and **only** the Flock's.
+   Every selector in this block is scoped to `.herd`. It was not, and that cost
+   a 140px band: `.herd-col` is also the class of the Projects list column and
+   the Settings nav column, so `.herd-col { display: none }` hid the only
+   navigation both `.panes2` pages have — while the rescue that re-shows them,
+   `.panes2[data-level="list"] .herd-col`, lives in the `max-width: 760px`
+   block above and therefore stopped at 760. From 761px to 900px inclusive,
+   which is every iPad in portrait and every half-screen desktop, Projects
+   rendered an empty detail pane with zero usable controls and Settings offered
+   one: a back chevron pointing at the hidden column. QA run 3, D1.
+
+   Scoping rather than adding a second rescue, because the bug is that a rule
+   written for one page did not say so. A `.panes2 .herd-col { display: flex }`
+   rescue would have fixed the same 140px while leaving the Flock's rule still
+   claiming every `.herd-col` in the document, and the next page to reuse the
+   class would have rediscovered this.
+
+   `.back` is scoped too, and the phone's two-pane back chevron — which was
+   relying on this block, 160px outside its own — is declared in the 760 block
+   where it belongs. Driven at every width in `render_check.VIEWPORTS` by
+   `test_shell_live.py::test_both_two_pane_pages_can_be_navigated_at_every_declared_viewport`. */
 @media (max-width: 900px) {
   .herd { grid-template-columns: minmax(0, 1fr); }
-  .herd-col { display: none; border-right: none; }
+  .herd .herd-col { display: none; border-right: none; }
   .legend { gap: 0.3rem 0.8rem; padding: 0.5rem 0.8rem; }
   .herd[data-level="projects"] .col-projects,
   .herd[data-level="sessions"] .col-sessions,
   .herd[data-level="detail"]   .col-detail { display: flex; }
-  .back { display: grid; }
+  .herd .back { display: grid; }
 }
 
 @media (prefers-reduced-motion: reduce) {

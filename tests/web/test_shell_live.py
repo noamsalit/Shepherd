@@ -21,6 +21,8 @@ is an environment fact, and reporting it as a code defect is the failure mode
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import pytest
 
 from web.conftest import Client, MasterDoubles, seed
@@ -30,11 +32,18 @@ from shepherd.store.db import Store
 
 playwright_api = pytest.importorskip("playwright.sync_api")
 
-#: `tools/render_check.py`'s own two, read out of that file rather than
-#: re-spelled: the phone is the primary client and the one the `.legend-note`
-#: defect was invisible at.
-PHONE = {"width": 390, "height": 844}
-DESKTOP = {"width": 1280, "height": 900}
+#: Every viewport `tools/render_check.py` declares, **read out of that file**
+#: rather than re-spelled. The comment here used to say "read out of that file"
+#: while spelling two literals below it, and that was the whole of the hole QA
+#: run 3 walked through: the constant grew a width and no test would have
+#: noticed. `_viewports()` derives the mapping, so a width added at the one
+#: definition site is a width this module drives.
+VIEWPORTS = {
+    name: {"width": width, "height": height}
+    for name, width, height in render_check_constant("VIEWPORTS")  # type: ignore[misc]
+}
+PHONE = VIEWPORTS["phone"]
+DESKTOP = VIEWPORTS["desktop"]
 
 
 def _open(client: Client, viewport: dict[str, int]):
@@ -83,7 +92,10 @@ def phone(client: Client, master_doubles: MasterDoubles):
 
 def _nav(page, target: str) -> None:
     """Open a page the way a person does, through the drawer on a phone."""
-    if page.viewport_size["width"] < 760:
+    # `<=`, not `<`: the drawer's media query is `max-width: 760px`, which is
+    # inclusive. Latent while only 390 and 1280 were driven; a real off-by-one
+    # the moment this helper is handed a width it has not seen before.
+    if page.viewport_size["width"] <= 760:
         page.locator("#drawer-open").click()
         page.wait_for_timeout(200)
     page.locator(f'.nav-item[data-page="{target}"]').click()
@@ -423,3 +435,289 @@ def test_a_burst_of_envelopes_does_not_become_a_request_per_envelope(desktop) ->
     # also pass the line above.
     assert len(reads) >= 2, reads
     assert errors == [], errors
+
+
+# ==============================================================================
+# QA run 3, D1 — the band between the two widths every gate used as bounds
+# ==============================================================================
+
+#: Anything a finger or a pointer can land on, inside one page root.
+USABLE_CONTROLS = """
+(root) => {
+  const host = document.querySelector(root);
+  if (host === null) return null;
+  const out = [];
+  for (const node of host.querySelectorAll("button, a[href], input, select, textarea")) {
+    const box = node.getBoundingClientRect();
+    if (box.width > 0 && box.height > 0) {
+      out.push(node.id || node.className || node.tagName);
+    }
+  }
+  return out;
+}
+"""
+
+#: The computed `display` of one selector, for a failure message that names the
+#: cause rather than only the symptom.
+DISPLAY_OF = """
+(selector) => {
+  const node = document.querySelector(selector);
+  if (node === null) return "(absent)";
+  return getComputedStyle(node).display;
+}
+"""
+
+
+@contextmanager
+def _at(client: Client, viewport: dict[str, int]):
+    """The shipped page at one viewport, torn down whatever happens."""
+    play, browser, page, errors = _open(client, viewport)
+    try:
+        yield page, errors
+    finally:
+        browser.close()
+        play.stop()
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_both_two_pane_pages_can_be_navigated_at_every_declared_viewport(
+    client: Client, master_doubles: MasterDoubles, viewport: str
+) -> None:
+    """QA run 3's D1: Projects and Settings lost their only navigation at 820.
+
+    `app.css`'s `@media (max-width: 900px) { .herd-col { display: none } }` is
+    the **Flock's** rule — its three panes are re-shown by
+    `.herd[data-level] .col-*` — but `.herd-col` is also the class of the
+    Projects list column and the Settings nav column, and the `.panes2` rescue
+    that re-shows *those* lives inside `@media (max-width: 760px)`. So from
+    761px to 900px inclusive both pages rendered a detail pane over an empty
+    grid: zero usable controls on Projects with two projects in the store, and
+    one on Settings — a back chevron whose target was the hidden column.
+
+    Parametrised over `VIEWPORTS` and not over two hand-written widths, because
+    the defect's whole cause of death was that the gates drove 390 and 1280 and
+    the band sat between them. A width added to `render_check.VIEWPORTS` is
+    driven here without this file being touched.
+    """
+    size = VIEWPORTS[viewport]
+    with _at(client, size) as (page, errors):
+        _nav(page, "projects")
+        controls = page.evaluate(USABLE_CONTROLS, "#page-projects")
+        display = page.evaluate(DISPLAY_OF, "#page-projects .herd-col")
+        assert controls is not None, "#page-projects is not in the document"
+        assert "proj-new" in controls, (
+            f"projects at {size['width']}px: the list column computes"
+            f" display:{display} and the page offers {len(controls)} usable"
+            f" controls {controls} — 'New project' is not one of them"
+        )
+
+        _nav(page, "settings")
+        items = page.locator("#page-settings .set-item:visible")
+        display = page.evaluate(DISPLAY_OF, "#page-settings .herd-col")
+        assert items.count() >= 2, (
+            f"settings at {size['width']}px: the nav column computes"
+            f" display:{display} and offers {items.count()} visible sections;"
+            f" the page's usable controls are"
+            f" {page.evaluate(USABLE_CONTROLS, '#page-settings')}"
+        )
+
+        # …and the navigation is not merely painted: the section it names opens.
+        target = items.nth(1)
+        title = target.inner_text().splitlines()[0].strip()
+        target.click()
+        page.wait_for_timeout(300)
+        head = page.locator("#settings-panel .col-head")
+        assert head.is_visible(), f"settings at {size['width']}px: the panel did not open"
+        assert title.lower() in head.inner_text().lower(), (title, head.inner_text())
+
+        # The way back, on exactly the widths that took one away. Below the
+        # drill-down's breakpoint the panel replaced the list, so there must be
+        # a chevron and it must restore the list; above it both panes are on
+        # screen and a chevron would point at a column the reader is looking at.
+        back = page.locator("#settings-back")
+        if size["width"] <= 760:
+            assert back.is_visible(), (
+                f"settings at {size['width']}px: the panel replaced the nav column"
+                " and there is no way back to it"
+            )
+            back.click()
+            page.wait_for_timeout(300)
+            assert page.locator("#page-settings .herd-col").is_visible(), (
+                f"settings at {size['width']}px: the back chevron changed nothing"
+            )
+        else:
+            assert not back.is_visible(), (
+                f"settings at {size['width']}px: both panes are on screen and a"
+                " back chevron is offered anyway — it sets data-level='list',"
+                " which at this width changes nothing on the page"
+            )
+
+        assert errors == [], errors
+
+
+# ==============================================================================
+# QA run 3, D2 — a modal that opens where nothing is drawn
+# ==============================================================================
+
+#: What a tap at the middle of one element actually lands on.
+HIT_TEST = """
+(selector) => {
+  const node = document.querySelector(selector);
+  if (node === null) return null;
+  const box = node.getBoundingClientRect();
+  const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+  return {
+    width: box.width,
+    height: box.height,
+    display: getComputedStyle(node).display,
+    landedOn: hit === null ? "(nothing)" : hit.id || hit.tagName,
+    inADialog: hit !== null && hit.closest("dialog") !== null,
+  };
+}
+"""
+
+
+def _dialog_is_usable(page, dialog: str, control: str, width: int) -> None:
+    """Both halves of "the modal opened": it is drawn, and taps reach it."""
+    shown = page.evaluate(HIT_TEST, dialog)
+    assert shown is not None, f"{dialog} is not in the document"
+    assert shown["width"] > 0 and shown["height"] > 0, (
+        f"{dialog} at {width}px: showModal() ran and the dialog computes"
+        f" display:{shown['display']} at {shown['width']}x{shown['height']} —"
+        " the modal is open, invisible, and its backdrop is swallowing every tap"
+    )
+    landed = page.evaluate(HIT_TEST, control)
+    assert landed["inADialog"], (
+        f"{control} at {width}px: a tap at its centre lands on"
+        f" {landed['landedOn']}, not on the dialog"
+        f" (box {landed['width']}x{landed['height']}, display {landed['display']})"
+    )
+
+
+def test_the_projects_dialogs_are_on_screen_on_a_phone(phone, store: Store) -> None:
+    """QA run 3's D2, on the client the spec calls primary.
+
+    `mountProjects()` builds `#dlg-project` and `#dlg-delete` inside
+    `#page-projects` deliberately — `index.html`'s shell comment records why: a
+    second copy at shell level would be the one `getElementById` handed back.
+    The blanket `@media (max-width: 760px) { .panes2[data-level] > * { display:
+    none } }` then hid them, and an author rule beats the UA's `dialog[open] {
+    display: block }`. `showModal()` still ran: modal true, box 0x0, every tap
+    on the page swallowed by the backdrop, no visible button anywhere in the
+    dialog, and the only exit a keyboard Escape on a device with no keyboard.
+
+    Both dialogs, because both are children of that root and a fix that reached
+    one is a fix that reached half the defect. The assertion is a **hit test**
+    and not `is_visible()`: what broke was where the taps went.
+    """
+    page, errors = phone
+    seed(store)
+    page.reload()
+    page.wait_for_timeout(700)
+    _nav(page, "projects")
+    width = page.viewport_size["width"]
+
+    page.locator("#proj-new").click()
+    page.wait_for_timeout(300)
+    assert page.evaluate("() => document.getElementById('dlg-project').open") is True
+    _dialog_is_usable(page, "#dlg-project", "#p-save", width)
+    # …and it can be dismissed by a finger, which is the half Escape hid.
+    page.locator("#dlg-project .dlg-acts .ghost").click()
+    page.wait_for_timeout(200)
+    assert page.evaluate("() => document.getElementById('dlg-project').open") is False
+
+    page.locator('#proj-list .proj-row:not([data-reserved="true"])').first.click()
+    page.wait_for_timeout(400)
+    page.locator("#proj-delete").click()
+    page.wait_for_timeout(400)
+    assert page.evaluate("() => document.getElementById('dlg-delete').open") is True
+    _dialog_is_usable(page, "#dlg-delete", "#dlg-delete-cancel", width)
+
+    assert errors == [], errors
+
+
+# ==============================================================================
+# QA run 3, D3 — a tooltip left on screen that swallows the next click
+# ==============================================================================
+
+#: The tooltip's own box, and what a tap in the middle of it reaches.
+TIP_HIT = """
+() => {
+  const tip = document.querySelector(".tip");
+  if (tip === null) return null;
+  const box = tip.getBoundingClientRect();
+  const x = box.left + box.width / 2;
+  const y = box.top + box.height / 2;
+  const hit = document.elementFromPoint(x, y);
+  const info = document.querySelector(".legend-info");
+  const infoBox = info === null ? null : info.getBoundingClientRect();
+  const infoHit =
+    infoBox === null
+      ? null
+      : document.elementFromPoint(
+          infoBox.left + infoBox.width / 2,
+          infoBox.top + infoBox.height / 2,
+        );
+  return {
+    box: { top: box.top, left: box.left, width: box.width, height: box.height },
+    landedOn: hit === null ? "(nothing)" : hit.className || hit.tagName,
+    intercepts: hit !== null && (hit === tip || tip.contains(hit)),
+    infoBlocked: infoHit !== null && (infoHit === tip || tip.contains(infoHit)),
+  };
+}
+"""
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_the_legend_tooltip_never_swallows_a_click(
+    client: Client, master_doubles: MasterDoubles, viewport: str
+) -> None:
+    """QA run 3's D3, driven through the sequence that leaves the tip behind.
+
+    `flock.js` binds `focus` → `showTip` on every legend key, and
+    `<dialog>.close()` restores focus to the key that opened the sheet — so
+    closing the bucket explainer re-fires `focus` and the tooltip comes back
+    with no pointer anywhere near it. `.tip` was `position: fixed; z-index: 40`
+    with pointer events on, so a 19rem box sat over the page eating taps: two
+    controls at 1280 and four at 390, including `.legend-info`, which is U1's
+    documented way into that same explainer.
+
+    The assertion is over the tooltip's **own box** rather than a named control,
+    because which controls it covers depends on what is seeded and how wide the
+    page is; what is always true is that a tooltip must never be what a tap
+    lands on.
+    """
+    size = VIEWPORTS[viewport]
+    with _at(client, size) as (page, errors):
+        _nav(page, "flock")
+        key = page.locator("#flock-legend .legend-key").first
+        key.hover()
+        page.wait_for_timeout(150)
+        key.click()
+        page.wait_for_timeout(300)
+        assert page.evaluate("() => document.getElementById('dlg-legend').open") is True
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+        assert page.evaluate("() => document.getElementById('dlg-legend').open") is False
+
+        reading = page.evaluate(TIP_HIT)
+        if reading is None:
+            # The sheet's close did not bring the tooltip back at this width —
+            # then there is nothing for it to swallow. Reported, not assumed.
+            return
+        assert not reading["intercepts"], (
+            f"the legend tooltip at {size['width']}px is still on screen after the"
+            f" sheet closed, and a tap at its centre lands on {reading['landedOn']}:"
+            f" every tap inside {reading['box']} is swallowed"
+        )
+        assert not reading["infoBlocked"], (
+            f"the legend tooltip at {size['width']}px covers `.legend-info` — U1's"
+            " documented way into the explainer — and takes the tap"
+        )
+        # The other half of the story the fix tells: the tip goes when the key
+        # it belongs to stops being focused, which is what the tap that now
+        # reaches the control underneath does.
+        page.evaluate("() => document.activeElement.blur()")
+        page.wait_for_timeout(150)
+        assert page.locator(".tip").count() == 0, "the tooltip outlived the focus it follows"
+        assert errors == [], errors

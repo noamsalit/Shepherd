@@ -379,15 +379,18 @@ def test_variant_d_an_error_thrown_on_a_nav_click_fails_and_names_the_page(
 ) -> None:
     """D — and the report names *settings*, the page that caused it.
 
-    The count is asserted too: two viewports, one report each. A gate that
-    re-reads a list it never drains reports the same error once per remaining
-    page, which is noise dressed as thoroughness.
+    The count is asserted too: **one report per declared viewport**, read from
+    `rc.VIEWPORTS` rather than written as a literal. A gate that re-reads a list
+    it never drains reports the same error once per remaining page, which is
+    noise dressed as thoroughness — and a literal `2` here was half of why a
+    third width could be added to that constant without any gate noticing
+    whether it ran (QA run 3's reusable finding).
     """
     write, origin = served
     write(page_html(onclick=CLICK_THROW))
     assert rc.check(origin, tmp_path / "shots") == 1
     out = capsys.readouterr().out
-    assert out.count("FIXTURE boom on settings") == 2, out
+    assert out.count("FIXTURE boom on settings") == len(rc.VIEWPORTS), out
     assert "after opening settings" in out
 
 
@@ -404,7 +407,7 @@ def test_variant_e_a_boom_banner_painted_on_a_nav_click_fails(
     assert rc.check(origin, tmp_path / "shots") == 1
     out = capsys.readouterr().out
     assert "error banner" in out
-    assert out.count("FIXTURE render failed") == 2, out
+    assert out.count("FIXTURE render failed") == len(rc.VIEWPORTS), out
 
 
 # --------------------------------------------------------------------------
@@ -426,13 +429,22 @@ def test_a_run_that_opened_no_page_fails_and_says_how_little_it_checked(
 def test_a_good_run_reports_what_it_checked(
     served, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Six pages at two viewports, each screenshotted. Counted, not assumed."""
+    """Six pages at every declared viewport, each screenshotted.
+
+    Counted, not assumed — and counted as `len(PAGES) * len(VIEWPORTS)` rather
+    than as `12`, so a width added to `VIEWPORTS` has to *run* before this
+    passes. The literal was the gate's blind spot: the tool drove two widths,
+    every browser test drove the same two, and the 140px band between them held
+    two pages with no navigation at all.
+    """
     write, origin = served
     write(page_html())
     assert rc.check(origin, tmp_path / "shots") == 0
     out = capsys.readouterr().out
-    assert "12 pages checked" in out
-    assert "12 screenshots" in out
+    expected = len(rc.PAGES) * len(rc.VIEWPORTS)
+    assert len(rc.VIEWPORTS) >= 3, rc.VIEWPORTS
+    assert f"{expected} pages checked" in out
+    assert f"{expected} screenshots" in out
 
 
 def test_the_shots_directory_is_not_created_by_a_run_that_never_shot(

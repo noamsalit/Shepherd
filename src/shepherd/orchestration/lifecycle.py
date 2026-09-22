@@ -63,9 +63,9 @@ __all__ = [
     "record_and_terminate",
 ]
 
-#: The durable record's key space, one key per session: written before the kill,
-#: cleared once the kill is accounted for, so a process that dies in between
-#: leaves evidence a later pass can read.
+#: The durable record's key space, one key per session: written before the kill so
+#: a death in between leaves evidence a later pass can read, then **overwritten with
+#: `null` — never cleared**, so the row survives unread and unreaped (qa-remfix-3).
 KILL_RECORD_PREFIX = "kill."
 
 KILL_EVENT = "session.killed"
