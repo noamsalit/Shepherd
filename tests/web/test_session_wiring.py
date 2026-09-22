@@ -214,14 +214,30 @@ def assignments(text: str) -> list[str]:
 #: K6/principle 5 say page 3 must put on the screen.
 REQUIRED_ASSIGNMENTS = {
     # `fill(id, value)`: principle 5's em dash for a datum the row does not carry.
-    'element.textContent = value === null || value === undefined ? "—" : String(value)',
-    # D21's buttons. `text` is the field `project_action` emits — the page read
-    # `action.label`, which exists nowhere in the projection layer, so every
-    # stopped-band button rendered empty and no unknown was counted.
-    'button.className = "session-action"',
+    # Bound as `node` rather than `element` since D67: the shared node helper is
+    # imported from `flock.js` under that name, and a local binding shadowing it
+    # would turn every later `element(...)` into a call on a DOM node.
+    'node.textContent = value === null || value === undefined ? "—" : String(value)',
+    # D21's buttons, relocated to the pane by **D67**. `text` and `kind` are the
+    # fields `project_action` emits — the page once read `action.label`, which
+    # exists nowhere in the projection layer, so every stopped-band button
+    # rendered empty and no unknown was counted. They are now built through
+    # `flock.js::element`, which sets the class and the text in one call, so the
+    # two lines that used to do it by hand are gone rather than missing.
     'button.type = "button"',
-    "button.textContent = actionText(action)",
-    "button.dataset.kind = actionKind(action)",
+    "button.dataset.kind = kind",
+    # RD6, which moved with the list it governs: an action whose capability
+    # lands later is **labelled and inert**, never an unlabelled dead button.
+    # One inert path, two reasons — a second `disabled` write would be the same
+    # render performed twice, which the duplicate check above refuses.
+    "button.disabled = true",
+    "button.title = reason",
+    # G-M2-7's `external` with somewhere to go: live at M2 because it needs
+    # nothing of ours. The three lines are one affordance and move together.
+    "link.href = action.target",
+    'link.target = "_blank"',
+    'link.rel = "noopener noreferrer"',
+
     # D29's click-to-edit rename, and DP1's boundary: this is the **local**
     # rename. The engine write-back stays behind `can_set_title`, server-side.
     'input.className = "session-rename-input"',

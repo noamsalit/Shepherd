@@ -1,5 +1,17 @@
-// §12's page 3, the part that is not the terminal: the header band, the stopped
-// session's buttons, the rename affordance and the `local only` marker.
+// **D67: this is the Flock's third pane, not a fourth page.** §12's page 3, the
+// part that is not the terminal: the header band, D21's `next_actions[]`, the
+// rename affordance and the `local only` marker.
+//
+// The view **relocated**; it was not deleted. `terminal.js` and the vendored
+// emulator stay reachable from here, and the module's contracts are unchanged.
+// What moved *in* is the stopped-row logic that used to live in `fleet.js`:
+// U7 fixes the session card at four items — glyph and colour, title, the ask,
+// relative time — so D21's list has nowhere on the card to be, and §12 always
+// said it renders in the Session view header. Every rule the list carried moved
+// with it rather than being quietly dropped: RD6's labelled-and-inert kinds,
+// N10's honest `[why?]`, §14's `nothing to do` and G-M2-7's targetless
+// `external`. A relocation that loses the rules is a deletion with a better
+// name.
 //
 // Every value below lands in a slot with `textContent`. There is no HTML sink in
 // this file and no string concatenated into markup: §13's rule has no exception
@@ -15,6 +27,7 @@
 // nothing imported it, and eight tests asserting its contents all passed against
 // code no browser ever loaded (`test_session_wiring.py`).
 
+import { element, showLevel } from "./flock.js";
 import { openTerminal, INPUT_UNAVAILABLE } from "./terminal.js";
 
 // §9, verbatim. An `attached` session has no pty of ours: it was started in the
@@ -29,7 +42,7 @@ const READ_ONLY_BANNER =
 // decided.
 const LOCAL_ONLY_MARKER = "local only";
 
-// Principle 5, and `fleet.js` says the same word for the same reason: a field
+// Principle 5, and `flock.js` says the same word for the same reason: a field
 // the payload did not carry is *shown* as unknown, never rendered as a blank
 // button nobody can read and nobody counted.
 const UNKNOWN = "unknown";
@@ -69,9 +82,12 @@ function slot(id) {
 }
 
 function fill(id, value) {
-  const element = slot(id);
-  element.textContent = value === null || value === undefined ? "—" : String(value);
-  return element;
+  // Named `node`, not `element`: the shared node helper is imported under that
+  // name above, and a local binding that shadowed it would make every later
+  // `element(...)` in this file a call on a DOM node instead.
+  const node = slot(id);
+  node.textContent = value === null || value === undefined ? "—" : String(value);
+  return node;
 }
 
 function path(template, sessionId) {
@@ -81,7 +97,7 @@ function path(template, sessionId) {
 // `project_action` (`toolsurface/tools_m1.py`) emits exactly `text`, `kind`,
 // `target` and `source`. This page read `action.label` — a field that exists
 // nowhere in the projection layer — so D21's buttons rendered empty and, with
-// no fallback, nothing counted the unknown either. `fleet.js:134` reads the same
+// no fallback, nothing counted the unknown either. `flock.js` reads the same
 // payload the same way, which is the point: one payload, one reading.
 function actionText(action) {
   return typeof action.text === "string" && action.text !== "" ? action.text : UNKNOWN;
@@ -91,13 +107,128 @@ function actionKind(action) {
   return typeof action.kind === "string" && action.kind !== "" ? action.kind : UNKNOWN;
 }
 
+// N10 / D34. The model verdict lane is **not built** at M2, so `[why?]` expands
+// the heuristic evidence and says so in words. A control that implied a verdict
+// nobody computed would be worse than no control at all.
+const MODEL_LANE_NOTE =
+  "Heuristic evidence only — the model verdict lane is not built in this build, so no model looked at this stop.";
+
+// RD6: an action whose capability lands later renders **labelled and inert**,
+// with the milestone named. §12 says the row is never a dead end, and an
+// unlabelled dead button *is* the dead end. This table arrived with the list
+// when D67 moved it off the card; it is not new and it is not optional.
+const ACTION_MILESTONE = {
+  resume: "M3",
+  respawn: "M3",
+  retry: "M3",
+  escalate: "M4",
+  requeue: "M4",
+  reauth: "M4",
+};
+
+// The kinds this build can honour today: `external` is a link when it has a
+// target, `inspect` is the expansion itself, and `none` names no capability at
+// all ("Resumes by itself — nothing to do"). Every kind the store can hold is
+// in one table or the other; one in neither is the silent dead button.
+const LIVE_KINDS = {
+  inspect: true,
+  external: true,
+  none: true,
+};
+
+// Why an action cannot be honoured today, or `null` when it can be. The two
+// cases are different facts and say so: a kind this build knows but has not
+// built yet names its milestone (RD6), and a kind from a newer build names its
+// own unfamiliarity. Neither is ever a silently clickable button.
+function notYetReason(kind) {
+  const milestone = ACTION_MILESTONE[kind];
+  if (milestone !== undefined) {
+    return `not yet — ${kind} lands at ${milestone}`;
+  }
+  if (!(kind in LIVE_KINDS)) {
+    return `not yet — this build does not know the action kind ${kind}`;
+  }
+  return null;
+}
+
 function actionButton(action) {
-  const button = document.createElement("button");
-  button.className = "session-action";
+  const kind = actionKind(action);
+  const text = actionText(action);
+
+  // §12's `[↗]`. A link needs nothing of ours, so it is live at M2 — but only
+  // when there is somewhere to go: G-M2-7's `Chase — what it is waiting on is
+  // not recorded` has no url, and must not pretend to one.
+  if (kind === "external" && typeof action.target === "string" && action.target !== "") {
+    const link = element("a", "session-action action-link", `${text} ↗`);
+    link.href = action.target;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    return link;
+  }
+
+  // One inert path, two reasons. Writing `disabled` in each branch would be the
+  // same render performed twice, and `test_render_session_performs_every_
+  // assignment_the_spec_requires` refuses a duplicated render precisely because
+  // a second copy is where the two eventually stop agreeing.
+  const reason = notYetReason(kind);
+  const button = element(
+    "button",
+    reason === null ? "session-action" : "session-action action-not-yet",
+    text,
+  );
   button.type = "button";
-  button.textContent = actionText(action);
-  button.dataset.kind = actionKind(action);
+  button.dataset.kind = kind;
+  if (reason !== null) {
+    button.disabled = true;
+    button.title = reason;
+    button.appendChild(element("span", "action-badge", "not yet"));
+  }
   return button;
+}
+
+// D21's list, in the pane's header — **every** action, with its ordinal and the
+// source it came from. The collapsed fleet row rendered `actions[0]` because it
+// had space for one; the pane has space for the list, which is the property the
+// redesign keeps and the retired card test could not.
+//
+// Nothing here sorts: `next_actions[]` arrives already ordered from
+// `project_action`, and the order is `default_actions`' own.
+function actionList(row) {
+  const list = element("ol", "session-actions-list");
+  const actions = Array.isArray(row.next_actions) ? row.next_actions : [];
+  if (actions.length === 0) {
+    // §14: an empty list is only ever a *confident* `completed`. Anything else
+    // with no actions is a rule bug, and the classifier's own tests say so.
+    list.appendChild(element("li", "session-no-action", "nothing to do"));
+    return list;
+  }
+  actions.forEach((action, index) => {
+    const item = element("li", "session-action-row");
+    item.appendChild(element("span", "action-ordinal", `${index + 1}`));
+    item.appendChild(actionButton(action));
+    item.appendChild(element("span", "action-source", action.source || UNKNOWN));
+    list.appendChild(item);
+  });
+  return list;
+}
+
+// N10's `[why?]`: a native disclosure, never a button. It expands the evidence
+// the row already carries and names the lane that did not look at this stop.
+// Nothing here opens a log, a transcript or a second endpoint (K14/D25).
+function whyNote(row) {
+  const note = element("details", "why-note");
+  note.appendChild(element("summary", "why-summary", "why?"));
+  const decided = typeof row.decided_by === "string" ? row.decided_by : UNKNOWN;
+  const confidence = typeof row.confidence === "number" ? row.confidence : null;
+  note.appendChild(
+    element(
+      "p",
+      "why-evidence",
+      `decided by ${decided} · confidence ${confidence === null ? UNKNOWN : confidence}`,
+    ),
+  );
+  note.appendChild(element("p", "why-lane", MODEL_LANE_NOTE));
+  return note;
 }
 
 // D29's marker, after a rename that has been answered. `local_only` is the
@@ -176,6 +307,11 @@ export function renderSession(row) {
   // this line, and for one task nothing in the tree contained it.
   const view = slot("session-view");
   view.hidden = false;
+  // D67: opening a session walks the Flock's drill-down to its third level. On
+  // a wide screen all three columns are up already and this changes nothing; on
+  // a phone it is the navigation. `app.css` owns what the level reveals, and
+  // `flock.js` owns the attribute — this module only says which level it is.
+  showLevel("detail");
 
   fill("session-title", row.title);
   fill("session-chip", row.bucket);
@@ -187,12 +323,12 @@ export function renderSession(row) {
   rename.onclick = () => beginRename(row);
   fill("session-rename-status", "");
 
-  // The stopped band (D21): the bucket, the `why`, and `next_actions[]` as
-  // buttons. `why` is null on a session nobody classified, which renders as the
-  // em dash `fill` uses everywhere — an unknown shown, not hidden (principle 5).
+  // The stopped band (D21): the bucket, the `why`, and `next_actions[]` as an
+  // ordered list. `why` is null on a session nobody classified, which renders as
+  // the em dash `fill` uses everywhere — an unknown shown, not hidden
+  // (principle 5) — with the honest `[why?]` disclosure beside it.
   fill("session-why", row.why);
-  const actions = slot("session-actions");
-  actions.replaceChildren(...row.next_actions.map(actionButton));
+  slot("session-actions").replaceChildren(actionList(row), whyNote(row));
 
   const marker = slot("session-local-only");
   marker.textContent = localOnly(row) ? LOCAL_ONLY_MARKER : "";

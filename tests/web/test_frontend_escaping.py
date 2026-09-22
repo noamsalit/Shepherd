@@ -26,11 +26,19 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # that passes by finding nothing, so this list is widened deliberately rather
 # than loosened into a glob. The chat page is the one that most needs it — it
 # interpolates the master's own output, which carries tool results.
+# **T6.1 appends `flock.js`**, by name and for the third time for the same
+# reason. `fleet.js` is still listed beside it and still on disk: `app.js`
+# imports it and `app.js` is the shell's, which the integration pass rewires in
+# one go. Deleting the module here while the page still asks for it would not be
+# a red test, it would be a 404 in the module graph — so the deletion travels
+# with the import that causes it, and until then the dead module is scanned like
+# every other shipped byte rather than quietly exempted.
 EXPECTED_MODULES = (
     "app.js",
     "chat.js",
     "escape.js",
     "fleet.js",
+    "flock.js",
     "rail.js",
     "session.js",
     "sse.js",
