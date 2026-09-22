@@ -70,6 +70,7 @@ from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
 from shepherd.toolsurface.tools_m3 import register_m3_tools
 from shepherd.toolsurface.tools_master import autonomy_level, register_master_tools
+from shepherd.toolsurface.tools_projects import register_project_tools
 from shepherd.toolsurface.tools_rename import register_rename_tool
 from shepherd.toolsurface.tools_replay import register_replay_tool
 from shepherd.toolsurface.types import AuditSink
@@ -434,6 +435,13 @@ def compose_tool_surface(
     register_rename_tool(
         store=store, runner=runner, now=utc_now, config_dir=engine_config_dir, capabilities=engine
     )
+    # D57's project lifecycle (T3.2). **No `kill` injection**: the plan's
+    # signature carries one for `delete_project`, and that verb is not
+    # registered — `writes.delete_project` calls its injected kill from inside
+    # the store's writer transaction, and the shipped kill path's first
+    # statement is itself a store write, so wiring the two together deadlocks
+    # every later write in this process. See `tools_projects.py`'s docstring.
+    register_project_tools(store=store, now=utc_now)
 
     driver = TurnDriver(
         store=store,

@@ -78,8 +78,32 @@ M4_TOOL_NAMES: tuple[str, ...] = (
     "wake_summary",
 )
 
+#: What T3.2 adds: D57's project lifecycle, registered by the composition root.
+#: Written out for the same reason the four lists above are — a list built from
+#: `tools_projects.PROJECT_TOOL_NAMES` would agree with itself no matter which
+#: verbs the composition actually reached.
+#:
+#: **Six, not the plan's seven.** `delete_project` is not registered: its store
+#: verb calls the injected `kill` inside the writer transaction, and the shipped
+#: kill path writes to the store first, which deadlocks the writer thread. The
+#: seventh name arrives on this line with the store-side split.
+PROJECT_TOOL_NAMES_HERE: tuple[str, ...] = (
+    "add_repo",
+    "create_project",
+    "get_project",
+    "list_repos",
+    "remove_repo",
+    "rename_project",
+)
+
 ALL_TOOL_NAMES: tuple[str, ...] = tuple(
-    sorted(M1_TOOL_NAMES + M2_TOOL_NAMES + M3_TOOL_NAMES + M4_TOOL_NAMES)
+    sorted(
+        M1_TOOL_NAMES
+        + M2_TOOL_NAMES
+        + M3_TOOL_NAMES
+        + M4_TOOL_NAMES
+        + PROJECT_TOOL_NAMES_HERE
+    )
 )
 
 NOW = "2026-09-17T10:00:00Z"

@@ -468,3 +468,49 @@ def test_compose_does_not_import_the_master_package() -> None:
     assert "shepherd.toolsurface.registry" in imported, "the reader read nothing"
     assert [name for name in sorted(imported) if name.split(".")[:2] == ["shepherd", "master"]] == []
     assert [name for name in sorted(imported) if name.split(".")[:2] == ["shepherd", "logs"]] == []
+
+
+# ----- the project lifecycle (T3.2) -------------------------------------------
+
+
+def test_the_project_tools_are_registered_by_the_composition(world: World) -> None:
+    """T3.2's row: D57's lifecycle, reachable in a **composed** process.
+
+    The expected set is enumerated the way the master tools above are — by
+    registering into an empty registry and reading the names back — so a verb
+    added to `tools_projects.py` widens both sides of this equality at once and
+    no list in this file has to be maintained.
+
+    The call at the end is a `local_read`, which the gate lets through at every
+    autonomy level. That is deliberate: the point of this line is that the
+    *registration happened before the freeze*, and driving a
+    `local_destructive` verb here would park the test on the real approval
+    deadline to prove something `tests/toolsurface/test_tools_projects.py`
+    already proves behind the shipped gate.
+    """
+    from shepherd.toolsurface.registry import RegistryFrozen, invoke, reset_registry
+    from shepherd.toolsurface.tools_projects import (
+        PROJECT_TOOL_NAMES,
+        register_project_tools,
+    )
+
+    reset_registry()
+    register_project_tools(store=world.store)
+    expected = set(registered_tools())
+    assert expected == set(PROJECT_TOOL_NAMES), sorted(expected)
+    reset_registry()
+
+    world.compose()
+
+    assert expected <= set(registered_tools())
+    answered = invoke(
+        "list_repos", {"project_id": "unassigned"}, as_master("cid-projects")
+    )
+    assert answered.ok, (answered.error, answered.failure)
+    assert answered.data == {"repos": []}
+
+    # …and the registry really did freeze, so the registration above was not a
+    # late one that merely happened to work. A second `register` after the
+    # composition is the refusal ADR-7 exists for.
+    with pytest.raises(RegistryFrozen):
+        register_project_tools(store=world.store)
