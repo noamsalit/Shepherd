@@ -36,7 +36,10 @@
     "Router: pass-2 findings are applied as a diff-scoped AMENDMENT rather than escalated. The two-pass fresh-review cap is spent, but all 15 findings carry named mechanical fixes and none is an owner decision. The amendment lane is uncapped and exists for exactly this case.",
     "F6 pushback ACCEPTED: the planner's sink-to-module walk is right and the review's was not. Verified independently - 2520 renderLegend, 2858 BACK_BUTTON (flock.js); 2688 bylineMark, 2796/2814/2837 renderDetail (session.js, per D67); 3101 BACK_BUTTON_P (projects.js); 3617 panelHead (settings.js). T5.3 and T7.1 rewrite no sinks at all, so this removes work rather than moving it.",
     "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33.",
-    "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired."
+    "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired.",
+    "T8.1 scope increases RATIFIED: Choice.number is int|None (the trust dialog's choices are unnumbered), Choice.selected exists (nowhere else to report which line carries the cursor), DecisionPrompt.kind exists (E17 requires the trust dialog be named so T8.2 refuses it by name rather than by sniffing its text). Each is forced by captured evidence, not preference.",
+    "The tests/golden claude-dir guard is NARROWED, not dropped: it excludes paths under the repository's own tree. This harness places agent worktrees at <repo>/.claude/worktrees/, so the bare '/.claude/' substring flagged 138 frozen captures. The clause is kept because it is the one that would catch ANOTHER user's config dir. Proven both ways with a four-case control.",
+    "A6 RETIRED in the plan: esprima replaced by chromium at Phase 0. The live form of that risk is playwright, which render_check.py imports at module level and pyproject.toml does not declare; pytest.importorskip guards it."
   ],
   "plan_mode": "execution_plan",
   "build_scope": "standard",
@@ -282,7 +285,11 @@
     "re-plan": "completed",
     "plan-review-gap-2": "completed",
     "plan-review-amendment": "completed",
-    "phase-0": "completed"
+    "phase-0": "completed",
+    "phase-8-T8.1": "completed",
+    "w6-docs": "completed",
+    "phase-1": "in_progress",
+    "phase-5-T5.2": "in_progress"
   },
   "deferred_findings": [
     {
@@ -334,7 +341,7 @@
         "master"
       ]
     },
-    "git_base_sha": "1e735b2",
+    "git_base_sha": "d2f1f99",
     "target_repo": null,
     "builder": {
       "phase": "phase-0",
@@ -391,7 +398,9 @@
   },
   "evidence": {
     "builder": [
-      "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open."
+      "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open.",
+      "T8.1: A8 gate passed (dialog_text carries the numbered option lines); 17 tests; four degradation branches each with a positive control; tests/runner 82 passed.",
+      "W6 docs: six spec defects closed; router independently re-derived 12 Runner members, 10 omitted columns and the Scripted* list against source."
     ],
     "investigator": [],
     "reviewer": [
@@ -544,9 +553,14 @@
       "event": "phase_0_completed",
       "ts": "2026-09-22T00:49:12Z",
       "phase": "phase-0"
+    },
+    {
+      "event": "parallel_tracks_landed",
+      "ts": "2026-09-22T04:46:22Z",
+      "detail": "T8.1 merged from worktree; W6 docs complete; T5.2 dispatched in a worktree"
     }
   ],
   "remediation_history": [],
   "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T00:49:12Z"
+  "updated_at": "2026-09-22T04:46:22Z"
 }

@@ -367,7 +367,7 @@ every action with its source" stays literally true.
 | A3 | A `HUMAN`-audience call to a `local_destructive` tool needs no approval card | `proven_by_code` | `toolsurface/policy.py` docstring, DP2/K23. |
 | A4 | New routes are permitted by the additive gate | `proven_by_code` | `test_the_pre_m4_route_mappings_are_unchanged` (`:170`) is a **subset** check. |
 | A5 | `playwright` + chromium work headless in this venv | `proven_by_code` | `import playwright` succeeds; the tool already ran against the prototype. **But it is not a declared dependency either** (`pyproject.toml:15`), and `tools/render_check.py:29` imports `playwright.sync_api` at **module level** — so a test that loads that module by path makes playwright a suite import (F13). Marker deselection does not help: `-m 'not live'` deselects *after* collection imports the module. `tests/tools/test_render_check_args.py` therefore opens with `pytest.importorskip("playwright")`. |
-| A6 | `esprima` is importable but **not** a declared dependency | `proven_by_code` | `pyproject.toml:15` lists only `claude-agent-sdk` and `anyio`. **No suite test may import it.** |
+| ~~A6~~ | ~~`esprima` is importable but **not** a declared dependency~~ | **RETIRED at Phase 0** | `esprima` 4.0.1 is an **ES2017** parser: it rejects `?.`, `??`, class fields, `#private`, `\|\|=`, optional catch binding, `import.meta` and numeric separators — verified across eight constructs — while being a Required Check in six tasks that write three new modules. A gate that fails browser-correct code either drags the code down to the parser's era or quietly stops being run. `tools/js_syntax_check.py` now parses in **chromium**, the engine the code actually runs in. The assumption is retired, not merely satisfied. Cost, recorded rather than absorbed: chromium gives no line number for a module compile error. |
 | A7 | Deleting `fleet.js` and adding `flock.js` passes the freeze with two `post_milestone` entries | `proven_by_code` | Simulated through the real helpers; recon §I. |
 | A8 | `PaneState.dialog_text` carries the permission dialog's numbered option lines | `inferred` | `pane.py:215` detects the dialog from `PERMISSION_MARKER` **plus a numbered option line**, so the lines are on the screen; that they survive into `dialog_text` is the inference. **Falsified by** T8.1's first assertion, which stops and writes `t8-1.md` rather than widening the capture path. |
 | A9 | Deriving `last_activity_at` at read time is fast enough here | `inferred` | One `GROUP BY` over `session`, a table this deployment holds in the hundreds. No index added; if it ever matters, that is a later migration. |
@@ -640,7 +640,9 @@ checker can reach a served page and fails on a page it should fail on.
 - **Checkpoint Type:** none
 - **Exit Criteria:** `tests/tools` passes; `PAGES` has six entries and
   `NAV_SELECTOR` / `DRAWER_SELECTOR` are named constants; the tool still runs
-  against the prototype file; `grep -rn "esprima" tests/` is empty (A6); and
+  against the prototype file; `grep -rn "esprima" tests/` is empty (vacuous since
+  Phase 0 retired A6 — the parser is chromium now, and the grep passes because
+  nothing names `esprima` anywhere under `tests/`); and
   **the suite collects and passes with playwright uninstalled** — proved by
   running the collection with the package hidden
   (`.venv/bin/python -m pytest tests/tools -q -p no:cacheprovider` under a
@@ -662,7 +664,11 @@ checker can reach a served page and fails on a page it should fail on.
 > No `tests/tools/__init__.py` — `tests/store/` has none either, and nothing
 > cross-imports this package.
 >
-> `tools/js_syntax_check.py` imports `esprima`. **No file under `tests/` may
+> **Superseded at Phase 0: `tools/js_syntax_check.py` no longer imports
+> `esprima`; it parses in chromium.** The rule below is kept because its shape
+> still governs `playwright`, which `render_check.py` imports at module level
+> and which is equally undeclared — that is what `pytest.importorskip` guards.
+> Original text: `tools/js_syntax_check.py` imports `esprima`. **No file under `tests/` may
 > import it** (A6): a suite import would make a green run depend on an
 > undeclared package. It is an acceptance command, not a gate.
 >
@@ -2148,7 +2154,7 @@ Error paths:
 | The seeded `unassigned` row silently breaks "empty" assertions | **high** | low | Deterministic — E21, and the two sites named in T1.5 |
 | `list_workspaces()[0]` returns the seeded `Unassigned` instead of the fixture's project | **high** | med | Deterministic (and **the failure itself is deterministic**, so it cannot hide) — E22, and `grep -rn "list_workspaces()\[0\]" tests/` empty at T1.5's exit |
 | U17's parser breaks on an engine update | **high** | med | Deterministic — E16: the property tested is *degrades, never guesses*, which is what survives the update |
-| `esprima` becomes an undeclared suite dependency | med | med | Deterministic — `grep -rn "esprima" tests/` empty, in T0.1's exit |
+| ~~`esprima` becomes an undeclared suite dependency~~ **RETIRED at Phase 0** — the parser is chromium. The live form of this risk is `playwright`, which `tools/render_check.py` imports at module level and `pyproject.toml` does not declare | med | med | Deterministic — `pytest.importorskip("playwright")` is the first executable statement of `tests/tools/test_render_check_args.py`, proven end to end with the package hidden behind a meta-path blocker. Marker deselection does **not** help: `-m 'not live'` deselects after collection has already imported the module |
 | A `tmux kill-server` or a signal to pid 1 escapes a test | low | **high** | Deterministic — `tests/conftest.py`'s net and `tests/test_signal_guard.py`; and no task here creates a tmux session |
 | `docs/probes/` is edited to make a parser test pass | low | **high** | Deterministic — `git status --porcelain docs/probes/` in T8.1's and T10.2's required checks |
 
