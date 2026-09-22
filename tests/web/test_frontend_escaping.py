@@ -37,12 +37,17 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # entry and gains one rather than growing. The rename is T6.1's by plan, and it
 # is what makes T6.4's manifest arithmetic come out: one path removed, one path
 # added.
+# T7.2 appends `settings.js` (U13's Settings page), by name and for the third
+# time for the same reason: widened deliberately, never loosened into a glob.
+# It is the page that most needs the rule after `chat.js` — it renders the audit
+# tail, whose `tool` field is whatever a caller named.
 EXPECTED_MODULES = (
     "app.js",
     "chat.js",
     "escape.js",
     "flock.js",
     "session.js",
+    "settings.js",
     "sse.js",
     "terminal.js",
 )

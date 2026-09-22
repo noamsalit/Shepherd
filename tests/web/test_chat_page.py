@@ -1,12 +1,30 @@
-"""T24 — §12's page 1, asserted on the bytes the server actually serves.
+"""T24, re-based by T7.1 — the Shepherd page, on the bytes the server serves.
+
+**The page is called Shepherd and the module is still `chat.js`.** That is not
+an oversight: `chat.js` is the one static file created after the step-0b
+baseline and claimed by T24's rebase, so renaming it would make `moved_paths`
+report it un-moved while `regenerated_paths` still declares it — an equality
+with no repair available. A module filename is not a user-facing label.
+
+**What T7.1 took off this page**, both of them asserted below rather than merely
+done: D65's autonomy control (it is a Settings control and nothing else) and
+U6's audit tail (Settings → Data, four-field whitelist intact). Their route
+assertions moved to `test_settings_page.py` with them; a copy left here would
+keep passing on a page that no longer has either.
 
 **Seam, stated because it bounds every claim below.** There is no browser, no
 node and no npm on this host (G-M3-6, K10), so nothing here proves the page
 *renders*. Every assertion is about bytes on disk or bytes on a socket: the
 shipped static files parsed and never executed, plus real HTTP requests through
-`invoke()` against a live loopback server. That the conversation appears, that a
-card's two buttons resolve it and that the toggle moves is on T24's **manual**
-checklist, exactly as M3's clause 11 says of the terminal.
+`invoke()` against a live loopback server. That the conversation appears and
+that a card's two buttons resolve it is on the manual checklist, exactly as M3's
+clause 11 says of the terminal.
+
+**The markup this page consumes lives in `fixtures/shell_harness.html`.**
+`index.html` is rewritten by Phase 5 in a worktree of its own, so the shell
+contract is asserted against the committed harness and the integration pass
+carries it into the shipped shell. Where the two disagree the shipped page wins
+— and the wiring test below is what makes the disagreement visible.
 
 The four lessons M3's T19 review paid for are the acceptance conditions here:
 
@@ -43,13 +61,10 @@ from shepherd.toolsurface.approvals import (
     ApprovalStore,
     build_authorizer,
 )
-from shepherd.toolsurface.audit import encode_audit_record
 from shepherd.toolsurface.policy import AutonomyLevel
 from shepherd.toolsurface.stream import StreamDelivery
 from shepherd.toolsurface.tools_master import project_approval, project_turn
 from shepherd.toolsurface.types import (
-    ActorKind,
-    AuditRecord,
     Audience,
     BlastClass,
     CallerContext,
@@ -72,24 +87,6 @@ def field_reads(text: str, identifier: str) -> set[str]:
     return set(re.findall(rf"\b{identifier}\.(\w+)", body))
 
 
-def _audit_record() -> AuditRecord:
-    """One decided call, as `invoke()` builds it. Only its **key list** is used."""
-    return AuditRecord(
-        at="2026-09-16T10:00:30Z",
-        correlation_id="c-1",
-        actor_kind=ActorKind.HUMAN,
-        actor_id="web",
-        tool="kill_session",
-        blast_class=BlastClass.LOCAL_DESTRUCTIVE,
-        args={},
-        autonomy_level=2,
-        decision="allow",
-        approved_by="user",
-        approval_id="ap-1",
-        result="ok",
-        failure=None,
-        duration_ms=3,
-    )
 from web.test_frontend_escaping import unsafe_sinks
 from web.test_session_page import (
     FIXTURES,
@@ -125,10 +122,10 @@ def test_the_chat_page_posts_a_turn_through_invoke(
     assert body["data"]["turn_id"] == TURN_ID
 
 
-def test_the_two_other_mutations_go_through_invoke(
+def test_the_card_is_decided_through_invoke(
     client: Client, master_doubles: MasterDoubles
 ) -> None:
-    """The card's buttons and D8's toggle, over the socket a browser has.
+    """The card's two buttons, over the socket a browser has.
 
     **Arrival before absence, and the arrival is mutated**: the card is asserted
     `pending()` *before* it is decided and `()` after, so a `decide_approval`
@@ -162,12 +159,8 @@ def test_the_two_other_mutations_go_through_invoke(
     }
     assert master_doubles.approvals.pending() == ()
 
-    # D8's toggle: the level is readable before it is written, and the write
-    # reports what it moved from — both through `invoke()`.
-    assert client.request("/api/autonomy").json()["data"] == {"level": 2}
-    moved = client.post("/api/autonomy", {"level": 3})
-    assert moved.json()["data"] == {"level": 3, "previous": 2}
-    assert client.request("/api/autonomy").json()["data"] == {"level": 3}
+    # D8's toggle is **not** asserted here: T7.1 moved it to Settings, and its
+    # route assertions moved with it to `test_settings_page.py`.
 
 
 def test_a_refused_turn_is_a_result_and_not_an_error(
@@ -400,38 +393,34 @@ def test_the_page_reads_only_fields_the_projection_emits() -> None:
     )
     assert frozenset(project_turn(TurnRefused(reason="busy"))) == TURN_RESULT_KEYS
 
-    audit_keys = frozenset(encode_audit_record(_audit_record()))
-    assert "args" in audit_keys, "arrival: the record really carries the arguments"
-
     chat = code_only(source("chat.js"))
 
     # `data.*` is read off a stream envelope's payload **and** off a tool
     # result, so the permitted set is the union of every producer the page can
     # be handed. A field no producer emits is what M3 shipped.
+    #
+    # **The autonomy and audit results are deliberately absent from the union.**
+    # T7.1 moved both off this page, so leaving their keys permitted would let a
+    # re-added `data.level` or `data.records` pass the scan that exists to catch
+    # exactly that.
     emitted_data = (
         APPROVAL_CREATED_DATA_KEYS
         | APPROVAL_DECIDED_DATA_KEYS
         | MASTER_EVENT_DATA_KEYS
         | TURN_RESULT_KEYS
         | DECISION_RESULT_KEYS
-        | AUTONOMY_RESULT_KEYS
-        | AUDIT_RESULT_KEYS
         | APPROVAL_LIST_KEYS
     )
+    assert not (AUTONOMY_RESULT_KEYS | AUDIT_RESULT_KEYS) & emitted_data, (
+        "arrival: a Settings key is still reachable through this union"
+    )
     read_data = field_reads(chat, "data")
-    assert {"text", "approval_id", "level", "records"} <= read_data, sorted(read_data)
+    assert {"text", "approval_id"} <= read_data, sorted(read_data)
     assert read_data <= emitted_data, sorted(read_data - emitted_data)
 
     read_approval = field_reads(chat, "approval")
     assert read_approval != set(), "arrival: the card reads no field at all"
     assert read_approval <= APPROVAL_ROW_KEYS, sorted(read_approval - APPROVAL_ROW_KEYS)
-
-    read_record = field_reads(chat, "record")
-    assert "tool" in read_record, sorted(read_record)
-    assert read_record <= audit_keys, sorted(read_record - audit_keys)
-    # D25 is a *literal tail*, and §13's whitelist is at the sink: the record's
-    # arguments are redacted for a log and a page is a wider audience than a log.
-    assert "args" not in read_record
 
     read_envelope = field_reads(chat, "envelope")
     assert {"type", "data"} <= read_envelope, sorted(read_envelope)
@@ -475,7 +464,7 @@ def test_an_approval_card_renders_from_a_stream_event() -> None:
     assert f'const APPROVAL_CREATED = "{APPROVAL_CREATED_KIND}";' in chat
     assert f'const APPROVAL_DECIDED = "{APPROVAL_DECIDED_KIND}";' in chat
 
-    handler = block_after(chat, "export function onChatEvent")
+    handler = block_after(chat, "export function onShepherdEvent")
     assert handler is not None, "the stream handler is not a function on this page"
     assert "APPROVAL_CREATED" in handler, handler
     assert "approvalCard(" in handler, "the card is not built where the event arrives"
@@ -492,8 +481,10 @@ def test_an_approval_card_renders_from_a_stream_event() -> None:
     # …and the list is read exactly once, on the first paint. A second read site
     # is how a stream-fed rail quietly becomes a polled one.
     assert chat.count("read(APPROVALS)") == 1
-    first_paint = block_after(chat, "export async function loadChat")
+    first_paint = block_after(chat, "export async function loadShepherd")
     assert first_paint is not None and "read(APPROVALS)" in first_paint
+
+
 
 
 # ----- the renders, enumerated ------------------------------------------------
@@ -505,127 +496,267 @@ def test_an_approval_card_renders_from_a_stream_event() -> None:
 #: The set is compared **whole**, so a render added, deleted or altered fails
 #: here — which is what four surviving deletions in `session.js` cost to learn.
 #:
-#: **What this rule does not cover, said out loud:** `appendChild` is not an
-#: assignment, so the three append sites (a chat line, a card, an audit line)
-#: are covered by `test_an_approval_card_renders_from_a_stream_event` and by the
-#: field scan instead. A rule that claimed to be total and was not would be
-#: worse than one whose edge is stated.
-REQUIRED_CHAT_ASSIGNMENTS = {
+#: **What this rule does not cover, said out loud:** `appendChild` and
+#: `replaceChildren` are not assignments, so the append sites (a turn, a tool
+#: step, a card, the decided stub that replaces a card's buttons) are covered by
+#: `test_an_approval_card_renders_from_a_stream_event`, by the class-contract
+#: test and by the field scan instead. A rule that claimed to be total and was
+#: not would be worse than one whose edge is stated.
+REQUIRED_SHEPHERD_ASSIGNMENTS = {
     # Principle 5's em dash, in the one place every slot on this page goes
     # through: a missing datum renders identically everywhere.
     "element.textContent = textOf(value)",
-    # `line(className, text)`: the conversation, the audit tail and nothing else
-    # build their nodes here, with the text as text.
+    # `el(tag, className, text)` builds every node on this page, with the text
+    # as text. There is no second constructor and no HTML sink (§13).
     "element.className = className",
     "element.textContent = text",
-    # §12's card: the tool, the redacted summary, the deadline, two buttons.
-    # `args` are deliberately not among them (§13 at the sink).
-    'card.className = "approval-card"',
+    # A `<button>` with no `type` inside a form submits it. Both of the card's
+    # choices and the send control go through one helper so none can be missed.
+    'element.type = "button"',
+    # U6's card, inline at the blocked turn, carrying its own id — never its
+    # position in a list that may have moved underneath.
     "card.dataset.approvalId = approval.approval_id",
-    'tool.className = "approval-tool"',
-    "tool.textContent = textOf(approval.tool)",
-    'summary.className = "approval-summary"',
-    "summary.textContent = textOf(approval.summary)",
-    'deadline.className = "approval-deadline"',
-    "deadline.textContent = textOf(approval.deadline_at)",
-    "button.className = `approval-choice approval-${choice}`",
-    "button.type = \"button\"",
-    "button.textContent = choice",
-    # The two words `decide_approval` accepts, carried by the card's own id —
-    # never by its position in a list that may have moved underneath.
+    # The two words `decide_approval` accepts, and nothing else.
     "button.onclick = () => decide(approval.approval_id, choice)",
-    # D8's toggle offers the level you are not on, and offers nothing at all
-    # until one has been read: a guessed level beside a button is a lie a click
-    # would act on.
-    "next.textContent = state.level === null ? UNKNOWN : String(otherLevel(state.level))",
-    "next.disabled = state.level === null",
-    "state.level = data.level",
     # The composer clears on send, so a second click cannot repost the first
     # message into a turn that is already running.
     'input.value = ""',
-    # The rail's state: a card arrives, a card leaves, and the first paint sets
-    # both it and the level.
+    # U6's *growing* composer. `auto` first, because a textarea's `scrollHeight`
+    # never shrinks while an explicit height is still set — measuring without
+    # the reset grows monotonically and never comes back down. The cap is the
+    # stylesheet's own `max-height: 9rem`; past it the textarea scrolls.
+    'input.style.height = "auto"',
+    "input.style.height = `${Math.min(input.scrollHeight, COMPOSER_MAX)}px`",
+    # Three controls, three wirings. An unwired one is exactly the defect
+    # `#session-rename` shipped as for a whole task.
+    "input.oninput = () => grow(input)",
+    "input.onkeydown = (event) => onComposerKey(event)",
+    "send.onclick = () => submit()",
+    # The conversation's state: a card arrives, a card leaves, and the first
+    # paint seeds the list from the one read.
     "state.approvals = [...state.approvals, raised]",
     "state.approvals = without(state.approvals, data.approval_id)",
     "state.approvals = approvals.approvals",
-    "state.level = autonomy.level",
-    # `hidden` in static markup inverts the failure direction, so the reveal and
-    # the hide are both enumerated: a deleted `view.hidden = false` is a page
-    # that silently never appears, and every text assertion still passes.
-    "view.hidden = false",
-    "view.hidden = true",
-    # The two controls §12's page 1 has. Bound to a name first so the rule can
-    # see them: `slot("chat-send").onclick = …` is not an assignment this
-    # enumeration can read, and an unwired button is exactly the defect
-    # `#session-rename` shipped as for a whole task.
-    "sendButton.onclick = () => send()",
-    "toggle.onclick = () => toggleAutonomy()",
+    # A turn that arrives below the fold is a turn nobody reads. This is caused
+    # by an append, never by a schedule — see the no-polling test.
+    "scroll.scrollTop = scroll.scrollHeight",
 }
 
 
-def test_render_chat_performs_every_assignment_the_spec_requires() -> None:
+def test_render_shepherd_performs_every_assignment_the_spec_requires() -> None:
     performed = assignments(source("chat.js"))
     assert performed != [], "arrival: the enumeration read no assignment at all"
     assert len(performed) == len(set(performed)), "a duplicated render"
-    assert set(performed) == REQUIRED_CHAT_ASSIGNMENTS, {
-        "missing": sorted(REQUIRED_CHAT_ASSIGNMENTS - set(performed)),
-        "unexpected": sorted(set(performed) - REQUIRED_CHAT_ASSIGNMENTS),
+    assert set(performed) == REQUIRED_SHEPHERD_ASSIGNMENTS, {
+        "missing": sorted(REQUIRED_SHEPHERD_ASSIGNMENTS - set(performed)),
+        "unexpected": sorted(set(performed) - REQUIRED_SHEPHERD_ASSIGNMENTS),
     }
 
 
-def test_every_id_in_the_chat_view_is_wired_by_the_script() -> None:
+# ----- D65 and U6: what this page no longer has -------------------------------
+
+
+def test_the_autonomy_control_has_left_this_page() -> None:
+    """D65: the autonomy toggle is a Settings control and nothing else.
+
+    Asserted on three surfaces, because each can be satisfied while another is
+    not: the module names neither the route nor the level, the page root in the
+    harness ships no control for it, and the Settings module — which is where it
+    went — does name the route. The last is the arrival: a test that only
+    asserted absence would pass just as well if the control had been **deleted**
+    rather than moved, which is a different and worse outcome.
+    """
+    chat = code_only(source("chat.js"))
+    for banned in ("/api/autonomy", "AUTONOMY", "autonomy", "LEVELS", "otherLevel"):
+        assert banned not in chat, banned
+
+    root = shepherd_root()
+    assert "autonomy" not in root.lower(), root
+
+    settings = code_only(source("settings.js"))
+    assert '"/api/autonomy"' in settings, "the control was deleted, not moved"
+
+
+def test_the_audit_tail_has_left_this_page() -> None:
+    """U6: the tail is in Settings → Data, and the same moved/deleted arrival."""
+    chat = code_only(source("chat.js"))
+    for banned in ("/api/audit", "AUDIT", "auditLine", "loadAudit", "approved_by"):
+        assert banned not in chat, banned
+
+    root = shepherd_root()
+    assert "audit" not in root.lower(), root
+
+    settings = code_only(source("settings.js"))
+    assert '"/api/audit"' in settings, "the tail was deleted, not moved"
+
+
+# ----- the shell contract, against the committed harness ----------------------
+
+
+HARNESS = FIXTURES / "shell_harness.html"
+
+
+def page_root(page: str) -> str:
+    """The markup of one `#page-*` root, from the committed render harness."""
+    markup = HARNESS.read_text(encoding="utf-8")
+    start = markup.index(f'id="page-{page}"')
+    open_tag = markup.rindex("<", 0, start)
+    depth = 0
+    index = open_tag
+    while True:
+        nxt = markup.find("<", index)
+        assert nxt != -1, f"page-{page} is not a closed element"
+        if markup.startswith("</", nxt):
+            depth -= 1
+            end = markup.index(">", nxt) + 1
+            if depth == 0:
+                return markup[open_tag:end]
+            index = end
+            continue
+        end = markup.index(">", nxt)
+        if markup[end - 1] != "/" and not markup.startswith("<!--", nxt):
+            depth += 1
+        index = end + 1
+
+
+#: `id="…"`, and **not** `data-approval-id="…"`. Written as a lookbehind rather
+#: than as an exclusion list because the card really does carry its own id in a
+#: data attribute, and a scan that read it as an element id would demand that
+#: `chat.js` wire a slot that does not exist.
+_ID_ATTRIBUTE = re.compile(r'(?<![-\w])id="([^"]+)"')
+
+
+def page_ids(root: str) -> set[str]:
+    return set(_ID_ATTRIBUTE.findall(root))
+
+
+def shepherd_root() -> str:
+    return page_root("shepherd")
+
+
+def test_the_id_scan_does_not_read_a_data_attribute() -> None:
+    """B1: the exclusion above is only real if the shape it excludes trips it."""
+    assert page_ids('<div data-approval-id="ap-1" id="card">') == {"card"}
+    assert page_ids('<div data-approval-id="ap-1">') == set()
+
+
+def test_the_harness_extractor_reads_a_whole_root() -> None:
+    """The extractor above is the input to four tests; a broken one passes them.
+
+    It is proved against the harness's own `#page-queues`, which is three
+    elements long and whose closing tag is known — so an extractor that stopped
+    at the first `</div>` returns a prefix and fails here.
+    """
+    queues = page_root("queues")
+    assert queues.startswith('<div class="scroll" id="page-queues"'), queues
+    assert queues.endswith("</div>"), queues
+    assert "Nothing here this milestone." in queues, queues
+    assert queues.count("<div") == queues.count("</div>"), queues
+
+
+def test_every_id_the_shepherd_page_ships_is_wired_by_the_script() -> None:
     """The mirror M3 needed: an element the markup ships and nothing fills.
 
     `#session-rename` shipped as a button with no behaviour for a whole task
     because every check ran the other way round — slots ⊆ markup, which is blind
-    to markup nothing wires. There is no exclusion list here: every element
-    page 1 ships is an element page 1 fills.
+    to markup nothing wires. There is no exclusion list here: every element the
+    Shepherd page ships is an element the Shepherd page fills.
     """
-    markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
-    section = re.search(r'<section id="chat-view".*?</section>', markup, flags=re.DOTALL)
-    assert section is not None, "arrival: page 1's markup is not in index.html"
-    ids = set(re.findall(r'id="([^"]+)"', section.group(0)))
-    ids.add("chat-view")
-    assert len(ids) >= 8, sorted(ids)
+    root = shepherd_root()
+    ids = page_ids(root)
+    assert len(ids) >= 4, sorted(ids)
 
     chat = source("chat.js")
     wired = set(re.findall(r"""(?:slot|fill)\(\s*["']([^"']+)["']""", chat))
     assert ids - wired == set(), sorted(ids - wired)
-
-    # …and the nav entry §12 asks for, wired by the bootstrap that owns routing.
-    app = code_only(source("app.js"))
-    for entry in ("nav-chat", "nav-fleet", "fleet-view"):
-        assert entry in app, entry
-    assert 'id="nav-chat"' in markup and 'id="nav-fleet"' in markup
+    # …and the other way: a slot the script fills that the markup never ships is
+    # a `throw new Error("no slot …")` on the first paint.
+    assert wired - ids == set(), sorted(wired - ids)
 
 
-def test_the_chat_view_ships_hidden_and_the_fleet_ships_visible() -> None:
+def test_the_shepherd_root_renders_its_own_name_before_the_script_runs() -> None:
+    """`tools/render_check.py` asserts each page shows its own name.
+
+    With an empty thread the only thing inside `#page-shepherd` is the shell's
+    static markup, so the name has to be **in the markup** — a page whose name
+    arrives with the first stream event is a page the nav is lying about until
+    the daemon answers.
+    """
+    root = shepherd_root()
+    assert "Shepherd" in root, root
+    # The thread is where the conversation goes, and it ships empty.
+    thread = re.search(r'<div class="thread" id="shepherd-thread">\s*</div>', root)
+    assert thread is not None, root
+
+
+def test_the_shepherd_page_ships_visible_and_every_other_root_ships_hidden() -> None:
     """The direction `hidden` must fail in, asserted rather than assumed.
 
-    Found by mutation: removing `hidden` from `#chat-view`'s static markup left
-    the whole of `tests/web` green at 143 passed. `view.hidden = false` is
-    enumerated, so a *deleted reveal* is caught — but a page that was **never
-    hidden** reveals itself without the script, and every text-level assertion
-    about it still passes. That is M3's lesson 3 arriving from the other side.
-
-    The degrade is the point: with the module graph broken the browser shows the
-    fleet — the M1 surface that needs no orchestrator — and not an empty
-    conversation frame claiming a master that never answered.
+    Found by mutation on the old shell: removing `hidden` from `#chat-view` left
+    the whole of `tests/web` green at 143 passed, because every text-level
+    assertion about a page still passes when the page was never hidden. The
+    shell switches pages with `hidden` alone (`app.css`'s
+    `[hidden] { display: none !important }`), so the static attribute is the
+    degrade: with the module graph broken the browser shows the conversation
+    frame and nothing on top of it.
     """
-    markup = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
-    chat = re.search(r'<section id="chat-view"[^>]*>', markup)
-    assert chat is not None, "arrival: page 1's section is not in index.html"
-    assert " hidden" in chat.group(0), chat.group(0)
+    markup = HARNESS.read_text(encoding="utf-8")
+    roots = re.findall(r"<(?:div|section)\b[^>]*\bid=\"(page-[a-z]+)\"[^>]*>", markup)
+    assert len(roots) == 6, roots
 
-    fleet = re.search(r'<div id="fleet-view"[^>]*>', markup)
-    assert fleet is not None, "arrival: the fleet is not in a view of its own"
-    assert " hidden" not in fleet.group(0), fleet.group(0)
+    visible = [
+        name
+        for name in roots
+        if " hidden" not in re.search(rf"<[^>]*id=\"{name}\"[^>]*>", markup).group(0)
+    ]
+    assert visible == ["page-shepherd"], visible
 
-    # …and the bootstrap is what swaps them, so the two attributes are a degrade
-    # rather than a page that renders both.
-    app = code_only(source("app.js"))
-    assert 'document.getElementById("fleet-view").hidden = true' in app, app
-    assert "mountChat()" in app
+
+#: The class contract the Shepherd page takes from `app.css`. Every one of these
+#: has a rule in the stylesheet T5.2 shipped, and a render that invented a
+#: neighbouring spelling would be an unstyled node on a dark page — which reads
+#: as a rendering bug, not as a typo.
+SHEPHERD_CLASSES = (
+    "turn turn-you",
+    "bubble",
+    "turn turn-shepherd",
+    "byline",
+    "byline-mark",
+    "prose",
+    "step",
+    "step-chevron",
+    "step-tool",
+    "step-time",
+    "step-body",
+    "approval",
+    "approval-head",
+    "approval-tool",
+    "approval-meta",
+    "approval-acts",
+    "btn btn-primary",
+    "btn",
+    "decided",
+)
+
+
+def test_every_class_the_page_renders_has_a_rule_in_the_stylesheet() -> None:
+    """U6's conversation is bubbles, bylined prose, folded steps and a card.
+
+    The list is checked in **both** directions: the page really writes each
+    class, and `app.css` really defines it. Only the pair is a contract — a name
+    the page writes and the stylesheet does not know is an unstyled node, and a
+    rule the page never writes is dead CSS.
+    """
+    chat = source("chat.js")
+    stylesheet = (STATIC_ROOT / "app.css").read_text(encoding="utf-8")
+    for contract in SHEPHERD_CLASSES:
+        assert f'"{contract}"' in chat, contract
+        for name in contract.split():
+            assert f".{name}" in stylesheet, name
+
+    # The tool step is folded, which is a `<details>` and not a class.
+    assert '"details"' in chat, "the tool step is not a disclosure element"
+    assert '"summary"' in chat
 
 
 def test_the_gap_branch_uses_the_streams_own_marker() -> None:
@@ -642,10 +773,10 @@ def test_the_gap_branch_uses_the_streams_own_marker() -> None:
     """
     chat = code_only(source("chat.js"))
     assert 'import { GAP } from "./sse.js";' in chat
-    handler = block_after(chat, "export function onChatEvent")
+    handler = block_after(chat, "export function onShepherdEvent")
     assert handler is not None
     assert "envelope.type === GAP" in handler, handler
-    assert "say(" in handler, handler
+    assert "shepherdSays(" in handler, handler
 
     stream = code_only(source("sse.js"))
     assert 'export const GAP = "stream.gap";' in stream
