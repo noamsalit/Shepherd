@@ -44,6 +44,9 @@ VIEWPORTS = [("phone", 390, 844), ("desktop", 1280, 900)]
 NAV_SELECTOR = '.nav-item[data-page="{page}"]'
 DRAWER_SELECTOR = "#drawer-open"
 
+# Every page root, so the loop can assert *exclusivity* rather than presence.
+PAGE_ROOT_SELECTOR = '[id^="page-"]'
+
 # (page, what must be visible once it is open)
 #
 # Six pages, in nav order (`docs/design/ui-decisions.md`). The `must_see` string
@@ -119,22 +122,36 @@ def parse_args(argv: list[str]) -> Args:
     )
     ns = parser.parse_args(argv)
 
-    named = ns.url or ns.file
-    if named:
-        target, positional_shots = named, ns.rest[:1]
+    # `--url "$VAR"` with `VAR` unset hands argparse an empty string, and a
+    # truthiness test reads that as "no target named" — silently retargeting a
+    # server check at the prototype file. An empty value is a broken command.
+    for flag, value in (("--url", ns.url), ("--file", ns.file)):
+        if value is not None and not value.strip():
+            parser.error(f"{flag} was given an empty value")
+
+    named = ns.url if ns.url is not None else ns.file
+    if named is not None:
+        target, rest = named, list(ns.rest)
     else:
         target = ns.rest[0] if ns.rest else "shepherd-dark.html"
-        positional_shots = ns.rest[1:2]
+        rest = list(ns.rest[1:])
 
-    shots = Path(positional_shots[0]) if positional_shots else default_shots(target)
+    # Dropping what it cannot place is how a checker ends up pointed somewhere
+    # its author did not ask for, quietly.
+    if len(rest) > 1:
+        parser.error(f"unexpected extra arguments: {' '.join(rest[1:])}")
+
+    shots = Path(rest[0]) if rest else default_shots(target)
     return Args(target=target, shots=shots, fail_on_empty=ns.fail_on_empty)
 
 
 def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
     """Drive every page at every viewport. `origin` is a URL or a path."""
     url = target_url(origin)
-    shots.mkdir(parents=True, exist_ok=True)
     failures: list[str] = []
+    opened = 0
+    taken = 0
+    shots_made = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -144,6 +161,37 @@ def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
             console: list[str] = []
             page.on("console", lambda m: console.append(f"{m.type}: {m.text}"))
             page.on("pageerror", lambda e: console.append(f"pageerror: {e}"))
+
+            booms_reported = 0
+
+            def sweep(where: str) -> None:
+                """Report — and then forget — everything the page has said.
+
+                Read once, before the navigation loop, this gate covered the
+                first 700 ms of a run whose whole substance is the loop. It is
+                now read at arrival, after every page opens, and once more at
+                the end, so the failure names the page that caused it.
+
+                Forgetting is the other half: a list re-read and never drained
+                reports one error once per remaining page, which is noise
+                dressed as thoroughness. The banner count works the same way —
+                only banners not yet reported are new.
+                """
+                nonlocal booms_reported
+                errors = [c for c in console if c.startswith(("error", "pageerror"))]
+                console.clear()
+                failures.extend(f"[{name}] {where}: {e}" for e in errors)
+
+                banners = page.locator(".boom")
+                painted = banners.count()
+                if painted > booms_reported:
+                    for i in range(booms_reported, painted):
+                        text = banners.nth(i).inner_text()
+                        failures.append(f"[{name}] {where}: error banner: {text}")
+                    booms_reported = painted
+
+            def open_roots() -> int:
+                return page.locator(f"{PAGE_ROOT_SELECTOR}:visible").count()
 
             page.goto(url)
             page.wait_for_timeout(700)
@@ -155,14 +203,14 @@ def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
             if fail_on_empty and not page.locator("body").inner_text().strip():
                 failures.append(f"[{name}] arrived at an empty page")
 
-            errors = [c for c in console if c.startswith(("error", "pageerror"))]
-            if errors:
-                failures += [f"[{name}] {e}" for e in errors]
+            sweep("on arrival")
 
-            # The error surface the prototype paints on itself. If it is on the
-            # page, something threw after the handlers were wired.
-            if page.locator(".boom").count():
-                failures.append(f"[{name}] error banner: {page.locator('.boom').inner_text()}")
+            # Nothing is open yet, so more than one visible root means the
+            # routing never hid anything — U18, which is the defect this tool
+            # was written for and the one it could not see.
+            arrived_open = open_roots()
+            if arrived_open > 1:
+                failures.append(f"[{name}] on arrival: {arrived_open} page roots visible at once")
 
             for target, must_see in PAGES:
                 nav = page.locator(NAV_SELECTOR.format(page=target))
@@ -170,19 +218,42 @@ def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
                     failures.append(f"[{name}] no nav entry for {target}")
                     continue
                 if name == "phone":
-                    page.locator(DRAWER_SELECTOR).click()
+                    drawer = page.locator(DRAWER_SELECTOR)
+                    # Same shape as the nav entry three lines up. Clicking a
+                    # locator that matches nothing raises after 30s, and a
+                    # raise loses every failure already collected along with
+                    # the summary line — a missing control must be reported,
+                    # not thrown.
+                    if not drawer.count():
+                        failures.append(f"[{name}] no drawer control for {target}")
+                        continue
+                    drawer.click()
                     page.wait_for_timeout(250)
                 nav.click()
                 page.wait_for_timeout(350)
+                opened += 1
+
+                sweep(f"after opening {target}")
 
                 view = page.locator(f"#page-{target}")
                 if not view.is_visible():
                     failures.append(f"[{name}] {target} did not open")
                     continue
+                # Presence is not exclusivity: asserting only that the clicked
+                # root is visible passes a page on which all six are.
+                now_open = open_roots()
+                if now_open != 1:
+                    failures.append(f"[{name}] {target}: {now_open} page roots visible at once")
                 if must_see not in view.inner_text():
                     failures.append(f"[{name}] {target} is missing {must_see!r}")
 
+                if not shots_made:
+                    # Lazily, so a run that never reached a page leaves no
+                    # empty directory behind claiming it did.
+                    shots.mkdir(parents=True, exist_ok=True)
+                    shots_made = True
                 page.screenshot(path=shots / f"{name}-{target}.png", full_page=False)
+                taken += 1
 
             # Nothing may scroll sideways at any width.
             overflow = page.evaluate(
@@ -191,13 +262,21 @@ def check(origin: str, shots: Path, fail_on_empty: bool = False) -> int:
             if overflow > 1:
                 failures.append(f"[{name}] page scrolls sideways by {overflow}px")
 
+            sweep("before the page closed")
             page.close()
         browser.close()
+
+    # A floor on how much was checked. `0 failures` is byte-identical whether
+    # twelve assertions ran or none, which is this repo's own "a counter
+    # reading 0 because its path never ran" in its reporting form.
+    if not opened:
+        failures.append("no pages were checked")
 
     for f in failures:
         print("FAIL", f)
     print(f"\n{url}")
-    print(f"{len(failures)} failures · screenshots in {shots}")
+    print(f"{opened} pages checked · {taken} screenshots · {len(failures)} failures")
+    print(f"screenshots in {shots}")
     return 1 if failures else 0
 
 
