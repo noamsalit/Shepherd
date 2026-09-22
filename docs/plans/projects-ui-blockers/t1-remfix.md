@@ -239,7 +239,7 @@ control.
 
 ---
 
-## T1-remfix.9 · an unexplained transient, recorded rather than smoothed over
+## T1-remfix.9 · a transient, and its cause: another builder was live in this checkout
 
 One full-suite run in this session reported
 `tests/boundaries/test_one_definition_site.py::test_every_source_reading_rule_has_one_definition_site`
@@ -250,5 +250,24 @@ every `.py` under `tests/`, so a file being rewritten underneath it is visible
 to it; the runs that *followed* were confirmed contaminated that way (a
 background suite racing this session's own edits) and were discarded. The run
 recorded as this remediation's evidence was taken with nothing else running.
-The transient is written down because M4's T19 had one too and the rule there
-was that an unexplained transient is a finding, not a re-run.
+**Cause, found after the entry was first written as unexplained.** `git log`
+shows `3b0743e T8.1 remfix: the choice list was anchored on the cursor, and
+truncated` committed at **06:11:01** — 570 changed lines in
+`tests/runner/test_pane_decision.py` — by another builder working in the same
+checkout, inside the window of the failing run. The check `ast.parse`s every
+`.py` under `tests/`, and a file caught mid-write raises `SyntaxError` inside
+the test body, which pytest reports as a FAILED test rather than an
+environment error. That is the mechanism, and it is not this remediation's
+code.
+
+The finding that outlives it: **this check is not safe to run against a
+checkout somebody else is writing to**, and the failure it produces names an
+innocent file. It is written down because M4's T19 had a transient too and the
+rule there was that an unexplained one is a finding, not a re-run — and because
+the next person to see this failure should look at `git log --date=iso` before
+looking at the rule.
+
+The evidence run recorded for this remediation (`2002 passed, 2 skipped, 75
+deselected`, exit 0, at `502ddf1`) was taken with no other suite running; the
+concurrent-edit risk from *another agent* cannot be excluded by anything this
+builder controls, which is itself part of the finding.
