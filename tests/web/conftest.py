@@ -11,6 +11,7 @@ import http.client
 import json
 import threading
 from collections.abc import Iterator, Mapping
+from typing import NoReturn
 from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -39,8 +40,17 @@ NOW = "2026-09-16T10:00:30Z"
 LIVE_FIELDS = "1|0||✳ shp-probe-title-1|160|45|4041880"
 
 
-def _no_fork(argv: list[str], *, timeout_ms: int) -> object:
-    """`can_fork` is `False` in these fixtures, so nothing may reach this."""
+def _no_fork(argv: list[str], *, timeout_ms: int) -> NoReturn:
+    """`can_fork` is `False` in these fixtures, so nothing may reach this.
+
+    `NoReturn` rather than `object`: this function has no return path, and the
+    annotation that says so is also the only one that satisfies `ForkRunner`,
+    whose `__call__` promises a `CommandResult`. It went unnoticed until T10.1
+    put the first `@pytest.mark.live` test in this directory, which is what
+    drags this module into `tests/e2e/test_live_lane_typechecks.py` — the gate
+    for exactly this: a module the default run never executes carrying a type
+    error nobody sees, because a deselected test is not a failing test.
+    """
     raise AssertionError("no web test forks a process")
 
 
