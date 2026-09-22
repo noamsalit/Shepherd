@@ -501,7 +501,7 @@ def stopped_session(store: Store) -> str:
     """One master-owned session that stopped `unfinished` — D31's wake set is
     `origin = orchestrator` plus `outcome IN (unfinished, error)`, and the query
     is `store.wake_candidates`'s. Nothing is re-stated here."""
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="shepherd", description=None)
     store.create_owned_session(
         session_id=WAKE_SESSION_ID,
         engine_session_id="eng-wake-1",
@@ -626,7 +626,7 @@ def seed_fleet(store: Store, size: int) -> None:
     """The same 200-session fleet `scratchpad/m4-t23/measure_fleet_bytes.py`
     builds, so the literals above and the bytes below are about one fixture."""
     spaces = [
-        store.upsert_workspace(f"project-{index}", f"/root/projects/project-{index}")
+        store.create_project(name=f"project-{index}", description=None)
         for index in range(8)
     ]
     states = (

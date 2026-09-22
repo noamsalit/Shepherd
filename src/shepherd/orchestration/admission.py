@@ -110,41 +110,41 @@ def _canonical(path: str) -> Path | None:
 
 
 def _registered_roots(store: Store, workspace_id: str) -> list[Path] | SpawnRefused:
-    """§13's allowlist: the workspace's **registered repo paths**, plus its root.
+    """§13's allowlist: the project's **registered repo paths**, and nothing else.
 
-    D22 says what the population is — *"`add_repo` is `local_destructive`
-    because §13 validates every spawn against the registered allowlist — adding
-    a repo **widens that allowlist**"* — and the schema says what it is not:
-    `workspace.root_path` is *"only where `discover_repos` starts looking; repos
-    may live anywhere (D22)"*. Reading that one column refused a spawn into any
-    repo not nested under it, which is the normal case, and refused everything
-    for a workspace whose root is `NULL` (blocker T11-1).
+    D22: *"`add_repo` is `local_destructive` because §13 validates every spawn
+    against the registered allowlist — adding a repo **widens that
+    allowlist**"*. After D57 that is the whole population. The workspace root
+    was the other half until migration 004 dropped the column: it was where a
+    scanner started, never a statement about where repos are, and reading it
+    refused a spawn into any repo not nested under it (blocker T11-1).
 
-    The workspace root stays a permitted root where it is not `NULL`: it is
-    registered too, and dropping it would narrow the allowlist in the other
-    direction. Every repo is included — nothing in `store/` ever clears
-    `repo.active`, and `tests/store/test_verbs.py` holds that as a tripwire so
-    the filter arrives with the verb that makes it reachable.
+    Existence is asked of `get_workspace` rather than inferred from an empty
+    list: "there is no such project" and "this project registered nothing" are
+    different facts and are fixed differently. Every repo is included —
+    nothing in `store/` ever clears `repo.active` (tripwire in `test_verbs`).
     """
-    registered = [
-        workspace.root_path
-        for workspace in store.list_workspaces()
-        if workspace.id == workspace_id and workspace.root_path
-    ]
-    registered += [repo.root_path for repo in store.list_repos(workspace_id)]
+    if store.get_workspace(workspace_id) is None:
+        return SpawnRefused(
+            f"there is no project {workspace_id!r}, so it has no allowlist to evaluate a "
+            f"spawn against — a missing project and an empty one are different facts and "
+            f"are fixed differently",
+            None,
+        )
+    registered = [repo.root_path for repo in store.list_repos(workspace_id)]
     roots: list[Path] = []
     for stored in registered:
         resolved = _canonical(stored)
         if resolved is None:
             # Named, never dropped. A root this rule cannot evaluate makes the
             # allowlist unevaluable, and silently omitting it would narrow §13's
-            # allowlist and then report "no registered root" — false of the
+            # allowlist and then report "no registered repo" — false of the
             # database, and the same silent-shrink failure this module closed in
             # the other direction (T11-1).
             return SpawnRefused(
-                f"workspace {workspace_id!r} has a registered root that does not canonicalize, "
-                f"so its allowlist cannot be evaluated at all: {stored!r} — fix that row before "
-                f"anything can be admitted here",
+                f"project {workspace_id!r} has a registered repo path that does not "
+                f"canonicalize, so its allowlist cannot be evaluated at all: {stored!r} — fix "
+                f"that row before anything can be admitted here",
                 None,
             )
         roots.append(resolved)
@@ -169,15 +169,15 @@ def _canonical_cwd(store: Store, workspace_id: str, cwd: str) -> tuple[Path, Pat
         return roots
     if not roots:
         return SpawnRefused(
-            f"workspace {workspace_id!r} has no registered root and no registered repo, so "
-            f"no directory is inside its allowlist: {cwd!r}",
+            f"project {workspace_id!r} has no registered repo, so no directory is inside "
+            f"its allowlist: {cwd!r}",
             None,
         )
     candidate = _canonical(cwd)
     if candidate is None:
         return SpawnRefused(
             f"{cwd!r} does not canonicalize to any directory, so it cannot be placed inside "
-            f"workspace {workspace_id!r}'s allowlist: a cwd carrying a NUL byte or a path this "
+            f"project {workspace_id!r}'s allowlist: a cwd carrying a NUL byte or a path this "
             f"process may not walk is refused, never guessed at",
             None,
         )
@@ -188,7 +188,7 @@ def _canonical_cwd(store: Store, workspace_id: str, cwd: str) -> tuple[Path, Pat
         return candidate, max(matched, key=lambda root: len(root.parts))
     return SpawnRefused(
         f"{cwd!r} canonicalizes to {str(candidate)!r}, outside every registered root of "
-        f"workspace {workspace_id!r} ({sorted(str(root) for root in roots)}): §13 permits no "
+        f"project {workspace_id!r} ({sorted(str(root) for root in roots)}): §13 permits no "
         f"path traversal into an unregistered directory",
         None,
     )

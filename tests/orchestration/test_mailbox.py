@@ -141,7 +141,7 @@ def owned_row(
     ownership an owned-session row can have; the attached case is passed to the
     decision as a value rather than forged into a row the store would refuse.
     """
-    workspace = store.upsert_workspace("shepherd", str(REPO_ROOT)).id
+    workspace = store.create_project(name="shepherd", description=None).id
     store.create_owned_session(
         session_id=session_id,
         engine_session_id=f"engine-{session_id}",

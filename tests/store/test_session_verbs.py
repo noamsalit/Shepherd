@@ -40,8 +40,8 @@ def db_path(tmp_path: Path) -> Path:
     opened = connect(path)
     try:
         opened.execute(
-            "INSERT INTO workspace (id, name, root_path, created_at)"
-            " VALUES ('ws-1', 'shepherd', '/root/Shepherd', '2026-09-17T10:00:00Z')"
+            "INSERT INTO workspace (id, name, created_at)"
+            " VALUES ('ws-1', 'shepherd', '2026-09-17T10:00:00Z')"
         )
         opened.commit()
     finally:

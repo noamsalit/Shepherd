@@ -451,7 +451,7 @@ def test_subagent_pairing_survives_a_controld_restart(tmp_path: Path) -> None:
 
     db_path = tmp_path / "state" / "shepherd.db"
     store = open_store(db_path)
-    workspace = store.upsert_workspace("w", None)
+    workspace = store.create_project(name="w", description=None)
     session = store.register_session(
         engine_session_id="engine-1",
         workspace_id=workspace.id,

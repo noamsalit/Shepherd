@@ -16,6 +16,7 @@ from signals.conftest import GitWorld, git
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.signals.binding import bind_cwd_to_repo
 from shepherd.store.db import Store, open_store
+from shepherd.store.models import UNASSIGNED_PROJECT_ID
 
 
 @pytest.fixture()
@@ -40,7 +41,10 @@ def test_bind_plain_repo(store: Store, git_world: GitWorld) -> None:
     assert repo.id == binding.repo_id
     assert repo.root_path == str(git_world.main)
     assert repo.name == "main"
-    assert repo.workspace_id == binding.workspace_id
+    # A discovered repo is registered to no project (D59/F10), so the binding's
+    # project is the reserved one and the repo row carries no project at all.
+    assert binding.workspace_id == UNASSIGNED_PROJECT_ID
+    assert store.projects_for_repo(repo.id) == []
     # `origin` here is a local path, returned verbatim by `get-url`.
     assert repo.vcs_remote == str(git_world.root / "origin-src")
 
@@ -51,7 +55,9 @@ def test_bind_subdirectory(store: Store, git_world: GitWorld) -> None:
 
     assert from_subdir.repo_id == first.repo_id
     assert from_subdir.anomaly is None
-    assert len(store.list_workspaces()) == 1
+    # N1: a fresh database already holds the seeded `unassigned` project, and
+    # binding creates none — so the count is the seed, and only the seed.
+    assert [w.id for w in store.list_workspaces()] == [UNASSIGNED_PROJECT_ID]
 
 
 def test_bind_worktree_to_main_repo(git_world: GitWorld, store: Store) -> None:
@@ -152,3 +158,136 @@ def test_bind_repo_with_no_commits_still_binds(store: Store, git_world: GitWorld
 
     assert binding.repo_id is not None
     assert binding.git_common_dir == str(empty / ".git")
+
+
+# ----- T1.7: binding after the join table (D59, D60) ------------------------
+
+
+def test_a_non_repo_cwd_binds_to_unassigned_and_counts_the_anomaly(
+    store: Store, git_world: GitWorld
+) -> None:
+    """D59 — the branch that used to mint a project from `Path(cwd).name`.
+
+    A directory that is not a repo is not a project. Minting one gave every
+    stray `cd` a row on the Projects page and a name nobody chose, and the
+    anomaly counter already said the interesting part.
+    """
+    plain = git_world.root / "not-a-repo"
+    plain.mkdir()
+
+    binding = bind_cwd_to_repo(store, str(plain))
+
+    assert binding.workspace_id == UNASSIGNED_PROJECT_ID
+    assert binding.repo_id is None
+    assert binding.anomaly is not None and binding.anomaly.kind is AnomalyKind.GIT_NOT_A_REPO
+    # The negative control: nothing was created. One project exists and it is
+    # the seeded one.
+    assert [w.id for w in store.list_workspaces()] == [UNASSIGNED_PROJECT_ID]
+
+
+def test_the_new_session_lands_in_that_project(store: Store, git_world: GitWorld) -> None:
+    """The steady state: a repo registered to exactly one project binds there.
+
+    The repo row is discovered first (unattached), then registered through
+    `add_repo` the way the UI will — and the *next* discovered session in the
+    same directory resolves the project through `project_repo`.
+    """
+    first = bind_cwd_to_repo(store, str(git_world.main))
+    assert first.workspace_id == UNASSIGNED_PROJECT_ID, "a discovered repo joins no project"
+    assert first.repo_id is not None
+
+    project = store.create_project(name="the-one", description=None)
+    store.add_repo(
+        workspace_id=project.id,
+        root_path=str(git_world.main),
+        name="main",
+        git_common_dir=str(git_world.main / ".git"),
+        vcs_remote=None,
+    )
+
+    again = bind_cwd_to_repo(store, str(git_world.subdir))
+    assert again.repo_id == first.repo_id, "the same directory is the same repo row (D48)"
+    assert again.workspace_id == project.id
+
+
+def test_a_repo_in_two_projects_binds_a_discovered_session_to_unassigned(
+    store: Store, git_world: GitWorld
+) -> None:
+    """E4/D60 — a discovered session cannot be asked which project it meant.
+
+    The negative control is the first assertion: with **one** project the same
+    repo binds to it, so the fallback below is ambiguity and not a verb that
+    never resolves anything.
+    """
+    discovered = bind_cwd_to_repo(store, str(git_world.main))
+    assert discovered.repo_id is not None
+    work = store.create_project(name="work", description=None)
+    personal = store.create_project(name="personal", description=None)
+    for project in (work, personal):
+        store.add_repo(
+            workspace_id=project.id,
+            root_path=str(git_world.main),
+            name="main",
+            git_common_dir=str(git_world.main / ".git"),
+            vcs_remote=None,
+        )
+    assert sorted(store.projects_for_repo(discovered.repo_id)) == sorted(
+        [work.id, personal.id]
+    )
+
+    ambiguous = bind_cwd_to_repo(store, str(git_world.main))
+    assert ambiguous.repo_id == discovered.repo_id
+    assert ambiguous.workspace_id == UNASSIGNED_PROJECT_ID
+
+
+def test_an_orphaned_repo_binds_to_unassigned_and_the_repo_row_survives(
+    store: Store, git_world: GitWorld
+) -> None:
+    """E5 — a repo in no project. The repo row is **kept** (D48's identity
+    under `ux_repo_path`), so history does not lose its `repo_id`.
+    """
+    project = store.create_project(name="work", description=None)
+    added = store.add_repo(
+        workspace_id=project.id,
+        root_path=str(git_world.main),
+        name="main",
+        git_common_dir=str(git_world.main / ".git"),
+        vcs_remote=None,
+    )
+    assert store.remove_repo(workspace_id=project.id, repo_id=added.id) is True
+
+    binding = bind_cwd_to_repo(store, str(git_world.main))
+
+    assert binding.repo_id == added.id
+    assert binding.workspace_id == UNASSIGNED_PROJECT_ID
+    assert store.find_repo_by_common_dir(str(git_world.main / ".git")) is not None
+
+
+def test_bind_cwd_to_repo_never_raises_over_the_cwd_matrix(
+    store: Store, git_world: GitWorld, tmp_path: Path
+) -> None:
+    """P4 — the contract in the docstring, over the shapes that could break it.
+
+    `RepoBinding.workspace_id` is non-optional and the verb never raises, so
+    every row below has to come back with a real project id. A branch that let
+    an `OSError` through would fail here rather than in `controld`, which is
+    where it would otherwise surface — one lane, at 2 s intervals, taking the
+    daemon with it.
+    """
+    missing = tmp_path / "gone"
+    empty_name = str(tmp_path) + "/"
+    matrix = (
+        str(git_world.main),
+        str(git_world.subdir),
+        str(git_world.worktree),
+        str(git_world.bare),
+        str(missing),
+        empty_name,
+        "",
+        "/",
+        str(tmp_path / "with space"),
+    )
+    for cwd in matrix:
+        binding = bind_cwd_to_repo(store, cwd)
+        assert binding.workspace_id, cwd
+        assert isinstance(binding.workspace_id, str), cwd

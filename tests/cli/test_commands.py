@@ -38,7 +38,7 @@ def seed(
     needs_you_reason: str | None = None,
     last_event_at: str = NOW,
 ) -> Session:
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="shepherd", description=None)
     session = store.register_session(
         engine_session_id=engine_session_id,
         workspace_id=workspace.id,
@@ -440,8 +440,8 @@ def test_doctor_reports_the_schema_version_when_a_tool_projects_it(
     database = next(
         line for line in out.getvalue().splitlines() if line.startswith("database:")
     )
-    assert "schema version 3" in database
-    assert "expects 3" in database
+    assert "schema version 4" in database
+    assert "expects 4" in database
     assert "unknown" not in database
 
 
@@ -699,7 +699,7 @@ def test_doctor_in_a_standalone_process_still_reports_real_facts(
     engine = next(line for line in lines if line.startswith("engine:"))
     # No database file has been written there yet — said as a fact, not a blank.
     assert "no database file" in database
-    assert "expects schema version 3" in database
+    assert "expects schema version 4" in database
     # The engine version is discovered from the host, not from a constant.
     assert "schemas pinned 2.1.270" in engine
     assert "no registered tool" not in engine

@@ -135,7 +135,15 @@ def store(tmp_path: Path) -> Iterator[Store]:
 def workspace_id(store: Store, tmp_path: Path) -> str:
     root = tmp_path / "work"
     root.mkdir()
-    return store.upsert_workspace("shepherd", str(root)).id
+    project = store.create_project(name="shepherd", description=None)
+    store.add_repo(
+        workspace_id=project.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
+    return project.id
 
 
 def owned_row(
@@ -723,7 +731,10 @@ def test_the_reconcile_runs_before_the_first_spawn_can_take_a_cap_slot(
         store=store,
         runner=runner_of(double),
         workspace_id=workspace_id,
-        cwd=str(Path(store.list_workspaces()[0].root_path or ".")),
+        # The project's one registered repo path — §13's allowlist is checked
+        # before the cap, so an unregistered cwd would refuse for the wrong
+        # reason and the cap assertion below would never be reached.
+        cwd=store.list_repos(workspace_id)[0].root_path,
         parent_session_id=None,
     )
     assert isinstance(refused, SpawnRefused)

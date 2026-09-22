@@ -472,7 +472,7 @@ def test_sources_converge_on_session_id(store: Store, tmp_path: Path) -> None:
 
     # registry first, then the hook path registering the same engine session id
     discovery_pass(store, host, lambda result: None, OBSERVED, config_dir)
-    workspace = store.upsert_workspace("hook-side", "/tmp/shp-tui-A-4tvrx00n")
+    workspace = store.create_project(name="hook-side", description=None)
     store.register_session(
         engine_session_id=SESSION_ID,
         workspace_id=workspace.id,
@@ -490,7 +490,7 @@ def test_sources_converge_on_session_id(store: Store, tmp_path: Path) -> None:
 def test_hook_first_then_registry_is_still_one_row(store: Store, tmp_path: Path) -> None:
     config_dir = tmp_path / "claude"
     write_sidecar(config_dir, capture_fields(RUNNING))
-    workspace = store.upsert_workspace("hook-side", "/tmp/shp-tui-A-4tvrx00n")
+    workspace = store.create_project(name="hook-side", description=None)
     store.register_session(
         engine_session_id=SESSION_ID,
         workspace_id=workspace.id,
@@ -626,7 +626,7 @@ def hook_registered_row(store: Store, engine_session_id: str, cwd: str) -> str:
     (`test_only_the_registry_lane_writes_pid` pins that), which is what makes
     "the registry has never seen this row" an observable fact rather than a guess.
     """
-    workspace = store.upsert_workspace("hook-side", cwd)
+    workspace = store.create_project(name="hook-side", description=None)
     return store.register_session(
         engine_session_id=engine_session_id,
         workspace_id=workspace.id,
@@ -732,7 +732,7 @@ def test_an_owned_session_is_never_reconciled_to_ephemeral(
     fields = capture_fields(RUNNING)
     assert fields["kind"] == "interactive" and fields["entrypoint"] == "cli"
     write_sidecar(config_dir, fields)
-    workspace = store.upsert_workspace("owned", "/tmp/shp-tui-A-4tvrx00n")
+    workspace = store.create_project(name="owned", description=None)
     owned = store.create_owned_session(
         session_id="01OWNEDSESSION0000000000AA",
         engine_session_id=SESSION_ID,
@@ -897,7 +897,7 @@ def test_discovery_does_not_duplicate_an_owned_session(store: Store, tmp_path: P
     # reconcile returns without writing and the identity claim below would be
     # asserted over a code path that did nothing.
     write_sidecar(config_dir, capture_fields(RUNNING))
-    workspace = store.upsert_workspace("owned", "/tmp/shp-tui-A-4tvrx00n")
+    workspace = store.create_project(name="owned", description=None)
     store.create_owned_session(
         session_id="01PREREGISTERED0000000000B",
         engine_session_id=SESSION_ID,

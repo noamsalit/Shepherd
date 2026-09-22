@@ -508,7 +508,7 @@ def world_store(tmp_path: Path) -> Iterator[tuple[Store, Path, str]]:
     (config_dir / "projects").mkdir(parents=True)
     store = open_store(tmp_path / "data" / "shepherd.db")
     try:
-        workspace_id = store.upsert_workspace("degradation", str(config_dir)).id
+        workspace_id = store.create_project(name="degradation", description=None).id
         store.create_owned_session(
             session_id=OWNED_ID,
             engine_session_id=ENGINE_ID,

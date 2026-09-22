@@ -47,7 +47,7 @@ def store(db_path: Path) -> typing.Iterator[Store]:
 
 
 def seed(store: Store, engine_session_id: str = "eng-1") -> models.Session:
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="shepherd", description=None)
     return store.register_session(
         engine_session_id=engine_session_id,
         workspace_id=workspace.id,

@@ -86,7 +86,7 @@ def composed(world: World, tmp_path: Path) -> Iterator[Composed]:
     """
     session = world.store.register_session(
         engine_session_id=ENGINE_SESSION_ID,
-        workspace_id=world.store.upsert_workspace("shepherd", str(tmp_path / "work")).id,
+        workspace_id=world.store.create_project(name="shepherd", description=None).id,
         repo_id=None,
         cwd=str(tmp_path / "work"),
         started_at="2026-09-18T09:00:00Z",

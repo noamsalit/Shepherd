@@ -150,7 +150,7 @@ def store(tmp_path: Path) -> Iterator[Store]:
 
 
 def owned_row(store: Store, *, title: str | None = None, source: TitleSource = "brief") -> str:
-    workspace = store.upsert_workspace("shepherd", str(REPO_ROOT)).id
+    workspace = store.create_project(name="shepherd", description=None).id
     store.create_owned_session(
         session_id=SESSION_ID,
         engine_session_id=f"engine-{SESSION_ID}",

@@ -126,7 +126,7 @@ def stored(reason: StopReason) -> Verdict:
 
 def seed(store: Store, session_id_hint: str, verdict: Verdict, at: str = STAMP) -> str:
     """One stopped session carrying a verdict, as the live lane leaves it."""
-    workspace = store.upsert_workspace(session_id_hint, f"/tmp/{session_id_hint}")
+    workspace = store.create_project(name=session_id_hint, description=None)
     session = store.register_session(
         engine_session_id=f"engine-{session_id_hint}",
         workspace_id=workspace.id,
@@ -197,7 +197,7 @@ def seed_unclassified(store: Store, session_id_hint: str, at: str = STAMP) -> st
     """E-M2-4's cohort: the fold moved the row to `stopped` and no verdict ever
     arrived, so `stop_reason` is NULL. Never green, never red — and the cohort
     `replay` exists to fix."""
-    workspace = store.upsert_workspace(session_id_hint, f"/tmp/{session_id_hint}")
+    workspace = store.create_project(name=session_id_hint, description=None)
     session = store.register_session(
         engine_session_id=f"engine-{session_id_hint}",
         workspace_id=workspace.id,

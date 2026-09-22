@@ -45,7 +45,7 @@ DAY = "2026-09-17"
 
 def seed_stop(store: Store, log_dir: Path, name: str, stamp: str = STAMP) -> str:
     """One stopped session whose column says `unknown` and whose record does not."""
-    workspace = store.upsert_workspace(name, f"/tmp/{name}")
+    workspace = store.create_project(name=name, description=None)
     session = store.register_session(
         engine_session_id=f"engine-{name}",
         workspace_id=workspace.id,

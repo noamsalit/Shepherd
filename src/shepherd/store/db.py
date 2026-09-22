@@ -47,7 +47,9 @@ from shepherd.store import sessions as session_verbs
 from shepherd.store import writes
 from shepherd.store.migrate import migrate
 from shepherd.store.models import (
+    DeleteOutcome,
     FleetRow,
+    OnRunning,
     Repo,
     ReplayTarget,
     Session,
@@ -203,31 +205,84 @@ class Store:
 
     # ----- workspace and repo ---------------------------------------------
 
-    def upsert_workspace(self, name: str, root_path: str | None) -> Workspace:
-        return self._write(lambda c: writes.upsert_workspace(c, name, root_path))
+    def create_project(self, *, name: str, description: str | None) -> Workspace:
+        return self._write(lambda c: writes.create_project(c, name=name, description=description))
+
+    def rename_project(self, *, workspace_id: str, name: str) -> Workspace | None:
+        return self._write(
+            lambda c: writes.rename_project(c, workspace_id=workspace_id, name=name)
+        )
+
+    def delete_project(
+        self, *, workspace_id: str, on_running: OnRunning, kill: Callable[[str], None]
+    ) -> DeleteOutcome:
+        return self._write(
+            lambda c: writes.delete_project(
+                c, workspace_id=workspace_id, on_running=on_running, kill=kill
+            )
+        )
+
+    def add_repo(
+        self,
+        *,
+        workspace_id: str,
+        root_path: str,
+        name: str,
+        git_common_dir: str,
+        vcs_remote: str | None,
+    ) -> Repo:
+        return self._write(
+            lambda c: writes.add_repo(
+                c,
+                workspace_id=workspace_id,
+                root_path=root_path,
+                name=name,
+                git_common_dir=git_common_dir,
+                vcs_remote=vcs_remote,
+            )
+        )
+
+    def remove_repo(self, *, workspace_id: str, repo_id: str) -> bool:
+        return self._write(
+            lambda c: writes.remove_repo(c, workspace_id=workspace_id, repo_id=repo_id)
+        )
 
     def upsert_repo(
         self,
-        workspace_id: str,
         root_path: str,
         name: str,
         vcs_remote: str | None,
         git_common_dir: str,
     ) -> Repo:
+        """The **unattached** repo row (F10) — what discovery writes. `add_repo`
+        is the verb that also registers it to a project."""
         return self._write(
-            lambda c: writes.upsert_repo(
-                c, workspace_id, root_path, name, vcs_remote, git_common_dir
-            )
+            lambda c: writes.upsert_repo(c, root_path, name, vcs_remote, git_common_dir)
         )
 
     def find_repo_by_common_dir(self, git_common_dir: str) -> Repo | None:
         return reads.find_repo_by_common_dir(self._read(), git_common_dir)
+
+    def get_workspace(self, workspace_id: str) -> Workspace | None:
+        return reads.get_workspace(self._read(), workspace_id)
 
     def list_repos(self, workspace_id: str) -> list[Repo]:
         return reads.list_repos(self._read(), workspace_id)
 
     def list_workspaces(self) -> list[Workspace]:
         return reads.list_workspaces(self._read())
+
+    def projects_for_repo(self, repo_id: str) -> list[str]:
+        return reads.projects_for_repo(self._read(), repo_id)
+
+    def project_last_activity(self) -> dict[str, str]:
+        return reads.project_last_activity(self._read())
+
+    def repo_counts(self) -> dict[str, int]:
+        return reads.repo_counts(self._read())
+
+    def running_sessions_for(self, workspace_id: str) -> list[Session]:
+        return reads.running_sessions_for(self._read(), workspace_id)
 
     # ----- sessions --------------------------------------------------------
 

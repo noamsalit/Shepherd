@@ -174,7 +174,7 @@ def store(tmp_path: Path) -> Iterator[Store]:
 def workspace_id(store: Store, tmp_path: Path) -> str:
     root = tmp_path / "work"
     root.mkdir()
-    return store.upsert_workspace("shepherd", str(root)).id
+    return store.create_project(name="shepherd", description=None).id
 
 
 @pytest.fixture()

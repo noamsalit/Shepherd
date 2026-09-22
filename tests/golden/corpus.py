@@ -237,7 +237,10 @@ class Binding:
 
     workspace_id: str
     repo_id: str | None
-    root_path: str
+    repo_root: str
+    """The **repo's** root, renamed from `root_path` when D57 dropped
+    `workspace.root_path`: a project has no path, a repo does, and one name for
+    two things is how the two get confused."""
 
 
 Binder = Callable[[Store, str], Binding]
@@ -252,15 +255,15 @@ def offline_binder(store: Store, cwd: str) -> Binding:
     captured cwd, which is what those sessions actually had.
     """
     root = cwd or "/"
-    workspace = store.upsert_workspace(Path(root).name or "local", root)
-    repo = store.upsert_repo(
+    workspace = store.create_project(name=Path(root).name or "local", description=None)
+    repo = store.add_repo(
         workspace_id=workspace.id,
         root_path=root,
         name=Path(root).name or "local",
-        vcs_remote=None,
         git_common_dir=f"{root}/.git",
+        vcs_remote=None,
     )
-    return Binding(workspace_id=workspace.id, repo_id=repo.id, root_path=root)
+    return Binding(workspace_id=workspace.id, repo_id=repo.id, repo_root=root)
 
 
 @dataclass
@@ -321,7 +324,7 @@ def replay(
             stats.registrations += 1
             stats.sessions[engine_id] = session.id
             if binding.repo_id is not None:
-                stats.repo_roots[binding.repo_id] = binding.root_path
+                stats.repo_roots[binding.repo_id] = binding.repo_root
             found = store.snapshot(session.id)
             assert found is not None
             prior = found
@@ -335,7 +338,7 @@ def replay(
             rebound = binder(store, result.delta.cwd)
             if rebound.repo_id is not None and rebound.repo_id != prior.repo_id:
                 store.apply_fold_delta(prior.session_id, FoldDelta(repo_id=rebound.repo_id))
-                stats.repo_roots[rebound.repo_id] = rebound.root_path
+                stats.repo_roots[rebound.repo_id] = rebound.repo_root
                 prior = replace(prior, repo_id=rebound.repo_id)
 
         if prior.active_subagents < stats.min_active_subagents:

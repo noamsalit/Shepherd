@@ -204,7 +204,7 @@ def store(tmp_path: Path) -> Iterator[Store]:
 
 def spawn(store: Store, runner: LocalRunner, throwaway: Throwaway) -> Lane:
     """One spawn through the shipped sequence, into a never-trusted directory."""
-    workspace = store.upsert_workspace("shepherd-m3-live", str(throwaway.workdir))
+    workspace = store.create_project(name="shepherd-m3-live", description=None)
     events: list[StreamEvent] = []
     argv_from = len(TMUX_CALLS)
     outcome = spawn_owned_session(

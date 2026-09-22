@@ -61,6 +61,45 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "test_future_schema_refuses_to_start_at_five, which inserts version 5.",
         "§7 rule 2, re-anchored by §3 D57's migration 004.",
     ),
+    "tests/store/test_store_delegation.py::test_upsert_workspace_updates_a_moved_root_path": (
+        "The test pinned upsert_workspace's middle arm — update a changed root_path — and "
+        "migration 004 removes both the column and the verb: workspace.root_path is dropped "
+        "and upsert_workspace is deleted by RD-1, because a project keyed by name made "
+        "/work/api and /personal/api one row and let the second silently overwrite the "
+        "first's path. The property it protected — that a moved path updates the existing "
+        "repo row rather than minting a second under ux_repo_path — moved to add_repo and "
+        "is asserted by the named successor "
+        "tests/store/test_verbs.py::test_re_adding_an_orphaned_path_rebinds_the_same_repo_row.",
+        "§3 D57.",
+    ),
+    "tests/signals/test_discovery.py::test_discovery_finds_worktree_with_dotgit_file": (
+        "discover_repos existed to walk workspace.root_path — the module's own first line says so — and migration 004 drops that column, so the module's sole documented justification is gone. It had no caller anywhere in src/ at any point, and U14 has repo paths typed into the Edit dialog rather than scanned for, so wiring it now would mean building a caller in order to justify a module. Deleted with its suite rather than left as dead code that the next reader has to re-decide; probe_repo and resolve_remote, which binding.py imports, are untouched.",
+        "§3 D57 / RD-2.",
+    ),
+    "tests/signals/test_discovery.py::test_discovery_skips_non_repo_directories": (
+        "discover_repos existed to walk workspace.root_path — the module's own first line says so — and migration 004 drops that column, so the module's sole documented justification is gone. It had no caller anywhere in src/ at any point, and U14 has repo paths typed into the Edit dialog rather than scanned for, so wiring it now would mean building a caller in order to justify a module. Deleted with its suite rather than left as dead code that the next reader has to re-decide; probe_repo and resolve_remote, which binding.py imports, are untouched.",
+        "§3 D57 / RD-2.",
+    ),
+    "tests/signals/test_discovery.py::test_discovery_of_a_directory_with_no_repos_is_empty": (
+        "discover_repos existed to walk workspace.root_path — the module's own first line says so — and migration 004 drops that column, so the module's sole documented justification is gone. It had no caller anywhere in src/ at any point, and U14 has repo paths typed into the Edit dialog rather than scanned for, so wiring it now would mean building a caller in order to justify a module. Deleted with its suite rather than left as dead code that the next reader has to re-decide; probe_repo and resolve_remote, which binding.py imports, are untouched.",
+        "§3 D57 / RD-2.",
+    ),
+    "tests/orchestration/test_admission.py::test_a_repo_registered_outside_its_workspace_root_is_admitted": (
+        "The test's whole premise is a repo registered OUTSIDE its workspace root, and migration 004 drops workspace.root_path — so after D57 every repo is outside it, because there is no it, and the assertion can no longer distinguish the defect it was written for from the ordinary case. The property it protected — a registered repo path admits a spawn into itself and into a directory under it — is asserted by the named successor in the same file, test_a_registered_repo_admits_a_spawn.",
+        "§3 D57.",
+    ),
+    "tests/orchestration/test_admission.py::test_a_workspace_with_no_root_path_still_admits_its_registered_repos": (
+        "The name states a condition that cannot be expressed any more: root_path is dropped by migration 004, so every project has no root path and the test's distinguishing setup is gone. What it proved — that the allowlist is the registered repos and the spawn is admitted on their strength alone — is asserted by the named successor in the same file, test_add_repo_widens_the_allowlist, which measures the allowlist across the one registration rather than asserting it once afterwards.",
+        "§3 D57.",
+    ),
+    "tests/orchestration/test_admission.py::test_the_workspace_root_stays_a_permitted_root_beside_the_repos": (
+        "This test asserted the opposite of what D57 decides: the workspace root was a permitted root beside the repo paths, and after migration 004 the population is the registered repo paths ALONE. It is retired rather than inverted because a test whose name promises the root stays and whose body proves it is gone is a trap for the next reader. The new rule's boundary is asserted by the named successor in the same file, test_a_project_with_no_repo_refuses_everything.",
+        "§3 D57.",
+    ),
+    "tests/orchestration/test_admission.py::test_a_workspace_with_neither_a_root_nor_a_repo_refuses_everything": (
+        "Half the condition in the name — 'neither a root' — stopped existing when migration 004 dropped workspace.root_path, so the test now describes a two-part setup of which only one part can be built. The property is unchanged and is the whole of the named successor in the same file, test_a_project_with_no_repo_refuses_everything: an empty allowlist is a refusal and never permission, asserted for an ordinary project and for the reserved one.",
+        "§3 D57.",
+    ),
 }
 
 

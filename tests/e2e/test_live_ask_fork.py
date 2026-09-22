@@ -132,7 +132,7 @@ def test_the_target_transcript_is_unchanged(throwaway: Throwaway, tmp_path: Path
     #         session` and forks nothing.
     store: Store = open_store(tmp_path / "data" / "shepherd.db")
     try:
-        workspace = store.upsert_workspace("shepherd-live-ask", str(throwaway.workdir))
+        workspace = store.create_project(name="shepherd-live-ask", description=None)
         store.create_owned_session(
             session_id=SESSION_ID,
             engine_session_id=engine_session_id,

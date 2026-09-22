@@ -46,7 +46,7 @@ CHILD = "01CHILD000000000000000000"[:26]
 @pytest.fixture()
 def store(tmp_path: Path) -> typing.Iterator[Store]:
     opened = open_store(tmp_path / "data" / "shepherd.db")
-    opened.upsert_workspace("shepherd", "/root/Shepherd")
+    opened.create_project(name="shepherd", description=None)
     try:
         yield opened
     finally:
@@ -54,7 +54,7 @@ def store(tmp_path: Path) -> typing.Iterator[Store]:
 
 
 def workspace_id(store: Store) -> str:
-    return store.list_workspaces()[0].id
+    return next(w for w in store.list_workspaces() if w.name == "shepherd").id
 
 
 def spawn(
@@ -248,7 +248,7 @@ def test_every_delegated_write_crosses_the_one_writer_thread(store: Store) -> No
 def test_every_delegated_verb_is_refused_once_the_store_is_closed(tmp_path: Path) -> None:
     """Proof the verb went through `_write`/`_read` and not its own connection."""
     closed = open_store(tmp_path / "data" / "shepherd.db")
-    closed.upsert_workspace("shepherd", "/root/Shepherd")
+    closed.create_project(name="shepherd", description=None)
     spawn(closed)
     closed.close()
 
@@ -282,7 +282,7 @@ def test_every_delegated_verb_is_refused_once_the_store_is_closed(tmp_path: Path
 SQL_STATEMENT_WORDS = ("INSERT", "UPDATE ", "SELECT")
 
 MOVED_WRITES = (
-    "upsert_workspace",
+    "create_project",
     "upsert_repo",
     "register_session",
     "apply_fold_delta",
@@ -362,7 +362,7 @@ def test_the_m1_and_m2_write_implementations_live_in_store_writes(store: Store) 
     assert statement_literals("db") == [], "db.py still spells SQL over a table"
 
     # …and the surface is unchanged: the same call, through the same name.
-    assert store.list_workspaces()[0].name == "shepherd"
+    assert [w.name for w in store.list_workspaces()] == ["Unassigned", "shepherd"]
     store.set_app_state("m3.probe", {"n": 1})
     assert store.get_app_state("m3.probe") == {"n": 1}
 
@@ -395,8 +395,8 @@ def test_every_moved_write_crosses_the_one_writer_thread(store: Store) -> None:
     database and quietly gives D37 a second writer. This is the guard that makes
     each delegation load-bearing rather than decorative.
     """
-    space = store.upsert_workspace("moved", "/root/Moved")
-    store.upsert_repo(space.id, "/root/Moved/repo", "repo", None, "/root/Moved/repo/.git")
+    space = store.create_project(name="moved", description=None)
+    store.upsert_repo("/root/Moved/repo", "repo", None, "/root/Moved/repo/.git")
     registered = store.register_session(
         engine_session_id="eng-moved",
         workspace_id=space.id,
@@ -431,7 +431,7 @@ def test_every_moved_write_crosses_the_one_writer_thread(store: Store) -> None:
 def test_every_moved_write_is_refused_once_the_store_is_closed(tmp_path: Path) -> None:
     """Proof each moved verb still goes through `_write`, not its own connection."""
     closed = open_store(tmp_path / "data" / "shepherd.db")
-    space = closed.upsert_workspace("shepherd", "/root/Shepherd")
+    space = closed.create_project(name="shepherd", description=None)
     registered = closed.register_session(
         engine_session_id="eng-closed",
         workspace_id=space.id,
@@ -444,8 +444,8 @@ def test_every_moved_write_is_refused_once_the_store_is_closed(tmp_path: Path) -
     closed.close()
 
     refused: list[typing.Callable[[], object]] = [
-        lambda: closed.upsert_workspace("late", None),
-        lambda: closed.upsert_repo(space.id, "/root/Late", "late", None, "/root/Late/.git"),
+        lambda: closed.create_project(name="late", description=None),
+        lambda: closed.upsert_repo("/root/Late", "late", None, "/root/Late/.git"),
         lambda: closed.register_session(
             engine_session_id="eng-late",
             workspace_id=space.id,
@@ -484,23 +484,105 @@ def test_the_reexports_are_aliases_not_copies() -> None:
     assert db._now is writes._now
 
 
-def test_upsert_workspace_updates_a_moved_root_path(store: Store) -> None:
-    """The branch T4-3's mutation run found unasserted, in code it only moved.
 
-    `upsert_workspace` has three arms — insert, update a changed `root_path`,
-    leave an unchanged or omitted one alone. Replacing the middle arm's condition
-    with `False` left every one of the 199 store and signals tests green, so the
-    arm that keeps a moved project pointing at its real directory was carried
-    from `db.py` to `writes.py` untested. Closed here rather than reported,
-    because a surviving mutation is a gap until it is shown to be dead code and
-    this one is plainly live (D48 binds repos by path).
+
+# ----- T1.6: the project verbs, delegated ------------------------------------
+
+#: Every verb D57 adds to `Store`. Named once so the two properties below —
+#: crosses the one writer thread, refused once closed — are total over the set
+#: rather than over whichever verbs someone remembered to list twice.
+PROJECT_WRITES = ("create_project", "rename_project", "delete_project", "add_repo", "remove_repo")
+PROJECT_READS = (
+    "get_workspace",
+    "projects_for_repo",
+    "project_last_activity",
+    "repo_counts",
+    "running_sessions_for",
+)
+
+
+@pytest.fixture()
+def project_store(tmp_path: Path) -> typing.Iterator[Store]:
+    opened = open_store(tmp_path / "projects" / "shepherd.db")
+    try:
+        yield opened
+    finally:
+        opened.close()
+
+
+def test_every_project_verb_is_on_the_store_surface(project_store: Store) -> None:
+    missing = [
+        name
+        for name in (*PROJECT_WRITES, *PROJECT_READS, "upsert_repo")
+        if not hasattr(project_store, name)
+    ]
+    assert missing == []
+    # RD-1: the verb D57 removes is gone from the surface, not merely unused.
+    assert not hasattr(project_store, "upsert_workspace")
+
+
+def test_every_project_write_crosses_the_one_writer_thread(project_store: Store) -> None:
+    """ADR-7/D37 for the five lifecycle verbs. A verb wired to `self._read()`
+    answers correctly on a read-write database and quietly gives D37 a second
+    writer, so the idents are the assertion and the return value is not.
     """
-    first = store.upsert_workspace("moved", "/root/Before")
-    assert first.root_path == "/root/Before"
+    project = project_store.create_project(name="api", description=None)
+    project_store.rename_project(workspace_id=project.id, name="payments-api")
+    added = project_store.add_repo(
+        workspace_id=project.id,
+        root_path="/srv/api",
+        name="api",
+        git_common_dir="/srv/api/.git",
+        vcs_remote=None,
+    )
+    project_store.upsert_repo(
+        root_path="/srv/loose", name="loose", vcs_remote=None, git_common_dir="/srv/loose/.git"
+    )
+    assert project_store.repo_counts() == {project.id: 1}
+    assert project_store.projects_for_repo(added.id) == [project.id]
+    assert project_store.remove_repo(workspace_id=project.id, repo_id=added.id) is True
+    assert project_store.delete_project(
+        workspace_id=project.id, on_running=models.OnRunning.REFUSE, kill=lambda _: None
+    ).deleted is True
+    assert project_store.get_workspace(project.id) is None
 
-    moved = store.upsert_workspace("moved", "/root/After")
-    assert moved.id == first.id, "an upsert moves the row, it does not make a second one"
-    assert moved.root_path == "/root/After"
+    idents = project_store.writer_thread_idents()
+    assert len(idents) == 1, f"ADR-7 says one writer thread, saw {len(idents)}"
+    assert threading.get_ident() not in idents, "a project write ran on the calling thread"
 
-    omitted = store.upsert_workspace("moved", None)
-    assert omitted.root_path == "/root/After", "None means untouched, never cleared"
+
+def test_every_project_verb_is_refused_once_the_store_is_closed(tmp_path: Path) -> None:
+    """Proof each one went through `_write`/`_read` rather than opening a
+    connection of its own — the only way this property can be false.
+    """
+    closed = open_store(tmp_path / "projects" / "shepherd.db")
+    project = closed.create_project(name="api", description=None)
+    closed.close()
+
+    refused: list[typing.Callable[[], object]] = [
+        lambda: closed.create_project(name="late", description=None),
+        lambda: closed.rename_project(workspace_id=project.id, name="late"),
+        lambda: closed.delete_project(
+            workspace_id=project.id, on_running=models.OnRunning.REFUSE, kill=lambda _: None
+        ),
+        lambda: closed.add_repo(
+            workspace_id=project.id,
+            root_path="/srv/late",
+            name="late",
+            git_common_dir="/srv/late/.git",
+            vcs_remote=None,
+        ),
+        lambda: closed.remove_repo(workspace_id=project.id, repo_id="r-1"),
+        lambda: closed.upsert_repo(
+            root_path="/srv/late", name="late", vcs_remote=None, git_common_dir="/srv/late/.git"
+        ),
+        lambda: closed.get_workspace(project.id),
+        lambda: closed.projects_for_repo("r-1"),
+        lambda: closed.project_last_activity(),
+        lambda: closed.repo_counts(),
+        lambda: closed.running_sessions_for(project.id),
+    ]
+    assert len(refused) == len(PROJECT_WRITES) + len(PROJECT_READS) + 1
+    for verb in refused:
+        with pytest.raises(RuntimeError):
+            verb()

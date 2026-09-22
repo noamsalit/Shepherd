@@ -181,7 +181,7 @@ class WallClock:
 @pytest.fixture()
 def store(tmp_path: Path) -> Iterator[Store]:
     opened = open_store(tmp_path / "data" / "shepherd.db")
-    opened.upsert_workspace("shepherd", "/root/Shepherd")
+    opened.create_project(name="shepherd", description=None)
     try:
         yield opened
     finally:
@@ -192,7 +192,7 @@ def spawn(store: Store, session_id: str, title: str) -> None:
     store.create_owned_session(
         session_id=session_id,
         engine_session_id=f"eng-{session_id}",
-        workspace_id=store.list_workspaces()[0].id,
+        workspace_id=next(w for w in store.list_workspaces() if w.name == "shepherd").id,
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-17T09:00:00.000Z",

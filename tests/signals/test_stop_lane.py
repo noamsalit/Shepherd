@@ -70,7 +70,7 @@ def stop_log(directory: Path) -> StopLog:
 
 def registered(store: Store) -> str:
     """A real session row, registered the way the hook lane registers one."""
-    workspace = store.upsert_workspace("Shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="Shepherd", description=None)
     session = store.register_session(
         engine_session_id=ENGINE_SESSION_ID,
         workspace_id=workspace.id,

@@ -95,11 +95,24 @@ def payload(name: str, args: dict[str, object]) -> dict[str, object]:
     return result.data
 
 
+def the_project(store: Store, name: str = "shepherd") -> str:
+    """The project of that name, created once.
+
+    `create_project` is no longer keyed by name (E1: `/work/api` and
+    `/personal/api` are two projects), so a helper that called it per session
+    used to return one row and now returns one per call. The fixture wants one
+    project, so it says so.
+    """
+    for workspace in store.list_workspaces():
+        if workspace.name == name:
+            return workspace.id
+    return store.create_project(name=name, description=None).id
+
+
 def seed(store: Store, engine_session_id: str) -> Session:
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
     return store.register_session(
         engine_session_id=engine_session_id,
-        workspace_id=workspace.id,
+        workspace_id=the_project(store),
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-16T10:00:00Z",

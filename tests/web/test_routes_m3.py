@@ -50,7 +50,7 @@ def owned(store: Store, runner: ScriptedRunner) -> str:
     from shepherd.core.runner import RunnerHandle
     from shepherd.testkit.scripted_runner import RUNNER_NAME, SCRIPTED_SOCKET
 
-    workspace = store.upsert_workspace("owned", None)
+    workspace = store.create_project(name="owned", description=None)
     store.create_owned_session(
         session_id=OWNED_ID,
         engine_session_id="11111111-2222-3333-4444-555555555555",
@@ -146,7 +146,15 @@ def test_a_post_reaches_the_capability_through_invoke(
     """The first mutation `web/` has ever had, end to end."""
     root = tmp_path / "work"
     (root / "repo").mkdir(parents=True)
-    workspace = store.upsert_workspace("spawnable", str(root))
+    workspace = store.create_project(name="spawnable", description=None)
+    # §13's allowlist after D57 is the project's registered repo paths alone.
+    store.add_repo(
+        workspace_id=workspace.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
 
     response = client.post(
         "/api/sessions", {"workspace_id": workspace.id, "cwd": str(root / "repo")}

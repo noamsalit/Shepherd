@@ -43,7 +43,7 @@ HANDLE = RunnerHandle(runner="tmux", socket="shepherd-runner", session_name="she
 @pytest.fixture()
 def store(tmp_path: Path) -> typing.Iterator[Store]:
     opened = open_store(tmp_path / "data" / "shepherd.db")
-    opened.upsert_workspace("shepherd", "/root/Shepherd")
+    opened.create_project(name="shepherd", description=None)
     try:
         yield opened
     finally:
@@ -52,7 +52,7 @@ def store(tmp_path: Path) -> typing.Iterator[Store]:
 
 def attempt(store: Store, session_id: str, *, engine: str | None = None) -> str:
     """One owned, master-spawned session row, created by the shipped verb."""
-    workspace = store.list_workspaces()[0]
+    workspace = next(w for w in store.list_workspaces() if w.name == "shepherd")
     store.create_owned_session(
         session_id=session_id,
         engine_session_id=engine if engine is not None else f"eng-{session_id}",
@@ -197,7 +197,7 @@ def test_the_link_crosses_the_one_writer_thread_and_dies_with_the_store(
     monkeypatch.setattr(writes, "link_retry", recording)
 
     opened = open_store(tmp_path / "data" / "shepherd.db")
-    opened.upsert_workspace("shepherd", "/root/Shepherd")
+    opened.create_project(name="shepherd", description=None)
     attempt(opened, ROOT)
     attempt(opened, SECOND)
     opened.link_retry(session_id=SECOND, retry_of=ROOT)

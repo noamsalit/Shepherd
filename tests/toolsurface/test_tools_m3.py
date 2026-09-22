@@ -95,7 +95,17 @@ def root(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def workspace_id(store: Store, root: Path) -> str:
-    return store.upsert_workspace("shepherd", str(root)).id
+    """A project with `root` registered as a repo: §13's allowlist after D57 is
+    the project's registered repo paths alone."""
+    project = store.create_project(name="shepherd", description=None)
+    store.add_repo(
+        workspace_id=project.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
+    return project.id
 
 
 class World:
@@ -285,7 +295,7 @@ def owned_row(store: Store, world: World, *, ownership_is_owned: bool = True) ->
     store.create_owned_session(
         session_id=OWNED_ID,
         engine_session_id=ENGINE_ID,
-        workspace_id=store.upsert_workspace("owned", None).id,
+        workspace_id=store.create_project(name="owned", description=None).id,
         repo_id=None,
         cwd="/tmp",
         started_at=NOW,

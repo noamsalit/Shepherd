@@ -204,7 +204,7 @@ def test_typing_rename_makes_the_engine_write_custom_title(
 
     handle = runner.start(spec)
     try:
-        workspace = store.upsert_workspace("shepherd-live", str(throwaway.workdir)).id
+        workspace = store.create_project(name="shepherd-live", description=None).id
         store.create_owned_session(
             session_id=SESSION_ID,
             engine_session_id=engine_session_id,

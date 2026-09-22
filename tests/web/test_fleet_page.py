@@ -20,7 +20,7 @@ from shepherd.core.stops import CONFIDENT_ENOUGH, ActionSource, NextActionKind, 
 from shepherd.signals.ordering import LIVENESS_WINDOW_S, fleet_sort_key
 from shepherd.signals.stop_rules import DEFAULT_ACTIONS, default_actions
 from shepherd.store.db import Store
-from shepherd.store.models import FleetRow
+from shepherd.store.models import UNASSIGNED_PROJECT_ID, FleetRow
 from shepherd.web import routes
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "src" / "shepherd" / "web" / "static"
@@ -101,7 +101,17 @@ def test_empty_fleet_payload_renders_an_empty_state(client: Client) -> None:
 
     projects = client.request("/api/projects").json()["data"]
     assert isinstance(projects, dict)
-    assert projects["projects"] == []
+    # E21/N1: a fresh install is not empty — migration 004 seeds the reserved
+    # project, and it is the one row `/api/projects` answers with here.
+    assert projects["projects"] == [
+        {
+            "project_id": UNASSIGNED_PROJECT_ID,
+            "name": "Unassigned",
+            "description": "Work that matched no declared project.",
+            "repo_count": 0,
+            "last_activity_at": None,
+        }
+    ]
 
 
 def test_the_page_has_an_empty_state_to_render_it_into() -> None:
@@ -130,7 +140,7 @@ def test_the_fleet_route_hands_the_page_an_ordered_tree(client: Client, store: S
     disagree; whatever the page does with this payload, `needs_you` is already
     at the top when it gets there.
     """
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="shepherd", description=None)
     made: dict[str, str] = {}
     for engine_id, state in (
         ("eng-stopped", SessionState.STOPPED),

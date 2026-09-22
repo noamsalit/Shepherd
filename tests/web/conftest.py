@@ -319,7 +319,7 @@ def client(server: ThreadingHTTPServer) -> Client:
 
 
 def seed(store: Store, engine_session_id: str = "eng-1") -> Session:
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
+    workspace = store.create_project(name="shepherd", description=None)
     return store.register_session(
         engine_session_id=engine_session_id,
         workspace_id=workspace.id,

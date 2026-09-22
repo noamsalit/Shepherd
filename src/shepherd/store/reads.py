@@ -88,19 +88,108 @@ def list_repos(connection: sqlite3.Connection, workspace_id: str) -> list[Repo]:
     Ordered by `root_path` so the caller's longest-prefix match is over a stable
     list; the order is asserted, because an unordered read is a test that passes
     on one SQLite build and not on the next.
+
+    The edge is `project_repo` since 004 (D57): a repo may be registered to two
+    projects, so it cannot be a column on `repo`. The signature and the ordering
+    are unchanged — only the join is.
     """
     rows = _rows(
         connection,
-        "SELECT * FROM repo WHERE workspace_id = ? ORDER BY root_path",
+        "SELECT r.* FROM repo r JOIN project_repo pr ON pr.repo_id = r.id"
+        " WHERE pr.workspace_id = ? ORDER BY r.root_path",
         (workspace_id,),
     )
     return [repo(row) for row in rows]
 
 
+def get_workspace(connection: sqlite3.Connection, workspace_id: str) -> Workspace | None:
+    rows = _rows(connection, "SELECT * FROM workspace WHERE id = ?", (workspace_id,))
+    return workspace(rows[0]) if rows else None
+
+
 def list_workspaces(connection: sqlite3.Connection) -> list[Workspace]:
+    """Every project, by name.
+
+    **Unchanged by D57's migration, deliberately.** The `ORDER BY name` below
+    predates it, and under BINARY collation the seeded `"Unassigned"` sorts
+    ahead of every lower-case name — so `list_workspaces()[0]` is the reserved
+    project and not the caller's (N2, E22). The repair belongs at the call
+    sites, which now select by name or by a captured id; a tiebreak added here
+    would read as a fix while changing nothing.
+    """
     return [
         workspace(row) for row in _rows(connection, "SELECT * FROM workspace ORDER BY name")
     ]
+
+
+def projects_for_repo(connection: sqlite3.Connection, repo_id: str) -> list[str]:
+    """Which projects hold this repo — D60's input.
+
+    A discovered session cannot be asked which project it meant, so
+    `bind_cwd_to_repo` reads the length of this list: exactly one is
+    unambiguous, and anything else is `UNASSIGNED_PROJECT_ID`.
+    """
+    rows = _rows(
+        connection,
+        "SELECT workspace_id FROM project_repo WHERE repo_id = ? ORDER BY workspace_id",
+        (repo_id,),
+    )
+    return [str(row["workspace_id"]) for row in rows]
+
+
+def project_last_activity(connection: sqlite3.Connection) -> dict[str, str]:
+    """The latest activity per project, derived from its sessions (ADR-P4).
+
+    `workspace.last_activity_at` is a column nothing writes, and keeping it
+    written would need a writer on every session update — wrong the first time
+    one was missed. A project with no session is **absent** from this mapping
+    rather than present with a null: the projection renders "never" from the
+    absence, and a null in a `dict[str, str]` would be a second spelling of it.
+    """
+    rows = _rows(
+        connection,
+        "SELECT workspace_id, MAX(COALESCE(last_event_at, started_at)) AS latest"
+        " FROM session GROUP BY workspace_id",
+    )
+    return {
+        str(row["workspace_id"]): str(row["latest"])
+        for row in rows
+        if row["latest"] is not None
+    }
+
+
+def repo_counts(connection: sqlite3.Connection) -> dict[str, int]:
+    """`{workspace_id: registered repo count}` for **every** project, in one
+    statement (M4).
+
+    The Projects page needs one number per row. Asking `list_repos` per project
+    is an N+1 whose cost is invisible until a person has thirty projects, and
+    the shape of the fix is the whole reason this verb exists rather than a
+    loop in the projection. A project with no repo is absent; the projection
+    reads a missing key as zero.
+    """
+    rows = _rows(
+        connection,
+        "SELECT workspace_id, COUNT(*) AS n FROM project_repo GROUP BY workspace_id",
+    )
+    return {str(row["workspace_id"]): int(row["n"]) for row in rows}
+
+
+def running_sessions_for(connection: sqlite3.Connection, workspace_id: str) -> list[Session]:
+    """The project's sessions that have not ended — what `delete_project`
+    refuses on, and what `kill` and `orphan` act over.
+
+    *Running* is `ended_at IS NULL` rather than `state = 'running'`: a session
+    in `starting` or `needs_you` is just as alive, and `state` is a fold's
+    opinion while `ended_at` is the fact.
+    """
+    rows = _rows(
+        connection,
+        f"SELECT {SESSION_COLUMNS} FROM session"
+        " WHERE workspace_id = ? AND ended_at IS NULL ORDER BY started_at, id",
+        (workspace_id,),
+    )
+    return [session(row) for row in rows]
 
 
 # ----- sessions --------------------------------------------------------------

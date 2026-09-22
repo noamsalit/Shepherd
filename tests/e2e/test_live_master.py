@@ -498,7 +498,7 @@ def live_run(tmp_path_factory: pytest.TempPathFactory) -> Iterator[LiveRun]:
             store.set_app_state(plane.MASTER_MODEL_KEY, LIVE_MODEL)
             store.set_app_state(compose.RUNNER_SOCKET_KEY, THROWAWAY_RUNNER_SOCKET)
 
-            workspace = store.upsert_workspace("t26-live", str(workdir))
+            workspace = store.create_project(name="t26-live", description=None)
             session_id = new_ulid()
             store.create_owned_session(
                 session_id=session_id,

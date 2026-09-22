@@ -221,7 +221,15 @@ def spawn_through_invoke(spawner: Spawner, tmp_path: Path, ctx: CallerContext) -
     name = ctx.caller_id
     root = tmp_path / f"work-{name}"
     (root / "repo").mkdir(parents=True, exist_ok=True)
-    workspace = spawner.store.upsert_workspace(name, str(root))
+    workspace = spawner.store.create_project(name=name, description=None)
+    # §13's allowlist after D57 is the project's registered repo paths alone.
+    spawner.store.add_repo(
+        workspace_id=workspace.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
 
     assert "spawn_session" in registered_tools(), "the M3 tools did not register"
     result = invoke(
@@ -395,7 +403,15 @@ def test_a_caller_cannot_choose_its_own_origin_by_argument(
 
     root = tmp_path / "work-sneaky"
     (root / "repo").mkdir(parents=True, exist_ok=True)
-    workspace = spawner.store.upsert_workspace("sneaky", str(root))
+    workspace = spawner.store.create_project(name="sneaky", description=None)
+    # §13's allowlist after D57 is the project's registered repo paths alone.
+    spawner.store.add_repo(
+        workspace_id=workspace.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
     refused = invoke(
         "spawn_session",
         {
@@ -475,7 +491,7 @@ def _a_row_that_can_wake(store: Store, tmp_path: Path, spawner: Spawner) -> str:
     lane — the only thing handed in differently from the spawn's row is
     `origin`, which is the column this whole scenario turns on.
     """
-    workspace = store.upsert_workspace("twin", str(tmp_path / "twin"))
+    workspace = store.create_project(name="twin", description=None)
     row = store.register_session(
         engine_session_id="7c27bb7f-5390-48b0-8b2e-cf4004113d09",
         workspace_id=workspace.id,

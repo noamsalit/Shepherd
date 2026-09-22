@@ -19,7 +19,7 @@ from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.engines.claude_code.hookd_command import HookEntry
 from shepherd.store.db import Store, open_store
-from shepherd.store.models import Session
+from shepherd.store.models import UNASSIGNED_PROJECT_ID, Session
 from shepherd.toolsurface.registry import invoke, registered_tools
 from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
@@ -110,11 +110,28 @@ def tools(store: Store, projects_root: Path) -> None:
     )
 
 
+def seen_hint(count: int) -> str:
+    return f"three reads answer the whole list: workspaces, repo counts, last activity — saw {count}"
+
+
+def the_project(store: Store, name: str = "shepherd") -> str:
+    """The project of that name, created once.
+
+    `create_project` is no longer keyed by name (E1: `/work/api` and
+    `/personal/api` are two projects), so a helper that called it per session
+    used to return one row and now returns one per call. The fixture wants one
+    project, so it says so.
+    """
+    for workspace in store.list_workspaces():
+        if workspace.name == name:
+            return workspace.id
+    return store.create_project(name=name, description=None).id
+
+
 def seed(store: Store, engine_session_id: str = "eng-1") -> Session:
-    workspace = store.upsert_workspace("shepherd", "/root/Shepherd")
     return store.register_session(
         engine_session_id=engine_session_id,
-        workspace_id=workspace.id,
+        workspace_id=the_project(store),
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-16T10:00:00Z",
@@ -215,18 +232,76 @@ def test_fleet_summary_applies_the_liveness_backstop(store: Store) -> None:
 
 
 def test_list_projects_returns_workspaces(store: Store) -> None:
-    """D22: a project **is** a workspace."""
-    store.upsert_workspace("shepherd", "/root/Shepherd")
-    data = payload("list_projects", {})
-    projects = data["projects"]
+    """D22: a project **is** a workspace — and after D57 it carries a
+    description and a repo count rather than a `root_path` it never had.
+
+    `last_activity_at` is derived from the project's sessions (ADR-P4), so the
+    project with a session reports one and the seeded `unassigned` — which has
+    none — reports `None` rather than a fabricated timestamp.
+    """
+    project = store.create_project(name="shepherd", description="the one")
+    store.add_repo(
+        workspace_id=project.id,
+        root_path="/root/Shepherd",
+        name="Shepherd",
+        git_common_dir="/root/Shepherd/.git",
+        vcs_remote=None,
+    )
+    store.register_session(
+        engine_session_id="eng-p1",
+        workspace_id=project.id,
+        repo_id=None,
+        cwd="/root/Shepherd",
+        started_at="2026-09-16T10:00:00Z",
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
+    )
+
+    projects = payload("list_projects", {})["projects"]
     assert isinstance(projects, list)
-    assert len(projects) == 1
-    assert projects[0] == {
-        "project_id": projects[0]["project_id"],
+    # E21/N1: a fresh install already holds the seeded reserved project.
+    assert [p["name"] for p in projects] == ["Unassigned", "shepherd"]
+    assert projects[1] == {
+        "project_id": project.id,
         "name": "shepherd",
-        "root_path": "/root/Shepherd",
+        "description": "the one",
+        "repo_count": 1,
+        "last_activity_at": "2026-09-16T10:00:00Z",
+    }
+    assert projects[0] == {
+        "project_id": UNASSIGNED_PROJECT_ID,
+        "name": "Unassigned",
+        "description": "Work that matched no declared project.",
+        "repo_count": 0,
         "last_activity_at": None,
     }
+
+
+def test_the_project_list_issues_a_bounded_number_of_statements(store: Store) -> None:
+    """M4/RD-3 — `repo_count` and `last_activity_at` are one query each for the
+    **whole list**, never one per project.
+
+    The control is the measurement across two fixture sizes: eight projects
+    cost the same statements as one. An N+1 would grow with the list, and no
+    assertion on the *payload* could tell the two apart.
+    """
+
+    def statements_for(project_count: int) -> int:
+        for index in range(project_count):
+            store.create_project(name=f"project-{index}", description=None)
+        seen: list[str] = []
+        connection = store._read()  # noqa: SLF001 - the tracing seam has no public door
+        connection.set_trace_callback(seen.append)
+        try:
+            payload("list_projects", {})
+        finally:
+            connection.set_trace_callback(None)
+        return len(seen)
+
+    one = statements_for(1)
+    eight = statements_for(8)
+    assert one == eight, f"the project list is an N+1: {one} then {eight}"
+    assert eight <= 3, seen_hint(eight)
 
 
 def test_list_sessions_filters_by_project_and_state(store: Store) -> None:

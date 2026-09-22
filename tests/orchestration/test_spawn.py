@@ -141,7 +141,17 @@ def root(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def workspace_id(store: Store, root: Path) -> str:
-    return store.upsert_workspace("shepherd", str(root)).id
+    """A project with `root` registered as a repo — §13's allowlist after D57 is
+    the registered repo paths alone, so the fixture registers one."""
+    project = store.create_project(name="shepherd", description=None)
+    store.add_repo(
+        workspace_id=project.id,
+        root_path=str(root),
+        name="work",
+        git_common_dir=str(root / ".git"),
+        vcs_remote=None,
+    )
+    return project.id
 
 
 class Clock:
@@ -653,8 +663,8 @@ def test_a_registered_root_is_accepted_including_the_root_itself(
 
 
 def test_a_workspace_with_no_registered_root_refuses(store: Store, root: Path) -> None:
-    """A workspace nobody gave a root is not an allowlist of everything."""
-    rootless = store.upsert_workspace("rootless", None).id
+    """A project nobody registered a repo to is not an allowlist of everything."""
+    rootless = store.create_project(name="rootless", description=None).id
     result, _ = spawn(
         store=store,
         runner=scripted(panes=[ready_pane()]),
@@ -662,7 +672,7 @@ def test_a_workspace_with_no_registered_root_refuses(store: Store, root: Path) -
         cwd=str(root / "repo"),
     )
     assert isinstance(result, SpawnRefused)
-    assert "no registered root" in result.reason
+    assert "no registered repo" in result.reason
 
 
 # ----- 5 · no tmux is a refusal, not a traceback ------------------------------

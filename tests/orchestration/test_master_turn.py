@@ -201,7 +201,7 @@ def recorder() -> Recorder:
 @pytest.fixture()
 def store(tmp_path: Path) -> Iterator[Store]:
     opened = open_store(tmp_path / "data" / "shepherd.db")
-    opened.upsert_workspace("shepherd", "/root/Shepherd")
+    opened.create_project(name="shepherd", description=None)
     try:
         yield opened
     finally:
@@ -214,7 +214,7 @@ def plant_a_waking_stop(store: Store) -> None:
     store.create_owned_session(
         session_id=WAKING_ID,
         engine_session_id=f"eng-{WAKING_ID}",
-        workspace_id=store.list_workspaces()[0].id,
+        workspace_id=next(w for w in store.list_workspaces() if w.name == "shepherd").id,
         repo_id=None,
         cwd="/root/Shepherd",
         started_at="2026-09-17T10:00:00.000Z",

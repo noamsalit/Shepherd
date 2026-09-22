@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 
 from shepherd.core.clock import utc_now
 from shepherd.core.fold_types import FoldDelta
@@ -32,12 +33,15 @@ from shepherd.core.stops import Verdict
 from shepherd.store.models import (
     DEFAULT_ENGINE,
     SESSION_COLUMNS,
+    UNASSIGNED_PROJECT_ID,
+    DeleteOutcome,
+    OnRunning,
     Repo,
     Session,
     StoreError,
     Workspace,
 )
-from shepherd.store.reads import ANOMALY_KEY_PREFIX
+from shepherd.store.reads import ANOMALY_KEY_PREFIX, get_workspace, running_sessions_for
 from shepherd.store.rows import repo, session, workspace
 from shepherd.store.stops import write_verdict
 
@@ -101,37 +105,149 @@ def _delta_values(delta: FoldDelta) -> dict[str, object]:
 # ----- workspace and repo ----------------------------------------------------
 
 
-def upsert_workspace(
-    connection: sqlite3.Connection, name: str, root_path: str | None
+def create_project(
+    connection: sqlite3.Connection, *, name: str, description: str | None
 ) -> Workspace:
-    row = connection.execute("SELECT * FROM workspace WHERE name = ?", (name,)).fetchone()
-    if row is None:
-        connection.execute(
-            "INSERT INTO workspace (id, name, root_path, created_at) VALUES (?, ?, ?, ?)",
-            (new_ulid(), name, root_path, _now()),
-        )
-    elif root_path is not None and row["root_path"] != root_path:
-        connection.execute(
-            "UPDATE workspace SET root_path = ? WHERE id = ?", (root_path, row["id"])
-        )
-    fresh = connection.execute("SELECT * FROM workspace WHERE name = ?", (name,)).fetchone()
+    """A project, declared. **Never keyed by name** (E1).
+
+    `upsert_workspace`, which this replaces, selected by `name` — so `/work/api`
+    and `/personal/api` were one row, and the second registration silently
+    overwrote the first's path. Identity is `workspace.id` and a name is a
+    label (D57).
+    """
+    workspace_id = new_ulid()
+    connection.execute(
+        "INSERT INTO workspace (id, name, description, created_at) VALUES (?, ?, ?, ?)",
+        (workspace_id, name, description, _now()),
+    )
+    fresh = connection.execute(
+        "SELECT * FROM workspace WHERE id = ?", (workspace_id,)
+    ).fetchone()
     return workspace(fresh)
+
+
+def _refuse_reserved(workspace_id: str, verb: str) -> None:
+    if workspace_id == UNASSIGNED_PROJECT_ID:
+        raise StoreError(
+            f"the Unassigned project cannot be {verb}: it is the reserved landing place "
+            f"for work that matched no declared project, and every discovered session "
+            f"binds to it (D59)"
+        )
+
+
+def rename_project(
+    connection: sqlite3.Connection, *, workspace_id: str, name: str
+) -> Workspace | None:
+    """A new label on an existing project.
+
+    The two negative answers are different things and are spelled differently:
+    the reserved project is **forbidden** and raises (E8), while a project that
+    does not exist is **absent** and answers `None`. Collapsing them would tell
+    a caller that deleting the row first would have worked.
+    """
+    _refuse_reserved(workspace_id, "renamed")
+    changed = connection.execute(
+        "UPDATE workspace SET name = ? WHERE id = ?", (name, workspace_id)
+    ).rowcount
+    if not changed:
+        return None
+    fresh = connection.execute(
+        "SELECT * FROM workspace WHERE id = ?", (workspace_id,)
+    ).fetchone()
+    return workspace(fresh)
+
+
+def delete_project(
+    connection: sqlite3.Connection,
+    *,
+    workspace_id: str,
+    on_running: OnRunning,
+    kill: Callable[[str], None],
+) -> DeleteOutcome:
+    """D61's state machine, and the cascade lives here rather than in the schema
+    (ADR-P1).
+
+    **Never raises.** Every answer is a `DeleteOutcome`, because the page
+    renders the three choices out of the refusal itself, and an exception is not
+    something a card can draw.
+
+    The cascade order is `mailbox_message -> session -> project_repo ->
+    workspace`, inside the one transaction `Store._write` already opened. `repo`
+    rows are **kept**: they carry D48's binding identity under `ux_repo_path`,
+    and minting them afresh would orphan every historical session's `repo_id`.
+
+    `kill` is the caller's kill path, injected. `store/` does not learn about
+    runners — a verb that imported one would put a subprocess behind a
+    `sqlite3.Connection`.
+    """
+    if workspace_id == UNASSIGNED_PROJECT_ID:
+        return DeleteOutcome(
+            deleted=False, refused="the Unassigned project cannot be deleted"
+        )
+    if get_workspace(connection, workspace_id) is None:
+        return DeleteOutcome(
+            deleted=False, refused=f"there is no project {workspace_id!r} to delete"
+        )
+
+    running = tuple(s.id for s in running_sessions_for(connection, workspace_id))
+    if running and on_running is OnRunning.REFUSE:
+        return DeleteOutcome(
+            deleted=False,
+            refused=(
+                f"{len(running)} session(s) are still running in this project; "
+                f"choose whether to stop them or move them to Unassigned"
+            ),
+            running=running,
+        )
+
+    killed: tuple[str, ...] = ()
+    orphaned: tuple[str, ...] = ()
+    if running and on_running is OnRunning.KILL:
+        for session_id in running:
+            kill(session_id)
+        killed = running
+    elif running and on_running is OnRunning.ORPHAN:
+        # Before the cascade, so the rows this moves are not the rows it
+        # deletes. P2: no session may be left pointing at a workspace that is
+        # about to go, because `fleet()` is an INNER JOIN and it would vanish.
+        connection.executemany(
+            "UPDATE session SET workspace_id = ? WHERE id = ?",
+            [(UNASSIGNED_PROJECT_ID, session_id) for session_id in running],
+        )
+        orphaned = running
+
+    connection.execute(
+        "DELETE FROM mailbox_message WHERE session_id IN"
+        " (SELECT id FROM session WHERE workspace_id = ?)",
+        (workspace_id,),
+    )
+    connection.execute("DELETE FROM session WHERE workspace_id = ?", (workspace_id,))
+    connection.execute("DELETE FROM project_repo WHERE workspace_id = ?", (workspace_id,))
+    connection.execute("DELETE FROM workspace WHERE id = ?", (workspace_id,))
+    return DeleteOutcome(deleted=True, killed=killed, orphaned=orphaned)
 
 
 def upsert_repo(
     connection: sqlite3.Connection,
-    workspace_id: str,
     root_path: str,
     name: str,
     vcs_remote: str | None,
     git_common_dir: str,
 ) -> Repo:
+    """The repo row, by path identity, attached to **no project** (F10).
+
+    This is what a discovered session's repo becomes: `ux_repo_path` is the
+    identity, so the same directory is the same row forever and D48's
+    `git_common_dir` binding survives every project it is or is not in.
+    Attaching here instead would widen `_registered_roots("unassigned")` to
+    every repo the machine has ever seen — a §13 allowlist growing by discovery.
+    """
     row = connection.execute("SELECT * FROM repo WHERE root_path = ?", (root_path,)).fetchone()
     if row is None:
         connection.execute(
-            "INSERT INTO repo (id, workspace_id, name, root_path, git_common_dir,"
-            " vcs_remote, added_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (new_ulid(), workspace_id, name, root_path, git_common_dir, vcs_remote, _now()),
+            "INSERT INTO repo (id, name, root_path, git_common_dir,"
+            " vcs_remote, added_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (new_ulid(), name, root_path, git_common_dir, vcs_remote, _now()),
         )
     else:
         connection.execute(
@@ -141,6 +257,51 @@ def upsert_repo(
         )
     fresh = connection.execute("SELECT * FROM repo WHERE root_path = ?", (root_path,)).fetchone()
     return repo(fresh)
+
+
+def add_repo(
+    connection: sqlite3.Connection,
+    *,
+    workspace_id: str,
+    root_path: str,
+    name: str,
+    git_common_dir: str,
+    vcs_remote: str | None,
+) -> Repo:
+    """Register a repo to a project — D22's *"adding a repo widens the
+    allowlist"*, which is why the tool is `local_destructive`.
+
+    No filesystem call: `root_path` arrives already canonicalized and
+    `git_common_dir` already probed (E10, the purity map). `store/` takes a
+    connection and nothing else.
+    """
+    _refuse_reserved(workspace_id, "added to")
+    if get_workspace(connection, workspace_id) is None:
+        raise StoreError(f"there is no project {workspace_id!r} to add a repo to")
+    registered = upsert_repo(
+        connection,
+        root_path=root_path,
+        name=name,
+        vcs_remote=vcs_remote,
+        git_common_dir=git_common_dir,
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO project_repo (workspace_id, repo_id, added_at)"
+        " VALUES (?, ?, ?)",
+        (workspace_id, registered.id, _now()),
+    )
+    return registered
+
+
+def remove_repo(connection: sqlite3.Connection, *, workspace_id: str, repo_id: str) -> bool:
+    """Drop the project↔repo edge. **The `repo` row is kept** — orphaned, not
+    deleted — so re-adding the same path rebinds the same row (E6).
+    """
+    removed = connection.execute(
+        "DELETE FROM project_repo WHERE workspace_id = ? AND repo_id = ?",
+        (workspace_id, repo_id),
+    ).rowcount
+    return bool(removed)
 
 
 # ----- sessions --------------------------------------------------------------

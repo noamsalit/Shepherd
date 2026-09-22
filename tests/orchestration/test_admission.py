@@ -6,16 +6,22 @@ siblings) drives the same rule through `spawn_owned_session`, and those tests
 stay exactly as they are — they are still right. What they could not see is the
 population the rule is evaluated over.
 
-**The defect this file closes.** `_canonical_cwd` read `workspace.root_path`,
-and the schema's own note on that column says *"only where `discover_repos`
-starts looking; repos may live anywhere (D22)"* (`orchestrator-platform.md`
+**The defect this file closed.** `_canonical_cwd` read `workspace.root_path`,
+and the schema's own note on that column said it was only where a scanner
+started looking — repos may live anywhere (D22, `orchestrator-platform.md`
 l.647). D22 ties the allowlist to repos in as many words: *"`add_repo` is
 `local_destructive` because §13 validates every spawn against the registered
 allowlist — adding a repo **widens that allowlist**."* So a repo registered
 outside its workspace's root — the normal case for any repo not nested under it
-— was refused a spawn, and a workspace whose `root_path` is `NULL` refused
+— was refused a spawn, and a workspace whose `root_path` was `NULL` refused
 everything. Refusing is the safe direction, which is why this was availability
 and not authority, and why it was recorded rather than hot-fixed.
+
+**And the column is now gone (§3 D57).** Migration 004 drops
+`workspace.root_path` entirely, so the population below is the project's
+registered repo paths *alone*: there is no second half left to keep. Four of
+this file's frozen tests named that half and are retired with successors in
+this module; the other eleven kept their names and had their bodies rewritten.
 
 **Longest prefix, innermost wins (D22's own words), and it is observable.**
 `Admitted` carries the root that admitted the cwd. A yes/no admission cannot
@@ -63,6 +69,7 @@ from shepherd.orchestration.admission import (
 )
 from shepherd.runner.base import PaneRef
 from shepherd.store.db import Store, open_store
+from shepherd.store.models import UNASSIGNED_PROJECT_ID
 
 
 class NoPanes:
@@ -90,12 +97,14 @@ def world(tmp_path: Path) -> Path:
 
 
 def register(store: Store, workspace_id: str, root: Path, name: str) -> None:
-    store.upsert_repo(
+    """Register a repo to a project — D22's widening verb, which is what §13's
+    allowlist is made of after D57."""
+    store.add_repo(
         workspace_id=workspace_id,
         root_path=str(root),
         name=name,
-        vcs_remote=None,
         git_common_dir=str(root / ".git"),
+        vcs_remote=None,
     )
 
 
@@ -112,62 +121,6 @@ def ask(store: Store, workspace_id: str, cwd: Path | str) -> Admitted | SpawnRef
 # ----- the case that was broken ----------------------------------------------
 
 
-def test_a_repo_registered_outside_its_workspace_root_is_admitted(
-    store: Store, world: Path
-) -> None:
-    """D22: repos may live anywhere. Goes red against the `root_path`-only rule.
-
-    The workspace root is `work/`; the repo is `elsewhere/frontend`. Nothing
-    about that is exotic — it is one `add_repo` away from the normal case, and
-    before this it was a spawn nobody could explain being refused.
-    """
-    workspace = store.upsert_workspace("shepherd", str(world / "work"))
-    register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
-
-    result = ask(store, workspace.id, world / "elsewhere" / "frontend" / "src")
-    assert isinstance(result, Admitted), result
-    assert result.cwd == (world / "elsewhere" / "frontend" / "src").resolve()
-    assert result.root == (world / "elsewhere" / "frontend").resolve()
-
-    # …and the repo root itself, not only a directory under it.
-    root_itself = ask(store, workspace.id, world / "elsewhere" / "frontend")
-    assert isinstance(root_itself, Admitted), root_itself
-
-
-def test_a_workspace_with_no_root_path_still_admits_its_registered_repos(
-    store: Store, world: Path
-) -> None:
-    """`root_path` is nullable and `discover_repos` is its only documented job.
-
-    A workspace with a `NULL` root and a registered repo used to refuse
-    everything — the allowlist read one column that the schema says is not
-    where repos are.
-    """
-    workspace = store.upsert_workspace("rootless", None)
-    register(store, workspace.id, world / "work" / "api", "api")
-
-    result = ask(store, workspace.id, world / "work" / "api" / "src")
-    assert isinstance(result, Admitted), result
-    assert result.root == (world / "work" / "api").resolve()
-
-
-def test_the_workspace_root_stays_a_permitted_root_beside_the_repos(
-    store: Store, world: Path
-) -> None:
-    """Keeping it is the point: a workspace root is registered too.
-
-    Dropping it while adding the repos would narrow the allowlist in the other
-    direction, and `test_spawn.py::test_a_registered_root_is_accepted_including
-    _the_root_itself` is the test that would have found it a task later.
-    """
-    workspace = store.upsert_workspace("shepherd", str(world / "work"))
-    register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
-
-    result = ask(store, workspace.id, world / "work" / "api" / "src")
-    assert isinstance(result, Admitted), result
-    assert result.root == (world / "work").resolve()
-
-
 # ----- longest prefix, innermost wins (D22) -----------------------------------
 
 
@@ -180,7 +133,7 @@ def test_the_innermost_registered_root_wins(store: Store, world: Path) -> None:
     that returned the first or the shortest match would still admit this cwd,
     which is exactly why the matched root is part of the answer.
     """
-    workspace = store.upsert_workspace("shepherd", str(world / "elsewhere"))
+    workspace = store.create_project(name="shepherd", description=None)
     register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
     register(store, workspace.id, world / "elsewhere" / "frontend" / "vendor" / "inner", "inner")
 
@@ -194,10 +147,10 @@ def test_the_innermost_registered_root_wins(store: Store, world: Path) -> None:
     assert isinstance(outer, Admitted), outer
     assert outer.root == (world / "elsewhere" / "frontend").resolve()
 
-    # …and outside every repo, the workspace root is still what admitted it.
+    # …and outside every repo nothing admits it: the project root that used to
+    # be the outermost permitted root is gone with the column (D57).
     plain = ask(store, workspace.id, world / "elsewhere")
-    assert isinstance(plain, Admitted), plain
-    assert plain.root == (world / "elsewhere").resolve()
+    assert isinstance(plain, SpawnRefused), plain
 
 
 # ----- what must still refuse -------------------------------------------------
@@ -212,25 +165,13 @@ def test_a_repo_registered_to_another_workspace_admits_nothing_here(
     `registered_roots()` would have made every project a permitted root of
     every other.
     """
-    mine = store.upsert_workspace("mine", str(world / "work"))
-    theirs = store.upsert_workspace("theirs", None)
+    mine = store.create_project(name="mine", description=None)
+    theirs = store.create_project(name="theirs", description=None)
     register(store, theirs.id, world / "elsewhere" / "frontend", "frontend")
 
     result = ask(store, mine.id, world / "elsewhere" / "frontend" / "src")
     assert isinstance(result, SpawnRefused), result
     assert result.cap is None, "an unregistered directory is not a cap refusal"
-
-
-def test_a_workspace_with_neither_a_root_nor_a_repo_refuses_everything(
-    store: Store, world: Path
-) -> None:
-    """The empty allowlist is empty, not universal — the M3 wording kept."""
-    workspace = store.upsert_workspace("rootless", None)
-
-    result = ask(store, workspace.id, world / "work" / "api")
-    assert isinstance(result, SpawnRefused), result
-    assert "no registered root" in result.reason
-    assert str(world / "work" / "api") in result.reason
 
 
 #: Every shape an unregistered directory arrives in, now that a **repo** is one
@@ -259,7 +200,7 @@ def test_a_directory_outside_every_registered_repo_is_refused(
     `Path.parents` comparison refuses, and it is the one an attacker — or an
     ordinary `mkdir` — reaches first.
     """
-    workspace = store.upsert_workspace("rootless", None)
+    workspace = store.create_project(name="rootless", description=None)
     register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
     (world / "elsewhere" / "frontend-scratch").mkdir()
     (world / "elsewhere" / "frontend" / "escape").symlink_to(world / "work")
@@ -285,12 +226,14 @@ def test_the_refusal_names_every_registered_root_it_was_measured_against(
     "outside every registered root" with no list is a message that sends a
     human to read the database. The roots are what the operator has to change.
     """
-    workspace = store.upsert_workspace("shepherd", str(world / "work"))
+    workspace = store.create_project(name="shepherd", description=None)
     register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
+
+    register(store, workspace.id, world / "work" / "api", "api")
 
     result = ask(store, workspace.id, world / "elsewhere" / "frontend-scratch")
     assert isinstance(result, SpawnRefused), result
-    assert str((world / "work").resolve()) in result.reason
+    assert str((world / "work" / "api").resolve()) in result.reason
     assert str((world / "elsewhere" / "frontend").resolve()) in result.reason
 
 
@@ -317,7 +260,7 @@ def test_a_cwd_that_will_not_canonicalize_is_refused_rather_than_raised(
     Arrival before absence: the same workspace admits a real directory first, so
     a refusal here cannot pass by the rule never having been reached.
     """
-    workspace = store.upsert_workspace("shepherd", str(world / "work"))
+    workspace = store.create_project(name="shepherd", description=None)
     register(store, workspace.id, world / "work" / "api", "api")
 
     # Arrival: this workspace really does admit something.
@@ -343,22 +286,22 @@ def test_a_registered_root_that_will_not_canonicalize_refuses_and_names_itself(
 ) -> None:
     """The other side of the same `resolve()`, and it is reachable too.
 
-    `upsert_repo` stores a `root_path` containing a NUL without complaint
+    `add_repo` stores a `root_path` containing a NUL without complaint
     (sqlite is happy to hold one), and `add_repo` is a registered tool. The
     allowlist is then a list this rule **cannot evaluate**, so it refuses and
     names the row to fix. Dropping the bad root instead would quietly narrow
-    §13's allowlist and then report "no registered root", which is false of the
+    §13's allowlist and then report "no registered repo", which is false of the
     database — an allowlist that shrinks silently is the failure this file was
     written to close in the other direction.
     """
-    workspace = store.upsert_workspace("rootless", None)
+    workspace = store.create_project(name="rootless", description=None)
     register(store, workspace.id, world / "work" / "api", "api")
-    store.upsert_repo(
+    store.add_repo(
         workspace_id=workspace.id,
         root_path="/tmp/a\x00b",
         name="corrupt",
-        vcs_remote=None,
         git_common_dir="/tmp/a/.git",
+        vcs_remote=None,
     )
 
     result = ask(store, workspace.id, world / "work" / "api" / "src")
@@ -381,7 +324,13 @@ def owned(
     store: Store, session_id: str, *, depth: int = 0, parent: str | None = None
 ) -> str:
     """One owned, master-spawned row through the shipped verb."""
-    workspace = store.list_workspaces()[0]
+    # By name, never by position: BINARY collation puts the seeded
+    # `"Unassigned"` first, so `[0]` is the reserved project (N2/E22). The row
+    # only needs *a* project to point at — the cap is about the lineage.
+    named = [w for w in store.list_workspaces() if w.name == "lineage"]
+    workspace = named[0] if named else store.create_project(
+        name="lineage", description=None
+    )
     store.create_owned_session(
         session_id=session_id,
         engine_session_id=f"eng-{session_id}",
@@ -425,7 +374,7 @@ def anomaly_count(store: Store, kind: AnomalyKind) -> int:
 def workspace_admitting(store: Store, world: Path) -> str:
     """A workspace whose allowlist admits `world/work/api` — so that a refusal
     below is the retry cap's and not §13's."""
-    workspace = store.upsert_workspace("shepherd", str(world / "work"))
+    workspace = store.create_project(name="shepherd", description=None)
     register(store, workspace.id, world / "work" / "api", "api")
     return workspace.id
 
@@ -636,3 +585,88 @@ def test_every_existing_admission_refusal_still_fires(store: Store, world: Path)
         assert isinstance(result, SpawnRefused), (cap, result)
         assert result.cap == cap, (cap, result)
         assert cap in result.reason or cap == CAP_RETRY, (cap, result.reason)
+
+
+# ----- T1.9: the allowlist is the repo paths alone (D57) ---------------------
+
+
+def test_a_registered_repo_admits_a_spawn(store: Store, world: Path) -> None:
+    """The successor to `test_a_repo_registered_outside_its_workspace_root_is
+    _admitted`, whose premise — a repo *outside* the workspace root — stopped
+    meaning anything when the root column was dropped. Every repo is now
+    "outside" it, because there is no it.
+    """
+    workspace = store.create_project(name="shepherd", description=None)
+    register(store, workspace.id, world / "elsewhere" / "frontend", "frontend")
+
+    result = ask(store, workspace.id, world / "elsewhere" / "frontend" / "src")
+    assert isinstance(result, Admitted), result
+    assert result.root == (world / "elsewhere" / "frontend").resolve()
+
+    root_itself = ask(store, workspace.id, world / "elsewhere" / "frontend")
+    assert isinstance(root_itself, Admitted), root_itself
+
+
+def test_add_repo_widens_the_allowlist(store: Store, world: Path) -> None:
+    """D22 in as many words: *"adding a repo widens that allowlist"* — which is
+    why the tool is `local_destructive`. Measured across the one call.
+
+    The first half is the negative control: before the `add_repo`, the very
+    same cwd is refused, so the admission below is the registration and not a
+    rule that admits everything.
+    """
+    workspace = store.create_project(name="shepherd", description=None)
+    before = ask(store, workspace.id, world / "work" / "api" / "src")
+    assert isinstance(before, SpawnRefused), before
+
+    register(store, workspace.id, world / "work" / "api", "api")
+
+    after = ask(store, workspace.id, world / "work" / "api" / "src")
+    assert isinstance(after, Admitted), after
+    assert after.root == (world / "work" / "api").resolve()
+
+
+def test_a_project_with_no_repo_refuses_everything(store: Store, world: Path) -> None:
+    """E11 — the empty allowlist is empty, not universal.
+
+    The successor to `test_a_workspace_with_neither_a_root_nor_a_repo_refuses
+    _everything`: there is no "root" half of that sentence any more, and the
+    property it protected is the whole of this one.
+    """
+    workspace = store.create_project(name="empty", description=None)
+
+    result = ask(store, workspace.id, world / "work" / "api")
+    assert isinstance(result, SpawnRefused), result
+    assert "no registered repo" in result.reason
+    assert str(world / "work" / "api") in result.reason
+    # …and the reserved project is no exception: nothing is registered to it.
+    reserved = ask(store, UNASSIGNED_PROJECT_ID, world / "work" / "api")
+    assert isinstance(reserved, SpawnRefused), reserved
+
+
+def test_every_registered_path_is_either_admitted_or_named_in_the_refusal(
+    store: Store, world: Path
+) -> None:
+    """P5 — **the allowlist never silently narrows.**
+
+    A stored root that will not canonicalize makes the allowlist unevaluable,
+    and the rule says so by name rather than dropping the row and reporting
+    "no registered repo" — which would be false of the database. Replacing the
+    refusal at `admission.py:141-143` with a `continue` reddens this.
+
+    The control is the two branches, run in one test: with **only** the good
+    repo the cwd under it is admitted, and with the bad row added the same cwd
+    is refused *and the bad path is in the message*. One branch alone would
+    leave "names it" or "refuses" unproved.
+    """
+    workspace = store.create_project(name="shepherd", description=None)
+    register(store, workspace.id, world / "work" / "api", "api")
+    good = ask(store, workspace.id, world / "work" / "api" / "src")
+    assert isinstance(good, Admitted), good
+
+    register(store, workspace.id, Path(f"{world}/work/nul\x00path"), "bad")
+
+    refused = ask(store, workspace.id, world / "work" / "api" / "src")
+    assert isinstance(refused, SpawnRefused), refused
+    assert "nul" in refused.reason, refused.reason
+    assert refused.cap is None

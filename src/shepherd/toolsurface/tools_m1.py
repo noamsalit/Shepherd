@@ -148,13 +148,23 @@ def project_fleet_row(row: FleetRow, session: Session, now: str) -> dict[str, ob
     }
 
 
-def project_workspace(workspace: Workspace) -> dict[str, object]:
-    """D22: a project **is** a workspace, so the consumer-facing key is `project_id`."""
+def project_workspace(
+    workspace: Workspace, *, repo_count: int, last_activity_at: str | None
+) -> dict[str, object]:
+    """D22: a project **is** a workspace, so the consumer-facing key is `project_id`.
+
+    `root_path` is gone with the column (D57) — a project has no path, its
+    repos do — and `repo_count` and `last_activity_at` arrive as **arguments**
+    rather than being fetched here. That is what keeps the list one query each
+    (M4/RD-3): a projection that reached for a store would be an N+1 the moment
+    it was called in a loop, which is exactly how it is called.
+    """
     return {
         "project_id": workspace.id,
         "name": workspace.name,
-        "root_path": workspace.root_path,
-        "last_activity_at": workspace.last_activity_at,
+        "description": workspace.description,
+        "repo_count": repo_count,
+        "last_activity_at": last_activity_at,
     }
 
 
@@ -361,7 +371,20 @@ def fleet_tree(store: Store, clock: Clock) -> dict[str, object]:
 
 
 def list_projects(store: Store) -> dict[str, object]:
-    return {"projects": [project_workspace(row) for row in store.list_workspaces()]}
+    """Three reads for the whole list, whatever its length: the projects, the
+    repo counts, and the derived last activity (M4)."""
+    counts = store.repo_counts()
+    activity = store.project_last_activity()
+    return {
+        "projects": [
+            project_workspace(
+                row,
+                repo_count=counts.get(row.id, 0),
+                last_activity_at=activity.get(row.id),
+            )
+            for row in store.list_workspaces()
+        ]
+    }
 
 
 def fleet_buckets(store: Store, now: str) -> dict[str, str]:

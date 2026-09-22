@@ -26,6 +26,7 @@ from pathlib import Path
 
 from shepherd.core.anomalies import Anomaly, AnomalyKind
 from shepherd.store.db import Store
+from shepherd.store.models import UNASSIGNED_PROJECT_ID
 
 GIT_TIMEOUT_S = 10.0
 
@@ -200,14 +201,21 @@ def resolve_remote(cwd: str) -> tuple[str | None, AnomalyKind | None]:
     return normalise_remote_url(url.stdout), None
 
 
-def _workspace_name(path: str) -> str:
-    name = Path(path).name
-    return name if name else "local"
-
-
 def _counted(store: Store, kind: AnomalyKind, detail: str) -> Anomaly:
     store.bump_anomaly(kind.value)
     return Anomaly(kind=kind, detail=detail, engine_session_id=None)
+
+
+def _resolve_project(store: Store, repo_id: str) -> str:
+    """D59/D60: which project a **discovered** session's repo belongs to.
+
+    Exactly one project is the only unambiguous answer. More than one is D60 —
+    a discovered session cannot be asked which it meant — and none is D59. Both
+    land on the reserved project, where a person can move them, rather than on
+    a guess a person would have to notice in order to correct.
+    """
+    projects = store.projects_for_repo(repo_id)
+    return projects[0] if len(projects) == 1 else UNASSIGNED_PROJECT_ID
 
 
 def bind_cwd_to_repo(store: Store, cwd: str) -> RepoBinding:
@@ -215,24 +223,33 @@ def bind_cwd_to_repo(store: Store, cwd: str) -> RepoBinding:
 
     An unresolvable directory is counted and reported (principle 5), and the
     session still lands in a workspace so the fleet page can show it.
+
+    **It creates no project** (D59). Before the `project_repo` join table this
+    verb called `upsert_workspace(basename(cwd), cwd)` on three of its four
+    branches, so every stray directory minted a project named after itself.
+    Work that matches no declared project now lands in the reserved one.
+
+    The repo row is still written, by `upsert_repo` and **not** `add_repo`:
+    `add_repo` attaches a repo to a project, and attaching every discovered
+    repo to the reserved one would widen `_registered_roots("unassigned")` to
+    every repo this machine has ever seen — a §13 allowlist that grows by
+    discovery (F10).
     """
     probe = probe_repo(cwd)
 
     if probe.failure is not None or probe.git_common_dir is None:
         kind = probe.failure or AnomalyKind.GIT_NOT_A_REPO
-        workspace = store.upsert_workspace(_workspace_name(cwd), cwd)
         return RepoBinding(
             repo_id=None,
-            workspace_id=workspace.id,
+            workspace_id=UNASSIGNED_PROJECT_ID,
             git_common_dir=None,
             anomaly=_counted(store, kind, probe.detail or cwd),
         )
 
     if probe.is_bare:
-        workspace = store.upsert_workspace(_workspace_name(cwd), cwd)
         return RepoBinding(
             repo_id=None,
-            workspace_id=workspace.id,
+            workspace_id=UNASSIGNED_PROJECT_ID,
             git_common_dir=probe.git_common_dir,
             anomaly=_counted(store, AnomalyKind.GIT_BARE_REPO, cwd),
         )
@@ -241,25 +258,23 @@ def bind_cwd_to_repo(store: Store, cwd: str) -> RepoBinding:
     if known is not None:
         return RepoBinding(
             repo_id=known.id,
-            workspace_id=known.workspace_id,
+            workspace_id=_resolve_project(store, known.id),
             git_common_dir=probe.git_common_dir,
             anomaly=None,
         )
 
     root = repo_root(cwd, probe.git_common_dir) or str(Path(probe.git_common_dir).parent)
     remote, remote_kind = resolve_remote(cwd)
-    workspace = store.upsert_workspace(_workspace_name(root), root)
     repo = store.upsert_repo(
-        workspace_id=workspace.id,
         root_path=root,
-        name=_workspace_name(root),
+        name=Path(root).name or "local",
         vcs_remote=remote,
         git_common_dir=probe.git_common_dir,
     )
     anomaly = None if remote_kind is None else _counted(store, remote_kind, root)
     return RepoBinding(
         repo_id=repo.id,
-        workspace_id=workspace.id,
+        workspace_id=_resolve_project(store, repo.id),
         git_common_dir=probe.git_common_dir,
         anomaly=anomaly,
     )

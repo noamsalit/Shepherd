@@ -118,7 +118,7 @@ def rows(world: World) -> list[Mapping[str, object]]:
 
 
 def a_session(store: Store, tmp_path: Path, name: str, ownership: Ownership) -> str:
-    workspace = store.upsert_workspace(name, str(tmp_path / name))
+    workspace = store.create_project(name=name, description=None)
     session = store.register_session(
         engine_session_id=f"engine-{name}",
         workspace_id=workspace.id,
