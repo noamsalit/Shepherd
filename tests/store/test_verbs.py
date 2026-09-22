@@ -1060,6 +1060,48 @@ def test_delete_refuses_by_default_and_names_the_running_sessions(
     assert reads.get_workspace(connection, project.id) is not None
 
 
+def test_the_refusing_plan_says_what_the_delete_would_take(
+    connection: sqlite3.Connection,
+) -> None:
+    """`DeletePlan.doomed` on the refusal, which is the only place it is useful.
+
+    Its own docstring says it exists *"so the dialog can say what it is about to
+    take **before** the button"* — and the refusal **is** before the button. It
+    was computed after the refusing return, so a plan that refuses carried an
+    empty tuple and a page could say "2 sessions are still running" and could
+    not say "and four hundred finished ones go with the project". The page that
+    shipped derived that count itself, out of a second read: a copy of a store
+    derivation, which is the thing that drifts.
+
+    `doomed` under a refusal is every session row in the project — what goes if
+    the caller proceeds. The orphan case is that list minus `running`, which the
+    caller has in the same record.
+    """
+    project = writes.create_project(connection, name="api", description=None)
+    plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
+    plant_session(
+        connection, "s-done", project.id, started_at="2026-01-01T00:00:00Z",
+        ended_at="2026-01-01T01:00:00Z",
+    )
+
+    plan = reads.plan_project_delete(
+        connection, workspace_id=project.id, on_running=models.OnRunning.REFUSE
+    )
+
+    assert plan.refusal is not None
+    assert plan.running == ("s-live",)
+    # `ORDER BY started_at, id`, which is the plan's own ordering: the two
+    # sessions share a start, so the ids break the tie.
+    assert plan.doomed == ("s-done", "s-live")
+    # The control: a plan that does not refuse was already saying this, and
+    # still does — the fix moved the derivation, it did not add a second one.
+    ok = reads.plan_project_delete(
+        connection, workspace_id=project.id, on_running=models.OnRunning.ORPHAN
+    )
+    assert ok.refusal is None
+    assert ok.doomed == ("s-done",)
+
+
 def test_delete_with_kill_stops_them_then_cascades(connection: sqlite3.Connection) -> None:
     """D61 — the kill happens **through the caller's kill path**, between the
     two halves. `store/` never learns about runners.

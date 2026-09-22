@@ -87,7 +87,10 @@ def on_running_schema() -> Mapping[str, object]:
 
 
 def delete_outcome(
-    outcome: DeleteOutcome, *, kill_failures: Sequence[KillFailure] = ()
+    outcome: DeleteOutcome,
+    *,
+    plan: DeletePlan | None = None,
+    kill_failures: Sequence[KillFailure] = (),
 ) -> dict[str, object]:
     """D61's record, projected whole — every field, on refusals too.
 
@@ -112,6 +115,17 @@ def delete_outcome(
             {"session_id": link.session_id, "column": link.column} for link in outcome.severed
         ],
         "destroyed": list(outcome.destroyed),
+        # The plan's three, projected on refusals as well as on outcomes —
+        # which is the whole point of them. `doomed` is what this delete would
+        # take if the caller proceeds, so a dialog can say it **before** the
+        # button instead of counting sessions itself out of a second read; the
+        # split of `running` is what lets it gray a choice that cannot work
+        # rather than discovering that by click. `plan` is `None` only for the
+        # refusal that happens before there is a plan (an `on_running` outside
+        # the enum), where the honest answer to all three is "nothing known".
+        "doomed": list(plan.doomed) if plan is not None else [],
+        "killable": list(plan.killable) if plan is not None else [],
+        "unkillable": list(plan.unkillable) if plan is not None else [],
         # Not a `store/` fact and deliberately not on `DeleteOutcome`: the
         # store never saw the raise, and a record of what the *caller's* kill
         # did belongs to the layer that called it.
@@ -202,12 +216,17 @@ def delete_project(
 
     plan = store.plan_project_delete(workspace_id=project_id, on_running=choice)
     if plan.refusal is not None:
-        return delete_outcome(plan.refusal)
+        # The **plan**, not only its refusal: `doomed` and the killable split
+        # are read before the button, and the handler used to discard the one
+        # record that carries them.
+        return delete_outcome(plan.refusal, plan=plan)
     killed, failures = (
         _kill_running(store, kill, plan.running) if choice is OnRunning.KILL else ((), ())
     )
     return delete_outcome(
-        store.commit_project_delete(plan=plan, killed=killed), kill_failures=failures
+        store.commit_project_delete(plan=plan, killed=killed),
+        plan=plan,
+        kill_failures=failures,
     )
 
 

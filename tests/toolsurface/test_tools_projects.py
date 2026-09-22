@@ -42,7 +42,7 @@ import pytest
 from chokepoint_fixture import install_test_chokepoint
 from signals.conftest import git_env
 
-from shepherd.core.runner import RunnerRefusal
+from shepherd.core.runner import RunnerHandle, RunnerRefusal
 from shepherd.core.states import Origin, Ownership
 from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict
 from shepherd.signals.binding import bind_cwd_to_repo
@@ -438,6 +438,63 @@ def test_delete_project_with_no_on_running_refuses_a_running_project(
     assert "still running" in str(answer["refused"])
     assert killer.asked == [], "REFUSE must never reach the kill path"
     assert registered.get_workspace(project_id) is not None
+
+
+def test_a_refused_delete_says_what_it_would_have_taken_and_what_it_can_stop(
+    registered: Store, killer: Killer
+) -> None:
+    """GAP 1 and GAP 2 — the two things the first consumer of this verb needed
+    and could not get, on the one record it reads before the button.
+
+    **`doomed`.** `DeletePlan.doomed` never reached anyone: the handler read the
+    plan's refusal and discarded the plan, so the dialog could say *"1 session
+    is still running"* and could not say *"and the finished ones go with the
+    project"*. The page derived that count itself, out of a second read — a copy
+    of a store derivation, and a copy is what drifts.
+
+    **`killable` / `unkillable`.** The shipped kill answers `no_pane(...)` for
+    any session with no runner handle, which is every *attached* one, so
+    `kill_sessions` on a project of discovered sessions **cannot succeed** and
+    nothing said so in advance. A dialog that grays the choice needs to know
+    before the click, so the split is on the record: `unkillable` is the
+    sessions the kill path has no handle for, and it is the reason.
+    """
+    project_id = made(registered)
+    attached = running_session(registered, project_id, "eng-attached")
+    done = ended_session(registered, project_id, "eng-done")
+
+    answer = data(call("delete_project", {"project_id": project_id}))
+
+    assert answer["deleted"] is False
+    assert answer["running"] == [attached]
+    # Everything goes if the caller proceeds — the finished session included.
+    assert sorted(str(row) for row in answer["doomed"]) == sorted([attached, done])
+    # …and none of it can be stopped, because a registered-but-attached session
+    # has no runner handle of ours.
+    assert answer["killable"] == []
+    assert answer["unkillable"] == [attached]
+    assert registered.get_workspace(project_id) is not None
+
+
+def test_a_session_with_a_pane_is_reported_killable(
+    registered: Store, killer: Killer
+) -> None:
+    """The other branch of the split above, so `unkillable` is a measurement
+    rather than a field that is always full.
+
+    Killable is exactly `handle_for`'s question — does this session have a
+    runner handle — because that is the one the shipped kill asks before it
+    answers `no_pane(...)`.
+    """
+    project_id = made(registered)
+    owned = running_session(registered, project_id, "eng-owned")
+    registered.set_runner_handle(owned, RunnerHandle(runner="tmux", socket="shepherd", session_name="shepherd_1"))
+
+    answer = data(call("delete_project", {"project_id": project_id}))
+
+    assert answer["running"] == [owned]
+    assert answer["killable"] == [owned]
+    assert answer["unkillable"] == []
 
 
 def test_delete_project_deletes_a_project_with_no_running_sessions(

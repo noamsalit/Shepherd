@@ -250,22 +250,21 @@ def plan_project_delete(
             ),
         )
 
-    running = tuple(s.id for s in running_sessions_for(connection, workspace_id))
-    if running and on_running is OnRunning.REFUSE:
-        return DeletePlan(
-            workspace_id=workspace_id,
-            on_running=on_running,
-            running=running,
-            refusal=DeleteOutcome(
-                deleted=False,
-                refused=(
-                    f"{len(running)} session(s) are still running in this project; "
-                    f"choose whether to stop them or move them to Unassigned"
-                ),
-                running=running,
-            ),
-        )
-
+    alive = running_sessions_for(connection, workspace_id)
+    running = tuple(s.id for s in alive)
+    # D61's choice is only offerable over the sessions a kill can reach: the
+    # shipped kill path asks `handle_for`, which is this column, and answers
+    # `no_pane(...)` for the rest. Split here rather than at the caller, because
+    # the rows are already read and asking per session is an N+1 (M4).
+    killable = tuple(s.id for s in alive if s.runner_handle is not None)
+    unkillable = tuple(s.id for s in alive if s.runner_handle is None)
+    # **Before the refusing return, not after it.** `doomed` exists so the
+    # dialog can say what the delete is about to take *before* the button, and
+    # the refusal is what a page has before the button. Computed after it, a
+    # refusing plan carried an empty tuple: the page could say "2 sessions are
+    # still running" and could not say that four hundred finished ones go with
+    # the project, so the page that shipped derived that count itself — a copy
+    # of this derivation, which is the thing that drifts.
     survivors = frozenset(running) if on_running is OnRunning.ORPHAN else frozenset()
     doomed = tuple(
         str(row["id"])
@@ -276,8 +275,34 @@ def plan_project_delete(
         )
         if str(row["id"]) not in survivors
     )
+    if running and on_running is OnRunning.REFUSE:
+        return DeletePlan(
+            workspace_id=workspace_id,
+            on_running=on_running,
+            running=running,
+            killable=killable,
+            unkillable=unkillable,
+            # Every row, including the running ones: under `REFUSE` nothing
+            # survives if the caller proceeds. The orphan case is this list
+            # minus `running`, which the caller holds in the same record.
+            doomed=doomed,
+            refusal=DeleteOutcome(
+                deleted=False,
+                refused=(
+                    f"{len(running)} session(s) are still running in this project; "
+                    f"choose whether to stop them or move them to Unassigned"
+                ),
+                running=running,
+            ),
+        )
+
     return DeletePlan(
-        workspace_id=workspace_id, on_running=on_running, running=running, doomed=doomed
+        workspace_id=workspace_id,
+        on_running=on_running,
+        running=running,
+        killable=killable,
+        unkillable=unkillable,
+        doomed=doomed,
     )
 
 

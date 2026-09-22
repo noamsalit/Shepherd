@@ -168,7 +168,25 @@ class DeletePlan:
     `KILL`, and what is moved out under `ORPHAN`."""
     doomed: tuple[str, ...] = ()
     """Session rows this delete would destroy, so the dialog can say what it is
-    about to take **before** the button rather than in the outcome."""
+    about to take **before** the button rather than in the outcome.
+
+    Populated on a **refusing** plan too, which is where it is actually read:
+    the refusal is what a page holds before the button, and a plan that carried
+    an empty tuple there is why the first Projects page derived the count
+    itself — a copy of this derivation, which is the thing that drifts."""
+    killable: tuple[str, ...] = ()
+    """The running sessions the caller's kill path can actually stop: the ones
+    with a `runner_handle`.
+
+    `running` alone could not say this, and it is the difference between a
+    choice and a click that cannot work. The shipped kill answers
+    `no_pane(session_id)` for any session it has no handle for — which is every
+    *attached* one — so `kill_sessions` over a project of discovered sessions
+    cannot succeed, and nothing said so in advance. The store reports the fact
+    (`runner_handle IS NOT NULL`); naming it *killable* is the one inference,
+    and it is exactly the question `handle_for` asks."""
+    unkillable: tuple[str, ...] = ()
+    """The rest of `running` — alive, and with no pane of ours to stop."""
     refusal: DeleteOutcome | None = None
 
 SESSION_COLUMNS = (
