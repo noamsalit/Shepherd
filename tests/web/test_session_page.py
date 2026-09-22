@@ -650,6 +650,15 @@ def test_the_session_pane_renders_why_and_every_action() -> None:
     assert "action-ordinal" in listing
     assert "action-source" in listing
 
+    # The word "every" in this test's own name, asserted. A mutation that sliced
+    # the list to its first element survived all four assertions above — the
+    # ordinal, the source and the class are all still rendered for the one
+    # action that is left — which is exactly the truncation the retired card
+    # test settled for and this one claims to have removed.
+    assert "actions.forEach(" in listing
+    for truncating in (".slice(", "actions[0]", ".at(0)", "actions.shift("):
+        assert truncating not in listing, truncating
+
 
 def test_the_pane_labels_unreachable_action_kinds_rather_than_dropping_them() -> None:
     """RD6, relocated with the list it governs. `not yet`, with the milestone.

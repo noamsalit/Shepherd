@@ -267,6 +267,16 @@ def test_expanded_row_lists_every_action_with_its_source() -> None:
     assert "action.source" in body
     assert "action-source" in body
 
+    # **"Every" is the load-bearing word, and a mutation proved it was not being
+    # checked.** `actions.slice(0, 1).forEach(...)` keeps the ordinal, the
+    # source and the class, so every assertion above stayed green while the pane
+    # rendered exactly the one action the retired card test settled for. The
+    # truncation is what D67's successor claims to have removed, so the shapes
+    # that truncate are named rather than described.
+    assert "actions.forEach(" in body
+    for truncating in (".slice(", "actions[0]", ".at(0)", "actions.shift("):
+        assert truncating not in body, truncating
+
 
 def test_source_footer_counts_by_source() -> None:
     """The footer's property, kept per row instead of aggregated (D67).
