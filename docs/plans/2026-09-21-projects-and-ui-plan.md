@@ -381,7 +381,11 @@ every action with its source" stays literally true.
 ### `delete_project` — the state machine
 
 `delete_project(workspace_id, on_running)` where
-`on_running ∈ {"refuse", "kill", "orphan"}`, default `"refuse"`.
+`on_running ∈ {"refuse", "kill_sessions", "orphan"}`, default `"refuse"`.
+**`kill_sessions`, not `kill`** — a bare `kill` is a tmux command-name prefix
+that `tests/boundaries/test_tmux_blast_radius.py` refuses, because tmux
+prefix-resolves it to `kill-server`. The enum is `store.models.OnRunning`;
+read it there, never from this document.
 
 | Given | `on_running` | Then |
 |---|---|---|
@@ -389,9 +393,9 @@ every action with its source" stays literally true.
 | no such project | any | **Refused**, `refused="there is no project …"`. Nothing written. |
 | exists, **no** running sessions | any | Deleted. Cascade order inside one writer transaction: `mailbox_message` → `session` → `project_repo` → `workspace`. `repo` rows are **kept**. |
 | exists, ≥1 running session | `"refuse"` | **Refused**, naming the count, `running=(session_id, …)`. Nothing written. The page renders the three choices from this. |
-| exists, ≥1 running session | `"kill"` | Each running session is killed through the existing kill path, then the cascade runs. `killed=(…)`. |
+| exists, ≥1 running session | `"kill_sessions"` | Each running session is killed through the existing kill path, then the cascade runs. `killed=(…)`. |
 | exists, ≥1 running session | `"orphan"` | Each session's `workspace_id` becomes `"unassigned"`; the rest cascades; the orphaned sessions survive and stay visible on Flock. `orphaned=(…)`. |
-| any other string | — | **Refused at the schema** (`enum` in `input_schema`), before the handler. |
+| any other string | — | **Refused by the handler**, as a renderable `DeleteOutcome` listing the real members. *Corrected 2026-09-22: this row said "refused at the schema", which is not what happens — `registry._argument_problem` validates `type` only and never `enum`. The code's behaviour is the better one: a `Failure.UNAVAILABLE` is not something a dialog can draw, and a refusal record is.* |
 
 **Invariant, and the reason `orphan` is a correctness requirement not a
 courtesy:** `Store.fleet()` is an **INNER** `JOIN workspace`
@@ -1186,7 +1190,8 @@ or that a person can drive them (Phase 9).
   `rename_project`, `remove_repo` → `LOCAL_WRITE`; `list_repos`, `get_project`
   → `LOCAL_READ`. Audiences `{MASTER, HUMAN}` for all seven.
   `delete_project`'s schema carries `on_running` as
-  `{"type": "string", "enum": ["refuse", "kill", "orphan"]}` with **no schema
+  an `enum` derived from `OnRunning` — **never the three strings typed by hand**;
+  the middle value is `"kill_sessions"` — with **no schema
   default**, and `OnRunning.REFUSE` as the handler's fallback — default-refuse
   must be unskippable by omission.
   **`add_repo` canonicalizes its path here** (E10), because `store/` does no
