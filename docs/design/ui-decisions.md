@@ -96,7 +96,19 @@ untouched.
   chip **and says why in the panel**. `shepherd uninstall` is dropped from the
   UI entirely.
 - **U16 — the card takes a wash of its bucket colour, and the legend is the
-  glyph plus coloured text.** Chosen on 2026-09-21 by building six treatments
+  glyph plus coloured text.**
+  *Clarified 2026-09-22, during the port: the prototype does **not** render it
+  that way.* Its `.legend-key` label computes to `--text-soft` for every bucket
+  and only `.legend-mark` takes the colour — measured in a browser, not read.
+  The card wash came from the `filltext` variant and ported; that variant's
+  **legend rule was never written**, so the legend had nothing to port and fell
+  through to the default. This decision stands over the prototype's pixels,
+  because it is what was asked for in the words that locked the treatment
+  (*"legend is like coloured text"*, then *"I like the filled + tet legend,
+  let's lock this"*). `app.css` sets `.legend-key { color: var(--b) }`.
+  **The general point: a prototype is evidence of a design, not the design.**
+  Where they disagree, say which wins and why, rather than letting whichever was
+  read last decide. Chosen on 2026-09-21 by building six treatments
   and comparing them on a real list (`payments-api`, four cards, four buckets),
   not by describing them. Rejected: a coloured frame with coloured text, a
   coloured left stripe, coloured text alone, a named chip, and filled cards with
