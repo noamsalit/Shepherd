@@ -50,13 +50,12 @@
     "web/routes.py": "0314b8ee836f901b81631c05b8e84ca4fe4425f3fa462d652c6df003ffbbafaa",
     "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
     "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
-    "web/static/app.css": "537fe059fc095d2867540a3ad3f76498d77ac65a3c120ef27002f11a6709cb38",
-    "web/static/app.js": "313f0e067e4b9945eff1366022d8e145ca2293eaf4d0f63e7c3f17c78fe5e6e8",
+    "web/static/app.css": "c8df5856bb18361b0025307ddeaa141496fc900bae513a159efd96ca1201b0bc",
+    "web/static/app.js": "a4100b45d95e4026ddf86c3bfce6ced931adca2a398aa934fedf78f478c8b292",
     "web/static/chat.js": "3357ca452542003120629d8ae99192d6c3c93fa162ad40d363a4ff1cf52f6e71",
     "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
     "web/static/fleet.js": "6afcc0ff47f56f667393616029e75fd89330d18e6015e180275b3f1fbd8f3f13",
-    "web/static/index.html": "ec142db28fd641c86fecda04d480346a1b6b8454ac8c76c1d826d791f70fab98",
-    "web/static/rail.js": "73b8a320f6f7f5c1898e810acc466a53fc6b2a81cd605e2d382b6dd3d61b2170",
+    "web/static/index.html": "bd50c1322b4816b148315b769f57cbfc2f444433b93cdcd52847ea3bf201828a",
     "web/static/session.js": "11f4b1abb60ac73015ca3309c77eb75559235915ffaa5e86967700aa0017eed3",
     "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
     "web/static/terminal.js": "ace78240d2b6255c50506502327062227f98349b0a98fa71244ace6a7be2c90c",
@@ -71,9 +70,9 @@
     "edits": [
       {
         "path": "web/static/rail.js",
-        "at": "2026-09-20T00:00:00Z",
-        "by": "publish scrub (owner instruction)",
-        "why": "One comment quoted a rail row using a repo name carrying a former employer's prefix. The owner's instruction was that the name must not appear anywhere in the repository. Renamed to `payments-api`, matching every other document. Comment text only: no statement, no selector and no behaviour changed."
+        "at": "2026-09-22T00:00:00Z",
+        "by": "T5.3 (projects-and-ui plan, Phase 5), superseding the 2026-09-20 publish scrub",
+        "why": "THE FILE IS DELETED. This entry is REWRITTEN rather than appended to, because post_milestone entries are per PATH and not per edit (post_milestone_paths asserts len(seen) == len(set(seen))), so a path can carry exactly one entry and it has to describe that path's WHOLE divergence from the step-0b baseline. The previous sentence said 'Comment text only: no statement, no selector and no behaviour changed' — true of the 2026-09-20 publish scrub, which renamed a repo name carrying a former employer's prefix to `payments-api` on the owner's instruction, and FALSE the moment the file stopped existing. Leaving it would have been a false record in the one gate whose entire purpose is an honest one. The deletion is D66: the Needs-You rail leaves the shell; §12's 'on every page' is reversed, and if the rail returns it lives on the Flock page alone (U2). The projection it rendered — `project_needs_you` and `fleet_summary`'s `needs_you` list — is untouched and is still asserted at tests/qa/test_s4_needs_you_rail.py; only the renderer went, with its seven frozen node ids retired by name in T5.1."
       }
     ]
   }
