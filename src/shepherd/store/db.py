@@ -42,6 +42,7 @@ from shepherd.core.runner import RunnerHandle
 from shepherd.core.states import Origin, Ownership, SessionState, TitleSource
 from shepherd.core.stops import Verdict
 from shepherd.store import mailbox as mailbox_verbs
+from shepherd.store import projects
 from shepherd.store import reads
 from shepherd.store import sessions as session_verbs
 from shepherd.store import writes
@@ -217,11 +218,20 @@ class Store:
     # ----- workspace and repo ---------------------------------------------
 
     def create_project(self, *, name: str, description: str | None) -> Workspace:
-        return self._write(lambda c: writes.create_project(c, name=name, description=description))
+        return self._write(lambda c: projects.create_project(c, name=name, description=description))
 
     def rename_project(self, *, workspace_id: str, name: str) -> Workspace | None:
         return self._write(
-            lambda c: writes.rename_project(c, workspace_id=workspace_id, name=name)
+            lambda c: projects.rename_project(c, workspace_id=workspace_id, name=name)
+        )
+
+    def set_project_description(
+        self, *, workspace_id: str, description: str | None
+    ) -> Workspace | None:
+        return self._write(
+            lambda c: projects.set_project_description(
+                c, workspace_id=workspace_id, description=description
+            )
         )
 
     def plan_project_delete(self, *, workspace_id: str, on_running: OnRunning) -> DeletePlan:
@@ -244,7 +254,7 @@ class Store:
         """The delete's commit half — the rows, and only the rows. `killed` is
         what the caller reports it actually stopped."""
         return self._write(
-            lambda c: writes.commit_project_delete(c, plan=plan, killed=killed)
+            lambda c: projects.commit_project_delete(c, plan=plan, killed=killed)
         )
 
     def add_repo(
@@ -257,7 +267,7 @@ class Store:
         vcs_remote: str | None,
     ) -> Repo:
         return self._write(
-            lambda c: writes.add_repo(
+            lambda c: projects.add_repo(
                 c,
                 workspace_id=workspace_id,
                 root_path=root_path,
@@ -269,7 +279,7 @@ class Store:
 
     def remove_repo(self, *, workspace_id: str, repo_id: str) -> bool:
         return self._write(
-            lambda c: writes.remove_repo(c, workspace_id=workspace_id, repo_id=repo_id)
+            lambda c: projects.remove_repo(c, workspace_id=workspace_id, repo_id=repo_id)
         )
 
     def upsert_repo(
@@ -282,7 +292,7 @@ class Store:
         """The **unattached** repo row (F10) — what discovery writes. `add_repo`
         is the verb that also registers it to a project."""
         return self._write(
-            lambda c: writes.upsert_repo(c, root_path, name, vcs_remote, git_common_dir)
+            lambda c: projects.upsert_repo(c, root_path, name, vcs_remote, git_common_dir)
         )
 
     def find_repo_by_common_dir(self, git_common_dir: str) -> Repo | None:

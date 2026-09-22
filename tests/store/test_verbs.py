@@ -22,7 +22,7 @@ from shepherd.core.clock import stamp
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict
-from shepherd.store import models, reads, writes
+from shepherd.store import models, projects, reads, writes
 from shepherd.store.db import Store, StoreError, open_store
 from shepherd.store.migrate import migrate
 
@@ -534,10 +534,14 @@ def test_nothing_deactivates_a_repo_so_list_repos_needs_no_active_filter() -> No
         for match in re.finditer(r"active\s*=\s*(\d+)", path.read_text(encoding="utf-8"))
     ]
     sql = sorted(
-        (name, text) for name, text in assignments if name in {"writes.py", "reads.py"}
+        (name, text)
+        for name, text in assignments
+        # `projects.py` since T3.4: `upsert_repo` moved there with the rest of
+        # D57's family when `writes.py` hit the 600-line ceiling.
+        if name in {"projects.py", "writes.py", "reads.py"}
     )
     # Arrival before absence: the scan really did read the write that sets it.
-    assert sql == [("writes.py", "active = 1")], sql
+    assert sql == [("projects.py", "active = 1")], sql
     assert all(text.endswith("1") for _, text in assignments), assignments
 
 
@@ -914,7 +918,7 @@ def delete_project(
         if on_running is models.OnRunning.KILL
         else ()
     )
-    return writes.commit_project_delete(connection, plan=plan, killed=killed)
+    return projects.commit_project_delete(connection, plan=plan, killed=killed)
 
 
 def test_two_projects_may_share_a_name(connection: sqlite3.Connection) -> None:
@@ -927,8 +931,8 @@ def test_two_projects_may_share_a_name(connection: sqlite3.Connection) -> None:
     `same id? True | rows named api: 1 | /work/api root became: /personal/api`.
     Identity is `workspace.id`; names are labels (D57).
     """
-    work = writes.create_project(connection, name="api", description="the work one")
-    personal = writes.create_project(connection, name="api", description=None)
+    work = projects.create_project(connection, name="api", description="the work one")
+    personal = projects.create_project(connection, name="api", description=None)
 
     assert work.id != personal.id
     assert (work.name, personal.name) == ("api", "api")
@@ -943,17 +947,63 @@ def test_unassigned_refuses_rename(connection: sqlite3.Connection) -> None:
     so the refusal is the reserved id and not a rename verb that never works.
     """
     with pytest.raises(StoreError):
-        writes.rename_project(
+        projects.rename_project(
             connection, workspace_id=models.UNASSIGNED_PROJECT_ID, name="Inbox"
         )
     still = reads.get_workspace(connection, models.UNASSIGNED_PROJECT_ID)
     assert still is not None and still.name == "Unassigned"
 
-    project = writes.create_project(connection, name="api", description=None)
-    renamed = writes.rename_project(connection, workspace_id=project.id, name="payments-api")
+    project = projects.create_project(connection, name="api", description=None)
+    renamed = projects.rename_project(connection, workspace_id=project.id, name="payments-api")
     assert renamed is not None and renamed.name == "payments-api"
     # A project that does not exist is absent, not forbidden: `None`, no raise.
-    assert writes.rename_project(connection, workspace_id="w-nope", name="x") is None
+    assert projects.rename_project(connection, workspace_id="w-nope", name="x") is None
+
+
+def test_set_project_description_writes_and_clears_it(
+    connection: sqlite3.Connection,
+) -> None:
+    """GAP 3 — a description was **write-once at creation**.
+
+    `create_project` takes one and `rename_project` takes `name` only, so a
+    person who mistyped a description had no verb that could change it and
+    Shepherd's answer was "delete the project". A separate verb rather than a
+    widened `rename_project`: a verb called *rename* that edits a description
+    is a verb whose name is wrong, and one that takes both fields has to invent
+    a spelling for "leave this one alone" — absent-means-unchanged against
+    null-means-clear, at the only surface where clearing is a real intent.
+
+    Here `None` **clears** it, because the field is nullable and that is the
+    whole of what the caller can mean by sending nothing.
+
+    The two negative answers keep this family's two spellings: the reserved
+    project is forbidden and raises (E8, as `rename_project` does), a project
+    that does not exist is absent and answers `None`.
+    """
+    project = projects.create_project(connection, name="api", description="the work one")
+
+    changed = projects.set_project_description(
+        connection, workspace_id=project.id, description="the payments api"
+    )
+    assert changed is not None and changed.description == "the payments api"
+    # …and the name is untouched, which is the half a widened rename risks.
+    assert changed.name == "api"
+
+    cleared = projects.set_project_description(
+        connection, workspace_id=project.id, description=None
+    )
+    assert cleared is not None and cleared.description is None
+
+    assert (
+        projects.set_project_description(connection, workspace_id="w-nope", description="x")
+        is None
+    )
+    with pytest.raises(StoreError):
+        projects.set_project_description(
+            connection, workspace_id=models.UNASSIGNED_PROJECT_ID, description="Inbox"
+        )
+    reserved = reads.get_workspace(connection, models.UNASSIGNED_PROJECT_ID)
+    assert reserved is not None and reserved.description != "Inbox"
 
 
 def test_unassigned_refuses_add_repo(connection: sqlite3.Connection) -> None:
@@ -963,7 +1013,7 @@ def test_unassigned_refuses_add_repo(connection: sqlite3.Connection) -> None:
     has ever seen.
     """
     with pytest.raises(StoreError):
-        writes.add_repo(
+        projects.add_repo(
             connection,
             workspace_id=models.UNASSIGNED_PROJECT_ID,
             root_path="/srv/api",
@@ -973,8 +1023,8 @@ def test_unassigned_refuses_add_repo(connection: sqlite3.Connection) -> None:
         )
     assert reads.list_repos(connection, models.UNASSIGNED_PROJECT_ID) == []
 
-    project = writes.create_project(connection, name="api", description=None)
-    added = writes.add_repo(
+    project = projects.create_project(connection, name="api", description=None)
+    added = projects.add_repo(
         connection,
         workspace_id=project.id,
         root_path="/srv/api",
@@ -1008,8 +1058,8 @@ def test_re_adding_an_orphaned_path_rebinds_the_same_repo_row(
     This is what `test_upsert_workspace_updates_a_moved_root_path` used to
     protect, on the verb that replaced it.
     """
-    first = writes.create_project(connection, name="api", description=None)
-    repo_row = writes.add_repo(
+    first = projects.create_project(connection, name="api", description=None)
+    repo_row = projects.add_repo(
         connection,
         workspace_id=first.id,
         root_path="/srv/api",
@@ -1017,14 +1067,14 @@ def test_re_adding_an_orphaned_path_rebinds_the_same_repo_row(
         git_common_dir="/srv/api/.git",
         vcs_remote=None,
     )
-    assert writes.remove_repo(connection, workspace_id=first.id, repo_id=repo_row.id) is True
+    assert projects.remove_repo(connection, workspace_id=first.id, repo_id=repo_row.id) is True
     # The repo row is **kept** — orphaned, not deleted, or D48's identity would
     # be minted afresh and every historical session would lose its repo.
     assert reads.find_repo_by_common_dir(connection, "/srv/api/.git") is not None
     assert reads.projects_for_repo(connection, repo_row.id) == []
 
-    second = writes.create_project(connection, name="payments", description=None)
-    again = writes.add_repo(
+    second = projects.create_project(connection, name="payments", description=None)
+    again = projects.add_repo(
         connection,
         workspace_id=second.id,
         root_path="/srv/api",
@@ -1034,7 +1084,7 @@ def test_re_adding_an_orphaned_path_rebinds_the_same_repo_row(
     )
     assert again.id == repo_row.id
     assert again.vcs_remote == "github.com/example-org/api"
-    assert writes.remove_repo(connection, workspace_id=second.id, repo_id="r-nope") is False
+    assert projects.remove_repo(connection, workspace_id=second.id, repo_id="r-nope") is False
 
 
 def test_delete_refuses_by_default_and_names_the_running_sessions(
@@ -1044,7 +1094,7 @@ def test_delete_refuses_by_default_and_names_the_running_sessions(
     because the page builds the three choices out of *this record* rather than
     going back and asking a second question that can disagree with the first.
     """
-    project = writes.create_project(connection, name="api", description=None)
+    project = projects.create_project(connection, name="api", description=None)
     plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
     plant_session(
         connection, "s-done", project.id, started_at="2026-01-01T00:00:00Z",
@@ -1077,7 +1127,7 @@ def test_the_refusing_plan_says_what_the_delete_would_take(
     the caller proceeds. The orphan case is that list minus `running`, which the
     caller has in the same record.
     """
-    project = writes.create_project(connection, name="api", description=None)
+    project = projects.create_project(connection, name="api", description=None)
     plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
     plant_session(
         connection, "s-done", project.id, started_at="2026-01-01T00:00:00Z",
@@ -1112,7 +1162,7 @@ def test_delete_with_kill_stops_them_then_cascades(connection: sqlite3.Connectio
     claim: this test passed over a world where the agent was still running and
     its row was deleted anyway.
     """
-    project = writes.create_project(connection, name="api", description=None)
+    project = projects.create_project(connection, name="api", description=None)
     plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
     connection.execute(
         "INSERT INTO mailbox_message (id, session_id, idempotency_key, body, origin, queued_at)"
@@ -1144,7 +1194,7 @@ def test_delete_with_orphan_moves_them_to_unassigned(connection: sqlite3.Connect
     is an INNER JOIN on `workspace`, so a session left pointing at a deleted
     project would vanish from Flock without a trace (P2).
     """
-    project = writes.create_project(connection, name="api", description=None)
+    project = projects.create_project(connection, name="api", description=None)
     plant_session(connection, "s-live", project.id, started_at="2026-01-01T00:00:00Z")
     plant_session(
         connection, "s-done", project.id, started_at="2026-01-01T00:00:00Z",
@@ -1215,7 +1265,7 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         itertools.product((True, False), (True, False), LINEAGE_SHAPES, tuple(models.OnRunning))
     ):
         if exists:
-            project = writes.create_project(connection, name=f"p{index}", description=None)
+            project = projects.create_project(connection, name=f"p{index}", description=None)
             workspace_id = project.id
         else:
             workspace_id = f"w-nope-{index}"
@@ -1274,7 +1324,7 @@ def test_delete_is_total_over_its_matrix(connection: sqlite3.Connection) -> None
         assert outcome.severed == (
             tuple(
                 models.SeveredLink(session_id=f"s-{index}", column=column)
-                for column in writes.LINEAGE_COLUMNS
+                for column in projects.LINEAGE_COLUMNS
                 if column in lineage
             )
             if survives
@@ -1303,8 +1353,8 @@ def test_no_session_ever_points_at_a_deleted_project(connection: sqlite3.Connect
     choices, and the referential net (`PRAGMA foreign_key_check`) is empty.
     """
     for choice in models.OnRunning:
-        project = writes.create_project(connection, name=f"api-{choice.value}", description=None)
-        other = writes.create_project(connection, name=f"kept-{choice.value}", description=None)
+        project = projects.create_project(connection, name=f"api-{choice.value}", description=None)
+        other = projects.create_project(connection, name=f"kept-{choice.value}", description=None)
         plant_session(
             connection, f"live-{choice.value}", project.id, started_at="2026-01-01T00:00:00Z"
         )
@@ -1468,7 +1518,7 @@ def test_the_commit_half_reports_only_kills_the_store_saw_land(
     **Not landed** (`kills_cleanly`, a bare `True` over an untouched row) must
     refuse the delete and leave the row alive, whatever the caller says.
     """
-    landed = writes.create_project(connection, name="landed", description=None)
+    landed = projects.create_project(connection, name="landed", description=None)
     plant_session(connection, "s-landed", landed.id, started_at="2026-01-01T00:00:00Z")
 
     outcome = delete_project(
@@ -1483,7 +1533,7 @@ def test_the_commit_half_reports_only_kills_the_store_saw_land(
 
     # The other branch. The caller says it killed the session; the store can
     # see that `ended_at` is still null, and the store's own fact wins.
-    lying = writes.create_project(connection, name="lying", description=None)
+    lying = projects.create_project(connection, name="lying", description=None)
     plant_session(connection, "s-lying", lying.id, started_at="2026-01-01T00:00:00Z")
 
     refused = delete_project(
@@ -1523,7 +1573,7 @@ def test_lineage_columns_is_every_self_reference_the_schema_declares(
         for row in connection.execute("PRAGMA foreign_key_list(session)")
         if str(row["table"]) == "session"
     }
-    assert declared == set(writes.LINEAGE_COLUMNS)
+    assert declared == set(projects.LINEAGE_COLUMNS)
     # The cascade iterates the constant, so the count has to agree too: a
     # duplicated entry would pass a set comparison and sever twice.
-    assert len(writes.LINEAGE_COLUMNS) == len(set(writes.LINEAGE_COLUMNS)) == len(declared)
+    assert len(projects.LINEAGE_COLUMNS) == len(set(projects.LINEAGE_COLUMNS)) == len(declared)

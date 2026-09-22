@@ -281,14 +281,29 @@ def test_every_delegated_verb_is_refused_once_the_store_is_closed(tmp_path: Path
 
 SQL_STATEMENT_WORDS = ("INSERT", "UPDATE ", "SELECT")
 
+#: The writes that came out of `db.py` at T4-3 and are still in `writes.py`.
 MOVED_WRITES = (
-    "create_project",
-    "upsert_repo",
     "register_session",
     "apply_fold_delta",
     "apply_stop_verdict",
     "set_app_state",
     "bump_anomaly",
+)
+
+#: D57's family, which moved **again** at T3.4 — out of `writes.py` and into
+#: `projects.py`, because `set_project_description` took that file to 623 lines
+#: against the 600 every file in `src/` is held to. Named in its own tuple
+#: rather than dropped from the one above: the property both assert is *not in
+#: `db.py`*, and a verb that quietly left the enumeration is a verb nothing
+#: says that about.
+PROJECT_WRITE_IMPLEMENTATIONS = (
+    "create_project",
+    "rename_project",
+    "set_project_description",
+    "add_repo",
+    "remove_repo",
+    "upsert_repo",
+    "commit_project_delete",
 )
 
 SHARED_VOCABULARY = ("StoreError", "SESSION_COLUMNS", "DEFAULT_ENGINE")
@@ -359,6 +374,27 @@ def test_the_m1_and_m2_write_implementations_live_in_store_writes(store: Store) 
 
     missing = [verb for verb in MOVED_WRITES if not callable(getattr(writes, verb, None))]
     assert missing == [], f"store/writes.py does not hold {missing}"
+
+    # D57's family lives one module over (T3.4), and the same property is
+    # asserted of it: an implementation, not a delegation, and not in `db.py`.
+    assert (
+        importlib.util.find_spec("shepherd.store.projects") is not None
+    ), "store/projects.py does not exist"
+    project_writes = importlib.import_module("shepherd.store.projects")
+    absent = [
+        verb
+        for verb in PROJECT_WRITE_IMPLEMENTATIONS
+        if not callable(getattr(project_writes, verb, None))
+    ]
+    assert absent == [], f"store/projects.py does not hold {absent}"
+    # …and they are not left behind in `writes.py` as well, which is how one
+    # verb becomes two bodies that drift.
+    still = [
+        verb
+        for verb in PROJECT_WRITE_IMPLEMENTATIONS
+        if getattr(writes, verb, None) is not None
+    ]
+    assert still == [], f"store/writes.py still holds {still}"
     assert statement_literals("db") == [], "db.py still spells SQL over a table"
 
     # …and the surface is unchanged: the same call, through the same name.
