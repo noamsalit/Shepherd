@@ -223,6 +223,15 @@ def commit_project_delete(
     kill things: a project that acquired a session in the meantime is refused
     rather than deleted out from under it.
 
+    **`killed` is a claim; `ended_at` is the fact, and the fact decides.** Under
+    `KILL` the re-derived running set is the gate, *unconditionally* — not
+    `running - killed`, which let a caller's word overrule the store's own
+    observation and talk the one safety check on the one destructive verb out of
+    firing. `DeleteOutcome.killed` reports the caller's claim intersected with
+    what the store saw **change** (`plan.running - fresh.running`), never with
+    what remains: the old intersection-with-what-remains inverted the field's
+    meaning, reporting exactly the kills that did not land.
+
     The cascade order is `mailbox_message -> session -> project_repo ->
     workspace`, preceded by the lineage severing. `repo` rows are **kept**:
     they carry D48's binding identity under `ux_repo_path`, and minting them
@@ -238,21 +247,37 @@ def commit_project_delete(
         return fresh.refusal
 
     running = fresh.running
-    reported = tuple(session_id for session_id in running if session_id in set(killed))
+    # What the store **observed stop**, which is not what the caller claims.
+    # `killed` used to be intersected with `running` — a set re-derived after
+    # the caller went away to kill things, and *running* is `ended_at IS NULL`
+    # while the real kill path (`apply_stop_verdict`) writes `ended_at`. So a
+    # kill that landed was filtered out of the report and a kill that did not
+    # was filtered in: the field was populated exactly when it was wrong.
+    #
+    # Intersect with what **changed** (`plan.running - fresh.running`), never
+    # with what remains.
+    reported = tuple(
+        session_id
+        for session_id in plan.running
+        if session_id in set(killed) and session_id not in set(running)
+    )
     orphaned: tuple[str, ...] = ()
     if plan.on_running is OnRunning.KILL:
-        survived = tuple(session_id for session_id in running if session_id not in set(killed))
-        if survived:
-            # Not the plan's running set — *this* one. A session that arrived
-            # while the caller was killing was never killed, and deleting its
-            # row would leave a live agent with nothing to show for it.
+        if running:
+            # Unconditional, and on the store's own fact rather than the
+            # caller's word. Two kinds of row are here and neither may be
+            # deleted: a session that arrived while the caller was killing, and
+            # a session whose kill did not land however it was reported. The
+            # gate used to be `running - killed`, which made the one safety
+            # check on the one verb that destroys data argue-out-able by the
+            # caller it exists to protect against.
             return DeleteOutcome(
                 deleted=False,
                 refused=(
-                    f"{len(survived)} session(s) in this project are still running and "
+                    f"{len(running)} session(s) in this project are still running and "
                     f"were not stopped; nothing was deleted"
                 ),
-                running=survived,
+                running=running,
                 killed=reported,
             )
     elif plan.on_running is OnRunning.ORPHAN and running:

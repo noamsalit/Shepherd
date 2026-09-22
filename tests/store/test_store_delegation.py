@@ -618,6 +618,13 @@ def test_a_kill_between_the_two_halves_may_write_to_the_store(project_store: Sto
     Run on a thread so the failure is a failed assertion rather than a suite
     that never ends. The `set_app_state` is not decoration: a kill that does not
     touch the store cannot fail this test, and the real one always does.
+
+    The kill also **stops the session** (`apply_stop_verdict`, writing
+    `ended_at`) — a second store write from the same between-the-halves window,
+    and the only kill production makes. It used to only append the id to a list,
+    which the commit half took on trust; it now re-derives the running set and
+    would refuse, so this test drives the full two-write sequence the real path
+    issues.
     """
     project = project_store.create_project(name="api", description=None)
     session = project_store.register_session(
@@ -640,6 +647,15 @@ def test_a_kill_between_the_two_halves_may_write_to_the_store(project_store: Sto
         for session_id in plan.running:
             # Exactly what the kill path does first, and where it used to hang.
             project_store.set_app_state(f"kill_record.{session_id}", {"recorded": True})
+            # ...and then the kill itself, which is a second store write:
+            # `apply_stop_verdict` sets `ended_at`, and that — not the id in
+            # this list — is what the commit half re-derives its answer from.
+            project_store.apply_stop_verdict(
+                session_id=session_id,
+                verdict=DONE,
+                ended_at="2026-09-21T10:01:00Z",
+                exit_code=None,
+            )
             killed.append(session_id)
         answer.append(
             project_store.commit_project_delete(plan=plan, killed=tuple(killed))
@@ -667,8 +683,16 @@ def test_the_commit_half_refuses_a_session_that_arrived_after_the_kill(
     The decision is a read taken before the caller went away to kill things, so
     the world can move underneath it. The commit re-derives the decision inside
     its own transaction and **refuses** rather than deleting a session nobody
-    stopped — the control is the same call with the newcomer's id in `killed`,
-    which proceeds.
+    stopped.
+
+    **This test changed with the code, and says so.** Its control used to be
+    *"the same call with the newcomer's id in `killed`, which proceeds"* — it
+    asserted `(True, (latecomer.id,))` for a session that was **still
+    running**, which pinned the inverted behaviour as the specification: the
+    caller's claim overruled the store's own `ended_at`, and the row was
+    destroyed under a live agent. Naming an id in `killed` is no longer a way
+    past this gate, and it must not become one again: the control now *stops*
+    the latecomer, and the claim-only call is the second refusal below.
     """
     project = project_store.create_project(name="api", description=None)
     plan = project_store.plan_project_delete(
@@ -691,9 +715,37 @@ def test_the_commit_half_refuses_a_session_that_arrived_after_the_kill(
     assert refused.running == (latecomer.id,)
     assert project_store.get_workspace(project.id) is not None
 
+    # Claiming the kill, without having made it, is still a refusal: the gate
+    # is the store's own re-derived running set and nothing the caller says.
+    claimed = project_store.commit_project_delete(plan=plan, killed=(latecomer.id,))
+    assert claimed.deleted is False
+    assert claimed.running == (latecomer.id,)
+    assert claimed.killed == ()
+    assert project_store.get_workspace(project.id) is not None
+
+    # The control, and the only branch that proceeds: the kill lands, the store
+    # sees `ended_at`, and the gate opens on the store's own observation.
+    project_store.apply_stop_verdict(
+        session_id=latecomer.id,
+        verdict=DONE,
+        ended_at="2026-09-21T10:06:00Z",
+        exit_code=None,
+    )
     proceeds = project_store.commit_project_delete(plan=plan, killed=(latecomer.id,))
-    assert (proceeds.deleted, proceeds.killed) == (True, (latecomer.id,))
+    assert proceeds.deleted is True
     assert project_store.get_workspace(project.id) is None
+    # ...and `killed` is **empty**, deliberately, on a kill that really landed.
+    #
+    # The report is the caller's claim intersected with what the store saw
+    # *change*: `plan.running - fresh.running`. The latecomer was never in
+    # `plan.running` — the plan was read before it existed — so the store never
+    # observed it running and cannot prove it stopped rather than having ended
+    # on its own. The limit is real and it errs the safe way: on the one verb
+    # that destroys data, `killed` under-reports rather than asserting a stop
+    # nobody watched. `destroyed` still names the row, so the dialog is not
+    # silent about what went.
+    assert proceeds.killed == ()
+    assert proceeds.destroyed == (latecomer.id,)
 
 
 def test_no_write_hangs_when_close_races_it(tmp_path: Path) -> None:
@@ -739,3 +791,96 @@ def test_no_write_hangs_when_close_races_it(tmp_path: Path) -> None:
     assert all(
         isinstance(outcome, (models.Workspace, RuntimeError)) for outcome in outcomes
     ), outcomes
+
+
+def test_close_cannot_land_between_the_closed_check_and_the_enqueue(tmp_path: Path) -> None:
+    """The window itself, deterministically — what the bound above is not.
+
+    `test_no_write_hangs_when_close_races_it` races eight writers against a
+    `close()` and asserts none of them hangs. Its own docstring concedes it
+    *"would not reliably have gone red against the old code"*: the window was a
+    few instructions wide and a thread scheduler will not reliably land in it.
+    A test that cannot be seen to fail on the defect it names is a bound on
+    regression, not a proof of the property.
+
+    This one constructs the interleaving instead of hoping for it. It parks a
+    writer **inside** `_queue.put` — the probe that modelled this could not,
+    because an unbounded `queue.Queue` never blocks there, so the block is
+    injected — and then asserts that `close()` **cannot proceed**: it is parked
+    on `_close_lock`, which `_write` is holding across the pair. That is the
+    property, stated positively. If the check and the `put` were two operations
+    again, `close()` would sail through, set `_closed`, and write its sentinel
+    ahead of a job that would then never be taken.
+
+    This reaches past the public surface on purpose: `_close_lock` is an
+    *internal* seam and the invariant is about the internal seam. There is no
+    way to observe "these two statements are one critical section" from
+    outside, and the alternative — a probabilistic race — is the thing being
+    replaced.
+
+    **The control drives the other branch**: with nothing parked in `put`, the
+    same `close()` on the same store returns well inside the same deadline. So
+    the wait below is measuring the lock, not a slow `close()`.
+    """
+    store = open_store(tmp_path / "window" / "shepherd.db")
+    inside_put = threading.Event()
+    release_put = threading.Event()
+    real_put = store._queue.put
+
+    def parking_put(item: object, *args: object, **kwargs: object) -> None:
+        # Only the first real job parks; the `None` sentinel and everything
+        # after must pass straight through or `close()` could never finish.
+        if item is not None and not inside_put.is_set():
+            inside_put.set()
+            assert release_put.wait(timeout=5.0), "the test never released the parked put"
+        real_put(item, *args, **kwargs)  # type: ignore[arg-type]
+
+    store._queue.put = parking_put  # type: ignore[method-assign]
+    written: list[object] = []
+    closed = threading.Event()
+
+    def write() -> None:
+        try:
+            written.append(store.create_project(name="api", description=None))
+        except BaseException as error:  # pragma: no cover - reported by assertion
+            written.append(error)
+
+    def close() -> None:
+        store.close()
+        closed.set()
+
+    writer = threading.Thread(target=write, daemon=True)
+    closer = threading.Thread(target=close, daemon=True)
+    try:
+        writer.start()
+        assert inside_put.wait(timeout=5.0), "the writer never reached _queue.put"
+        closer.start()
+
+        # The assertion. `close()` wants `_close_lock`; `_write` is holding it
+        # across the closed-check *and* the put, and the put is parked.
+        assert not closed.wait(timeout=1.0), (
+            "close() completed while a write was inside _queue.put: the closed-check "
+            "and the enqueue are not one critical section"
+        )
+    finally:
+        release_put.set()
+
+    writer.join(timeout=5.0)
+    closer.join(timeout=5.0)
+    assert not writer.is_alive() and not closer.is_alive()
+    assert closed.is_set(), "close() never completed once the put was released"
+    assert len(written) == 1 and isinstance(written[0], models.Workspace), written
+
+    # The control: no park, and `close()` clears the same deadline easily —
+    # so the wait above timed out on the lock and not on `close()` being slow.
+    control = open_store(tmp_path / "control" / "shepherd.db")
+    control_closed = threading.Event()
+
+    def close_control() -> None:
+        control.close()
+        control_closed.set()
+
+    unblocked = threading.Thread(target=close_control, daemon=True)
+    unblocked.start()
+    assert control_closed.wait(timeout=1.0), "close() on an idle store did not finish in 1s"
+    unblocked.join(timeout=5.0)
