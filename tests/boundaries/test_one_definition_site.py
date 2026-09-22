@@ -203,6 +203,14 @@ DECLARED_SCANNER_MODULES: frozenset[str] = frozenset(
         "tests/toolsurface/test_registry_gate.py",
         "tests/web/test_routes.py",
         "tests/web/test_security.py",
+        # T5.3 (2026-09-22). `render_check_constant` reads `PAGES`,
+        # `NAV_SELECTOR` and `DRAWER_SELECTOR` out of `tools/render_check.py`
+        # **by AST**, so the shell and the live checker cannot drift apart into
+        # two spellings of the same six page names. It parses rather than
+        # imports because `render_check.py:29` imports `playwright.sync_api` at
+        # module level, and importing it here would make an undeclared
+        # dependency a suite import (A5 / F13).
+        "tests/web/test_shell.py",
         "tests/web/test_ws.py",
     }
 )

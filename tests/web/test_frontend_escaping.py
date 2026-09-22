@@ -26,12 +26,18 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # that passes by finding nothing, so this list is widened deliberately rather
 # than loosened into a glob. The chat page is the one that most needs it — it
 # interpolates the master's own output, which carries tool results.
+# T5.3 drops `rail.js`: D66 takes the Needs-You rail off the shell, so the
+# module is deleted rather than left unreachable. The list is **narrowed by
+# name**, for the same reason it was widened by name — the equality against the
+# directory below is what makes it a closed set, and a glob would turn this
+# scan back into one that passes by finding nothing. `escape.js` stays (ADR-P6:
+# the owner kept it, byte-unchanged) and so does `chat.js`, which may be edited
+# but never deleted or renamed.
 EXPECTED_MODULES = (
     "app.js",
     "chat.js",
     "escape.js",
     "fleet.js",
-    "rail.js",
     "session.js",
     "sse.js",
     "terminal.js",

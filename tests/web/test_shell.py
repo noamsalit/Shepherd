@@ -414,3 +414,275 @@ def test_the_topbar_title_cannot_push_the_document_sideways() -> None:
         body = rule_body(selector)
         assert "min-width: 0" in body, selector
         assert "text-overflow: ellipsis" in body, selector
+
+
+# ==============================================================================
+# T5.3 — the shell's *markup*, read as a tree
+#
+# Everything above reads `app.css`. These read `index.html`, and they read it as
+# a tree rather than with `in` on a string, because three of the four properties
+# below are **structural**: "inside its own root", "exactly one is visible",
+# "every `.card` carries a bucket class". A substring scan can answer none of
+# them, and `'Flock' in markup` is satisfied by the word appearing in a comment.
+#
+# The page-root ids, the nav selector and the drawer selector are read **out of
+# `tools/render_check.py`** rather than spelled again here. That tool names them
+# as constants precisely so the shell and the checker cannot drift; a second
+# literal in this file would be the drift wearing a test's clothes. It is read
+# with `ast` and never imported: `render_check.py:29` imports
+# `playwright.sync_api` at module level (A5/F13), and importing it here would
+# make playwright a suite dependency.
+# ==============================================================================
+
+import ast
+from html.parser import HTMLParser
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+_VOID = frozenset(
+    {"area", "base", "br", "col", "embed", "hr", "img", "input",
+     "link", "meta", "param", "source", "track", "wbr"}
+)
+
+
+class Node:
+    """One element. `attrs` is the tag's attributes; `kids` is its children."""
+
+    def __init__(self, tag: str, attrs: dict[str, str]) -> None:
+        self.tag = tag
+        self.attrs = attrs
+        self.kids: list["Node"] = []
+        self.text = ""
+
+    def classes(self) -> set[str]:
+        return set(self.attrs.get("class", "").split())
+
+    def walk(self):
+        yield self
+        for kid in self.kids:
+            yield from kid.walk()
+
+    def visible_text(self) -> str:
+        """Text a reader sees — every *descendant* carrying `hidden` is dropped.
+
+        This is the half `in markup` cannot do, and it is the half that matters:
+        `tools/render_check.py` asserts each page's own name is in that root's
+        `inner_text()`, which is the browser's *rendered* text.
+
+        The node's **own** `hidden` is deliberately not consulted. Five of the
+        six page roots ship hidden, and the question being asked of each is what
+        it renders *when it is open* — which is the only moment the checker ever
+        reads one. Consulting it would make this method answer "nothing" for
+        every page but the landing one, which is a different question.
+        """
+        parts = [self.text]
+        for kid in self.kids:
+            if "hidden" in kid.attrs:
+                continue
+            parts.append(kid.visible_text())
+        return " ".join(parts)
+
+
+class _Tree(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = Node("#document", {})
+        self._stack = [self.root]
+
+    def handle_starttag(self, tag, attrs):
+        node = Node(tag, {key: (value or "") for key, value in attrs})
+        self._stack[-1].kids.append(node)
+        if tag not in _VOID:
+            self._stack.append(node)
+
+    def handle_startendtag(self, tag, attrs):
+        node = Node(tag, {key: (value or "") for key, value in attrs})
+        self._stack[-1].kids.append(node)
+
+    def handle_endtag(self, tag):
+        for index in range(len(self._stack) - 1, 0, -1):
+            if self._stack[index].tag == tag:
+                del self._stack[index:]
+                return
+
+    def handle_data(self, data):
+        self._stack[-1].text += data
+
+
+def parse(markup: str) -> Node:
+    tree = _Tree()
+    tree.feed(markup)
+    tree.close()
+    return tree.root
+
+
+def shell() -> Node:
+    return parse((STATIC_ROOT / "index.html").read_text(encoding="utf-8"))
+
+
+def render_check_constant(name: str) -> object:
+    """A literal out of `tools/render_check.py`, by AST — never by import.
+
+    Importing that module pulls in `playwright.sync_api` at its line 29, which
+    would make an undeclared dependency a suite import (A5 / F13).
+    """
+    tree = ast.parse((REPO_ROOT / "tools" / "render_check.py").read_text(encoding="utf-8"))
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            for target in statement.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    return ast.literal_eval(statement.value)
+    raise AssertionError(f"tools/render_check.py defines no {name}")
+
+
+def page_roots(tree: Node) -> dict[str, Node]:
+    return {
+        node.attrs["id"]: node
+        for node in tree.walk()
+        if node.attrs.get("id", "").startswith("page-")
+    }
+
+
+def test_the_shell_ships_exactly_the_page_roots_the_checker_drives() -> None:
+    """Six roots, named by `render_check.PAGES`, and **no seventh `page-*` id**.
+
+    The seventh is not hypothetical: the prototype's topbar heading is
+    `id="page-title"`, and `render_check.PAGE_ROOT_SELECTOR` is `[id^="page-"]`,
+    so porting that id verbatim makes a permanently-visible element count as a
+    page root and every exclusivity assertion in the live check fails at Phase
+    10 with a message about routing that has nothing to do with routing.
+    """
+    pages = render_check_constant("PAGES")
+    assert isinstance(pages, list) and len(pages) == 6, pages
+    expected = {f"page-{name}" for name, _ in pages}
+    assert set(page_roots(shell())) == expected
+
+
+def test_every_page_has_the_nav_entry_the_checker_clicks() -> None:
+    """`.nav-item[data-page="…"]`, read out of the checker's own constant."""
+    selector = render_check_constant("NAV_SELECTOR")
+    assert selector == '.nav-item[data-page="{page}"]', selector
+
+    tree = shell()
+    entries = {
+        node.attrs["data-page"]
+        for node in tree.walk()
+        if "nav-item" in node.classes() and "data-page" in node.attrs
+    }
+    assert entries == {name for name, _ in render_check_constant("PAGES")}
+
+
+def test_the_drawer_control_the_phone_run_clicks_exists() -> None:
+    """At 390px the nav is behind `#drawer-open`; without it every phone page
+    check is skipped with a *different* failure than the one being looked for."""
+    selector = render_check_constant("DRAWER_SELECTOR")
+    assert selector == "#drawer-open", selector
+    found = [node for node in shell().walk() if node.attrs.get("id") == "drawer-open"]
+    assert len(found) == 1, found
+
+
+def test_exactly_one_page_root_ships_visible() -> None:
+    """U18's arrival state. The checker asserts it before it clicks anything.
+
+    Which one is the M1 surface, deliberately: with the module graph broken the
+    browser shows the Flock — the page that needs no orchestrator — rather than
+    an empty conversation frame claiming a master that never answered.
+    """
+    roots = page_roots(shell())
+    visible = sorted(name for name, node in roots.items() if "hidden" not in node.attrs)
+    assert visible == ["page-flock"], visible
+
+
+def test_each_page_root_renders_its_own_name_inside_itself() -> None:
+    """The `must_see` contract Phase 0 fixed, asserted where it is cheap.
+
+    It is each page's *own name* rather than one of the prototype's strings
+    because `"payments-api"` is seeded data: a checker keyed on it fails on an
+    empty install, which is the one install a fresh reader has.
+    """
+    roots = page_roots(shell())
+    missing = [
+        (name, must_see)
+        for name, must_see in render_check_constant("PAGES")
+        if must_see not in roots[f"page-{name}"].visible_text()
+    ]
+    assert missing == [], missing
+
+
+def test_the_shell_carries_the_stop_summary_strip() -> None:
+    """B3. The prototype omits the strip; the prototype is a mock.
+
+    Three numbers that mean three different things, none folded into another:
+    *we could not map this stop*, *the turn ended cleanly and no heuristic could
+    tell us whether it finished*, and *we never classified it at all*. D34 names
+    the second as the trigger for the model lane this milestone defers, so a
+    page that drops it deletes the evidence for a decision not yet taken.
+    """
+    ids = {node.attrs["id"] for node in shell().walk() if "id" in node.attrs}
+    for slot in ("stop-summary", "unknown-rate", "low-confidence", "empty-state"):
+        assert slot in ids, slot
+
+
+def cards(tree: Node) -> list[Node]:
+    return [node for node in tree.walk() if "card" in node.classes()]
+
+
+def test_every_card_in_the_shipped_markup_declares_its_bucket() -> None:
+    """`--b` falls back to the unclassified grey, and that is the hazard.
+
+    A card that forgets its `.bucket-*` class does not render broken — it
+    renders as a *plausible unknown session*, indistinguishable from one the
+    fold genuinely could not classify. The default is right (D-4: neither good
+    news nor bad) and it is exactly what makes the omission invisible, so the
+    class is asserted rather than left to the eye.
+
+    Scanned over the shipped page **and** the render harness, with arrival, so
+    it cannot pass by finding no cards. What it does not cover is stated:
+    `flock.js` builds cards in script, and holding this rule on the *built*
+    card is T6.1's, at the seam that can see one.
+    """
+    buckets = {f"bucket-{bucket.value}" for bucket in Bucket}
+    seen = 0
+    offenders: list[str] = []
+    for markup in (
+        (STATIC_ROOT / "index.html").read_text(encoding="utf-8"),
+        (FIXTURES / "shell_harness.html").read_text(encoding="utf-8"),
+    ):
+        for card in cards(parse(markup)):
+            seen += 1
+            if not card.classes() & buckets:
+                offenders.append(card.attrs.get("class", ""))
+    assert seen >= 2, "arrival: the scan found no card to check"
+    assert offenders == [], offenders
+
+
+def test_the_rail_has_left_the_shell() -> None:
+    """D66, on the shipped bytes rather than on the spec row alone."""
+    assert not (STATIC_ROOT / "rail.js").exists()
+    ids = {node.attrs["id"] for node in shell().walk() if "id" in node.attrs}
+    assert "rail" not in ids
+
+
+def test_the_markup_scans_bite() -> None:
+    """Every rule above is a gate only if the violating shape trips it.
+
+    Four synthetic pages, each breaking exactly one property, because a parser
+    that returned everything — or nothing — would pass some of these and not
+    all four.
+    """
+    two_visible = parse('<div id="page-a">A</div><div id="page-b">B</div>')
+    assert sorted(
+        name for name, node in page_roots(two_visible).items() if "hidden" not in node.attrs
+    ) == ["page-a", "page-b"]
+
+    stray = parse('<h1 id="page-title">Shepherd</h1><div id="page-flock" hidden></div>')
+    assert set(page_roots(stray)) == {"page-title", "page-flock"}
+
+    hidden_name = parse('<div id="page-flock"><span hidden>Flock</span></div>')
+    assert "Flock" not in page_roots(hidden_name)["page-flock"].visible_text()
+    shown_name = parse('<div id="page-flock"><span>Flock</span></div>')
+    assert "Flock" in page_roots(shown_name)["page-flock"].visible_text()
+
+    bare = parse('<button class="card"><span class="card-title">x</span></button>')
+    assert cards(bare)[0].classes() == {"card"}

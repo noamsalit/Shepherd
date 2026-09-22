@@ -94,7 +94,13 @@ def test_unclassified_chip_renders_and_is_not_green_or_red() -> None:
 
 def test_the_page_does_not_re_derive_the_order() -> None:
     """The order is the server's (`fleet_bucket_sort_key`); the page renders it."""
-    for name in ("fleet.js", "app.js", "rail.js"):
+    # `rail.js` leaves this tuple **in the task that deletes the file** (F3),
+    # not one phase later: reading a path that is gone raises
+    # `FileNotFoundError` at a boundary the plan declares green, and a red for
+    # the wrong reason is a red nobody can read. The `"fleet.js"` →
+    # `"flock.js"` half of the same literal is T6.1's, for the same reason one
+    # task later.
+    for name in ("fleet.js", "app.js"):
         source = (STATIC_ROOT / name).read_text(encoding="utf-8")
         for shape in (".sort(", "localeCompare", "BUCKET_ORDER", "FLEET_STATE_ORDER"):
             assert shape not in source, f"{name}: {shape}"
