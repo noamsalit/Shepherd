@@ -25,10 +25,12 @@ from contextlib import contextmanager
 
 import pytest
 
-from web.conftest import Client, MasterDoubles, seed
+from web.conftest import Client, MasterDoubles, hold_fetches, seed
 from web.test_shell import render_check_constant
 
+from shepherd.core.states import Origin, Ownership
 from shepherd.store.db import Store
+from shepherd.store.models import Session
 
 playwright_api = pytest.importorskip("playwright.sync_api")
 
@@ -1105,3 +1107,149 @@ def test_the_settings_back_chevron_is_a_chevron_and_not_a_full_width_band(
             " of its band; every other back chevron leads its row"
         )
         assert errors == [], errors
+
+
+# ----- DUP-1: the session pane belongs to the last card ASKED FOR -------------
+#
+# BC-1's sibling, one file over. `openSession()` writes `view.sessionId` and
+# paints **after** its await with no guard, and both of its callers — the
+# delegated card listener and the Projects page's session anchor — start it
+# without awaiting. So two taps in quick succession leave two reads in flight
+# and the pane settles on whichever one *resolved* last, which is not
+# necessarily the one the reader asked for last.
+#
+# It was named by BC-1's investigation and never reproduced. The test below
+# reproduces it, deterministically, at the shipped seam: the older read is
+# parked and released only after the newer card has already painted, which is
+# the losing interleaving pinned at 100% rather than hoped for.
+
+
+def _two_cards(store: Store) -> tuple[Session, Session]:
+    """Two sessions under one project, told apart by their titles.
+
+    One project, because the cards have to be on screen **together**: the
+    second pane lists the open project's sessions, so a race between two
+    projects' cards would be a race the reader cannot run.
+    """
+    project = store.create_project(name="shepherd", description=None)
+    rows = []
+    for engine_id, title in (
+        ("eng-older", "the read that was asked for first"),
+        ("eng-newer", "the read that was asked for last"),
+    ):
+        row = store.register_session(
+            engine_session_id=engine_id,
+            workspace_id=project.id,
+            repo_id=None,
+            cwd="/root/Shepherd",
+            started_at="2026-09-16T10:00:00Z",
+            origin=Origin.EXTERNAL,
+            ownership=Ownership.ATTACHED,
+        )
+        store.apply_title(row.id, title, "engine")
+        rows.append(row)
+    return rows[0], rows[1]
+
+
+def test_a_session_read_that_resolves_after_a_newer_card_paints_nothing(
+    desktop, store: Store
+) -> None:
+    """Two taps, and the pane keeps the one that was asked for last.
+
+    The assertions are the pane's title **and** the card's `aria-current`,
+    because they come from two different writes — `renderSession(answer.session)`
+    paints the pane and `view.sessionId` is what `flock.js` marks the card
+    from. A fix that guarded only the paint would leave the Flock claiming a
+    different session is open than the one on screen, so both are read.
+    """
+    page, errors = desktop
+    older, newer = _two_cards(store)
+    page.reload()
+    page.wait_for_timeout(700)
+    _nav(page, "flock")
+    page.locator("#flock-projects .project").first.click()
+    page.wait_for_timeout(300)
+
+    # Park the older card's detail read, and only it: `/api/fleet` and
+    # `/api/fleet/tree` keep flowing, so the page behaves in every other way.
+    hold_fetches(page, f"/api/sessions/{older.id}$")
+
+    page.locator(f'#flock-cards .card[data-session-id="{older.id}"]').click()
+    page.wait_for_function("() => window.__held.length === 1", timeout=5000)
+    page.locator(f'#flock-cards .card[data-session-id="{newer.id}"]').click()
+    page.wait_for_selector(
+        '#session-title:text-is("the read that was asked for last")', timeout=5000
+    )
+
+    assert page.evaluate("() => window.__release()") == 1
+    page.wait_for_function("() => window.__delivered === 1", timeout=5000)
+    # The stale answer is now in the page's hands. The assertions below are
+    # negative — that it changed nothing — so they need a point after which it
+    # can no longer act: the body is local and already buffered, and one
+    # `requestAnimationFrame` plus a beat is past every microtask it queues.
+    page.wait_for_timeout(500)
+
+    assert (
+        page.locator("#session-title").inner_text()
+        == "the read that was asked for last"
+    )
+    assert (
+        page.locator(f'#flock-cards .card[data-session-id="{newer.id}"]').get_attribute(
+            "aria-current"
+        )
+        == "true"
+    )
+    assert (
+        page.locator(f'#flock-cards .card[data-session-id="{older.id}"]').get_attribute(
+            "aria-current"
+        )
+        == "false"
+    )
+    assert errors == [], errors
+
+
+def test_a_session_read_parked_by_a_card_cannot_take_the_pane_from_a_link(
+    desktop, store: Store
+) -> None:
+    """The same race across the shell's **other** unawaited caller.
+
+    `openSession` has two call sites and neither awaits: the delegated card
+    listener on `#flock-cards`, and the `[data-page]` anchor the Projects page
+    builds, which the shell honours by showing the Flock and opening the
+    session the link names. A guard that lived in the card listener would leave
+    this red, which is what makes this the variant worth driving: the two reads
+    are started by two different controls on two different pages.
+    """
+    page, errors = desktop
+    older, newer = _two_cards(store)
+    page.reload()
+    page.wait_for_timeout(700)
+    _nav(page, "flock")
+    page.locator("#flock-projects .project").first.click()
+    page.wait_for_timeout(300)
+
+    hold_fetches(page, f"/api/sessions/{older.id}$")
+
+    page.locator(f'#flock-cards .card[data-session-id="{older.id}"]').click()
+    page.wait_for_function("() => window.__held.length === 1", timeout=5000)
+
+    _nav(page, "projects")
+    page.locator("#proj-list .proj-row").first.click()
+    page.wait_for_timeout(400)
+    link = page.locator(f'#proj-detail .mini-open[data-session-id="{newer.id}"]')
+    assert link.count() == 1, page.locator("#proj-detail").inner_html()
+    link.click()
+    page.wait_for_selector(
+        '#session-title:text-is("the read that was asked for last")', timeout=5000
+    )
+
+    assert page.evaluate("() => window.__release()") == 1
+    page.wait_for_function("() => window.__delivered === 1", timeout=5000)
+    page.wait_for_timeout(500)
+
+    assert page.locator("#page-flock").is_visible()
+    assert (
+        page.locator("#session-title").inner_text()
+        == "the read that was asked for last"
+    )
+    assert errors == [], errors

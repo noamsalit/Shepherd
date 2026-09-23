@@ -48,12 +48,18 @@ const shell = document.getElementById("shell");
 // What the Flock is currently showing. `projectId` and `sessionId` are the
 // selection — `flock.js` reads both to mark the open project and the open card
 // with `aria-current`, and neither is derived from DOM order.
+//
+// `openSessionId` is not part of that selection: it is the **intent**, the
+// session this page was last asked to open, and it is written synchronously at
+// the tap while `sessionId` is written only once an answer for it has arrived.
+// Two slots because they are two facts — see `openSession` (DUP-1).
 const view = {
   fleet: null,
   workspaces: [],
   sessionCount: 0,
   projectId: null,
   sessionId: null,
+  openSessionId: null,
 };
 
 //: The sentence for a `fetch` that **rejected** rather than answered —
@@ -148,8 +154,30 @@ async function loadFleet() {
 // `found: false` is a real answer and not an error: a session that has been
 // swept while its card was on screen is principle 5's unknown, and the page
 // says so on the stream line rather than throwing.
+//
+// **DUP-1, and it is BC-1 one file over.** The pane belongs to the last card
+// *asked for*, not to the last read that *resolved*. Neither caller awaits this
+// function — the delegated listener on `#flock-cards` and the Projects page's
+// session anchor both start it and return — so two taps in quick succession
+// leave two reads in flight, and before `openSessionId` the pane settled on
+// whichever one came back last. A slow first tap and a quick second opened the
+// **first** session: the wrong pane, the wrong `aria-current`, and a terminal
+// socket attached to a pane nobody asked to see.
+//
+// Ordering the requests would not close it, for the same reason it did not in
+// `projects.js`: the two reads are started by two different controls and the
+// stale one is sometimes the one issued later. Only a recorded intent can say
+// which answer the page still wants, so the intent is written here,
+// synchronously, before the await — and a read that no longer matches it is
+// dropped whole. It paints nothing, it selects nothing, and it says nothing on
+// the stream line: "no such session" about a session the reader has already
+// left is a sentence about a pane that is not on screen.
 async function openSession(sessionId) {
+  view.openSessionId = sessionId;
   const answer = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}`);
+  if (view.openSessionId !== sessionId) {
+    return;
+  }
   if (answer === null) {
     return;
   }

@@ -42,7 +42,7 @@ pytest.importorskip("playwright")
 
 from playwright.sync_api import Browser, Page, sync_playwright  # noqa: E402
 
-from web.conftest import NOW, Client, Response  # noqa: E402
+from web.conftest import NOW, Client, Response, hold_fetches  # noqa: E402
 
 from shepherd.core.states import Origin, Ownership  # noqa: E402
 from shepherd.core.stops import Bucket, DecidedBy, StopReason, Verdict  # noqa: E402
@@ -1409,7 +1409,8 @@ def test_a_delete_that_succeeded_still_says_which_stop_did_not_land(
 # the draft path list never reached the clicked project's two repos.
 #
 # **Both tests below make the race deterministic rather than hoping for it.**
-# `HOLD_MATCHING_FETCH` parks the fetches whose URL matches a pattern — the
+# `hold_fetches` (in `web/conftest.py`, shared with the shell's own copy of
+# this defect class) parks the fetches whose URL matches a pattern — the
 # product's own `fetch` calls, untouched otherwise — and hands the test a
 # release. That turns "the later read to resolve wins" from a 1-in-4 flake into
 # a fact the test states: the stale read is released *after* the newer one has
@@ -1419,42 +1420,6 @@ def test_a_delete_that_succeeded_still_says_which_stop_did_not_land(
 # the render; `#p-name` and `#p-paths` prove what `#proj-edit`'s closure was
 # bound to. A fix that ordered the reads but left a stale closure on the button
 # would pass the first assertion and fail the second.
-
-#: Installed into the page before the race. `real.call(window, ...)` and not
-#: `real(...)`: a detached `fetch` reference is an illegal invocation in
-#: chromium. `__delivered` counts released responses so the test waits on a
-#: fact rather than on a duration.
-HOLD_MATCHING_FETCH = """(pattern) => {
-  const real = window.fetch;
-  const held = [];
-  const expression = new RegExp(pattern);
-  window.__held = held;
-  window.__delivered = 0;
-  window.fetch = (input, init) => {
-    const url = typeof input === "string" ? input : input.url;
-    if (!expression.test(url)) {
-      return real.call(window, input, init);
-    }
-    return new Promise((resolve, reject) => {
-      held.push(() =>
-        real.call(window, input, init).then(
-          (response) => { window.__delivered += 1; resolve(response); },
-          (error) => { window.__delivered += 1; reject(error); }
-        )
-      );
-    });
-  };
-  window.__release = () => {
-    const queued = held.splice(0, held.length);
-    for (const send of queued) { send(); }
-    return queued.length;
-  };
-}"""
-
-
-def hold_fetches(page: Page, pattern: str) -> None:
-    page.evaluate(HOLD_MATCHING_FETCH, pattern)
-
 
 def release_and_settle(page: Page, expected: int) -> None:
     """Release the parked reads and wait for the page to be quiet again.

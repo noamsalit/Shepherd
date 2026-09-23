@@ -373,3 +373,56 @@ def seed(store: Store, engine_session_id: str = "eng-1") -> Session:
         origin=Origin.EXTERNAL,
         ownership=Ownership.ATTACHED,
     )
+
+
+# ----- the parked-fetch shim -------------------------------------------------
+#
+# BC-1's proof tool, moved here when DUP-1 needed it at a second seam. It parks
+# the fetches whose URL matches a pattern — the product's own `fetch` calls,
+# untouched otherwise — and hands the test a release, which turns "whichever
+# read resolves last wins" from a flake into a fact the test states: the stale
+# read is released *after* the newer one has already painted, which is the
+# losing interleaving every time.
+#
+# It lives in the conftest rather than in either page's module because it is
+# about `window.fetch` and not about any page: `tests/web/test_projects_page.py`
+# drives it against `projects.js` and `tests/web/test_shell_live.py` against the
+# shipped shell. What is *not* here is the settle — `release_and_settle`'s
+# `networkidle` is sound on the Projects harness, which runs no stream, and
+# wrong on the shipped page, which holds an SSE socket open for its whole life.
+
+#: Installed into the page before the race. `real.call(window, ...)` and not
+#: `real(...)`: a detached `fetch` reference is an illegal invocation in
+#: chromium. `__delivered` counts released responses so the test waits on a
+#: fact rather than on a duration.
+HOLD_MATCHING_FETCH = """(pattern) => {
+  const real = window.fetch;
+  const held = [];
+  const expression = new RegExp(pattern);
+  window.__held = held;
+  window.__delivered = 0;
+  window.fetch = (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    if (!expression.test(url)) {
+      return real.call(window, input, init);
+    }
+    return new Promise((resolve, reject) => {
+      held.push(() =>
+        real.call(window, input, init).then(
+          (response) => { window.__delivered += 1; resolve(response); },
+          (error) => { window.__delivered += 1; reject(error); }
+        )
+      );
+    });
+  };
+  window.__release = () => {
+    const queued = held.splice(0, held.length);
+    for (const send of queued) { send(); }
+    return queued.length;
+  };
+}"""
+
+
+def hold_fetches(page: object, pattern: str) -> None:
+    """Park every `fetch` whose URL matches `pattern` until `__release()`."""
+    page.evaluate(HOLD_MATCHING_FETCH, pattern)  # type: ignore[attr-defined]
