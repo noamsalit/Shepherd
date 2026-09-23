@@ -44,6 +44,14 @@ Full flow requested: planner → builder → review → QA route.
 
 ## Recent Changes
 
+- [DEBUG-RESET: wf:wf-20260923T015907Z-6ade637f] 2026-09-23 — seeded from QA round 5 BC-1 (projects.js:254 unawaited loadDetail race). Attempt counting starts fresh; QA round 5 was not a failed debug attempt.
+- [QA-ROUND-5 COMPLETE: wf:wf-20260921T212808Z-9172ed6b] 2026-09-23 — the full seven-link QA route ran for the
+  first time in this milestone (rounds 1-4 only ever dispatched the executor). Verdict **BLOCKED**: 35 scenarios,
+  34 PASS / 0 FAIL / 1 BLOCKED / 1 FLAKY, three runs. Two bug candidates: BC-1 the `projects.js:254` unawaited
+  `loadDetail` race (high, reproduced red at 1/3), BC-2 `#stream-status` reading `live` 30s after the daemon
+  stopped (low, no oracle). AC-28's final clause was NOT executed — it invokes `pytest -m live`. Harness at
+  `tests/qa5/`, report at `.cc10x/qa/{wf}/report.md`.
+- [QA-START: wf:wf-20260921T212808Z-9172ed6b] 2026-09-22 — full QA route (round 5), seven-link chain, qa_scope=standard.
 - Repo was docs-only at session start (spec + QA-experiment methodology docs, one baseline commit).
 - Environment and hook-payload ground truth established before planning (see `## Learnings`).
 

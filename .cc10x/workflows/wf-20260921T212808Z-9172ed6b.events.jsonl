@@ -7,3 +7,26 @@
 {"ts": "2026-09-21T22:49:33Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_amended", "revision": 4}
 {"ts": "2026-09-21T22:59:04Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_trust_gate_passed", "phases": 10}
 {"ts": "2026-09-22T00:49:12Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "phase_completed", "phase": "phase-0", "remediated": true}
+{"ts": "2026-09-22T14:48:41.185421+00:00", "wf": "wf-20260921T212808Z-9172ed6b", "event": "compact_occurred", "phase": "unknown", "task_id": null, "agent": "hook", "decision": "logged", "reason": "auto", "details": "<analysis>\nLet me work through this conversation chronologically.\n\n**Opening context:** The session continues from a compacted prior conversation about Shepherd, an orchestrator platform for coding-ag"}
+{"ts": "2026-09-22T18:29:34.776089+00:00", "wf": "wf-20260921T212808Z-9172ed6b", "event": "compact_occurred", "phase": "unknown", "task_id": null, "agent": "hook", "decision": "logged", "reason": "manual", "details": "<analysis>\nLet me work through this conversation chronologically. This session continues from a prior compacted conversation, so I need to preserve both the inherited context and everything new.\n\n**In"}
+{"ts": "2026-09-22T18:35:12Z", "event": "plan_amended", "phase": "qa", "detail": "plan revision 6: QA acceptance surface now names render_check.VIEWPORTS", "commit": "83c76b8"}
+{"ts": "2026-09-22T18:39:00Z", "event": "guard_observations_recorded", "phase": "qa", "detail": "G1 denylist inert while workflow_type=PLAN; G2 substring bypass in plan-phase mutation check"}
+{"ts": "2026-09-22T19:55:03.119196+00:00", "wf": "wf-20260921T212808Z-9172ed6b", "event": "compact_occurred", "phase": "unknown", "task_id": null, "agent": "hook", "decision": "logged", "reason": "manual", "details": "<analysis>\nLet me work through this conversation chronologically.\n\n**Context inherited from prior compaction:** The session began with a summary of a prior conversation that ran out of context. The ma"}
+{"ts": "2026-09-22T19:55:24Z", "event": "qa_route_started", "phase": "qa-research", "wf": "wf-20260921T212808Z-9172ed6b"}
+{"ts": "2026-09-22T20:02:47Z", "event": "isolation_guard_denial", "phase": "qa-research", "detail": "G3 - subagent overflow buffer landed on denied path; lane re-dispatched to write into .cc10x/"}
+{"ts": "2026-09-22T20:06:24Z", "event": "researcher_refused_write", "phase": "qa-research", "detail": "G4 - refusal upheld; router request was the error"}
+{"ts": "2026-09-22T20:07:12Z", "event": "artifact_reconciled", "phase": "qa-research", "detail": "D4-D9 marked fixed+merged; incomplete_phases cleared; evidence gap E1 recorded"}
+{"ts": "2026-09-22T20:12:11Z", "event": "qa_research_consolidated", "phase": "qa-plan", "wf": "wf-20260921T212808Z-9172ed6b"}
+{"ts": "2026-09-22T20:32:40Z", "event": "qa_plan_created", "phase": "qa-plan-review"}
+{"ts": "2026-09-22T20:33:46Z", "event": "router_decision", "phase": "qa-plan-review", "detail": "RD-QA5-1 kill-server dropped from teardown; tmux audit PASS"}
+{"ts": "2026-09-22T20:42:11Z", "event": "qa_plan_review_pass1_findings", "phase": "qa-re-plan", "blocking": 6}
+{"ts": "2026-09-22T21:02:33Z", "event": "qa_plan_amended", "phase": "qa-plan-review-2", "revision": "r2"}
+{"ts": "2026-09-22T21:14:15Z", "event": "qa_plan_review_pass2_findings", "phase": "qa-re-plan", "blocking": 5, "detail": "r3 dispatched; deferral DEF-2 trigger reached"}
+{"ts": "2026-09-22T21:32:57Z", "event": "qa_plan_amended_r3", "phase": "qa-preflight", "revision": "r3"}
+{"ts": "2026-09-22T21:43:52Z", "event": "preflight_env_corrections", "phase": "qa-re-plan", "count": 5}
+{"ts": "2026-09-22T21:59:15Z", "event": "env_plan_r4", "phase": "qa-build"}
+{"ts": "2026-09-23T00:47:00Z", "event": "qa_harness_built", "phase": "qa-review"}
+{"ts": "2026-09-23T00:57:21Z", "event": "qa_harness_review_changes_requested", "phase": "qa-review", "high": 5}
+{"ts": "2026-09-23T00:58:35Z", "event": "re_qa_build_dispatched", "phase": "re-qa-build", "round": 1, "critical": 2, "high": 9}
+{"ts": "2026-09-23T01:40:36Z", "event": "qa_execute_dispatched", "phase": "qa-execute"}
+{"ts": "2026-09-23T01:58:19Z", "event": "bug_candidates_recorded", "phase": "memory-finalize", "count": 2}

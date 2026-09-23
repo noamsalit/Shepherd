@@ -2,6 +2,8 @@
 
 ## Current Workflow
 
+QA round 5 (wf-20260921T212808Z-9172ed6b) — full seven-link route, verdict **BLOCKED**. Harness `tests/qa5/` (6081 lines, 35 scenarios, mutation floor 11/11). Two bug candidates open: BC-1 high, BC-2 low.
+
 **M1–M4 are built, verified and QA'd.** There is no workflow in flight.
 
 **2026-09-21 — documentation and design only.** Nothing under `src/` changed; the one change
@@ -106,4 +108,4 @@ No flag has drifted. `tests/engines/test_spawn_argv.py::test_every_flag_is_prese
 
 ## Last Updated
 
-2026-09-21 — M1–M4 complete; documentation realigned for repository recreation.
+2026-09-23

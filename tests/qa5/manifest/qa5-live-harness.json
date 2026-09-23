@@ -1,0 +1,159 @@
+{
+  "name": "shepherd-qa5",
+  "workdir": "/root/Shepherd",
+  "required_env": [],
+  "environment": {
+    "CI": "true",
+    "QA5_SESSION_SCRATCH": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad"
+  },
+  "setup": [
+    {
+      "name": "Prerequisites, T1-T2 only (nothing is started here)",
+      "command": "test -x /root/Shepherd/.venv/bin/python && git -C /root/Shepherd status --porcelain docs/probes/ src/ tools/ | tee /dev/stderr | wc -l | grep -qx 0 && tmux -V && git --version && ls /root/Shepherd/src/shepherd/store/migrations/ | wc -l | grep -qx 4",
+      "expected": "the venv python exists; docs/probes, src and tools are unmodified; tmux and git answer; four migrations are on disk"
+    },
+    {
+      "name": "playwright imports AND chromium launches UNDER THE HARNESS ENVIRONMENT",
+      "command": "PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright /root/Shepherd/.venv/bin/python -c \"import os, pathlib; from playwright.sync_api import sync_playwright; p=sync_playwright().start(); ep=pathlib.Path(p.chromium.executable_path); assert ep.exists(), ep; b=p.chromium.launch(headless=True); b.close(); p.stop(); print('chromium ok at', ep)\"",
+      "expected": "executable_path EXISTS on disk and a real launch/close succeeds. B13: js_syntax_check.py and render_check.py both sit behind importorskip for an undeclared dependency, so a machine without playwright collects and PASSES. r4/P1: the check must run with PLAYWRIGHT_BROWSERS_PATH pinned, because the harness redirects XDG_CACHE_HOME and HOME and executable_path then resolves without raising to a file that is not there."
+    },
+    {
+      "name": "the live marker is deselected, measured as an integer",
+      "command": "cd /root/Shepherd && a=$(.venv/bin/python -m pytest --collect-only -q 2>/dev/null | tail -1) && b=$(.venv/bin/python -m pytest --collect-only -q -m live 2>/dev/null | tail -1) && echo \"default: $a\" && echo \"live: $b\"",
+      "expected": "live-marked count EQUALS the deselected count. Marker-based, never path-based: three tests/e2e/ node ids are collected by default on purpose (test_live_lane_typechecks.py says so in its own docstring), so a path scan goes red on three intentional tests."
+    },
+    {
+      "name": "the run root and the short runtime dir are minted by the session fixture",
+      "command": "true",
+      "expected": "env-plan \u00a74 steps 1-2 run INSIDE the pytest process (tests/qa5/runroot.py): the session scratchpad is shared and holds a registered git worktree of the repo under test, so only $SESSION_SCRATCH/qa5-<pid> is minted and only that is removed. XDG_RUNTIME_DIR is /tmp/shq5-<pid>, whose budget is asserted with the product's own plan_socket."
+    }
+  ],
+  "reset": [
+    {
+      "name": "No reset: there is nothing to reset",
+      "command": "true",
+      "expected": "Ephemeral-everything. Each run mints a new run root, a new database file inside it, a new tmux server and a new browser, and destroys all four. The SESSION scratchpad is never fresh and is never destroyed."
+    },
+    {
+      "name": "Sweep abandoned run roots, by our own pattern only",
+      "command": "true",
+      "expected": "runroot.sweep() removes $SESSION_SCRATCH/qa5-<pid> and /tmp/shq5-<pid> whose pid is NOT alive, reports each removal, and stops if a survivor's pid is alive (a concurrent run). It never removes an entry it did not name \u2014 the rule the macwt worktree exists to teach."
+    },
+    {
+      "name": "Sweep abandoned tmux SESSIONS on our own socket, by name",
+      "command": "true",
+      "expected": "conftest._sweep_panes(), env-plan \u00a74 step 5, BEFORE the four panes are created. Directories were swept at mint and sessions never were: a run that died between new-session and teardown left shepherd_r5a alive, `new-session -s shepherd_r5a` then exits 1 (measured), and the harness bricked itself until somebody killed the panes by hand. The five owned names are killed one by one and the socket is then asserted EMPTY \u2014 a survivor under any other name stops the run rather than being tidied away, because nothing else is entitled to be on shepherd-qa and deleting an entry we did not name is the rule runroot.sweep exists to keep. Proved both ways: a planted shepherd_r5a is reported as `swept ['shepherd_r5a']`, and a planted `a_stranger` raises HarnessBlocked."
+    }
+  ],
+  "seed": [
+    {
+      "name": "The n>1 world, P0-P7 and twenty-one sessions",
+      "command": "true",
+      "expected": "tests/qa5/seed.py, run by the session fixture at \u00a74 step 8. Projects and repos through the product's OWN front door; sessions through Store verbs because the only front door that creates one is spawn_session, which starts a real claude process and is forbidden. Asserted on arrival: eight workspaces, two sharing a name, P1=2 repos and P3=1 on the read path, P4 with exactly one handled and one unhandled running session, P5 attached-only."
+    }
+  ],
+  "healthcheck": {
+    "name": "Readiness is TWO signals, because there is no health endpoint (B1)",
+    "command": "true",
+    "expected": "(1) controld.start does not return until the control socket's `bound` event is set \u2014 a real signal the product itself sets, and the only one purely about liveness; (2) GET /api/fleet answers 200 {ok:true} on a bounded retry loop. A step-2 failure after a clean bind is BLOCKED, an environment verdict, never a product FAIL. No `sleep N` anywhere: every wait is a bounded predicate with a loud failure."
+  },
+  "scenarios": [
+    {
+      "name": "The harness's own guards \u2014 pure, no environment, no service",
+      "mode": "proof",
+      "given": "Nothing. These checks refuse at construction, which is the point of putting them there",
+      "when": "tests/qa5/test_guards.py runs, marked `pure`, so the session fixture is never requested",
+      "then": "Every refusal this package writes is exercised at least once, and a negative control proves each guard still accepts ordinary work",
+      "command": "cd /root/Shepherd && CI=true .venv/bin/python -m pytest tests/qa5/test_guards.py -q",
+      "expected": "exit 0, 18 passed, and NO environment is brought up. Before this file existed, `grep -rn 'pytest.raises' tests/qa5/` returned nothing: _argv's refusals, _check_name's ':' refusal, _alive's pid floor and sweep's live-pid stop were unreached code in every run \u2014 and two of them were WRONG. `\"kill-server\" in words` waved `kill-serv` through (tmux resolves an unambiguous command-name prefix; measured rc=0 on this host, server gone), and `any(word == \"-L\")` waved the fused `-Lshepherd` through. The teardown predicate is now IMPORTED from the product (shepherd.runner.tmux_cmd.is_server_teardown), which tests/boundaries/ also reads, so the property cannot drift into three spellings.",
+      "observations": [
+        {
+          "point": "tmux",
+          "how": "no tmux server is contacted: _argv raises before any subprocess exists"
+        },
+        {
+          "point": "signals",
+          "how": "_alive delivers signal 0, which delivers nothing; a guard against a reboot must not be able to cause one"
+        },
+        {
+          "point": "files",
+          "how": "sweep's live-pid case asserts the directory SURVIVES \u2014 a sweep that deleted and then complained would satisfy pytest.raises anyway"
+        }
+      ]
+    },
+    {
+      "name": "QA round 5 \u2014 all 35 scenarios, six waves, ONE process",
+      "mode": "proof",
+      "given": "The seeded n>1 world on a real controld, a real tmux socket with four owned panes, a real chromium, and the two-client SSE rig proved live at bring-up",
+      "when": "The six waves run in their fixed order in a single pytest process",
+      "then": "Every scenario's API, DB, queue, UI and log observation points hold; teardown verifies itself and the repo is byte-identical",
+      "command": "cd /root/Shepherd && CI=true .venv/bin/python -m pytest tests/qa5/ -q",
+      "expected": "exit 0. THE WHOLE PACKAGE IS ONE COMMAND ON PURPOSE: the registry, the stream ring and compose._PLANE are module-global (B10), so exactly one composition may exist per process; and wave 3 consumes the binding wave 1's S0 measured, which lives in the session fixture. Splitting the waves across processes would re-run bring-up per wave AND lose that binding. THE REPORT CAN NOW SAY FAIL: conftest.pytest_runtest_makereport writes a FAIL/BLOCKED row for any test that ended non-passing without recording (and OVERRIDES a row a scenario recorded before dying in teardown), and pytest_sessionfinish emits once and publishes qa5-latest.json ONLY when the record set equals PLANNED_SCENARIOS. Measured before this: 140 run files, FAIL total 0, 47 of them all-green with scenarios: 0, each having overwritten latest. Measured after: every one of the 11 mutation runs produced a run file carrying its FAIL row, and none of them published.",
+      "observations": [
+        {
+          "point": "API",
+          "how": "tests/qa5/wire.py \u2014 every request carries Host and every POST carries Origin, because \u00a713's check runs before the body is read"
+        },
+        {
+          "point": "DB",
+          "how": "the in-process Store handle controld.start returned; no SQL is executed by the harness against the database"
+        },
+        {
+          "point": "Queue",
+          "how": "tests/qa5/rig.py \u2014 two raw SSE readers owned by the session fixture; `: open` and `: keep-alive` are comment lines and are counted separately, so 'no frame' stays distinguishable from 'socket alive'"
+        },
+        {
+          "point": "Logs",
+          "how": "tests/qa5/auditprobe.py \u2014 the production RotatingJsonlLog under $XDG_DATA_HOME/shepherd/logs/<AUDIT_PREFIX>/, with the prefix and the root resolved from the product, never spelled"
+        },
+        {
+          "point": "UI",
+          "how": "playwright against the SERVED page; console.error and pageerror listeners registered BEFORE the first navigation"
+        },
+        {
+          "point": "tmux",
+          "how": "tests/qa5/tmuxctl.py \u2014 `-L shepherd-qa` as argv[1] on every invocation; there is no kill-server at any blast radius; the user's socket is never named"
+        },
+        {
+          "point": "report",
+          "how": "the run file under .cc10x/qa/<wf>/runs/ carries measurements.record_set {planned, recorded, missing, extra, duplicated, complete}; qa5-latest.json is written only when complete is true"
+        }
+      ]
+    },
+    {
+      "name": "Re-runnability \u2014 the same suite, again, with no manual cleanup",
+      "mode": "proof",
+      "given": "Run 1 has completed and its teardown has verified itself",
+      "when": "The identical command runs a second time with nothing cleaned up in between",
+      "then": "The same verdict per scenario id, or the difference is a finding",
+      "command": "cd /root/Shepherd && CI=true .venv/bin/python -m pytest tests/qa5/ -q",
+      "expected": "exit 0, and the per-scenario verdicts match run 1. One run proves nothing about the second: state collisions, leftover fixtures and port conflicts all hide behind a single run. Freshness here rests on the run root's pid-named uniqueness, not on the session directory being empty \u2014 it is shared and it is never empty.",
+      "observations": [
+        {
+          "point": "ports",
+          "how": "port=0 everywhere and read back from Controld.port; no fixed port exists in the harness"
+        },
+        {
+          "point": "files",
+          "how": "a new run root per run, named by pid; the sweep removes abandoned ones whose pid is dead"
+        },
+        {
+          "point": "flags",
+          "how": "every setting lives in the deleted store or the deleted environment; autonomy_level is driven 2->3->2 by S26 and the store is deleted at teardown"
+        }
+      ]
+    }
+  ],
+  "cleanup": [
+    {
+      "name": "Teardown runs inside the session fixture and verifies itself",
+      "command": "true",
+      "expected": "env-plan \u00a79 steps 1-9, in order: pages and contexts, then chromium BY HANDLE (never pkill, never a signal to 0, 1 or -1), then playwright, then the SSE readers (joined, not abandoned), then controld CONDITIONALLY \u2014 S29 stops it as its own `When` and controld.stop must not be called twice, and the run report records which branch ran \u2014 then the panes one by one BY NAME, then the socket asserted EMPTY. Every step raises on its own failure; the failures are collected and re-raised together so one bad step cannot leak what the later steps would have freed."
+    },
+    {
+      "name": "The leak check, seven assertions and not one observation",
+      "command": "cd /root/Shepherd && ! ls -d /tmp/shq5-* 2>/dev/null && tmux -L shepherd-qa list-sessions 2>&1 | grep -q 'no server running' && git status --porcelain src/ tools/ docs/probes/ | wc -l | grep -qx 0 && echo 'no leaks'",
+      "expected": "no /tmp/shq5-*; the shepherd-qa socket has no server; src/, tools/ and the frozen docs/probes/ evidence are byte-identical. The chromium check is scoped to CHILDREN OF THE PYTEST PID, never a machine-wide pgrep: a machine-wide match goes red because the user has a browser open, and a gate that goes red for someone else's work gets turned off. `git worktree list` is compared against the bring-up baseline inside runroot.destroy()."
+    }
+  ]
+}

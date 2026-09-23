@@ -1,680 +1,1557 @@
 {
-  "workflow_uuid": "wf-20260921T212808Z-9172ed6b",
-  "workflow_id": "wf-20260921T212808Z-9172ed6b",
-  "workflow_type": "PLAN",
-  "state_root": ".cc10x",
-  "user_request": "Implement all backend changes required to support the 2026-09-21 UI redesign, then implement the UI itself \u2014 every page discussed: Shepherd, Flock, Projects, Settings (plus the Queues and Kanban placeholders). Route through cc10x: PLAN -> BUILD -> QA (Playwright) -> bug fixes until QA passes. Run fully autonomously; decide where decisions are needed; on a real blocker move to another part of the effort; stop only when done or fully blocked, then summarise work and gaps.",
-  "plan_file": "docs/plans/2026-09-21-projects-and-ui-plan.md",
-  "design_file": "docs/plans/2026-09-21-projects-and-ui-design.md",
-  "research_files": [
-    "docs/plans/recon/2026-09-21-backend-and-frontend-recon.md"
+ "workflow_uuid": "wf-20260921T212808Z-9172ed6b",
+ "workflow_id": "wf-20260921T212808Z-9172ed6b",
+ "workflow_type": "QA",
+ "state_root": ".cc10x",
+ "user_request": "Implement all backend changes required to support the 2026-09-21 UI redesign, then implement the UI itself \u2014 every page discussed: Shepherd, Flock, Projects, Settings (plus the Queues and Kanban placeholders). Route through cc10x: PLAN -> BUILD -> QA (Playwright) -> bug fixes until QA passes. Run fully autonomously; decide where decisions are needed; on a real blocker move to another part of the effort; stop only when done or fully blocked, then summarise work and gaps.",
+ "plan_file": "docs/plans/2026-09-21-projects-and-ui-plan.md",
+ "design_file": "docs/plans/2026-09-21-projects-and-ui-design.md",
+ "research_files": [
+  "docs/plans/recon/2026-09-21-backend-and-frontend-recon.md"
+ ],
+ "approved_decisions": [
+  "2026-09-21 owner: the Projects page is included in this effort, not deferred to a later milestone.",
+  "2026-09-21 owner: run fully autonomously, decide where decisions are needed, move to other work on a real blocker, stop only when done or fully blocked.",
+  "U2: the Needs-You rail is out of the shell; Flock page only if it returns. Reverses section 12's 'visible at all times' - needs its own decision row.",
+  "D65: the autonomy control is Settings-only.",
+  "U15: model/engine per spawned session deferred; no precedence rule adopted.",
+  "U16: cards take a wash of their bucket colour; the legend is coloured glyph + text.",
+  "U1: one info button opens a sheet explaining all eight buckets.",
+  "Design: D61's cascade lives in the verb, not ON DELETE CASCADE. No session table rebuild.",
+  "Design: migration 004 uses ALTER TABLE DROP COLUMN (probed working on SQLite 3.45.1).",
+  "Design: Unassigned is the reserved id 'unassigned', seeded by the migration.",
+  "Design: the page never sorts; fleet_bucket_sort_key is the only order.",
+  "Design: the Google Fonts link is dropped for a system font stack.",
+  "Design: removing the rail from the shell gets a numbered decision row (D66).",
+  "RD-1 APPROVED: upsert_workspace is deleted, not aliased. Once binding stops creating projects it has no caller in src/, and an alias would keep the match-on-name defect reachable.",
+  "RD-2 APPROVED: signals/discovery.py and its test file are deleted. discover_repos() has no caller in src/ and its sole documented justification (workspace.root_path) is removed by 004. It can return as an add_repo directory scanner when something needs it.",
+  "RD-3 APPROVED: workspace.last_activity_at is derived at read time from MAX(session.last_event_at), not written. Correct by construction, no new write path, and it stops a column that is always NULL being projected to the UI.",
+  "D67 (new spec row): the session view relocates into the Flock's third pane rather than being deleted. session.js, terminal.js and vendor/xterm.js are RETAINED and reachable from that pane. Section 12's Page 3 is rewritten as a pane, not a page. Reason: the owner asked for a three-pane Flock whose third pane is shaped like the Shepherd page; they never asked to lose the live pty view, and removing xterm would be a silent capability regression plus 16 retirements bought for nothing.",
+  "The stop-summary strip (#stop-summary, #unknown-rate, #low-confidence) is KEPT, in the Flock page header beside the legend. Reason: principle 5 - the unknown rate is counted and displayed, never hidden - and it is the headline metric section 12 puts on the fleet page. Preserves three frozen palette ids rather than retiring them.",
+  "D21's next_actions list relocates from the session CARD to the session PANE. U7's four-item card stands; section 12 already says the same list renders in the session view header. Capability preserved, U7 honoured, and most of test_fleet_page.py's assertions become body rewrites pointing at the new location rather than retirements.",
+  "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right.",
+  "RD-4 DECIDED, reversing the design's file-layout row: escape.js is KEPT, byte-unchanged. UNREACHABLE_BY_DESIGN's reason string quotes the very test the retirement would remove, so deleting it either leaves a stale exemption citing a test that no longer collects or forces a third edit. One retirement, one post_milestone entry and one constant edit, all bought for tidiness. post_milestone drops 7 -> 6; retirements 17 -> 16.",
+  "Router correction to N2: reads.list_workspaces DOES have ORDER BY name (reads.py:102). The seeded 'Unassigned' sorts FIRST under BINARY collation (uppercase before lowercase), so all 8 list_workspaces()[0] sites read Unassigned instead of their own project. Deterministic, not flaky - it fails identically everywhere and cannot hide. The count is 8, not 10. The repair is selecting by name or captured id, never by position.",
+  "F13 DECIDED: tests/tools/test_render_check_args.py opens with pytest.importorskip('playwright'), and T0.1's exit asserts the suite still collects and passes without playwright installed. Same rule A6 states for esprima; marker deselection does not help because -m deselects after import.",
+  "Router: pass-2 findings are applied as a diff-scoped AMENDMENT rather than escalated. The two-pass fresh-review cap is spent, but all 15 findings carry named mechanical fixes and none is an owner decision. The amendment lane is uncapped and exists for exactly this case.",
+  "F6 pushback ACCEPTED: the planner's sink-to-module walk is right and the review's was not. Verified independently - 2520 renderLegend, 2858 BACK_BUTTON (flock.js); 2688 bylineMark, 2796/2814/2837 renderDetail (session.js, per D67); 3101 BACK_BUTTON_P (projects.js); 3617 panelHead (settings.js). T5.3 and T7.1 rewrite no sinks at all, so this removes work rather than moving it.",
+  "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33.",
+  "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired.",
+  "T8.1 scope increases RATIFIED: Choice.number is int|None (the trust dialog's choices are unnumbered), Choice.selected exists (nowhere else to report which line carries the cursor), DecisionPrompt.kind exists (E17 requires the trust dialog be named so T8.2 refuses it by name rather than by sniffing its text). Each is forced by captured evidence, not preference.",
+  "The tests/golden claude-dir guard is NARROWED, not dropped: it excludes paths under the repository's own tree. This harness places agent worktrees at <repo>/.claude/worktrees/, so the bare '/.claude/' substring flagged 138 frozen captures. The clause is kept because it is the one that would catch ANOTHER user's config dir. Proven both ways with a four-case control.",
+  "A6 RETIRED in the plan: esprima replaced by chromium at Phase 0. The live form of that risk is playwright, which render_check.py imports at module level and pyproject.toml does not declare; pytest.importorskip guards it.",
+  "Phase 3 RATIFIED: delete_project is not registered, and test_delete_project_is_not_registered_and_the_reason_is_the_writer_thread asserts the absence so it goes red the moment someone wires it. A name a consumer can read but cannot call is worse than a gap that is stated.",
+  "Phase 3 RATIFIED: the three store-side refusal conventions are adapted to ONE record at the tool surface, not by changing store/. The reason is sharper than consistency - registry.py:69 turns any handler exception into GENERIC_ERROR = 'request failed', so a guard that RAISES reaches the page with no reason at all, and the reserved-project refusal is precisely the case a page must explain.",
+  "Phase 3 RATIFIED: T3.2's test lives in test_compose_m4.py rather than the plan's test_composition_root.py, which composes nothing (114 lines of AST rules, no store, host or SocketPlan). The seam is the plan's; only the file differs.",
+  "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path.",
+  "T8.1 remfix RATIFIED: the degrade reason is NOT exposed on the return value. The interface stays DecisionPrompt | None so no caller can route on WHY a screen was unreadable; the branch tags are source comments read by the test through sys.settrace. Keeps degrade-never-guess a property rather than a protocol.",
+  "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed.",
+  "Phase 9 RATIFIED: #dlg-project and #dlg-delete are built by mountProjects() inside #page-projects rather than declared in index.html. A departure from T9.1's Consumes line, forced by the contract-first mode and better regardless - one reader, one contract.",
+  "Phase 9 RATIFIED: the first delete POST carries NO on_running key at all, not 'refuse'. A key that is absent cannot be edited out of the body; a key spelled 'refuse' can.",
+  "Phase 9 RATIFIED: the page confirms before it asks, because delete_project destroys on its first call and no dry-run route exists.",
+  "GAP 3 RESOLVED as set_project_description, a new verb rather than a widened rename_project. A verb called rename that edits a description is a verb whose name is wrong, and a two-field verb would have to invent absent-means-unchanged beside null-means-clear at the one surface where clearing is real intent. Named set_project_description rather than set_description because the registry is flat and a description is a field more than one thing has.",
+  "The 450-line cap gate is now GLOBBED rather than a hand-written tuple. tools_m1.py (574) and tools_master.py (505) have been OVER the cap since M1 and were never measured, because the tuple never named them; three more modules were never measured at all. Both are grandfathered BY NAME and PINNED AT THEIR CURRENT SIZE rather than exempted - so they cannot grow, and the exemption is visible rather than structural."
+ ],
+ "plan_mode": "execution_plan",
+ "build_scope": "standard",
+ "worktree": "in_place",
+ "execution_mode": "subagent_dispatch",
+ "inline_fallback_reason": "task_primitive_unavailable: this harness exposes no TaskCreate/TaskList/TaskGet. The task graph is tracked in this artifact; every cc10x gate still runs.",
+ "verification_rigor": "critical_path",
+ "proof_status": "gaps_found",
+ "traceability": {
+  "requirements": [],
+  "phases": [],
+  "verification": [],
+  "remediation": []
+ },
+ "intent": {
+  "goal": "Ship the projects backend (D57-D61) and the redesigned dark-only web UI (U1-U18) so that Shepherd, Flock, Projects and Settings are real pages backed by real verbs, verified in a real browser.",
+  "non_goals": [
+   "M5 queues / work-item providers (W3) beyond configuration-only placeholders",
+   "Bring-your-own-harness (harness-contract.md, deferred)",
+   "Credentials / multi-user auth (credentials-and-auth.md, four open questions)",
+   "Real sandboxing (spec section 17)",
+   "Queues and Kanban beyond nav placeholders (W5)",
+   "Model/engine-per-session precedence (U15, deferred)"
   ],
-  "approved_decisions": [
-    "2026-09-21 owner: the Projects page is included in this effort, not deferred to a later milestone.",
-    "2026-09-21 owner: run fully autonomously, decide where decisions are needed, move to other work on a real blocker, stop only when done or fully blocked.",
-    "U2: the Needs-You rail is out of the shell; Flock page only if it returns. Reverses section 12's 'visible at all times' - needs its own decision row.",
-    "D65: the autonomy control is Settings-only.",
-    "U15: model/engine per spawned session deferred; no precedence rule adopted.",
-    "U16: cards take a wash of their bucket colour; the legend is coloured glyph + text.",
-    "U1: one info button opens a sheet explaining all eight buckets.",
-    "Design: D61's cascade lives in the verb, not ON DELETE CASCADE. No session table rebuild.",
-    "Design: migration 004 uses ALTER TABLE DROP COLUMN (probed working on SQLite 3.45.1).",
-    "Design: Unassigned is the reserved id 'unassigned', seeded by the migration.",
-    "Design: the page never sorts; fleet_bucket_sort_key is the only order.",
-    "Design: the Google Fonts link is dropped for a system font stack.",
-    "Design: removing the rail from the shell gets a numbered decision row (D66).",
-    "RD-1 APPROVED: upsert_workspace is deleted, not aliased. Once binding stops creating projects it has no caller in src/, and an alias would keep the match-on-name defect reachable.",
-    "RD-2 APPROVED: signals/discovery.py and its test file are deleted. discover_repos() has no caller in src/ and its sole documented justification (workspace.root_path) is removed by 004. It can return as an add_repo directory scanner when something needs it.",
-    "RD-3 APPROVED: workspace.last_activity_at is derived at read time from MAX(session.last_event_at), not written. Correct by construction, no new write path, and it stops a column that is always NULL being projected to the UI.",
-    "D67 (new spec row): the session view relocates into the Flock's third pane rather than being deleted. session.js, terminal.js and vendor/xterm.js are RETAINED and reachable from that pane. Section 12's Page 3 is rewritten as a pane, not a page. Reason: the owner asked for a three-pane Flock whose third pane is shaped like the Shepherd page; they never asked to lose the live pty view, and removing xterm would be a silent capability regression plus 16 retirements bought for nothing.",
-    "The stop-summary strip (#stop-summary, #unknown-rate, #low-confidence) is KEPT, in the Flock page header beside the legend. Reason: principle 5 - the unknown rate is counted and displayed, never hidden - and it is the headline metric section 12 puts on the fleet page. Preserves three frozen palette ids rather than retiring them.",
-    "D21's next_actions list relocates from the session CARD to the session PANE. U7's four-item card stands; section 12 already says the same list renders in the session view header. Capability preserved, U7 honoured, and most of test_fleet_page.py's assertions become body rewrites pointing at the new location rather than retirements.",
-    "Router correction: the frozen node-id count is 1480 (grep -c '::'), not 1482 (wc -l). The dispatch brief was wrong; the plan was right.",
-    "RD-4 DECIDED, reversing the design's file-layout row: escape.js is KEPT, byte-unchanged. UNREACHABLE_BY_DESIGN's reason string quotes the very test the retirement would remove, so deleting it either leaves a stale exemption citing a test that no longer collects or forces a third edit. One retirement, one post_milestone entry and one constant edit, all bought for tidiness. post_milestone drops 7 -> 6; retirements 17 -> 16.",
-    "Router correction to N2: reads.list_workspaces DOES have ORDER BY name (reads.py:102). The seeded 'Unassigned' sorts FIRST under BINARY collation (uppercase before lowercase), so all 8 list_workspaces()[0] sites read Unassigned instead of their own project. Deterministic, not flaky - it fails identically everywhere and cannot hide. The count is 8, not 10. The repair is selecting by name or captured id, never by position.",
-    "F13 DECIDED: tests/tools/test_render_check_args.py opens with pytest.importorskip('playwright'), and T0.1's exit asserts the suite still collects and passes without playwright installed. Same rule A6 states for esprima; marker deselection does not help because -m deselects after import.",
-    "Router: pass-2 findings are applied as a diff-scoped AMENDMENT rather than escalated. The two-pass fresh-review cap is spent, but all 15 findings carry named mechanical fixes and none is an owner decision. The amendment lane is uncapped and exists for exactly this case.",
-    "F6 pushback ACCEPTED: the planner's sink-to-module walk is right and the review's was not. Verified independently - 2520 renderLegend, 2858 BACK_BUTTON (flock.js); 2688 bylineMark, 2796/2814/2837 renderDetail (session.js, per D67); 3101 BACK_BUTTON_P (projects.js); 3617 panelHead (settings.js). T5.3 and T7.1 rewrite no sinks at all, so this removes work rather than moving it.",
-    "tools_projects.py is deliberately the one new module that is NOT pure: it runs the git probe, because git_common_dir is D48's binding key and a guessed value silently breaks session-to-project binding. The toolsurface->signals edge already exists at tools_m1.py:33.",
-    "esprima REPLACED by chromium in tools/js_syntax_check.py. esprima 4.0.1 is ES2017 and rejects ?., ??, class fields, #private, ||=, optional catch binding, import.meta and numeric separators - verified across 8 constructs - while being a Required Check in six later tasks that write three new modules. Chromium is the engine the code runs in, is already installed and already required. Cost, recorded not absorbed: no line number for a module compile error. A6 (no esprima under tests/) is retired.",
-    "T8.1 scope increases RATIFIED: Choice.number is int|None (the trust dialog's choices are unnumbered), Choice.selected exists (nowhere else to report which line carries the cursor), DecisionPrompt.kind exists (E17 requires the trust dialog be named so T8.2 refuses it by name rather than by sniffing its text). Each is forced by captured evidence, not preference.",
-    "The tests/golden claude-dir guard is NARROWED, not dropped: it excludes paths under the repository's own tree. This harness places agent worktrees at <repo>/.claude/worktrees/, so the bare '/.claude/' substring flagged 138 frozen captures. The clause is kept because it is the one that would catch ANOTHER user's config dir. Proven both ways with a four-case control.",
-    "A6 RETIRED in the plan: esprima replaced by chromium at Phase 0. The live form of that risk is playwright, which render_check.py imports at module level and pyproject.toml does not declare; pytest.importorskip guards it.",
-    "Phase 3 RATIFIED: delete_project is not registered, and test_delete_project_is_not_registered_and_the_reason_is_the_writer_thread asserts the absence so it goes red the moment someone wires it. A name a consumer can read but cannot call is worse than a gap that is stated.",
-    "Phase 3 RATIFIED: the three store-side refusal conventions are adapted to ONE record at the tool surface, not by changing store/. The reason is sharper than consistency - registry.py:69 turns any handler exception into GENERIC_ERROR = 'request failed', so a guard that RAISES reaches the page with no reason at all, and the reserved-project refusal is precisely the case a page must explain.",
-    "Phase 3 RATIFIED: T3.2's test lives in test_compose_m4.py rather than the plan's test_composition_root.py, which composes nothing (114 lines of AST rules, no store, host or SocketPlan). The seam is the plan's; only the file differs.",
-    "Phase 3 RATIFIED: add_repo resolves the repo's own root via repo_root - the same helper bind_cwd_to_repo uses - so a typed subdirectory cannot give one git_common_dir two repo rows under ux_repo_path.",
-    "T8.1 remfix RATIFIED: the degrade reason is NOT exposed on the return value. The interface stays DecisionPrompt | None so no caller can route on WHY a screen was unreadable; the branch tags are source comments read by the test through sys.settrace. Keeps degrade-never-guess a property rather than a protocol.",
-    "T8.1 remfix RATIFIED: the import-surface check calls the tree's shared _imports.module_imports from INSIDE the test body. A module-level AST walker would have been a sixth copy and would have needed an entry in test_one_definition_site.py's inventory - i.e. a duplicated walk laundered through an existing exception. No boundaries file was changed.",
-    "Phase 9 RATIFIED: #dlg-project and #dlg-delete are built by mountProjects() inside #page-projects rather than declared in index.html. A departure from T9.1's Consumes line, forced by the contract-first mode and better regardless - one reader, one contract.",
-    "Phase 9 RATIFIED: the first delete POST carries NO on_running key at all, not 'refuse'. A key that is absent cannot be edited out of the body; a key spelled 'refuse' can.",
-    "Phase 9 RATIFIED: the page confirms before it asks, because delete_project destroys on its first call and no dry-run route exists.",
-    "GAP 3 RESOLVED as set_project_description, a new verb rather than a widened rename_project. A verb called rename that edits a description is a verb whose name is wrong, and a two-field verb would have to invent absent-means-unchanged beside null-means-clear at the one surface where clearing is real intent. Named set_project_description rather than set_description because the registry is flat and a description is a field more than one thing has.",
-    "The 450-line cap gate is now GLOBBED rather than a hand-written tuple. tools_m1.py (574) and tools_master.py (505) have been OVER the cap since M1 and were never measured, because the tuple never named them; three more modules were never measured at all. Both are grandfathered BY NAME and PINNED AT THEIR CURRENT SIZE rather than exempted - so they cannot grow, and the exemption is visible rather than structural."
+  "constraints": [
+   "Spec section 3 decision log is law: D1-D65 plus D38.1. No silent reversal.",
+   "mypy --strict over src/ with disallow_any_explicit, no Any.",
+   "Downward-only imports; 105 AST boundary rules in tests/boundaries/ must stay green.",
+   "store/ exposes domain verbs returning dataclasses (D33). No SQL at call sites.",
+   "No shell=True anywhere (section 13); argv lists only.",
+   "web/static/ is byte-frozen by tests/boundaries/consumer_manifest.json. Every path whose bytes differ from the step-0b baseline - created and deleted files included - appears in exactly one of rebase.regenerated_paths or post_milestone.edits, never both. SIX post_milestone entries, one per path; entries are per PATH, not per edit. chat.js may be edited but never renamed or deleted.",
+   "No node/npm/tsc on this host: plain ES modules, no build step (D51).",
+   "Renames land in core.stops.PALETTE, not a second UI label table (test_palette_matches_core_stops).",
+   "[hidden] display reset must be in the real stylesheet (U18); the artifact wrapper supplied it and web/static does not.",
+   "tmux: never a bare kill-server; -L on every invocation; never touch the shepherd socket.",
+   "Never write under ~/.claude/; settings.json sha 375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac must not change.",
+   "Planted violations are inert fixtures only, never live source the suite executes."
   ],
-  "plan_mode": "execution_plan",
-  "build_scope": "standard",
-  "worktree": "in_place",
-  "execution_mode": "subagent_dispatch",
-  "inline_fallback_reason": "task_primitive_unavailable: this harness exposes no TaskCreate/TaskList/TaskGet. The task graph is tracked in this artifact; every cc10x gate still runs.",
-  "verification_rigor": "critical_path",
-  "proof_status": "passed",
-  "traceability": {
-    "requirements": [],
-    "phases": [],
-    "verification": [],
-    "remediation": []
-  },
-  "intent": {
-    "goal": "Ship the projects backend (D57-D61) and the redesigned dark-only web UI (U1-U18) so that Shepherd, Flock, Projects and Settings are real pages backed by real verbs, verified in a real browser.",
-    "non_goals": [
-      "M5 queues / work-item providers (W3) beyond configuration-only placeholders",
-      "Bring-your-own-harness (harness-contract.md, deferred)",
-      "Credentials / multi-user auth (credentials-and-auth.md, four open questions)",
-      "Real sandboxing (spec section 17)",
-      "Queues and Kanban beyond nav placeholders (W5)",
-      "Model/engine-per-session precedence (U15, deferred)"
-    ],
-    "constraints": [
-      "Spec section 3 decision log is law: D1-D65 plus D38.1. No silent reversal.",
-      "mypy --strict over src/ with disallow_any_explicit, no Any.",
-      "Downward-only imports; 105 AST boundary rules in tests/boundaries/ must stay green.",
-      "store/ exposes domain verbs returning dataclasses (D33). No SQL at call sites.",
-      "No shell=True anywhere (section 13); argv lists only.",
-      "web/static/ is byte-frozen by tests/boundaries/consumer_manifest.json. Every path whose bytes differ from the step-0b baseline - created and deleted files included - appears in exactly one of rebase.regenerated_paths or post_milestone.edits, never both. SIX post_milestone entries, one per path; entries are per PATH, not per edit. chat.js may be edited but never renamed or deleted.",
-      "No node/npm/tsc on this host: plain ES modules, no build step (D51).",
-      "Renames land in core.stops.PALETTE, not a second UI label table (test_palette_matches_core_stops).",
-      "[hidden] display reset must be in the real stylesheet (U18); the artifact wrapper supplied it and web/static does not.",
-      "tmux: never a bare kill-server; -L on every invocation; never touch the shepherd socket.",
-      "Never write under ~/.claude/; settings.json sha 375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac must not change.",
-      "Planted violations are inert fixtures only, never live source the suite executes."
-    ],
-    "acceptance_criteria": [
-      "Migration 004 drops workspace.root_path, adds workspace.description, replaces repo.workspace_id with a repo-project join table (D60), forward-only, with 001-003 untouched.",
-      "admission.py allowlist is the registered repo paths alone; the workspace-root branch and its T11-1 special case are gone.",
-      "upsert_workspace no longer matches on name; identity is workspace.id. The /work/api vs /personal/api collapse is proven fixed by a test.",
-      "Five verbs registered as ToolDefs and reachable from both the master and the HTTP API: create_project, rename_project, delete_project, add_repo, remove_repo, with create_project/add_repo/delete_project blast_class=local_destructive.",
-      "list_repos has a ToolDef and a route.",
-      "Unassigned (D59) is a reserved project and the policy lives in bind_cwd_to_repo.",
-      "delete_project forgets, cascading to sessions; running sessions force the three-way choice (kill / orphan to Unassigned / cancel) rather than dying silently.",
-      "core.stops.PALETTE carries stranded / limit exceeded / unknown; Bucket values unchanged; the 90-day stop log is unaffected.",
-      "The UI ships as a dark-only redesign with a collapsible side pane and the six nav entries; Shepherd, Flock, Projects and Settings are functional; Queues and Kanban are declared placeholders.",
-      "tools/render_check.py passes at 390x844 and 1280x900: zero console errors, every page opens, no horizontal overflow.",
-      "Full suite green and mypy --strict clean at the end of every phase.",
-      "QA route runs against the built UI with Playwright and passes."
-    ],
-    "open_decisions": []
-  },
-  "normalized_phases": [
-    {
-      "phase_id": "phase-0",
-      "title": "Verification tooling and the ledger",
-      "objective": "Verification tooling and the ledger",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 0' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "unit: argument parsing",
-        "integration: the tool against a throwaway static server"
-      ]
-    },
-    {
-      "phase_id": "phase-1",
-      "title": "Migration 004, the store, and the `src/` half of the schema change",
-      "objective": "Migration 004, the store, and the `src/` half of the schema change",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 1' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "unit: migration SQL",
-        "integration: store verbs against a real sqlite file"
-      ]
-    },
-    {
-      "phase_id": "phase-3",
-      "title": "The tool surface: seven verbs",
-      "objective": "The tool surface: seven verbs",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 3' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "unit: tool schemas",
-        "integration: invoke() through the registry"
-      ]
-    },
-    {
-      "phase_id": "phase-4",
-      "title": "Routes",
-      "objective": "Routes",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 4' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "integration: route table against the registry"
-      ]
-    },
-    {
-      "phase_id": "phase-5",
-      "title": "The UI shell, and the rail's removal",
-      "objective": "The UI shell, and the rail's removal",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 5' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "static: markup and CSS scans",
-        "integration: the shell in a browser"
-      ]
-    },
-    {
-      "phase_id": "phase-6",
-      "title": "The Flock page, and D67's third pane",
-      "objective": "The Flock page, and D67's third pane",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 6' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "static: module scans",
-        "integration: the Flock page in a browser"
-      ]
-    },
-    {
-      "phase_id": "phase-7",
-      "title": "Shepherd and Settings",
-      "objective": "Shepherd and Settings",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 7' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "static: module scans",
-        "integration: Shepherd and Settings in a browser"
-      ]
-    },
-    {
-      "phase_id": "phase-8",
-      "title": "U17: the decision card's projection",
-      "objective": "U17: the decision card's projection",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 8' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "unit: the pane parser against frozen captures"
-      ]
-    },
-    {
-      "phase_id": "phase-9",
-      "title": "The Projects page \u2014 the acceptance test for the seven verbs",
-      "objective": "The Projects page \u2014 the acceptance test for the seven verbs",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 9' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "integration: the Projects page against the seven verbs"
-      ]
-    },
-    {
-      "phase_id": "phase-10",
-      "title": "Live verification against the served page",
-      "objective": "Live verification against the served page",
-      "files": [],
-      "checks": [
-        "pytest",
-        "mypy --strict src",
-        "105 boundary rules"
-      ],
-      "exit_criteria": "see plan '### Phase 10' \u2014 exit criteria are per task and non-empty",
-      "test_seams": [
-        "system: headless chromium against a served controld"
-      ]
-    }
+  "acceptance_criteria": [
+   "Migration 004 drops workspace.root_path, adds workspace.description, replaces repo.workspace_id with a repo-project join table (D60), forward-only, with 001-003 untouched.",
+   "admission.py allowlist is the registered repo paths alone; the workspace-root branch and its T11-1 special case are gone.",
+   "upsert_workspace no longer matches on name; identity is workspace.id. The /work/api vs /personal/api collapse is proven fixed by a test.",
+   "Five verbs registered as ToolDefs and reachable from both the master and the HTTP API: create_project, rename_project, delete_project, add_repo, remove_repo, with create_project/add_repo/delete_project blast_class=local_destructive.",
+   "list_repos has a ToolDef and a route.",
+   "Unassigned (D59) is a reserved project and the policy lives in bind_cwd_to_repo.",
+   "delete_project forgets, cascading to sessions; running sessions force the three-way choice (kill / orphan to Unassigned / cancel) rather than dying silently.",
+   "core.stops.PALETTE carries stranded / limit exceeded / unknown; Bucket values unchanged; the 90-day stop log is unaffected.",
+   "The UI ships as a dark-only redesign with a collapsible side pane and the six nav entries; Shepherd, Flock, Projects and Settings are functional; Queues and Kanban are declared placeholders.",
+   "tools/render_check.py passes at 390x844 and 1280x900: zero console errors, every page opens, no horizontal overflow.",
+   "Full suite green and mypy --strict clean at the end of every phase.",
+   "QA route runs against the built UI with Playwright and passes."
   ],
-  "phase_cursor": "phase-1",
-  "capabilities": {
-    "brightdata_available": "unknown",
-    "octocode_available": "unknown",
-    "websearch_available": "unknown",
-    "webfetch_available": "unknown"
+  "open_decisions": []
+ },
+ "normalized_phases": [
+  {
+   "phase_id": "phase-0",
+   "title": "Verification tooling and the ledger",
+   "objective": "Verification tooling and the ledger",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 0' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "unit: argument parsing",
+    "integration: the tool against a throwaway static server"
+   ]
   },
-  "research_rounds": [],
-  "research_backend_history": [],
-  "research_quality": {
-    "web": "none",
-    "github": "none",
-    "overall": "none"
+  {
+   "phase_id": "phase-1",
+   "title": "Migration 004, the store, and the `src/` half of the schema change",
+   "objective": "Migration 004, the store, and the `src/` half of the schema change",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 1' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "unit: migration SQL",
+    "integration: store verbs against a real sqlite file"
+   ]
   },
-  "task_ids": {
-    "builder": null,
-    "investigator": null,
-    "reviewer": null,
-    "hunter": null,
-    "verifier": null,
-    "doc_syncer": null,
-    "planner_create": null,
-    "planning_review_pass1": null,
-    "planner_replan": null,
-    "planning_review_pass2": null,
-    "memory_finalize": null
+  {
+   "phase_id": "phase-3",
+   "title": "The tool surface: seven verbs",
+   "objective": "The tool surface: seven verbs",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 3' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "unit: tool schemas",
+    "integration: invoke() through the registry"
+   ]
   },
-  "phase_status": {
-    "plan-create": "completed",
-    "plan-review-gap-1": "completed",
-    "re-plan": "completed",
-    "plan-review-gap-2": "completed",
-    "plan-review-amendment": "completed",
-    "phase-0": "completed",
-    "phase-8-T8.1": "completed",
-    "w6-docs": "completed",
-    "phase-1": "remediation_in_progress",
-    "phase-5-T5.2": "in_progress",
-    "phase-3": "partial_held_for_merge",
-    "phase-9": "merged",
-    "phase-6": "merged",
-    "phase-7": "merged",
-    "backend-gaps-remfix": "completed",
-    "integration": "in_progress"
+  {
+   "phase_id": "phase-4",
+   "title": "Routes",
+   "objective": "Routes",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 4' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "integration: route table against the registry"
+   ]
   },
-  "deferred_findings": [
-    {
-      "source": "planner",
-      "phase_id": "plan-create",
-      "severity": "minor",
-      "finding": "docs/design/ui-decisions.md says 'Everything in the prototype is textContent'. It is not: eight innerHTML assignments, all findings under unsafe_sinks. Scoped into T6.1; the sentence in ui-decisions.md still needs correcting."
-    },
-    {
-      "source": "planner",
-      "phase_id": "plan-create",
-      "severity": "minor",
-      "finding": "docs/design/ui-decisions.md says one post_milestone declaration covers the redesign. Entries are per path; seven are needed. The sentence needs correcting."
-    },
-    {
-      "source": "router",
-      "phase_id": "plan-review-amendment",
-      "severity": "minor",
-      "finding": "Revision 4 states 19 sites for grep -rn '== 3\\b' over the three migration test modules; that pattern returns 16 (union with EXPECTED_SCHEMA_VERSION and [1,2,3] is 22). Conclusion unaffected - far more than the seven originally listed, and the plan carries the grep rather than a hand list. Fourth stated count in this plan to disagree with its source."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-0",
-      "severity": "minor",
-      "finding": "The plan's T0.1 exit criterion still greps for esprima, and a risk row still names it as an undeclared suite dependency. Both are now vacuous rather than wrong - the grep passes, nothing is red. Plan-owner edit."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-0",
-      "severity": "minor",
-      "finding": "js_syntax_check.py now needs playwright, as render_check.py already did. Neither is declared in pyproject.toml. The suite reaches the JS gate only by subprocess and the whole test file is behind pytest.importorskip, so a machine without playwright still collects and passes."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-3",
-      "severity": "minor",
-      "finding": "tools_projects.py is 408 lines against the 450 cap that now names it. delete_project plus its projection and three-branch handler is ~60-80 lines, so the authorised tools_projects.py + tools_projects_reads.py split is very likely required - and BOTH halves must be named on the cap line, or the split hides growth."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-3",
-      "severity": "minor",
-      "finding": "add_repo refusal completeness: absent, not-a-repo and bare are proved; an unreadable path, a submodule, and a filesystem vanishing mid-probe are not. get_project's session ordering is unpinned."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-8",
-      "severity": "minor",
-      "finding": "No capture exists of a dialog with more than three choices, a WRAPPED choice label, a subagent dialog, or the Tab-to-amend screen the permission footer advertises. A wrapped label is the likeliest breaker: a continuation line sits at the same label column and would be read as an extra choice, silently."
-    },
-    {
-      "source": "builder",
-      "phase_id": "phase-8",
-      "severity": "minor",
-      "finding": "In 06-permission-dialog.ansi the command lines sit at column 3 - the choice column - and are kept out of the block only by the indent-1 question line above them. An engine drawing its question at column 3 would have it read as a choice. Structural residual; the standing reason the degrade rule must stay structural."
-    },
-    {
-      "source": "phase-9 (first consumer)",
-      "phase_id": "phase-9",
-      "severity": "major",
-      "finding": "GAP 1 doomed: DeletePlan.doomed never reaches a consumer - the handler discards it and delete_outcome has no key. The refusal can say '2 running' and cannot say 'and 400 finished ones go with the project', which delete_outcome's own docstring says a person is owed. The page currently derives the count itself, a COPY of a store derivation - the thing that drifts."
-    },
-    {
-      "source": "phase-9 (first consumer)",
-      "phase_id": "phase-9",
-      "severity": "major",
-      "finding": "GAP 2 killability: DeletePlan.running does not distinguish owned from attached, and the shipped kill answers no_pane for every attached session. So the page can offer a kill_sessions button that cannot succeed, with a refusal that does not say why."
-    },
-    {
-      "source": "phase-9 (first consumer)",
-      "phase_id": "phase-9",
-      "severity": "minor",
-      "finding": "GAP 3 description: no verb changes a description. create_project takes one; rename_project takes name only. A description is write-once at creation, so the Edit dialog renders the field inert with the reason rather than dropping typed text."
-    },
-    {
-      "source": "phase-9 (first consumer)",
-      "phase_id": "phase-9",
-      "severity": "minor",
-      "finding": "GAP 4 D60 unreachable: nothing answers WHICH projects hold this repo. D60 says a path may sit in more than one project and the row says so - but no read exposes it, and deriving it is an N+1 the projections were shaped to avoid. The page shows the path in full and invents nothing."
-    },
-    {
-      "source": "phase-9 (first consumer)",
-      "phase_id": "phase-9",
-      "severity": "minor",
-      "finding": "GAP 5 destructive-first-call: delete_project destroys on its first call when nothing is running, so a 'probe for the refusal' would destroy any idle project. The page confirms before it asks. A dry-run would close it properly."
-    },
-    {
-      "source": "backend-gaps remfix",
-      "phase_id": "phase-3",
-      "severity": "minor",
-      "finding": "The kill catch is `except Exception` precisely because nothing proves the shipped kill raises only RunnerRefusal. A kill that HANGS still blocks the verb - no timeout was added. And `killable` means the kill path has a pane to address, not that the kill will land; a stale handle is still a refusal, which is the blocking item's own case."
-    }
+  {
+   "phase_id": "phase-5",
+   "title": "The UI shell, and the rail's removal",
+   "objective": "The UI shell, and the rail's removal",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 5' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "static: markup and CSS scans",
+    "integration: the shell in a browser"
+   ]
+  },
+  {
+   "phase_id": "phase-6",
+   "title": "The Flock page, and D67's third pane",
+   "objective": "The Flock page, and D67's third pane",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 6' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "static: module scans",
+    "integration: the Flock page in a browser"
+   ]
+  },
+  {
+   "phase_id": "phase-7",
+   "title": "Shepherd and Settings",
+   "objective": "Shepherd and Settings",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 7' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "static: module scans",
+    "integration: Shepherd and Settings in a browser"
+   ]
+  },
+  {
+   "phase_id": "phase-8",
+   "title": "U17: the decision card's projection",
+   "objective": "U17: the decision card's projection",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 8' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "unit: the pane parser against frozen captures"
+   ]
+  },
+  {
+   "phase_id": "phase-9",
+   "title": "The Projects page \u2014 the acceptance test for the seven verbs",
+   "objective": "The Projects page \u2014 the acceptance test for the seven verbs",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 9' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "integration: the Projects page against the seven verbs"
+   ]
+  },
+  {
+   "phase_id": "phase-10",
+   "title": "Live verification against the served page",
+   "objective": "Live verification against the served page",
+   "files": [],
+   "checks": [
+    "pytest",
+    "mypy --strict src",
+    "105 boundary rules"
+   ],
+   "exit_criteria": "see plan '### Phase 10' \u2014 exit criteria are per task and non-empty",
+   "test_seams": [
+    "system: headless chromium against a served controld"
+   ]
+  }
+ ],
+ "phase_cursor": "completed",
+ "capabilities": {
+  "brightdata_available": "unknown",
+  "octocode_available": "unknown",
+  "websearch_available": "unknown",
+  "webfetch_available": "unknown"
+ },
+ "research_rounds": [],
+ "research_backend_history": [],
+ "research_quality": {
+  "web": "none",
+  "github": "none",
+  "overall": "none"
+ },
+ "task_ids": {
+  "builder": null,
+  "investigator": null,
+  "reviewer": null,
+  "hunter": null,
+  "verifier": null,
+  "doc_syncer": null,
+  "planner_create": null,
+  "planning_review_pass1": null,
+  "planner_replan": null,
+  "planning_review_pass2": null,
+  "memory_finalize": null
+ },
+ "phase_status": {
+  "plan-create": "completed",
+  "plan-review-gap-1": "completed",
+  "re-plan": "completed",
+  "plan-review-gap-2": "completed",
+  "plan-review-amendment": "completed",
+  "phase-0": "completed",
+  "phase-8-T8.1": "completed",
+  "w6-docs": "completed",
+  "phase-1": "completed",
+  "phase-5-T5.2": "completed",
+  "phase-3": "completed",
+  "phase-9": "completed",
+  "phase-6": "completed",
+  "phase-7": "completed",
+  "backend-gaps-remfix": "completed",
+  "integration": "completed",
+  "qa-run-1": "completed",
+  "qa-remfix": "completed",
+  "qa-run-2": "completed",
+  "qa-remfix-2": "completed",
+  "qa-run-3": "completed",
+  "qa-remfix-3": "completed",
+  "qa-run-4": "completed",
+  "qa-remfix-4-lane-a": "in_progress",
+  "qa-remfix-4-lane-b": "in_progress"
+ },
+ "deferred_findings": [
+  {
+   "source": "planner",
+   "phase_id": "plan-create",
+   "severity": "minor",
+   "finding": "docs/design/ui-decisions.md says 'Everything in the prototype is textContent'. It is not: eight innerHTML assignments, all findings under unsafe_sinks. Scoped into T6.1; the sentence in ui-decisions.md still needs correcting."
+  },
+  {
+   "source": "planner",
+   "phase_id": "plan-create",
+   "severity": "minor",
+   "finding": "docs/design/ui-decisions.md says one post_milestone declaration covers the redesign. Entries are per path; seven are needed. The sentence needs correcting."
+  },
+  {
+   "source": "router",
+   "phase_id": "plan-review-amendment",
+   "severity": "minor",
+   "finding": "Revision 4 states 19 sites for grep -rn '== 3\\b' over the three migration test modules; that pattern returns 16 (union with EXPECTED_SCHEMA_VERSION and [1,2,3] is 22). Conclusion unaffected - far more than the seven originally listed, and the plan carries the grep rather than a hand list. Fourth stated count in this plan to disagree with its source."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-0",
+   "severity": "minor",
+   "finding": "The plan's T0.1 exit criterion still greps for esprima, and a risk row still names it as an undeclared suite dependency. Both are now vacuous rather than wrong - the grep passes, nothing is red. Plan-owner edit."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-0",
+   "severity": "minor",
+   "finding": "js_syntax_check.py now needs playwright, as render_check.py already did. Neither is declared in pyproject.toml. The suite reaches the JS gate only by subprocess and the whole test file is behind pytest.importorskip, so a machine without playwright still collects and passes."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-3",
+   "severity": "minor",
+   "finding": "tools_projects.py is 408 lines against the 450 cap that now names it. delete_project plus its projection and three-branch handler is ~60-80 lines, so the authorised tools_projects.py + tools_projects_reads.py split is very likely required - and BOTH halves must be named on the cap line, or the split hides growth."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-3",
+   "severity": "minor",
+   "finding": "add_repo refusal completeness: absent, not-a-repo and bare are proved; an unreadable path, a submodule, and a filesystem vanishing mid-probe are not. get_project's session ordering is unpinned."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-8",
+   "severity": "minor",
+   "finding": "No capture exists of a dialog with more than three choices, a WRAPPED choice label, a subagent dialog, or the Tab-to-amend screen the permission footer advertises. A wrapped label is the likeliest breaker: a continuation line sits at the same label column and would be read as an extra choice, silently."
+  },
+  {
+   "source": "builder",
+   "phase_id": "phase-8",
+   "severity": "minor",
+   "finding": "In 06-permission-dialog.ansi the command lines sit at column 3 - the choice column - and are kept out of the block only by the indent-1 question line above them. An engine drawing its question at column 3 would have it read as a choice. Structural residual; the standing reason the degrade rule must stay structural."
+  },
+  {
+   "source": "phase-9 (first consumer)",
+   "phase_id": "phase-9",
+   "severity": "major",
+   "finding": "GAP 1 doomed: DeletePlan.doomed never reaches a consumer - the handler discards it and delete_outcome has no key. The refusal can say '2 running' and cannot say 'and 400 finished ones go with the project', which delete_outcome's own docstring says a person is owed. The page currently derives the count itself, a COPY of a store derivation - the thing that drifts."
+  },
+  {
+   "source": "phase-9 (first consumer)",
+   "phase_id": "phase-9",
+   "severity": "major",
+   "finding": "GAP 2 killability: DeletePlan.running does not distinguish owned from attached, and the shipped kill answers no_pane for every attached session. So the page can offer a kill_sessions button that cannot succeed, with a refusal that does not say why."
+  },
+  {
+   "source": "phase-9 (first consumer)",
+   "phase_id": "phase-9",
+   "severity": "minor",
+   "finding": "GAP 3 description: no verb changes a description. create_project takes one; rename_project takes name only. A description is write-once at creation, so the Edit dialog renders the field inert with the reason rather than dropping typed text."
+  },
+  {
+   "source": "phase-9 (first consumer)",
+   "phase_id": "phase-9",
+   "severity": "minor",
+   "finding": "GAP 4 D60 unreachable: nothing answers WHICH projects hold this repo. D60 says a path may sit in more than one project and the row says so - but no read exposes it, and deriving it is an N+1 the projections were shaped to avoid. The page shows the path in full and invents nothing."
+  },
+  {
+   "source": "phase-9 (first consumer)",
+   "phase_id": "phase-9",
+   "severity": "minor",
+   "finding": "GAP 5 destructive-first-call: delete_project destroys on its first call when nothing is running, so a 'probe for the refusal' would destroy any idle project. The page confirms before it asks. A dry-run would close it properly."
+  },
+  {
+   "source": "backend-gaps remfix",
+   "phase_id": "phase-3",
+   "severity": "minor",
+   "finding": "The kill catch is `except Exception` precisely because nothing proves the shipped kill raises only RunnerRefusal. A kill that HANGS still blocks the verb - no timeout was added. And `killable` means the kill path has a pane to address, not that the kill will land; a stale handle is still a refusal, which is the blocking item's own case."
+  },
+  {
+   "id": "viewport-drift",
+   "ts": "2026-09-22T17:41:18Z",
+   "detail": "tests/web/test_projects_page.py and test_settings_live.py hard-code 1280x900 and reference render_check.VIEWPORTS zero times - the exact drift that hid D1. Named in the D1 remediation and still open. Router to parametrise after the lane merge (tests/web is lane A territory until then)."
+  }
+ ],
+ "results": {
+  "git_preflight": {
+   "isolated": false,
+   "detached_head": false,
+   "branch": "integration",
+   "status": "clean"
+  },
+  "baseline": {
+   "suite": "green (exit 0), -m 'not live'",
+   "mypy": "clean over 127 files",
+   "branch": "integration",
+   "sha": "4761c1d",
+   "settings_sha": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
+   "tmux_shepherd_socket": [
+    "m3",
+    "master"
+   ]
+  },
+  "git_base_sha": "d2f1f99",
+  "target_repo": null,
+  "builder": {
+   "phase": "phase-0",
+   "status": "PASS",
+   "remediated": true,
+   "suite": "1897 passed, 2 skipped",
+   "tests_tools": 31
+  },
+  "investigator": null,
+  "reviewer": {
+   "phase": "phase-0",
+   "status": "CHANGES_REQUESTED",
+   "critical": 2,
+   "high": 3,
+   "resolved": true
+  },
+  "hunter": {
+   "phase": "phase-0",
+   "status": "ISSUES_FOUND",
+   "critical": 2,
+   "high": 1,
+   "resolved": true
+  },
+  "verifier": null,
+  "planner": {
+   "status": "PLAN_CREATED",
+   "revision": 4,
+   "confidence": 88,
+   "phases": 10,
+   "tasks": 31,
+   "acceptance_clauses": 28,
+   "retirements": 17,
+   "post_milestone_entries": 6
+  },
+  "planning_reviewer": {
+   "pass": 2,
+   "status": "FINDINGS",
+   "blocking": 5,
+   "advisory": 10,
+   "mode": "fresh"
+  },
+  "qa_researchers": [],
+  "qa_plan": null,
+  "qa_harness_builder": null,
+  "qa_executor": null,
+  "doc_syncer": null,
+  "finishing": null,
+  "final_branch_review": null,
+  "research": {
+   "web": null,
+   "github": null,
+   "synthesis": null
+  },
+  "held_branches": {
+   "worktree-agent-a707de229afd3fe16": {
+    "sha": "8cf0e4d",
+    "what": "T5.2 app.css + tests/web/test_shell.py",
+    "adopt_at": "Phase 5"
+   },
+   "worktree-agent-ab6cfa80ec1636e6f": {
+    "sha": "41f9504",
+    "what": "T8.1 (already merged as 12cb3c8)",
+    "adopt_at": "merged"
+   },
+   "worktree-agent-af94e2c302e58b42f": {
+    "sha": "e1d2fe2",
+    "base": "44c26cc",
+    "what": "Phase 3: six of seven project tools + compose wiring; delete_project deliberately NOT registered",
+    "adopt_at": "after the Phase 1 remediation lands; files are disjoint from it"
+   }
+  }
+ },
+ "evidence": {
+  "builder": [
+   "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open.",
+   "T8.1: A8 gate passed (dialog_text carries the numbered option lines); 17 tests; four degradation branches each with a positive control; tests/runner 82 passed.",
+   "W6 docs: six spec defects closed; router independently re-derived 12 Runner members, 10 omitted columns and the Scripted* list against source.",
+   "T8.1 remfix (3b0743e): 82 -> 128 tests. Eight '# degrade:' branches, eight rows, no branch shared, traced with sys.settrace IN-SUITE - test_every_degradation_branch_is_driven_by_a_row fails if the source grows a branch no row reaches. Floor mutation-proved red at 1 / green at 2, router-verified independently."
   ],
-  "results": {
-    "git_preflight": {
-      "isolated": false,
-      "detached_head": false,
-      "branch": "integration",
-      "status": "clean"
-    },
-    "baseline": {
-      "suite": "green (exit 0), -m 'not live'",
-      "mypy": "clean over 127 files",
-      "branch": "integration",
-      "sha": "4761c1d",
-      "settings_sha": "375e53220773a12f0a2a7a666740f7fb20d31b2989b250e4076957d026b5d6ac",
-      "tmux_shepherd_socket": [
-        "m3",
-        "master"
-      ]
-    },
-    "git_base_sha": "d2f1f99",
-    "target_repo": null,
-    "builder": {
-      "phase": "phase-0",
-      "status": "PASS",
-      "remediated": true,
-      "suite": "1897 passed, 2 skipped",
-      "tests_tools": 31
-    },
-    "investigator": null,
-    "reviewer": {
-      "phase": "phase-0",
-      "status": "CHANGES_REQUESTED",
-      "critical": 2,
-      "high": 3,
-      "resolved": true
-    },
-    "hunter": {
-      "phase": "phase-0",
-      "status": "ISSUES_FOUND",
-      "critical": 2,
-      "high": 1,
-      "resolved": true
-    },
-    "verifier": null,
-    "planner": {
-      "status": "PLAN_CREATED",
-      "revision": 4,
-      "confidence": 88,
-      "phases": 10,
-      "tasks": 31,
-      "acceptance_clauses": 28,
-      "retirements": 17,
-      "post_milestone_entries": 6
-    },
-    "planning_reviewer": {
-      "pass": 2,
-      "status": "FINDINGS",
-      "blocking": 5,
-      "advisory": 10,
-      "mode": "fresh"
-    },
-    "qa_researchers": [],
-    "qa_plan": null,
-    "qa_harness_builder": null,
-    "qa_executor": null,
-    "doc_syncer": null,
-    "finishing": null,
-    "final_branch_review": null,
-    "research": {
-      "web": null,
-      "github": null,
-      "synthesis": null
-    },
-    "held_branches": {
-      "worktree-agent-a707de229afd3fe16": {
-        "sha": "8cf0e4d",
-        "what": "T5.2 app.css + tests/web/test_shell.py",
-        "adopt_at": "Phase 5"
-      },
-      "worktree-agent-ab6cfa80ec1636e6f": {
-        "sha": "41f9504",
-        "what": "T8.1 (already merged as 12cb3c8)",
-        "adopt_at": "merged"
-      },
-      "worktree-agent-af94e2c302e58b42f": {
-        "sha": "e1d2fe2",
-        "base": "44c26cc",
-        "what": "Phase 3: six of seven project tools + compose wiring; delete_project deliberately NOT registered",
-        "adopt_at": "after the Phase 1 remediation lands; files are disjoint from it"
-      }
-    }
-  },
-  "evidence": {
-    "builder": [
-      "Phase 0 remediation: six CLI variants A/C/D/E/F/G, three mutation probes each with a control, U18 reproduction caught at arrival and every open.",
-      "T8.1: A8 gate passed (dialog_text carries the numbered option lines); 17 tests; four degradation branches each with a positive control; tests/runner 82 passed.",
-      "W6 docs: six spec defects closed; router independently re-derived 12 Runner members, 10 omitted columns and the Scripted* list against source.",
-      "T8.1 remfix (3b0743e): 82 -> 128 tests. Eight '# degrade:' branches, eight rows, no branch shared, traced with sys.settrace IN-SUITE - test_every_degradation_branch_is_driven_by_a_row fails if the source grows a branch no row reaches. Floor mutation-proved red at 1 / green at 2, router-verified independently."
-    ],
-    "investigator": [],
-    "reviewer": [
-      "Phase 0: routing-exclusivity gap reproduced (a page with no script scores 0 failures); esprima ES2017 ceiling probed across 8 constructs."
-    ],
-    "hunter": [
-      "Phase 0: 10 probes with controls; 2 CRITICAL proven with exit-0 reproductions (console drain window, .boom window); 6 gates confirmed honest."
-    ],
-    "verifier": [],
-    "planning_reviewer": [],
-    "qa_executor": []
-  },
-  "source_wf": null,
-  "source_bug_candidate": null,
-  "qa": {
-    "qa_scope": null,
-    "qa_sources": {},
-    "qa_env_preflight": {},
-    "env_mode": null,
-    "artifacts": {
-      "feature_map": null,
-      "test_plan": null,
-      "env_plan": null,
-      "report": null,
-      "setup_record": null
-    },
-    "bug_candidates": [],
-    "isolation": {
-      "denied_reads": [],
-      "denied_read_reason": null,
-      "plan_phase_readonly": true,
-      "mutation_allowlist": [
-        ".cc10x/"
-      ]
-    },
-    "env_key": null,
-    "preflight": {
-      "status": null,
-      "cost_tier_reached": null,
-      "checks": [],
-      "human_prerequisites": [],
-      "env_plan_corrections": [],
-      "setup_record_stale": false,
-      "last_run_wf": null
-    }
-  },
-  "telemetry": {
-    "task_metrics_available": "unknown",
-    "workflow_wall_clock_seconds": 0,
-    "agent_wall_clock_seconds": {
-      "builder": 0,
-      "investigator": 0,
-      "reviewer": 0,
-      "hunter": 0,
-      "verifier": 0,
-      "planner": 0
-    },
-    "loop_counts": {
-      "re_review": 1,
-      "re_hunt": 0,
-      "re_verify": 0
-    },
-    "verifier": {
-      "phase_exit_proof_runs": 0,
-      "extended_audit_runs": 0,
-      "workload_seconds": {
-        "tests": 0,
-        "build": 0,
-        "scan": 0,
-        "reconcile": 0,
-        "reasoning": 0
-      }
-    }
-  },
-  "quality": {
-    "confidence": null,
-    "evidence_complete": false,
-    "scenario_coverage": 0,
-    "research_quality": "none",
-    "convergence_state": "pending"
-  },
-  "planning_review_runs": 2,
-  "planning_review_findings": [
-    "B1 blocking: Phase 1's boundary cannot be green - binding.py and admission.py break in Phase 1 and are repaired in Phase 2.",
-    "B2 blocking: test_fleet_page.py's 17 frozen ids assert fleet.js internals (stoppedRow, sessionRow, expansion, ACTION_MILESTONE, LIVE_KINDS, empty-state) the redesign does not contain; zero retirements budgeted.",
-    "B3 blocking: test_palette.py binds index.html to #stop-summary / #unknown-rate / #low-confidence, which the prototype does not draw.",
-    "B4 blocking: section 12 Page 3 (session terminal, session.js + terminal.js + vendor/xterm.js) has no home in the six-page shell and no decision row; test_session_page.py's 16 frozen ids unaccounted.",
-    "B5 blocking: every planned retirement cites a decision string the gate rejects - it asserts 'RD-' in decision or 'section-sign' in decision.",
-    "B6 blocking: test_routes_m3.py:237 asserts len(BODY_ARGS) == 10, a second hard-coded count outside T4.2's declared scope.",
-    "B7 blocking: E15's deciding test test_app_css_carries_the_hidden_reset is named three times and built by no task - the exact M4 failure shape.",
-    "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry.",
-    "F1 blocking: EXPECTED_SCHEMA_VERSION 3->4 reddens 7 frozen migration tests T1.1 itself runs; test_future_schema_refuses_to_start_at_four uses version 4 as its impossible sentinel and 004 makes it real. A 17th retirement.",
-    "F2 blocking: toolsurface/tools_m1.py:156 project_workspace reads workspace.root_path - a third src module broken at the Phase 1 boundary, and a suite failure not just a mypy one.",
-    "F3 blocking: test_palette.py:97 reads rail.js (deleted T5.3) and :42 reads fleet.js (deleted T6.1); both repairs are one task later, so two declared-green boundaries raise FileNotFoundError.",
-    "F4 blocking: T6.4 exit says 5 post_milestone entries, its own arithmetic says 4. Third total-vs-rows disagreement.",
-    "F5 blocking: add_repo has no declared source for git_common_dir/name/vcs_remote. D48's binding key guessed means a UI-registered repo never matches a discovered session and silently lands in Unassigned.",
-    "F8 advisory but important: AC-21 prints the post_milestone count instead of asserting it - exits 0 for any value, and it is the clause that would have caught F4.",
-    "F13 advisory, decided: playwright would become an undeclared suite dependency via the path-loaded render_check import. Fix is pytest.importorskip('playwright')."
+  "investigator": [],
+  "reviewer": [
+   "Phase 0: routing-exclusivity gap reproduced (a page with no script scores 0 failures); esprima ES2017 ceiling probed across 8 constructs."
   ],
-  "planning_review_status": "passed",
-  "plan_revision": 5,
-  "last_reviewed_revision": 5,
-  "memory_notes": [],
-  "pending_gate": null,
-  "status_history": [
-    {
-      "event": "workflow_started",
-      "ts": "2026-09-21T21:28:40Z",
-      "phase": "plan-create"
-    },
-    {
-      "event": "design_saved",
-      "ts": "2026-09-21T21:38:21Z",
-      "phase": "plan-create"
-    },
-    {
-      "event": "plan_saved",
-      "ts": "2026-09-21T21:56:25Z",
-      "phase": "plan-create"
-    },
-    {
-      "event": "planning_review_pass1_findings",
-      "ts": "2026-09-21T22:06:12Z",
-      "phase": "plan-review-gap-1"
-    },
-    {
-      "event": "plan_revised",
-      "ts": "2026-09-21T22:22:51Z",
-      "phase": "re-plan",
-      "revision": 2
-    },
-    {
-      "event": "planning_review_pass2_findings",
-      "ts": "2026-09-21T22:40:33Z",
-      "phase": "plan-review-gap-2",
-      "blocking": 5
-    },
-    {
-      "event": "plan_amended",
-      "ts": "2026-09-21T22:49:33Z",
-      "phase": "re-plan",
-      "revision": 4
-    },
-    {
-      "event": "plan_trust_gate_passed",
-      "ts": "2026-09-21T22:59:04Z",
-      "phase": "phase-0"
-    },
-    {
-      "event": "phase_0_completed",
-      "ts": "2026-09-22T00:49:12Z",
-      "phase": "phase-0"
-    },
-    {
-      "event": "parallel_tracks_landed",
-      "ts": "2026-09-22T04:46:22Z",
-      "detail": "T8.1 merged from worktree; W6 docs complete; T5.2 dispatched in a worktree"
-    },
-    {
-      "event": "phase_3_partial",
-      "ts": "2026-09-22T05:56:40Z",
-      "detail": "six of seven verbs; delete_project blocked on the Phase 1 split"
-    },
-    {
-      "event": "t8_1_remediated",
-      "ts": "2026-09-22T06:13:03Z"
-    },
-    {
-      "event": "phase_9_built",
-      "ts": "2026-09-22T08:29:11Z",
-      "detail": "all seven verbs driven end to end; five contract gaps found at the verb/consumer seam"
-    },
-    {
-      "event": "backend_gaps_closed",
-      "ts": "2026-09-22T09:24:40Z"
-    }
+  "hunter": [
+   "Phase 0: 10 probes with controls; 2 CRITICAL proven with exit-0 reproductions (console drain window, .boom window); 6 gates confirmed honest."
   ],
-  "remediation_history": [],
-  "created_at": "2026-09-21T21:28:40Z",
-  "updated_at": "2026-09-22T09:24:40Z"
+  "verifier": [],
+  "planning_reviewer": [],
+  "qa_executor": []
+ },
+ "source_wf": null,
+ "source_bug_candidate": null,
+ "qa": {
+  "qa_scope": "standard",
+  "qa_sources": {
+   "code": "available",
+   "spec_docs": "available",
+   "tickets": "unavailable \u2014 Atlassian MCP present but unauthenticated; user confirmed repo docs are the authority",
+   "cc10x_artifacts": "available"
+  },
+  "qa_env_preflight": {
+   "docker": "available",
+   "podman": "unavailable",
+   "compose_kind_k3d": "unavailable",
+   "testcontainers": "unavailable",
+   "playwright": "available (chromium-1243)",
+   "log_access": "local stdout",
+   "tmux": "PERMITTED on throwaway socket only \u2014 see isolation.tmux_policy"
+  },
+  "env_mode": "local",
+  "artifacts": {
+   "feature_map": ".cc10x/qa/wf-20260921T212808Z-9172ed6b/feature-map.md",
+   "test_plan": ".cc10x/qa/wf-20260921T212808Z-9172ed6b/test-plan.md",
+   "env_plan": ".cc10x/qa/wf-20260921T212808Z-9172ed6b/env-plan.md",
+   "report": ".cc10x/qa/wf-20260921T212808Z-9172ed6b/report.md",
+   "setup_record": null
+  },
+  "bug_candidates": [
+   {
+    "id": "BC-1",
+    "title": "projects.js:254 starts loadDetail() without awaiting it, so a concurrent detail read can overtake it and rebind #proj-edit to the wrong project",
+    "severity": "high",
+    "failure_class": "defect",
+    "scenario": "S33",
+    "tier": "ui",
+    "deterministic": false,
+    "hit_rate": "1/3 this round; ~1/4 measured by the builder",
+    "measured_on": {
+     "repo": "Shepherd",
+     "branch": "integration",
+     "sha": "c243773",
+     "commits_behind": 0
+    },
+    "first_failing_boundary": "projects.js:343 - #proj-edit's click closure, captured at detail-render time",
+    "mechanism": "projectRow's click handler calls loadDetail(project.project_id) WITHOUT awaiting and then renderList(), while submitProject's create branch already has a loadDetail in flight. The later read to RESOLVE wins the detail pane, and #proj-edit's click closure is captured at render time - so the edit dialog opens on whichever project rendered last.",
+    "user_visible": "a real user hits this by clicking a project row while a create is settling",
+    "baseline": "unknown - no round before 5 drove #proj-edit on an ordinary project at all",
+    "resolution": {
+     "status": "FIXED",
+     "commit": "7487f1a",
+     "debug_wf": "wf-20260923T015907Z-6ade637f",
+     "at": "2026-09-23T03:10:49Z",
+     "note": "Root cause differed from QA's suspicion: request ordering would not have fixed it. Re-qa-execute run 1 post-fix: exit 0, 36 PASS / 0 FAIL / 0 BLOCKED / 1 PARTIAL."
+    }
+   },
+   {
+    "id": "BC-2",
+    "title": "#stream-status still read `live` 30s after controld stopped; the denial mechanism exists but did not fire, and the check has no stated deadline",
+    "severity": "low",
+    "failure_class": "missing-input",
+    "scenario": "S29",
+    "tier": "ui",
+    "deterministic": true,
+    "hit_rate": "3/3",
+    "measured_on": {
+     "repo": "Shepherd",
+     "branch": "integration",
+     "sha": "c243773",
+     "commits_behind": 0
+    },
+    "why_not_higher": "the denial mechanism EXISTS in shipped code (sse.js:33 -> app.js:364 -> flock.js:546) so the state is reachable; what was never measured is whether an in-process controld.stop closes the already-accepted SSE socket. NOT_INSTRUMENTED, so the check has no oracle - which is why S29 is BLOCKED rather than FAIL or PASS.",
+    "resolution": {
+     "status": "OPEN",
+     "note": "BC-2 unchanged and unrelated to BC-1; S29 remains PARTIAL. Pre-existed this work."
+    }
+   }
+  ],
+  "isolation": {
+   "denied_reads": [
+    "/root/shepherd-backup-20260920/**",
+    "/root/pre-orchestrator-backup-20260720/**",
+    "/root/AIVisor/**",
+    "/root/Finopsera_poc/**",
+    "/root/.claude/**",
+    "**/*.key"
+   ],
+   "denied_read_reason": "User-confirmed 2026-09-22. The two backups are stale copies of this same repo: an agent citing them would report old code as current \u2014 a silent wrong result. AIVisor and Finopsera_poc are unrelated projects.",
+   "plan_phase_readonly": true,
+   "mutation_allowlist": [
+    ".cc10x/"
+   ],
+   "tmux_policy": {
+    "permitted": true,
+    "socket": "shepherd-qa",
+    "rules": [
+     "every invocation carries -L shepherd-qa explicitly (CLAUDE.md rule 3: -L on the session is not enough, a command inside tmux inherits $TMUX)",
+     "never a bare kill-server",
+     "never the shepherd socket \u2014 the user live sessions m3/master must not be touched or enumerated",
+     "no : in any session name, use shepherd_<id>"
+    ],
+    "authorized_by": "user, 2026-09-22",
+    "unblocks": [
+     "a kill that LANDS on a real pane",
+     "D6 terminal geometry against a real pane rather than a frozen capture"
+    ]
+   }
+  },
+  "env_key": "Shepherd-local",
+  "preflight": {
+   "status": "FAIL",
+   "at": "2026-09-22T21:43:52Z",
+   "cost_tier_reached": "T4",
+   "services_provisioned": [],
+   "product_code_touched": false,
+   "human_prerequisites": [],
+   "currency_gate": [],
+   "setup_record": ".cc10x/qa/env/Shepherd-local/setup.md",
+   "verdict": "The machine is fine. The plan was wrong about it in five ways, all wrong-guess against env-plan.md, none a product defect, none needing a human.",
+   "env_plan_corrections": [
+    {
+     "id": "P1",
+     "severity": "blocking",
+     "what": "PLAYWRIGHT_BROWSERS_PATH is UNSET and chromium is at /root/.cache/ms-playwright/chromium-1243, not in .venv. env-plan section 7 redirects HOME and XDG_CACHE_HOME, from which playwright derives that path, so executable_path resolves WITHOUT ERROR to a file that does not exist.",
+     "impact": "bring-up step 9 fails ~45s in, looking like a chromium fault. The preflight prerequisite passes because it runs under the REAL env and the harness runs under the redirected one - a preflight that cannot catch its own harness.",
+     "fix": "add PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright to section 7; proven to restore a full launch/inner_text/close under redirect"
+    },
+    {
+     "id": "P2",
+     "severity": "blocking",
+     "what": "$TMUX is inherited and non-empty on this host. Section 2 names it among flags that must be OFF, but section 7 - the table the plan says maps MECHANICALLY to the manifest's environment - has 9 rows and TMUX is not one. A generated manifest would not unset it.",
+     "impact": "CLAUDE.md rule 3: an inherited $TMUX resolves to that session own socket, so -L on the session is not enough.",
+     "fix": "add a TMUX (unset) row to section 7"
+    },
+    {
+     "id": "P3",
+     "severity": "blocking",
+     "what": "`rm -rf $SCRATCH` (section 9 step 8) would delete a REGISTERED GIT WORKTREE of the repo under test. Router-verified: /tmp/claude-0/-root-Shepherd/<uuid>/scratchpad/macwt is a worktree of /root/Shepherd at dade568 (detached HEAD), and the scratchpad holds 228 prior artifacts. It is long-lived and shared, not fresh per run.",
+     "impact": "destroys a live checkout and leaves a corrupt entry in /root/Shepherd/.git/worktrees/ - AND section 9 step 9 verification (git status --porcelain src/ tools/ docs/probes/) still reports EMPTY. A teardown that breaks the repo and certifies itself clean.",
+     "fix": "mint $SCRATCH/qa5-<pid>/ and remove only that; extend step 9 to assert `git worktree list` is unchanged"
+    },
+    {
+     "id": "P4",
+     "severity": "advisory",
+     "what": "B9's premise says the scratchpad is ~88 bytes. Router-verified: the root is 76. 88 is the SUBDIR form. Computed with the product own plan_socket, the /shepherd/controld.sock suffix is 23 bytes so the XDG_RUNTIME_DIR ceiling is 84. Root->99 accepted +8; subdir->111 refused by 4; /tmp/shq5-<pid>->40 accepted +67. The 107 budget confirmed empirically: 107 BOUND, 108 REFUSED.",
+     "impact": "conclusion survives for the intended form; the premise describes a different path",
+     "fix": "correct the premise to 76 and state the 84-byte ceiling"
+    },
+    {
+     "id": "P5",
+     "severity": "advisory",
+     "what": "Section 2's live gate is path-based (no node id from tests/e2e/). THREE tests/e2e/ node ids are collected by default, DELIBERATELY - test_live_lane_typechecks.py's docstring says 'This module carries no pytest.mark.live, and that is the whole point.' The marker reading is exact: live-marked 76 == deselected 76 (2226/2302 collected).",
+     "impact": "a path-based gate goes red on three intentional tests",
+     "fix": "respecify the live gate as marker-based"
+    }
+   ],
+   "notable_passes": [
+    "tmux 3.4",
+    "git 2.43.0",
+    ".venv Python 3.12.3",
+    "playwright 1.63.0 + chromium-1243 that really launches",
+    "/tmp writable, 24622 MiB free, ~2600x screenshot headroom",
+    "loopback bindable",
+    "four migrations 001-004 on disk",
+    "docs/probes/ src/ tools/ all clean",
+    "node-id freeze confirmed a SUBSET check, so adding tests/qa5/ is safe",
+    "B13 confirmed: playwright IS undeclared in pyproject.toml"
+   ],
+   "repo_currency": {
+    "repo": "Shepherd",
+    "branch": "integration",
+    "head": "c243773",
+    "default_branch": "main (UNRELATED HISTORY, no merge base)",
+    "commits_behind_raw": 2,
+    "dirty": true,
+    "no_gate_because": "(1) main and integration are unrelated histories - merge-base exits 1, roots 8685558 vs 22d9ef2. rev-list HEAD..main=2 and main..HEAD=108 are SET DIFFERENCES, not ahead/behind. Round 3 misread the 2 as 'main is 2 ahead' and capped every severity at unconfirmed on that basis; that reading was wrong. (2) dirty is 9 entries and NOT ONE is product code - all are this workflow's own bookkeeping files, modified BY this run. git status --porcelain src/ tools/ docs/probes/ is EMPTY. Gating on a workflow's own state files would gate every run by construction."
+   }
+  },
+  "qa_repo_set": [
+   {
+    "repo": "Shepherd",
+    "present": true,
+    "path": "/root/Shepherd",
+    "in_scope": true
+   }
+  ],
+  "authority_artifacts": [
+   "docs/specs/orchestrator-platform.md (D1-D67)",
+   "docs/design/ui-decisions.md (U1-U18)",
+   "docs/specs/logical-architecture.md",
+   "docs/plans/2026-09-21-projects-and-ui-plan.md",
+   "docs/backlog/2026-09-21-projects-work-sources-and-ui.md"
+  ],
+  "scope_amendment": {
+   "plan_revision": 6,
+   "commit": "83c76b8",
+   "what": "six pages x two viewports -> render_check.VIEWPORTS (390/820/1280) at P11, Live-E2E row, AC-28, out-of-scope 10",
+   "why": "AC-28 passed green while a 140px band (761-900px) was unusable; four restated constants, no definition site",
+   "at": "2026-09-22T18:35:12Z"
+  },
+  "guard_observations": [
+   {
+    "id": "G1",
+    "what": "cc10x_qa_isolation_guard.py:220 returns 0 unless workflow_type == 'QA'. This workflow has been PLAN throughout, so the user-set denied_reads have been INERT, not enforced.",
+    "impact": "No read of a denied path is known to have occurred, but the refusal the user asked for was a request, not a refusal \u2014 exactly what Rule 3 says a prompt-only denylist is.",
+    "action": "Arms itself when workflow_type flips to QA. No fix needed here; recorded so the inert window is not mistaken for enforcement."
+   },
+   {
+    "id": "G2",
+    "what": "guard:293 allows any Bash whose command merely CONTAINS an allowlist string: any(a.strip('/') in command for a in allowlist). A plan-phase command mentioning .cc10x anywhere \u2014 including in a comment \u2014 bypasses the mutation check.",
+    "impact": "Plan-phase mutation guard is bypassable by substring. Upstream cc10x defect, not Shepherd's.",
+    "action": "Reported, not patched. QA does not edit code it measures, and this file is the plugin's."
+   },
+   {
+    "id": "G3",
+    "at": "2026-09-22T20:02:47Z",
+    "what": "The cc10x_artifacts lane's report (58.5KB) overflowed the inline hand-back and the harness spilled it to /root/.claude/projects/.../tool-results/*.txt, which matches the user-set denied_read glob /root/.claude/**. The router's read was DENIED by the guard.",
+    "impact": "The guard worked as designed on its first real test. But the denied path held this workflow's OWN research output, not quarantined material - the denylist is a blunt glob and the harness chose the path, not an agent.",
+    "action": "Not routed around. The lane was asked to re-emit into .cc10x/qa/{wf}/research/cc10x_artifacts.md, which is inside mutation_allowlist and therefore a legal plan-phase write. Recorded as a gap per Rule 4."
+   },
+   {
+    "id": "G4",
+    "at": "2026-09-22T20:06:24Z",
+    "what": "The cc10x_artifacts researcher refused a router request to write its own report into .cc10x/qa/{wf}/research/, citing (a) its read-only contract, (b) plan_phase_readonly:true beside a non-empty mutation_allowlist, and (c) that a .cc10x-path heredoc is the G2 substring bypass.",
+    "assessment": "(a) is correct and the refusal stands: qa-researcher is read-only by role, and the router should not have asked. (b) is an over-read - qa-workflow.md Rule 3 ships plan_phase_readonly:true and mutation_allowlist:['.cc10x/'] together in the same block, so the allowlist is the stated exception to the readonly flag, not a contradiction with it. (c) is right about the mechanism but the write would have been legal on its merits, not only via the bypass.",
+    "impact": "Research hand-back had to be chunked inline instead. No file was written by any researcher; the read-only contract held.",
+    "action": "Router re-requested the report section by section. Recorded because the router's own request was the error here, not the agent's refusal."
+   }
+  ],
+  "round4_defects": {
+   "D4": {
+    "what": "legend sheet untappable",
+    "lane": "A",
+    "fixed": true,
+    "commit": "f391020",
+    "merge": "037c889"
+   },
+   "D5": {
+    "what": "double click binding (redundant card click)",
+    "lane": "A",
+    "fixed": true,
+    "commit": "f391020",
+    "merge": "037c889"
+   },
+   "D6": {
+    "what": "terminal emulator never fitted to its container",
+    "lane": "B",
+    "fixed": true,
+    "commit": "34f4b83",
+    "merge": "c243773"
+   },
+   "D7": {
+    "what": "project mutations never publish (no SSE frame on mutation)",
+    "lane": "B",
+    "fixed": true,
+    "commit": "34f4b83",
+    "merge": "c243773"
+   },
+   "D8": {
+    "what": ".back control had no size rule (sub-44px target)",
+    "lane": "A",
+    "fixed": true,
+    "commit": "f391020",
+    "merge": "037c889"
+   },
+   "D9": {
+    "what": ".back sizing sibling",
+    "lane": "A",
+    "fixed": true,
+    "commit": "f391020",
+    "merge": "037c889"
+   }
+  },
+  "round4_verification": {
+   "at": "2026-09-22T20:07:12Z",
+   "pytest": "exit 0",
+   "mypy_strict": "exit 0, 131 source files",
+   "boundaries": "exit 0, 105 rules",
+   "js_syntax_check": "exit 0, 9 files 0 failures"
+  },
+  "research_lanes": {
+   "cc10x_artifacts": {
+    "status": "returned",
+    "coverage": "full",
+    "note": "chunked hand-back; sections 2/3/5 verbatim, 1/4 condensed",
+    "sections": "1-5 all received (2,3,5 verbatim; 1,4 condensed)"
+   },
+   "code": {
+    "status": "returned",
+    "coverage": "partial",
+    "note": "app.css, the 11 store verbs and full test bodies not read"
+   },
+   "spec_docs": {
+    "status": "returned",
+    "coverage": "full",
+    "note": "recon doc deliberately excluded (not in authority list) - gap G-12"
+   }
+  },
+  "evidence_gaps": [
+   {
+    "id": "E1",
+    "at": "2026-09-22T20:07:12Z",
+    "what": "Rounds 1, 2 and 4 have no report artifact on disk - only round 3's report-qa3.md exists. Round 1's eleven defects are recorded closed with no id, no description and no named check.",
+    "consequence": "Round 5 cannot re-verify round 1's closures at all, and can re-verify rounds 2 and 4 only from commit diffs and test names. Any claim that 22 defects are closed rests on 5 that are individually evidenced."
+   }
+  ],
+  "blocking_contradictions": [
+   {
+    "id": "C-1",
+    "what": "AC-16/AC-21/AC-23 false of the tree (BODY_ARGS=16 not 15; post_milestone=7 not 6; terminal.js baseline ace78240 vs current 781bed86)",
+    "resolution": "code wins by measurement; plan NOT amended mid-QA; clauses declared stale and routed out for a revision 7 the user or a BUILD owns"
+   },
+   {
+    "id": "C-2",
+    "what": "No AC, P-property or flow map covers any event/SSE obligation - the hole D7 occupied",
+    "resolution": "round 5 asserts the event obligation directly; a SECOND LIVE CLIENT is mandatory in the matrix"
+   },
+   {
+    "id": "C-3",
+    "what": "AC-21 and AC-23 use git diff on the WORKING TREE, so they pass because the change is committed",
+    "resolution": "byte-cleanliness is asserted against consumer_manifest.json baseline digests, never git diff"
+   },
+   {
+    "id": "C-4",
+    "what": "AC-28's command runs pytest -m live, forbidden by standing user constraint (starts real claude processes against the real ~/.claude.json)",
+    "resolution": "substitute a served-controld render sweep carrying no live marker; declare in the report that AC-28 final clause was NOT run, with the reason"
+   },
+   {
+    "id": "C-6",
+    "what": "DeletePlan.running vs killable - two documents describe the same record differently",
+    "resolution": "SCENARIO S0, the binding probe: drive a real delete against a real running session and read the actual fields"
+   },
+   {
+    "id": "C-8",
+    "what": "viewport-drift STILL OPEN - test_projects_page.py and test_settings_live.py hardcode 1280x900 and reference render_check.VIEWPORTS zero times",
+    "resolution": "blocker (lane A ownership) is gone post-merge; handed to qa-build with its node-id retirement entries"
+   }
+  ],
+  "plan": {
+   "scenarios": 35,
+   "waves": 6,
+   "confidence": 75,
+   "provable_properties": 8,
+   "risks": 19,
+   "key_unlock": "app_state['runner_socket'] (D49/RD1) points the shipped kill path at the throwaway tmux socket WITHOUT editing src/ - this is why killable was empty in every prior fixture",
+   "differences_from_agreement": [
+    "no --data-dir flag on shepherd-controld; realised as redirected XDG_DATA_HOME with an arrival assertion",
+    "throwaway HostPlatform is the real LinuxHost under redirected env, not ScriptedHost (which stubs detached_launch and the runtime dir - the exact ground round 5 exists to drive)",
+    "controld is in-process, so teardown-by-pid binds to the child processes the fixture starts",
+    "AC-28 final clause not executed; S30 substitutes and a PASS on S30 does NOT discharge AC-28",
+    "owned sessions seeded through Store verbs, not spawn_session, which would start a real engine process - declared as a known gap with its false-confidence cost"
+   ],
+   "revision": "r4"
+  },
+  "router_decisions": [
+   {
+    "id": "RD-QA5-1",
+    "at": "2026-09-22T20:33:46Z",
+    "decision": "env-plan.md section 9 step 6 (`tmux -L shepherd-qa kill-server`) is DROPPED. The harness builder must not implement it. Teardown ends at step 5 - killing the QA panes by name - followed by the assertion that no sessions remain on shepherd-qa.",
+    "why": "The plan itself calls step 6 'belt-and-braces' and offers the replacement, so it costs nothing. `kill-server` is the exact verb of the 2026-09-12 incident that destroyed three live sessions including the one that issued it. CLAUDE.md rule 1 permits it with -L, and the plan's usage IS compliant - but a verb whose only defence is a flag being present is a verb worth not typing when it buys nothing. The socket dies with its last pane.",
+    "binding_on": "qa-harness-builder, qa-executor"
+   }
+  ],
+  "tmux_audit": {
+   "at": "2026-09-22T20:33:46Z",
+   "result": "PASS",
+   "method": "grep -ohE '`tmux [^`]*`' over both plan artifacts, matching commands rather than prose",
+   "invocations": [
+    "tmux -L shepherd-qa new-session -d -s shepherd_r5a -x 160 -y 45",
+    "tmux -L shepherd-qa list-sessions -F #{session_name}",
+    "tmux -L shepherd-qa kill-session -t '=shepherd_r5a:'",
+    "tmux -V"
+   ],
+   "findings": [
+    "every invocation carries -L shepherd-qa explicitly; `tmux -V` is the sole exception and contacts no server",
+    "`tmux -L shepherd ls` appears ONLY inside prose stating it is never run - the user live socket is never named in a command and never enumerated as a gate",
+    "session names shepherd_r5a/b/c carry no colon; the colons are in -t '=name:' target specs, which is correct usage",
+    "kill-server appeared once, -L explicit, post-pane-removal - compliant, but DROPPED anyway per RD-QA5-1"
+   ]
+  },
+  "plan_review_pass1": {
+   "status": "FINDINGS",
+   "blocking": 6,
+   "advisory": 10,
+   "at": "2026-09-22T20:42:11Z",
+   "confirmed_correct": [
+    "all four rollups hold - class/tier/wave partitions each equal the id set and are pairwise disjoint; no scenario dropped",
+    "tmux handling: NO VIOLATION. -L explicit on every invocation; session names carry no colon; the shepherd socket never named nor enumerated; tmux -V whitelisted by equality in the product own predicate",
+    "AC-28 substitution declared adequately in five places",
+    "no contradiction is recorded and then quietly planned around - that failure mode is absent",
+    "S31 measurements independently re-verified against the tree: API_ROUTES=14, POST_ROUTES=16, BODY_ARGS=16, post_milestone=7, terminal.js baseline ace78240 vs 781bed86"
+   ],
+   "blocking_findings": [
+    "B1 S0 zero-frame assertion ordered before the rig that makes zero meaningful; 5 more frame-counting scenarios lack an in-scenario liveness control; SSE client lifecycle unspecified past wave 2",
+    "B2 two full-combinatorial rows claim Uncovered:none over sets with undriven members - #proj-edit never opened on an ordinary project, the delete-dialog Wait choice driven by nothing",
+    "B3 S29 per-module unreachable sentence false of the tree - three modules share a byte-identical string and flock.js has no UNREACHABLE constant at all",
+    "B4 S30 --fail-on-empty is a whole-body text check that can never be empty given the persistent nav, so the assertion is unfalsifiable; --must-fill declined; C-8 claim that round-5 scenarios read VIEWPORTS by reference is false of 4 of 5",
+    "B5 PP-7 non-zero box tolerates a 1px collapse; FILL_FLOOR=0.75 ships and no scenario uses it; clickable undefined in S22/S23/S24",
+    "B6 S10/S12 require an attached-only project the seed never provisions; S13 needs an owned pane and every pane is already spoken for"
+   ],
+   "sharpest_advisory": "S0 STOP branch is provably unreachable - reads.py:283-284 and tools_projects_delete.py:128-136 emit the keys unconditionally, so B-ABSENT cannot fire and the seed forces B-OWNED. C-6 was resolvable by reading one line; the code lane never opened reads.py."
+  },
+  "re_plan": {
+   "at": "2026-09-22T21:02:33Z",
+   "revision": "r2",
+   "scenarios": 35,
+   "confidence": 88,
+   "sweep_gate": "PASSED - AMENDED_FILES, STALE_SWEEP and RECONCILIATION_RERUN all present and non-empty; router independently verified r2 markers in all three headers, 35 contiguous scenario headings S0-S34, teardown steps 1-9 contiguous, and zero live kill-server commands",
+   "verdict_on_findings": "all six blocking findings were the plan own error, none the reviewer; all ten advisories verified correct",
+   "added_scenarios": {
+    "S32": "the #proj-edit chain B2 found undriven",
+    "S33": "the page's validation surface - empty, whitespace-only, non-existent path, non-directory",
+    "S34": "the wire's refusal surface - GENERIC_ERROR envelope, Origin/Host on POST and SSE, dropped-field and path-param-wins"
+   },
+   "structural_changes": [
+    "S0 demoted from a four-branch gate to a measurement; the wave-1 gate moves to a fixture-side pane-kill control plus S11",
+    "new sections 3a (SSE rig lifecycle, one owner for the whole run), 3b (pane ledger r5a-r5d + r5z), 3c (fixture-side controls that make a red S11 attributable), 3d (HIT_TESTABLE / PANE_HEALTHY / ROUND5_WIDTHS defined once)",
+    "PP-3 restated to its provable form; S17 named as its breaker",
+    "S29 rewritten per module after the tree showed three modules share a byte-identical string and flock.js has none",
+    "RD-QA5-1 applied: kill-server step replaced by an emptiness assertion"
+   ],
+   "self_caught": [
+    "r1 wrongly listed S16 as tmux-BLOCKED; it drives the no_pane branch against an attached session and needs no pane",
+    "S4/S6/S7/S8/S13/S18/S28 assert strictly positive frame counts, which are self-controlling - stated as rule 4 rather than adding a redundant control"
+   ]
+  },
+  "plan_review_pass2": {
+   "status": "FINDINGS",
+   "blocking": 5,
+   "advisory": 11,
+   "at": "2026-09-22T21:14:15Z",
+   "confirmed_held": [
+    "all four partitions reconcile at 35, re-derived member by member from the section-4 headings against each scenario own Class: and Tier: lines",
+    "no 32-era denominator survives in any of the three artifacts",
+    "S32/S33/S34 each appear in a coverage row, a wave, a class bucket and a tier bucket",
+    "both of the planner self-serving claims check out at source level: S0 B-ABSENT/B-ALL really are unreachable, and S16 really needs no pane",
+    "B2, B3, B4, B5, B6 and RD-QA5-1 all landed and were verified against the tree",
+    "pane ledger sound end to end - NO scenario depends on a pane another destroyed"
+   ],
+   "blocking_findings": [
+    "F1 the central B1 repair contradicts itself: section 3a defines the liveness control as TWO frames, all twelve consuming scenarios assert exactly ONE, and the window definition says \"the control frame\" singular",
+    "F2 S5 drives a call that CANNOT refuse - duplicate-name is a client-side WARNING (projects.js:615-627), create_project returns created:True unconditionally. S5 would report a FABRICATED defect on the one scenario whose job is proving a negative",
+    "F3 the S16 correction is HALF-PROPAGATED - right in env-plan, unchanged in test-plan wave-4 Stop-if and section 1 preconditions. Exactly what pass 2 was convened to catch",
+    "F4 S33(d)(e) and S19 drive #p-new-path in CREATE mode where projects.js:549 hides the field and :583-588 returns before any request",
+    "F5 S34(d) sends workspace_id but the path parameter is project_id and BODY_ARGS is (\"name\",), so the field is dropped and the precedence assertion CANNOT FAIL"
+   ],
+   "route_note": "Maximum fresh-review passes is 2 and both are spent. The r3 amendment therefore ships under the sweep gate plus router verification only - this is the route own recorded deferral, \"no verifier for a QA plan amendment made after qa-plan-review-2\", and this run is its trigger."
+  },
+  "deferral_triggers_hit": [
+   {
+    "id": "DEF-2",
+    "at": "2026-09-22T21:14:15Z",
+    "deferral": "no verifier for a QA plan amendment made after qa-plan-review-2 (qa-workflow.md)",
+    "trigger_text": "if a QA run ships an unswept post-pass-2 amendment",
+    "status": "TRIGGERED BUT NOT UNSWEPT - r3 carries the full fail-closed sweep gate (AMENDED_FILES + STALE_SWEEP + RECONCILIATION_RERUN) and the router verifies it independently. Recorded because the hole is real and this run is the first to reach it."
+   }
+  ],
+  "re_plan_r3": {
+   "at": "2026-09-22T21:32:57Z",
+   "sweep_gate": "PASSED",
+   "router_verification": [
+    "r3 in all three headers",
+    "35 scenario headings, contiguous S0-S34, no duplicates",
+    "tier 13 e2e_backend + 17 ui + 5 integration = 35, re-derived by the router from each scenario own Tier: line",
+    "class 17 edge-case + 10 happy-path + 8 error-handling = 35, likewise",
+    "no live \"exactly one frame\" normative row survives - both remaining hits quote the old wording inside the correction that replaces it",
+    "zero 32-era denominators",
+    "S16 correction propagated to BOTH artifacts in all four gating places"
+   ],
+   "planner_corrected_the_reviewer_once": "F5: sending project_id is necessary but NOT sufficient. Two independent guards exist - BODY_ARGS drops the undeclared key (routes.py:247-249) AND args.update(captured) applies the path parameter last (:250) - and a wire-level request observes only their CONJUNCTION, so removing either alone leaves the assertion green. Re-labelled to what it does prove (no body key can redirect the target), named the unit seam that separates them, and carried the single-guard blindness as a new section-7 deferred row.",
+   "three_defects_found_while_sweeping_not_in_any_finding_list": [
+    "the liveness control's OWN footprint was uncounted - it is two gated invokes, so it appends two audit records, which would have broken S26's 'exactly three new JSONL records', the row that IS PP-6",
+    "S26 and S27 used the control but their cleanup never deleted their throwaway project",
+    "env-plan section 4 step 5 had an EMPTY Timeout cell - an unbounded wait on tmux, in a table that section says is translated mechanically into the manifest's setup[], which its own closing paragraph forbids"
+   ],
+   "residual_risk": "The control-footprint rule fixes S26 and S33 by construction but changes how EVERY count in section 4 is read, and no fresh reader has checked it against every row. Both fresh-review passes are spent. Carried forward to the harness review phase."
+  },
+  "carry_to_harness_review": [
+   {
+    "id": "CHR-1",
+    "at": "2026-09-22T21:32:57Z",
+    "what": "Verify the control-footprint rule (test-plan section 3a) against EVERY frame-count, audit-record-count and surviving-row assertion in section 4.",
+    "why": "It was introduced in r3, after both fresh-review passes were spent. It is the largest untested surface in the plan and it is load-bearing for PP-6 and for all 13 cell-(iii) scenarios."
+   }
+  ],
+  "near_misses": [
+   {
+    "id": "NM-1",
+    "at": "2026-09-22T21:43:52Z",
+    "what": "env-plan r3 section 9 step 8 specified `rm -rf $SCRATCH`, which would have destroyed the registered worktree /tmp/.../scratchpad/macwt of the repo under test, while step 9's verification reported clean.",
+    "caught_by": "qa-preflight T2, before anything was built or run",
+    "router_verified": true,
+    "lesson": "The session scratchpad is NOT per-run scratch: it is long-lived, shared, holds ~250 prior artifacts and a registered git worktree. Never rm -rf it; mint a subdirectory. A teardown whose verification cannot see the damage it does is not a verification."
+   }
+  ],
+  "env_plan_r4": {
+   "at": "2026-09-22T21:59:15Z",
+   "sweep_gate": "PASSED",
+   "router_verified": [
+    "r4 in all three headers",
+    "the ONLY rm -rf targets are /tmp/shq5-<pid> and $SCRATCH=$SESSION_SCRATCH/qa5-<pid>; $SESSION_SCRATCH is never removed",
+    "section 4 step 1 redefines $SCRATCH ONCE as the minted run root, so ~25 existing $SCRATCH/<sub> paths stay verbatim-correct - no second definition site",
+    "section 9 step 9 compares `git worktree list` against a baseline captured at bring-up; the leak check explicitly asserts $SESSION_SCRATCH/macwt still exists",
+    "section 7 is TEN rows and carries both PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright and TMUX->UNSET",
+    "section 4 step 3 asserts arrival of both: os.environ.get(\"TMUX\") is None and os.path.exists(chromium.executable_path)"
+   ],
+   "found_while_sweeping": [
+    "section 4 step 1's mkdir omitted `tmp` while section 7 sets TMPDIR=$SCRATCH/tmp",
+    "section 1's 'no path the run touches is outside the session scratchpad' is false under P1 (it READS the chromium binary outside) - restated as writes vs reads",
+    "section 11's 'Seven are external' was a slip; the table holds 8 (it had read the un-closable list as the external one)",
+    "test-plan section 9a's 'This is the final amendment on this route' superseded by r4 - corrected visibly",
+    "section 4 step 1 now sweeps stale qa5-*/shq5-* BEFORE minting, and STOPS rather than deletes if a survivor's pid is alive"
+   ],
+   "caveat": "r4 is self-verified. Fresh-review passes are 2/2 and no adversarial reader has read this revision whole."
+  },
+  "harness": {
+   "at": "2026-09-23T00:47:00Z",
+   "status": "PASS",
+   "confidence": 88,
+   "lines": 6081,
+   "package": "tests/qa5/",
+   "manifest": "tests/qa5/manifest/qa5-live-harness.json",
+   "scenarios_implemented": 35,
+   "tier_coverage": {
+    "integration": 5,
+    "e2e_backend": 13,
+    "ui": 17
+   },
+   "services_provisioned": [
+    "controld",
+    "SQLite Store schema 004",
+    "tmux shepherd-qa with 4 owned panes",
+    "chromium 1243 headless",
+    "two raw SSE clients"
+   ],
+   "mutation_floor": "MET IN FULL - 8 provable properties, branch 1 (one assertion_falsified PER property). 8/8 falsified, zero survived, zero blocked, zero not_applied. __pycache__ cleared before every run.",
+   "rerun_clean": true,
+   "teardown_verified": true,
+   "product_code_touched": false,
+   "evidence": [
+    "two back-to-back runs, identical verdict per scenario id",
+    "six consecutive clean full-suite runs after the last fix",
+    "no leaks: no /tmp/shq5-*, no run roots, no server on shepherd-qa",
+    "src/ tools/ docs/probes/ byte-identical; 14 worktrees unchanged; macwt intact",
+    "collection 2264/2340, exactly +38; live-marked 76 == deselected 76, unmoved",
+    "node-id freeze passes with NO retirement entry needed - it is a subset check"
+   ],
+   "run_command": "CI=true .venv/bin/python -m pytest tests/qa5/ -q  (~95s, one process)"
+  },
+  "chr1_verdict": {
+   "at": "2026-09-23T00:47:00Z",
+   "finding": "Section 3a's control-footprint rule holds on every row EXCEPT its window definition, which is UNSOUND as written. 'The window opens on the project.deleted frame of the PREVIOUS control' is exact only while every scenario runs a control, and cell-(ii) scenarios deliberately run none - so S4's six LEGITIMATE frames sit inside S5's literal window and S5's asserted zero is unreachable against a CORRECT product.",
+   "resolution": "Each cell-(iii) scenario now opens its own window and the control still CLOSES it, which is the endpoint that makes a zero mean anything. Windows are also narrowed by event FAMILY, because a kill publishes session.killed on the same ring.",
+   "assessment": "This is exactly what CHR-1 was raised to catch, and it was real. The rule introduced after both review passes were spent would have made a correct product look broken."
+  },
+  "scope_increases": [
+   {
+    "id": "SI-1",
+    "at": "2026-09-23T00:47:00Z",
+    "item": "C-8 viewport-drift parametrisation",
+    "verdict": "ACCEPTED as a separate BUILD, not done here",
+    "measured_basis": "Changing the one viewport literal in tests/web/test_projects_page.py to 390x844 makes 28 of 31 tests ERROR at fixture setup (Page.click: Timeout 5000ms) - below the 760px breakpoint the Projects page is a drill-down and the list column is collapsed. A 3-way parametrisation would retire 34 node ids into a RETIRED_NODE_IDS list that holds 20 carefully-argued entries for genuine deletions, create 102 browser node ids in place of 34, and require per-width branching in 34 bodies. It also needs a decision the harness cannot make: whether the phone case asserts the drill-down or is skipped.",
+    "why_not_blocking": "The coverage hole C-8 names is ALREADY CLOSED by round 5: S21-S24 drive the nine ROUND5_WIDTHS by reference - including 760/761/820/900, the exact band that hid D1 - and S30 drives render_check.VIEWPORTS by reference. No width literal exists in any .py file of the package."
+   },
+   {
+    "id": "SI-2",
+    "at": "2026-09-23T01:40:36Z",
+    "item": "declare playwright in pyproject.toml test dependencies",
+    "why": "testpaths=['tests'] collects tests/qa5 and a plain pytest on a fresh checkout dies at import. A marker alone does not deselect - pyproject.toml:55-59 records that exact shape going unnoticed for three milestones.",
+    "owner": "user or a BUILD"
+   }
+  ],
+  "harness_open_items": [
+   {
+    "id": "OI-1",
+    "what": "S29 is PARTIAL, never PASS: #stream-status still read `live` 30s after controld.stop.",
+    "classification": "MEASUREMENT, not FAIL - no source states how fast the page must notice",
+    "note": "Worth a product look. A page claiming `live` over a dead stream is the one state that indicator exists to deny. Candidate defect for the executor to confirm."
+   },
+   {
+    "id": "OI-2",
+    "what": "tests/qa5/ is collected by a plain `pytest` (+38 tests). A default full-suite run now starts a controld, a tmux server and a chromium for ~95s.",
+    "note": "Deliberate: it carries no `live` marker (the plan forbids that) and the builder added no skip, because a skipped suite reporting green is the failure the discipline names. But it changes what `pytest` means for this repo - user's call whether to keep it."
+   },
+   {
+    "id": "OI-3",
+    "what": "One flake identified mechanically: projects.js:250-254 starts loadDetail() without awaiting it while submitProject has its own in flight, so the later to RESOLVE wins and #proj-edit can bind to the wrong project. S33 failed 1 run in 4.",
+    "note": "Closed with a networkidle settle; 6/6 clean. The builder states plainly that six runs is not proof against a 1-in-4 rate - the argument is the identified mechanism PLUS the clean runs. Re-examine at execute."
+   }
+  ],
+  "harness_review": {
+   "at": "2026-09-23T00:57:21Z",
+   "status": "CHANGES_REQUESTED",
+   "confidence": 70,
+   "critical": 0,
+   "high": 5,
+   "medium": 5,
+   "verdict_on_trust": "A green run is worth substantially more than anything this repo has had - real chromium, real controld, real tmux panes, real store, real audit sink. Independently re-run: 38 tests, exit 0, ~92s, teardown clean, socket empty, worktree baseline identical. But four named limits stand.",
+   "high_findings": [
+    {
+     "id": "F1",
+     "what": "tmuxctl._argv guards kill-server by MEMBERSHIP (`if \"kill-server\" in words`), and tmux 3.4 resolves unambiguous command-name PREFIXES. `kill-ser`/`kill-serv`/`kill-serve` all reach kill-server and all pass this guard.",
+     "router_verified": true,
+     "why_severe": "The product ALREADY found, fixed and documented this exact defect: src/shepherd/runner/tmux_cmd.py:326 `is_server_teardown` exists precisely because 'kill-server in argv was a membership test... tmux -L <socket> kill-serv returns rc=0 and the server is gone'. The harness re-introduced it two directories away and did not import the hardened predicate. Not a live bypass today - the eight callers are a closed set - but the exposure is the next edit, which is exactly where the 2026-09-12 spike was.",
+     "also": "`any(word == '-L' ...)` is equality too, so a fused `-Lshepherd` is not refused; and _argv never calls the product's check_tmux_argv."
+    },
+    {
+     "id": "F2",
+     "what": "NONE of the harness's own guards is ever exercised. `grep -rn 'pytest.raises' tests/qa5/` returns nothing. The three _argv refusals, the ':' name refusal, the pid<=1 refusal and the live-pid sweep stop are unreached code in every run.",
+     "why_severe": "patterns.md states the rule this violates: 'An assertion that has never been observed failing is unproven, and unproven assertions are how a suite drifts into decoration.' The mutation floor 8/8 covers PRODUCT code; the harness's own safety surface has no proof at all."
+    },
+    {
+     "id": "F3",
+     "what": "THE RUN REPORT CANNOT EXPRESS A FAILURE. Every record() passes a literal verdict at the tail of a test body; no test wraps its record in try/finally; conftest defines NO pytest_runtest_makereport and NO pytest_sessionfinish. A failing scenario aborts before its record and VANISHES. counts().FAIL is structurally zero.",
+     "router_verified": true,
+     "measured_by_router": "140 emitted artifacts on disk; FAIL total across ALL of them = 0; 47 of them show scenarios=0 with all-green counts AND a fully green teardown block. emit() then overwrites qa5-latest.json unconditionally, so a partial run becomes \"latest\".",
+     "why_severe": "It contradicts report.py:9-11's own stated contract: 'Every loss is stated, never absorbed. A suite that quietly drops 60% of its scenarios and reports PASS is worse than one that fails, because it manufactures confidence.' This is the verdict-bearing artifact of the entire route."
+    },
+    {
+     "id": "F4",
+     "what": "Bring-up steps 1-5 (mint, env redirect, store knob, four new_session calls) execute BEFORE the try: whose finally: is the only caller of _teardown. A failure in that stretch leaks the run root, /tmp/shq5-<pid> and any panes created.",
+     "why_severe": "Directories are recoverable (sweep reclaims dead-pid roots) but SESSIONS ARE NOT SWEPT, and new_session on a surviving shepherd_r5a exits non-zero -> HarnessBlocked. The harness bricks itself until someone kills the panes by hand. Files swept, panes not, with no stated reason."
+    },
+    {
+     "id": "F5",
+     "what": "A RESTATED WIDTH LITERAL, in the instrument built to report restated width literals: test_wave5_browser.py:726 `DRILL_MAX_WIDTH = 760`, against constants.py:6-9's claim that 'no width literal appears in any other .py file in this package'. It must track app.css:1962's @media (max-width: 760px).",
+     "why_severe": "If the breakpoint moves, _two_pane_health classifies S24's four widths against the wrong side of it and keeps reporting green - D1's exact mechanism, reproduced inside the harness written to catch D1. The house technique for this is already in the same file (NEEDS_NAME and UNREACHABLE are parsed out of the .js)."
+    }
+   ],
+   "medium_findings": [
+    "F6 Rig/Subscriber partial-construction leaks: if Subscriber B raises, A's socket and daemon thread leak AND rig stays None so teardown SKIPS closing readers",
+    "F7 S27 leaves ten unawaited project.deleted frames in flight and S28 asserts its window interior exactly - a race that fails a HEALTHY system",
+    "F8 tests/qa5 is in the default pytest run unmarked; pyproject.toml:55-59 records this exact shape going unnoticed for three milestones",
+    "F9 an unhandled ConnectionResetError in a product server thread, printed and asserted on by nobody",
+    "F10 seed.py BASE is a fixed past instant while now is not, so \"fresh\" (BASE-40min) is already ~25h old today - the stated >=2x-from-every-boundary invariant is already false"
+   ],
+   "verified_clean": [
+    "NO tmux bypass - every invocation in all 20 modules routes through tmuxctl; the shepherd socket string appears nowhere; envredirect unsets TMUX and ASSERTS its absence",
+    "runroot is correctly narrow - globs are qa5-[0-9]* and shq5-[0-9]* only, a live pid RAISES and refuses to delete, destroy asserts the shared scratchpad survives and git worktree list is byte-identical",
+    "the pane ledger matches the code exactly, r5a through r5d, and wave 3 records a lose() before pytest.skip so a skip does not read as a pass",
+    "the one-definition-site claim holds everywhere EXCEPT F5",
+    "both resource fixes the builder claimed are real and load-bearing, including the non-obvious capture of .sock before getresponse()"
+   ]
+  },
+  "harness_hunt": {
+   "at": "2026-09-23T00:58:35Z",
+   "status": "ISSUES_FOUND",
+   "critical": 2,
+   "high": 4,
+   "medium": 9,
+   "low": 4,
+   "critical_findings": [
+    {
+     "id": "C1",
+     "router_verified": true,
+     "what": "S13 asserts a SHAPE over a collection the seed cannot populate: `for link in severed: assert set(link) == {...}` where severed == []. store/projects.py::_sever_lineage only emits a SeveredLink for a session in ANOTHER workspace whose lineage column points into the deleted one, and seed.py never sets a lineage column on any seeded session. The loop body never executes - and the PASS record still claims 'severed carries {session_id, column}'.",
+     "shape": "tests/web/test_ws.py's vacuous-by-construction defect one level up: a contract asserted where nothing can implement it, reported as evidence."
+    },
+    {
+     "id": "C2",
+     "router_verified": true,
+     "what": "S13 computes orphans_visible, drops it into the report's `actual` as orphans_named_on_flock=0, and NEVER ASSERTS IT. The plan's S13 UI row expects the Flock to still show the two orphaned sessions. A named observation point came back FALSIFIED and the scenario recorded PASS with no measurement=, no lose(), and no mention of the UI row in `expected`.",
+     "and_worse": "The count could never have been non-zero: flock.js:392 puts the id in card.dataset.sessionId (an ATTRIBUTE, not text), and the cards only render after drilling into a project, which S13 never does. Had it been asserted it would have gone red on run 1 and been fixed."
+    }
+   ],
+   "high_findings": [
+    "H1 the reproduced product race (projects.js:252-256 unawaited loadDetail, ~1 full-suite run in 4) is worked around by a networkidle settle and declared NOWHERE in the deliverable - no declaration, no loss, no measurement. The settle itself is SOUND (verified: zero timers in the product JS, so networkidle is a stable state) - the disposition is what is wrong.",
+    "H2 S20/S21 CONTROL_SET differential has no non-vacuity floor: an entry False on BOTH sides is silently dropped. Two of ten already are (drawer-open, proj-new). A renamed id would drop out identically with NO signal - the exact failure constants.py:63-66 says the set exists to prevent. S19 does it right and reports the excluded set by name.",
+    "H3 playwright still undeclared in pyproject.toml. The harness fixed the importorskip half correctly (a machine without it now gets a COLLECTION ERROR, not a green run) but tests/qa5 carries no live marker, so a plain pytest on a fresh checkout collects it and fails at import.",
+    "H4 S12 report `expected` states the OPPOSITE of what its code asserts; the measurement= field correctly explains neither holds on this tree. One Evidence record whose expected contradicts its own measurement and its code."
+   ],
+   "verified_good": [
+    "the section-3a control-footprint fix is REAL - all 12 rig.control() call sites enumerated, every zero-asserting scenario passes its own opening mark",
+    "the zero-frame windows are NOT degenerate: the interior is proved capable of carrying frames by six scenarios that assert it NON-empty",
+    "family narrowing correct AND the narrowed-away frames are asserted, not dropped (session.killed asserted separately)",
+    "both prior zero-on-a-dead-socket bugs genuinely closed - blocking read, socket captured before getresponse(), reader_fault raised into the next assertion",
+    "NO skip, xfail or early return reads as success anywhere in the package",
+    "teardown does not swallow - step failures collected and raised as a set; already-closed classified against refused",
+    "all 8 mutation rows are ATTRIBUTABLE - each output_tail names the intended node id and assertion, pycache cleared in the correct order, the plant proved landed by an asserted grep"
+   ]
+  },
+  "remediation_round": 1,
+  "remediation_r1": {
+   "at": "2026-09-23T01:40:36Z",
+   "status": "PASS",
+   "closed": 13,
+   "of": 14,
+   "router_verified": [
+    "F1: all four kill-server prefixes now REFUSED (kill-server/serve/serv/ser) with kill-session still ACCEPTED as the negative control, and -Lshepherd refused by prefix. The guard now imports the product own is_server_teardown rather than restating the rule.",
+    "F3: FAIL>0 now appears in 24 run files and BLOCKED>0 in 2, where it was 0 across all 140 before. qa5-latest carries record_set complete:true, 37/37 recorded, exitstatus 0, and is PUBLISHED only when the record set equals the planned set.",
+    "product code and pyproject.toml untouched"
+   ],
+   "criticals_closed": [
+    "C1: severed is now POPULATED via the product own lineage writer (store.link_retry) seeding the case _sever_lineage docstring names - a still-running child in P3 whose stopped parent is in P6. No row added, because a new session would move counts four other scenarios assert on. Mutation-proven: `assert len(severed)==0` goes red, and against the OLD seed that same mutation would have SURVIVED.",
+    "C2: S13 now drills to the cards the way the product requires ([data-project-id=unassigned] then [data-session-id]) and ASSERTS both orphan ids present, no destroyed id present, and P6 project button gone. Mutation-proven."
+   ],
+   "mutation_floor": "11/11 assertion_falsified (8 original + 3 new for C1, C2 and H2), each against a green unmutated baseline of the same target set; classify() now requires exit==1, the mutated test among the failures, no HarnessBlocked, and the mutated assertion source text in the output",
+   "found_during_verification": "A second back-to-back run went red (S33, then S19 ~1 run in 5) - the SAME declared product race: loadDetail() rebuilds #proj-detail with replaceChildren() and a press whose coordinates were read a moment earlier lands in the empty window. Fixed at the ROOT with press_until_open, a bounded retry against a MEASURED re-render that returns its press count into the report, so a run that needed a retry never looks identical to one that did not. Explicitly NOT a widened timeout: 'a bound widened to cover a leak stops being a bound.'",
+   "open": "H3 - playwright undeclared in pyproject.toml. NOT fixed: it is product configuration and QA may not edit it. The import failure is now explanatory rather than a bare ModuleNotFoundError, and a pytest_ignore_collect gate was DELIBERATELY refused as the silent-green anti-pattern."
+  },
+  "execute": {
+   "at": "2026-09-23T01:58:19Z",
+   "verdict": "BLOCKED",
+   "runs": 3,
+   "confidence": 88,
+   "counts": {
+    "total": 35,
+    "passed": 34,
+    "failed": 0,
+    "blocked": 1,
+    "flaky": 1
+   },
+   "tier": {
+    "integration": "5/5",
+    "e2e_backend": "13/13",
+    "ui": "16 pass, 1 blocked, 1 flaky of 17"
+   },
+   "failure_classes": {
+    "missing-input": 1,
+    "wrong-guess": 3,
+    "defect": 1,
+    "unconfirmed": 0
+   },
+   "run1_red": "S33 reproduced the DECLARED product race as a real red, pytest exit 1. Runs 2 and 3 green. Hit rate 1/3 this round, ~1/4 as measured by the builder.",
+   "press_retry_never_exercised": "press_until_open reported exactly 1 press for S19, S32 and S33 in ALL THREE runs. Run 1's red landed DOWNSTREAM of the dialog opening - the workaround was not what saved runs 2 and 3.",
+   "severity_cap": "DID NOT FIRE, and the reason was re-measured rather than inherited: merge-base HEAD main exits 1, disjoint roots 8685558/22d9ef2, HEAD..main=2 is a SET DIFFERENCE (22d9ef2 + bd10b01), main..HEAD=108, commits_behind=0. Round 3 read that 2 as a currency deficit and capped every severity on it; this run names that misreading so it is not repeated.",
+   "ac28": "NOT EXECUTED. Its command invokes pytest -m live, forbidden by standing user constraint. S30 substituted and passed all three runs (18 pages checked, 18 screenshots, 0 failures) - and a PASS on S30 does NOT discharge AC-28. AC-28 remains undischarged.",
+   "stale_acs_measured": {
+    "AC-16": "BODY_ARGS is 16, not 15",
+    "AC-21": "post_milestone.edits is 7, not 6",
+    "AC-23": "terminal.js left its manifest baseline ace78240 -> 781bed86"
+   },
+   "teardown": "clean, verified INDEPENDENTLY rather than taken from the harness log",
+   "user_socket_untouched": "the shepherd socket is byte-identical before and after: m3, master",
+   "no_code_touched": "tests/qa5 md5-of-md5s c8aca30e4096e1f4f8ac0a125a8c655a identical before run 1 and after run 3"
+  },
+  "memory_finalized": true
+ },
+ "telemetry": {
+  "task_metrics_available": "unknown",
+  "workflow_wall_clock_seconds": 0,
+  "agent_wall_clock_seconds": {
+   "builder": 0,
+   "investigator": 0,
+   "reviewer": 0,
+   "hunter": 0,
+   "verifier": 0,
+   "planner": 0
+  },
+  "loop_counts": {
+   "re_review": 1,
+   "re_hunt": 0,
+   "re_verify": 0
+  },
+  "verifier": {
+   "phase_exit_proof_runs": 0,
+   "extended_audit_runs": 0,
+   "workload_seconds": {
+    "tests": 0,
+    "build": 0,
+    "scan": 0,
+    "reconcile": 0,
+    "reasoning": 0
+   }
+  }
+ },
+ "quality": {
+  "confidence": null,
+  "evidence_complete": false,
+  "scenario_coverage": 0,
+  "research_quality": "none",
+  "convergence_state": "pending"
+ },
+ "planning_review_runs": 2,
+ "planning_review_findings": [
+  "B1 blocking: Phase 1's boundary cannot be green - binding.py and admission.py break in Phase 1 and are repaired in Phase 2.",
+  "B2 blocking: test_fleet_page.py's 17 frozen ids assert fleet.js internals (stoppedRow, sessionRow, expansion, ACTION_MILESTONE, LIVE_KINDS, empty-state) the redesign does not contain; zero retirements budgeted.",
+  "B3 blocking: test_palette.py binds index.html to #stop-summary / #unknown-rate / #low-confidence, which the prototype does not draw.",
+  "B4 blocking: section 12 Page 3 (session terminal, session.js + terminal.js + vendor/xterm.js) has no home in the six-page shell and no decision row; test_session_page.py's 16 frozen ids unaccounted.",
+  "B5 blocking: every planned retirement cites a decision string the gate rejects - it asserts 'RD-' in decision or 'section-sign' in decision.",
+  "B6 blocking: test_routes_m3.py:237 asserts len(BODY_ARGS) == 10, a second hard-coded count outside T4.2's declared scope.",
+  "B7 blocking: E15's deciding test test_app_css_carries_the_hidden_reset is named three times and built by no task - the exact M4 failure shape.",
+  "M1-M6 major: project_id vs workspace_id schema spelling; phases 7/8/9 concurrency; stale UNREACHABLE_BY_DESIGN after escape.js deletion; repo_count N+1 with no producing read; render_check's wider shell contract; session.js is the unnamed seventh post_milestone entry.",
+  "F1 blocking: EXPECTED_SCHEMA_VERSION 3->4 reddens 7 frozen migration tests T1.1 itself runs; test_future_schema_refuses_to_start_at_four uses version 4 as its impossible sentinel and 004 makes it real. A 17th retirement.",
+  "F2 blocking: toolsurface/tools_m1.py:156 project_workspace reads workspace.root_path - a third src module broken at the Phase 1 boundary, and a suite failure not just a mypy one.",
+  "F3 blocking: test_palette.py:97 reads rail.js (deleted T5.3) and :42 reads fleet.js (deleted T6.1); both repairs are one task later, so two declared-green boundaries raise FileNotFoundError.",
+  "F4 blocking: T6.4 exit says 5 post_milestone entries, its own arithmetic says 4. Third total-vs-rows disagreement.",
+  "F5 blocking: add_repo has no declared source for git_common_dir/name/vcs_remote. D48's binding key guessed means a UI-registered repo never matches a discovered session and silently lands in Unassigned.",
+  "F8 advisory but important: AC-21 prints the post_milestone count instead of asserting it - exits 0 for any value, and it is the clause that would have caught F4.",
+  "F13 advisory, decided: playwright would become an undeclared suite dependency via the path-loaded render_check import. Fix is pytest.importorskip('playwright')."
+ ],
+ "planning_review_status": "passed",
+ "plan_revision": 5,
+ "last_reviewed_revision": 5,
+ "memory_notes": [],
+ "pending_gate": null,
+ "status_history": [
+  {
+   "event": "workflow_started",
+   "ts": "2026-09-21T21:28:40Z",
+   "phase": "plan-create"
+  },
+  {
+   "event": "design_saved",
+   "ts": "2026-09-21T21:38:21Z",
+   "phase": "plan-create"
+  },
+  {
+   "event": "plan_saved",
+   "ts": "2026-09-21T21:56:25Z",
+   "phase": "plan-create"
+  },
+  {
+   "event": "planning_review_pass1_findings",
+   "ts": "2026-09-21T22:06:12Z",
+   "phase": "plan-review-gap-1"
+  },
+  {
+   "event": "plan_revised",
+   "ts": "2026-09-21T22:22:51Z",
+   "phase": "re-plan",
+   "revision": 2
+  },
+  {
+   "event": "planning_review_pass2_findings",
+   "ts": "2026-09-21T22:40:33Z",
+   "phase": "plan-review-gap-2",
+   "blocking": 5
+  },
+  {
+   "event": "plan_amended",
+   "ts": "2026-09-21T22:49:33Z",
+   "phase": "re-plan",
+   "revision": 4
+  },
+  {
+   "event": "plan_trust_gate_passed",
+   "ts": "2026-09-21T22:59:04Z",
+   "phase": "phase-0"
+  },
+  {
+   "event": "phase_0_completed",
+   "ts": "2026-09-22T00:49:12Z",
+   "phase": "phase-0"
+  },
+  {
+   "event": "parallel_tracks_landed",
+   "ts": "2026-09-22T04:46:22Z",
+   "detail": "T8.1 merged from worktree; W6 docs complete; T5.2 dispatched in a worktree"
+  },
+  {
+   "event": "phase_3_partial",
+   "ts": "2026-09-22T05:56:40Z",
+   "detail": "six of seven verbs; delete_project blocked on the Phase 1 split"
+  },
+  {
+   "event": "t8_1_remediated",
+   "ts": "2026-09-22T06:13:03Z"
+  },
+  {
+   "event": "phase_9_built",
+   "ts": "2026-09-22T08:29:11Z",
+   "detail": "all seven verbs driven end to end; five contract gaps found at the verb/consumer seam"
+  },
+  {
+   "event": "backend_gaps_closed",
+   "ts": "2026-09-22T09:24:40Z"
+  },
+  {
+   "event": "artifact_reconciled",
+   "ts": "2026-09-22T15:13:00Z",
+   "detail": "artifact writes stopped at 09:24; phases 1/3/5.2/6/7/9 and the integration merge had all landed on branch integration. Reconciled from the tree (HEAD e6adfc1, suite exit 0, boundaries exit 0), not from recollection."
+  },
+  {
+   "event": "qa_run_1_completed",
+   "ts": "2026-09-22T15:13:00Z",
+   "detail": "FAIL, 11 defects; all remediated and verified closed by live driving in run 2"
+  },
+  {
+   "event": "qa_run_2_completed",
+   "ts": "2026-09-22T15:13:00Z",
+   "detail": "FAIL, 2 new defects on fresh ground: kill_failures had no reader (HIGH), double-click Create made two projects (MEDIUM)"
+  },
+  {
+   "event": "qa_remfix_2_completed",
+   "ts": "2026-09-22T15:13:00Z",
+   "detail": "commit e6adfc1; 3 committed tests; suite 2190 passed/2 skipped, mypy 130 files, boundaries 105 rules, manifest digest-only"
+  },
+  {
+   "event": "qa_run_3_dispatched",
+   "ts": "2026-09-22T15:13:00Z",
+   "detail": "fresh ground preferred: a kill that lands via injected Runner, app_state kill.<id> accumulation, wire-level idempotence of the four unguarded handlers, pixels, and the thinly-driven Shepherd/Flock/Settings/Chat pages"
+  },
+  {
+   "event": "qa_run_3_completed",
+   "ts": "2026-09-22T17:05:14Z",
+   "detail": "FAIL, 3 defects: Projects+Settings unusable 761-900px, phone dialogs open invisible and trap the page, Flock tooltip swallows clicks"
+  },
+  {
+   "event": "qa_remfix_3_completed",
+   "ts": "2026-09-22T17:05:14Z",
+   "detail": "commit b1c1eb9; all three were one shape - a media query written for one page naming a class a second page also uses; render_check VIEWPORTS gains 820; suite 2197 passed/2 skipped"
+  },
+  {
+   "event": "branch_topology_noted",
+   "ts": "2026-09-22T17:05:14Z",
+   "detail": "main and integration have NO common ancestor (git merge-base exits 1, separate roots 8685558 / 22d9ef2). All work is on integration; main is a parallel 2-commit history. A PR between them needs --allow-unrelated-histories. Surfaced to the user, not acted on."
+  },
+  {
+   "event": "qa_run_4_dispatched",
+   "ts": "2026-09-22T17:05:14Z",
+   "detail": "confirmation of D1-D3 plus untouched ground: terminal WebSocket, two-tab concurrency, keyboard-only and a11y, width extremes, audit sink"
+  },
+  {
+   "event": "qa_run_4_completed",
+   "ts": "2026-09-22T17:41:18Z",
+   "detail": "FAIL, 6 defects, all fresh ground; run 3 D1/D2/D3 all re-verified closed. pytest tests/web was 298 passed while all six were live."
+  },
+  {
+   "event": "qa_remfix_4_dispatched",
+   "ts": "2026-09-22T17:41:18Z",
+   "detail": "two worktree lanes: A = D4 legend sheet untappable + D5 double click binding + D8/D9 .back sizing (index.html, flock.js, app.css); B = D6 terminal never fitted + D7 project mutations never publish (terminal.js, session.js, app.js, tools_projects*.py, routes.py). Router merges serially."
+  },
+  {
+   "event": "qa_route_setup_confirmed",
+   "ts": "2026-09-22T18:25:40Z",
+   "detail": "Steps 0a/0b/1/2/2a completed and user-confirmed in ONE batch. Rounds 1-4 never routed to QA: workflow_type stayed PLAN, the qa block was null, and only qa-executor (the last of seven links) was dispatched, four times. Round 5 runs the real chain: qa-researcher fan-out -> qa-plan -> qa-plan-review -> qa-preflight -> qa-harness-builder -> [reviewer||hunter] -> qa-executor."
+  },
+  {
+   "event": "qa_route_started",
+   "ts": "2026-09-22T19:55:24Z",
+   "phase": "qa-research",
+   "detail": "round 5 - full seven-link QA chain; workflow_type flipped PLAN->QA, denied_reads now enforced"
+  },
+  {
+   "event": "qa_research_consolidated",
+   "ts": "2026-09-22T20:12:11Z",
+   "phase": "qa-research",
+   "detail": "3 lanes returned; feature-map.md written; 6 blocking contradictions, 17 testability blockers, 22 findings routed out"
+  },
+  {
+   "event": "qa_plan_created",
+   "ts": "2026-09-22T20:32:40Z",
+   "phase": "qa-plan",
+   "detail": "32 scenarios S0-S31 in 6 waves; rollups reconciled mechanically across class/tier/wave"
+  },
+  {
+   "event": "qa_plan_review_pass1_findings",
+   "ts": "2026-09-22T20:42:11Z",
+   "phase": "qa-plan-review",
+   "blocking": 6,
+   "advisory": 10
+  },
+  {
+   "event": "qa_plan_amended",
+   "ts": "2026-09-22T21:02:33Z",
+   "phase": "qa-re-plan",
+   "revision": 2,
+   "scenarios": 35
+  },
+  {
+   "event": "qa_plan_review_pass2_findings",
+   "ts": "2026-09-22T21:14:15Z",
+   "phase": "qa-plan-review-2",
+   "blocking": 5,
+   "advisory": 11
+  },
+  {
+   "event": "qa_plan_amended_r3",
+   "ts": "2026-09-22T21:32:57Z",
+   "phase": "qa-re-plan",
+   "revision": 3,
+   "detail": "sweep gate passed and independently verified by the router; phase_cursor set to qa-preflight BEFORE dispatch per Rule 1"
+  },
+  {
+   "event": "qa_preflight_completed",
+   "ts": "2026-09-22T21:43:52Z",
+   "phase": "qa-preflight",
+   "status": "FAIL",
+   "detail": "5 env-plan corrections, 0 human prerequisites, 0 product defects; NM-1 near-miss caught"
+  },
+  {
+   "event": "env_plan_r4",
+   "ts": "2026-09-22T21:59:15Z",
+   "phase": "qa-re-plan",
+   "detail": "5 preflight corrections applied and router-verified; phase_cursor -> qa-build"
+  },
+  {
+   "event": "qa_harness_built",
+   "ts": "2026-09-23T00:47:00Z",
+   "phase": "qa-build",
+   "detail": "35/35 scenarios, mutation floor 8/8, rerun clean, teardown verified, product untouched"
+  },
+  {
+   "event": "qa_harness_review",
+   "ts": "2026-09-23T00:57:21Z",
+   "phase": "qa-review",
+   "status": "CHANGES_REQUESTED",
+   "high": 5
+  },
+  {
+   "event": "qa_harness_hunt",
+   "ts": "2026-09-23T00:58:35Z",
+   "phase": "qa-hunt",
+   "critical": 2,
+   "high": 4
+  },
+  {
+   "event": "qa_remediation_r1_passed",
+   "ts": "2026-09-23T01:40:36Z",
+   "phase": "re-qa-build",
+   "detail": "13 of 14 closed; mutation floor 11/11; H3 routed as SI-2"
+  },
+  {
+   "event": "qa_executed",
+   "ts": "2026-09-23T01:58:19Z",
+   "phase": "qa-execute",
+   "verdict": "BLOCKED",
+   "candidates": 2
+  },
+  {
+   "event": "qa_workflow_completed",
+   "ts": "2026-09-23T01:59:07Z",
+   "phase": "memory-finalize",
+   "verdict": "BLOCKED",
+   "detail": "full seven-link route completed; memory persisted to .cc10x/*.md"
+  }
+ ],
+ "remediation_history": [],
+ "created_at": "2026-09-21T21:28:40Z",
+ "updated_at": "2026-09-23T01:59:07Z",
+ "incomplete_phases": []
 }

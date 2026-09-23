@@ -406,6 +406,38 @@ and **recorded it as not the fix**, which is the part worth keeping. A change
 that improves the thing but does not move the threshold should say so, or the
 next reader credits it with the compliance.
 
+### QA round 5 — a check that reports success without checking (2026-09-23)
+
+The recurring defect of this milestone, found again in five new places — **including inside the
+harness built to report it**:
+
+- **A run report whose verdicts are literals at the tail of a test body cannot express a failure.**
+  Measured: 140 emitted artifacts, `FAIL` total 0, 47 of them all-green with `scenarios: 0` and a
+  fully green teardown block. Bind the verdict to the test outcome via `pytest_runtest_makereport`,
+  and gate publication on a completeness check against the planned set.
+- **A shape assertion looped over a collection the fixture cannot populate is vacuous by
+  construction.** `for link in severed: assert set(link) == {...}` where `severed == []` proves
+  nothing, and the report still claims the shape held. Grep the seed for the thing that produces the
+  collection before believing the loop.
+- **A value measured into a report field but never asserted is the same defect as printing it.**
+  S13 recorded `orphans_named_on_flock=0` against a plan row expecting two, and PASSed.
+- **A guard copied into a harness loses the hardening the product's copy earned.** `tmuxctl`
+  re-introduced the `"kill-server" in argv` membership test that `tmux_cmd.is_server_teardown`
+  exists to replace — same repo, two directories away. tmux prefix-resolves, so `kill-serv` reached
+  it. When the product owns a safety predicate, **import it**; a second definition of a property is
+  how a property becomes two spellings.
+- **A restated constant is a second definition site.** A hard-coded `760` appeared in the harness
+  written to report hard-coded widths. Parse product literals out of the shipped source.
+
+And two about evidence:
+
+- **A prerequisite check run under a different environment than the harness is not a prerequisite
+  check.** The chromium probe passed under the inherited env and would have failed under the
+  harness's own redirects, 45s later, looking like a product fault.
+- **A teardown can break the repo and certify itself clean.** `rm -rf $SCRATCH` would have destroyed
+  a registered git worktree of the repo under test while `git status --porcelain src/ tools/
+  docs/probes/` reported empty either way. Compare `git worktree list` against a bring-up baseline.
+
 ## Last Updated
 
-2026-09-21.
+2026-09-23

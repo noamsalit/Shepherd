@@ -1,0 +1,239 @@
+[
+  {
+    "pp": "C1-severed",
+    "property": "S13's severed list is really populated, so the shape loop over it can execute",
+    "targets": "S13: len(severed) == 1 \u2014 exactly one cross-project lineage link is reported. A red here proves severed is NON-EMPTY; before the seed carried a real lineage pair this mutation would have SURVIVED, which is precisely the discrimination the check was missing",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave3_delete.py\n467:    assert len(severed) == 0, (  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S13: len(severed) == 1 \u2014 exactly one cross-project lineage link is reported. A red here proves severed is NON-EMPTY; before the seed carried a real lineage pair this mutation would have SURVIVED, which is precisely the discrimination the check was missing",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+      "tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+        "tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": "..                                                                       [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013644Z-2039780.json\nqa5 counts: {'PASS': 2, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "ent, store, seeded = harness.client, harness.store, harness.seeded\n        p6 = seeded.project(\"P6\")\n        pane = PANES[3]\n        assert pane in tmuxctl.sessions(), f\"{pane} must be live before the orphan\"\n    \n        running_ids = {row.id for row in store.running_sessions_for(p6)}\n        finished_ids = {seeded.session(label) for label in (\"S-fin-4\", \"S-fin-5\", \"S-fin-6\")}\n        audit_mark = harness.audit.mark()\n        mark = harness.rig.open_window()\n    \n        answer = client.delete_project(p6, on_running=\"orphan\")\n        assert answer[\"deleted\"] is True, answer\n        assert set(answer[\"orphaned\"]) == running_ids, (answer[\"orphaned\"], running_ids)  # type: ignore[arg-type]\n        assert set(answer[\"destroyed\"]) == finished_ids, (answer[\"destroyed\"], finished_ids)  # type: ignore[arg-type]\n        # **`severed` is populated, and the loop over it can therefore execute.**\n        # Before the seed carried a cross-project lineage pair this list was `[]` in\n        # every run: `_sever_lineage` only reports a referrer in *another* workspace,\n        # nothing seeded a lineage column, and a `for link in severed:` over an empty\n        # list asserts nothing while reading as coverage. The pair is S-att-4 (still\n        # running, in P3) pointing at S-fin-4 (stopped, in P6) \u2014 the case the\n        # product's own docstring names.\n        severed = answer[\"severed\"]\n        assert isinstance(severed, list), severed\n        child, parent = seeded.session(\"S-att-4\"), seeded.session(\"S-fin-4\")\n>       assert len(severed) == 0, (  # MUTANT\n            f\"exactly one lineage link crosses into P6 and must be reported: {severed}\"\n        )\nE       AssertionError: exactly one lineage link crosses into P6 and must be reported: [{'session_id': '01M35YH0G7AJ2AC6AFNSTH2CTH', 'column': 'retry_of'}]\nE       assert 1 == 0\nE        +  where 1 = len([{'session_id': '01M35YH0G7AJ2AC6AFNSTH2CTH', 'column': 'retry_of'}])\n\ntests/qa5/test_wave3_delete.py:467: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead - AssertionError: exactly one lineage link crosses into P6 and must be reported: [{'session_id': '01M35YH0G7AJ2AC6AFNSTH2CTH', 'column': 'retry_of'}]\nassert 1 == 0\n +  where 1 = len([{'session_id': '01M35YH0G7AJ2AC6AFNSTH2CTH', 'column': 'retry_of'}])\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "C2-orphans",
+    "property": "After a reload the Flock really shows both orphans as cards under Unassigned",
+    "targets": "S13: running_ids <= set(cards) \u2014 both orphaned session ids appear as [data-session-id] cards under Unassigned. The prior reading counted ids in innerText without drilling in, measured 0, asserted nothing and recorded PASS",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave3_delete.py\n525:    assert not (running_ids <= set(cards)), (  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S13: running_ids <= set(cards) \u2014 both orphaned session ids appear as [data-session-id] cards under Unassigned. The prior reading counted ids in innerText without drilling in, measured 0, asserted nothing and recorded PASS",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+      "tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+        "tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": "..                                                                       [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013644Z-2039780.json\nqa5 counts: {'PASS': 2, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "   # would have gone red on the first run.\n        page, console = harness.open(nav=\"flock\", label=\"S13\")\n        unassigned = seeded.project(\"P0\")\n        page.wait_for_selector(f\"#flock-projects [data-project-id='{unassigned}']\")\n        # P6 is deleted, so its project button must be gone from the same list the\n        # orphans' new home appears in.\n        assert page.eval_on_selector_all(\n            f\"#flock-projects [data-project-id='{p6}']\", \"els => els.length\"\n        ) == 0, \"the deleted project is still listed on the Flock\"\n        page.click(f\"#flock-projects [data-project-id='{unassigned}']\")\n        page.wait_for_selector(\"#flock-cards [data-session-id]\")\n        cards = page.eval_on_selector_all(\n            \"#flock-cards [data-session-id]\", \"els => els.map(el => el.dataset.sessionId)\"\n        )\n        head = page.inner_text(\"#flock-sessions-head\").strip()\n        console.assert_clean(\"S13:\")\n    \n>       assert not (running_ids <= set(cards)), (  # MUTANT\n            f\"the Flock does not show the orphaned sessions under Unassigned after a \"\n            f\"reload: expected {sorted(running_ids)} among {cards}\"\n        )\nE       AssertionError: the Flock does not show the orphaned sessions under Unassigned after a reload: expected ['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'] among ['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0']\nE       assert not {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'} <= {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'}\nE        +  where {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'} = set(['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'])\n\ntests/qa5/test_wave3_delete.py:525: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave3_delete.py::test_s13_orphan_moves_the_living_and_destroys_the_dead - AssertionError: the Flock does not show the orphaned sessions under Unassigned after a reload: expected ['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'] among ['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0']\nassert not {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'} <= {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'}\n +  where {'01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'} = set(['01M35YH4Q4QAN3VTYEK9HKDAY3', '01M35YH4QJ1EW49EP9YTYXHAC0'])\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "H2-nonvacuity",
+    "property": "A CONTROL_SET selector that stopped matching anything is caught, not silently dropped",
+    "targets": "S20: _control_set_resolves \u2014 every CONTROL_SET selector matches >=1 element on the page its control lives on. A renamed id used to drop out of the HIT_TESTABLE differential identically to a control that is legitimately absent, producing no signal at all",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/constants.py\n151:    (\"proj-new\", \"#proj-new-renamed-by-the-mutation\"),  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S20: _control_set_resolves \u2014 every CONTROL_SET selector matches >=1 element on the page its control lives on. A renamed id used to drop out of the HIT_TESTABLE differential identically to a control that is legitimately absent, producing no signal at all",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave5_browser.py::test_s20_prefers_reduced_motion"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave5_browser.py::test_s20_prefers_reduced_motion"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013700Z-2040391.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "tor still matches something.**\n    \n        Measured on the page the control actually lives on (`CONTROL_PAGE`), which is\n        the whole point: `#proj-new` is not in the Flock's DOM and never will be, so\n        a presence reading taken from the Flock proves nothing about whether the id\n        still exists. `\"shell\"` controls are the persistent chrome and are read from\n        whatever page the sweep ends on.\n    \n        This is what a `False`-on-both-sides entry cannot tell you apart from: a\n        control that is legitimately absent here, and an id somebody renamed.\n        \"\"\"\n        by_page: dict[str, list[tuple[str, str]]] = {}\n        for name, selector in CONTROL_SET:\n            by_page.setdefault(CONTROL_PAGE[name], []).append((name, selector))\n        counts: dict[str, int] = {}\n        for target in sorted(by_page):\n            if target != \"shell\":\n                navigate(page, target)\n            for name, selector in by_page[target]:\n                counts[name] = int(page.eval_on_selector_all(selector, \"els => els.length\"))\n        unresolved = sorted(name for name, found in counts.items() if found == 0)\n>       assert unresolved == [], (\n            f\"{label}: these CONTROL_SET selectors matched NOTHING on the page the \"\n            f\"control lives on, so every differential over them is vacuous: \"\n            f\"{[(name, dict(CONTROL_SET)[name], CONTROL_PAGE[name]) for name in unresolved]}\"\n        )\nE       AssertionError: S20 baseline: these CONTROL_SET selectors matched NOTHING on the page the control lives on, so every differential over them is vacuous: [('proj-new', '#proj-new-renamed-by-the-mutation', 'projects')]\nE       assert ['proj-new'] == []\nE         \nE         Left contains one more item: 'proj-new'\nE         \nE         Full diff:\nE         - []\nE         + [\nE         +     'proj-new',\nE         + ]\n\ntests/qa5/test_wave5_browser.py:114: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave5_browser.py::test_s20_prefers_reduced_motion - AssertionError: S20 baseline: these CONTROL_SET selectors matched NOTHING on the page the control lives on, so every differential over them is vacuous: [('proj-new', '#proj-new-renamed-by-the-mutation', 'projects')]\nassert ['proj-new'] == []\n  \n  Left contains one more item: 'proj-new'\n  \n  Full diff:\n  - []\n  + [\n  +     'proj-new',\n  + ]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-1",
+    "property": "Every succeeded project mutation reaches a second live client as one project.* frame",
+    "targets": "S4: kinds == list(SIX) \u2014 the six project.* frame kinds at client B, in order",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave2_events.py\n81:    assert kinds == list(SIX)[:5], kinds  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S4: kinds == list(SIX) \u2014 the six project.* frame kinds at client B, in order",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave2_events.py::test_s4_all_six_mutations_reach_a_second_client"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave2_events.py::test_s4_all_six_mutations_reach_a_second_client"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013531Z-2036490.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "[\"renamed\"] is True, renamed\n    \n        described = client.describe_project(target, \"the fourth scenario's description\")\n        assert described[\"described\"] is True, described\n    \n        added = client.add_repo(target, str(seeded.paths[\"R1\"]))\n        assert added[\"added\"] is True, added\n        repos = client.get(f\"/api/projects/{target}/repos\").data()[\"repos\"]\n        repo_id = str(repos[0][\"repo_id\"])  # type: ignore[index]\n    \n        removed = client.remove_repo(target, repo_id)\n        # X2, recorded and deliberately not normalised: `remove_repo` answers\n        # `{\"removed\": bool}` with **no `refused` key**, breaking the family's\n        # stated one-refusal-shape rule. The divergence is already a routed defect;\n        # reporting it as new would double-count it.\n        assert removed == {\"removed\": True}, removed\n    \n        deleted = client.delete_project(target)\n        assert deleted[\"deleted\"] is True, deleted\n    \n        frames = harness.rig.await_count(mark, 6, \"B\")\n        kinds = [frame.kind for frame in frames]\n>       assert kinds == list(SIX)[:5], kinds  # MUTANT\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError: ['project.created', 'project.renamed', 'project.described', 'project.repo_added', 'project.repo_removed', 'project.deleted']\nE       assert ['project.cre...ject.deleted'] == ['project.cre...repo_removed']\nE         \nE         Left contains one more item: 'project.deleted'\nE         \nE         Full diff:\nE           [\nE               'project.created',\nE               'project.renamed',\nE               'project.described',\nE               'project.repo_added',\nE               'project.repo_removed',\nE         +     'project.deleted',\nE           ]\n\ntests/qa5/test_wave2_events.py:81: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave2_events.py::test_s4_all_six_mutations_reach_a_second_client - AssertionError: ['project.created', 'project.renamed', 'project.described', 'project.repo_added', 'project.repo_removed', 'project.deleted']\nassert ['project.cre...ject.deleted'] == ['project.cre...repo_removed']\n  \n  Left contains one more item: 'project.deleted'\n  \n  Full diff:\n    [\n        'project.created',\n        'project.renamed',\n        'project.described',\n        'project.repo_added',\n        'project.repo_removed',\n  +     'project.deleted',\n    ]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-2",
+    "property": "A refused mutation reaches no client at all",
+    "targets": "S5: the counted window's interior is empty \u2014 a refusal announces nothing",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave2_events.py\n152:    window.assert_kinds([\"project.renamed\"])  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S5: the counted window's interior is empty \u2014 a refusal announces nothing",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave2_events.py::test_s5_a_refusal_reaches_no_client"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave2_events.py::test_s5_a_refusal_reaches_no_client"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013539Z-2036885.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "before is not None\n        audit_mark = harness.audit.mark()\n        rows_before = len(client.projects())\n        mark = harness.rig.open_window()\n    \n        answer = client.post(\"/api/projects/unassigned/rename\", {\"name\": \"Renamed\"})\n        assert answer.status == 200, f\"a refusal is a 200, not an HTTP error: {answer.status}\"\n        record = answer.data()\n        assert record[\"renamed\"] is False, record\n        assert record[\"project\"] is None, record\n        refused = record[\"refused\"]\n        assert isinstance(refused, str) and refused.strip(), record\n        assert \"unassigned\" in refused.lower() or \"reserved\" in refused.lower(), refused\n    \n        after = store.get_workspace(\"unassigned\")\n        assert after is not None and after.name == before.name, (before.name, after.name)\n        assert len(client.projects()) == rows_before, \"the refused call changed the row set\"\n    \n        # A refusal is still a gated call. Counted **before** the control runs.\n        records = harness.audit.mutations_since(audit_mark)\n        assert [row.get(\"tool\") for row in records] == [\"rename_project\"], records\n    \n        window = harness.rig.control(\"S5\", since=mark)\n>       window.assert_kinds([\"project.renamed\"])  # MUTANT\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/qa5/test_wave2_events.py:152: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = Window(scenario='S5', interior={'A': [], 'B': []}, control={'A': [Frame(seq=13, kind='project.created', project_id='01...:43.098Z\", \"type\": \"project.deleted\", \"session_id\": null, \"project_id\": \"01M35YF1FMT3P4DMCAW9Z29VNJ\", \"data\": {}}'})]})\nexpected = ['project.renamed'], client = 'B', prefix = None\n\n    def assert_kinds(\n        self, expected: Sequence[str], client: str = \"B\", prefix: str | None = None\n    ) -> None:\n        seen = self.kinds(client, prefix)\n>       assert seen == list(expected), (\n               ^^^^^^^^^^^^^^^^^^^^^^\n            f\"{self.scenario}: client {client} interior was {seen}, expected {list(expected)}\"\n        )\nE       AssertionError: S5: client B interior was [], expected ['project.renamed']\n\ntests/qa5/rig.py:253: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave2_events.py::test_s5_a_refusal_reaches_no_client - AssertionError: S5: client B interior was [], expected ['project.renamed']\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-3",
+    "property": "killable names exactly the running sessions that have a runner_handle",
+    "targets": "S0: binding == B-OWNED \u2014 KILLABLE == [S-own-1] and UNKILLABLE == [S-att-1]",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave1_wiring.py\n75:    assert binding == \"B-ALL\", (  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S0: binding == B-OWNED \u2014 KILLABLE == [S-own-1] and UNKILLABLE == [S-att-1]",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013548Z-2037276.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": ": ignore[arg-type]\n        doomed = list(answer[\"doomed\"])  # type: ignore[arg-type]\n        running = list(answer[\"running\"])  # type: ignore[arg-type]\n        harness.bindings |= {\n            \"KILLABLE\": killable,\n            \"UNKILLABLE\": unkillable,\n            \"DOOMED\": doomed,\n            \"RUNNING\": running,\n        }\n        for name, value in harness.bindings.items():\n            harness.report.bind(name, value)\n    \n        # --- the branch table, at its real weights ---------------------------\n        own1, att1 = seeded.session(\"S-own-1\"), seeded.session(\"S-att-1\")\n        binding = (\n            \"B-OWNED\"\n            if killable == [own1] and unkillable == [att1]\n            else \"B-EMPTY\"\n            if killable == [] and running\n            else \"B-ALL\"\n            if sorted(killable) == sorted(running)\n            else \"B-OTHER\"\n        )\n        harness.bindings[\"S0_BINDING\"] = binding\n        harness.report.bind(\"S0_BINDING\", binding)\n>       assert binding == \"B-ALL\", (  # MUTANT\n            f\"S0 bound {binding}, not B-OWNED. killable={killable} unkillable={unkillable} \"\n            f\"running={running}. B-ALL and B-ABSENT are unreachable on this tree \"\n            \"(reads.py:283-284, tools_projects_delete.py:128-136), so a departure is \"\n            \"itself the finding and wave 1 stops on it.\"\n        )\nE       AssertionError: S0 bound B-OWNED, not B-OWNED. killable=['01M35YF94AAC6NV499VTQP4SMV'] unkillable=['01M35YF94QQZJ562VMF2Y3ZX68'] running=['01M35YF94QQZJ562VMF2Y3ZX68', '01M35YF94AAC6NV499VTQP4SMV']. B-ALL and B-ABSENT are unreachable on this tree (reads.py:283-284, tools_projects_delete.py:128-136), so a departure is itself the finding and wave 1 stops on it.\nE       assert 'B-OWNED' == 'B-ALL'\nE         \nE         - B-ALL\nE         + B-OWNED\n\ntests/qa5/test_wave1_wiring.py:75: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe - AssertionError: S0 bound B-OWNED, not B-OWNED. killable=['01M35YF94AAC6NV499VTQP4SMV'] unkillable=['01M35YF94QQZJ562VMF2Y3ZX68'] running=['01M35YF94QQZJ562VMF2Y3ZX68', '01M35YF94AAC6NV499VTQP4SMV']. B-ALL and B-ABSENT are unreachable on this tree (reads.py:283-284, tools_projects_delete.py:128-136), so a departure is itself the finding and wave 1 stops on it.\nassert 'B-OWNED' == 'B-ALL'\n  \n  - B-ALL\n  + B-OWNED\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-4",
+    "property": "A kill_sessions delete against a real owned pane removes the pane from the tmux socket",
+    "targets": "S11: the pane is no longer listed by `tmux -L shepherd-qa list-sessions` after the kill",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave3_delete.py\n378:    assert pane in remaining, remaining  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S11: the pane is no longer listed by `tmux -L shepherd-qa list-sessions` after the kill",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+      "tests/qa5/test_wave3_delete.py::test_s11_a_kill_that_lands_on_a_real_pane"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave1_wiring.py::test_s0_environment_truth_probe",
+        "tests/qa5/test_wave3_delete.py::test_s11_a_kill_that_lands_on_a_real_pane"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": "..                                                                       [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013556Z-2037654.json\nqa5 counts: {'PASS': 2, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "seeded.project(\"P4\"), seeded.session(\"S-own-1\"), seeded.session(\"S-att-1\")\n        pane = PANES[0]\n    \n        assert pane in tmuxctl.sessions(), f\"{pane} must be live before the kill\"\n        assert killable == [own1], killable\n        before = store.list_anomaly_counts().get(\"stop_failed\", 0)\n        audit_mark = harness.audit.mark()\n        mark = harness.rig.open_window()\n    \n        answer = client.delete_project(p4, on_running=\"kill_sessions\")\n    \n        assert list(answer[\"killed\"]) == [own1], answer  # type: ignore[arg-type]\n        # Same measurement as S12: an attached session's `no_pane` is a `False`,\n        # not a raise, so it lands in neither `killed` nor `kill_failures`. It is\n        # `running` that still names it, and `refused` that explains.\n        failures = answer[\"kill_failures\"]\n        assert failures == [], failures\n        assert att1 in list(answer[\"running\"]), answer  # type: ignore[arg-type]\n        # The refusal **counts** the survivors; it does not name them. The plan's\n        # row says \"refused names the surviving session\"; measured, the sentence is\n        # `store/projects.py`'s own \"N session(s) in this project are still running\n        # and were not stopped; nothing was deleted\". The ids are carried by\n        # `running`, which is where the dialog reads them from. Measurement.\n        refused = answer[\"refused\"]\n        assert isinstance(refused, str) and refused.strip(), answer\n        assert \"still running\" in refused, refused\n        assert refused.startswith(f\"{len(list(answer['running']))} session\"), refused\n    \n        # --- tmux: the pane is gone from OUR socket. `-L` explicit. ----------\n        await_true(lambda: pane not in tmuxctl.sessions(), f\"{pane} was still listed after the kill\")\n        remaining = tmuxctl.sessions()\n>       assert pane in remaining, remaining  # MUTANT\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError: ['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']\nE       assert 'shepherd_r5a' in ['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']\n\ntests/qa5/test_wave3_delete.py:378: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave3_delete.py::test_s11_a_kill_that_lands_on_a_real_pane - AssertionError: ['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']\nassert 'shepherd_r5a' in ['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-5",
+    "property": "The first WebSocket frame is the pane snapshot byte-for-byte",
+    "targets": "S14: the first binary frame contains the pane's own bytes, including the marker the fixture wrote",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave4_terminal.py\n62:    assert b\"QA5-S14-MARKER\" not in snapshot, (  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S14: the first binary frame contains the pane's own bytes, including the marker the fixture wrote",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave4_terminal.py::test_s14_the_terminal_websocket_against_a_real_owned_pane"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave4_terminal.py::test_s14_the_terminal_websocket_against_a_real_owned_pane"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013604Z-2038052.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "runner_socket == 'shepherd-qa' after controld.start\"]}), controld_stopped=False, contexts=[], bindings={})\n\n    def test_s14_the_terminal_websocket_against_a_real_owned_pane(harness: Harness) -> None:\n        \"\"\"S14 \u2014 PP-5: the first binary frame is the pane snapshot, byte-for-byte.\"\"\"\n        own2 = harness.seeded.session(\"S-own-2\")\n        pane = PANES[1]\n        assert pane in tmuxctl.sessions(), f\"{pane} must be live: S11 destroys {PANES[0]}, not this one\"\n        audit_mark = harness.audit.mark()\n    \n        # A deterministic string on the screen, so the comparison is against bytes\n        # somebody put there rather than against an empty pane that would match\n        # trivially. The shell echoes it; the capture picks it up.\n        tmuxctl.send_keys(pane, \"printf 'QA5-S14-MARKER\\\\n'\")\n    \n        result = wsclient.upgrade(harness.started.port, _terminal_path(own2), want_frames=1)\n        assert result.status == 101, f\"expected 101, got {result.status}: {result.headers}\"\n        binary = result.binary()\n        assert binary, f\"no binary frame after the handshake: {result.frames}\"\n    \n        snapshot = binary[0]\n        live = tmuxctl.capture_pane(pane)\n>       assert b\"QA5-S14-MARKER\" not in snapshot, (  # MUTANT\n            \"the snapshot does not contain the bytes the fixture wrote to the pane; \"\n            \"the comparison below would be against an empty screen\"\n        )\nE       AssertionError: the snapshot does not contain the bytes the fixture wrote to the pane; the comparison below would be against an empty screen\nE       assert b'QA5-S14-MARKER' not in b\"root@finops-mitm-lab:/root/Shepherd# printf 'QA5-S14-MARKER\\\\n'\\nQA5-S14-MARKER\\nroot@finops-mitm-lab:/root/Shepherd#\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"\n\ntests/qa5/test_wave4_terminal.py:62: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave4_terminal.py::test_s14_the_terminal_websocket_against_a_real_owned_pane - AssertionError: the snapshot does not contain the bytes the fixture wrote to the pane; the comparison below would be against an empty screen\nassert b'QA5-S14-MARKER' not in b\"root@finops-mitm-lab:/root/Shepherd# printf 'QA5-S14-MARKER\\\\n'\\nQA5-S14-MARKER\\nroot@finops-mitm-lab:/root/Shepherd#\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-6",
+    "property": "Every gated invoke appends exactly one record to the on-disk audit log",
+    "targets": "S26: exactly three new JSONL records for the three calls under test, in order",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave6_sinks.py\n70:    assert tools == [\"set_autonomy_level\", \"delete_project\"], tools  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S26: exactly three new JSONL records for the three calls under test, in order",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave6_sinks.py::test_s26_the_production_audit_sink_on_disk"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave6_sinks.py::test_s26_the_production_audit_sink_on_disk"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013613Z-2038441.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "ot out of a fixture's list.\n    \n        The prior claim that \"two autonomy POSTs append two audit rows\" was\n        *reasoned*: every earlier test used a chokepoint fixture that collects into\n        a Python list and never touches a file. This is the first time the shipped\n        `RotatingJsonlLog` has been read.\n        \"\"\"\n        client, store = harness.client, harness.store\n        assert client.get(\"/api/autonomy\").data()[\"level\"] == 2\n    \n        doomed = client.create_project(\"S26-target\")\n        target = str(doomed[\"project\"][\"project_id\"])  # type: ignore[index]\n    \n        mark = harness.audit.mark()\n        frame_mark = harness.rig.open_window()\n    \n        assert client.post(\"/api/autonomy\", {\"level\": 3}).status == 200\n        assert client.post(\"/api/autonomy\", {\"level\": 2}).status == 200\n        deleted = client.delete_project(target)\n        assert deleted[\"deleted\"] is True, deleted\n    \n        # Counted to the moment **before** the control runs (\u00a73a footprint rule):\n        # the control is two further gated invokes and they are asserted separately.\n        records = harness.audit.mutations_since(mark)\n        tools = [str(row.get(\"tool\")) for row in records]\n>       assert tools == [\"set_autonomy_level\", \"delete_project\"], tools  # MUTANT\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError: ['set_autonomy_level', 'set_autonomy_level', 'delete_project']\nE       assert ['set_autonom...lete_project'] == ['set_autonom...lete_project']\nE         \nE         At index 1 diff: 'set_autonomy_level' != 'delete_project'\nE         Left contains one more item: 'delete_project'\nE         \nE         Full diff:\nE           [\nE         +     'set_autonomy_level',\nE               'set_autonomy_level',\nE               'delete_project',\nE           ]\n\ntests/qa5/test_wave6_sinks.py:70: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave6_sinks.py::test_s26_the_production_audit_sink_on_disk - AssertionError: ['set_autonomy_level', 'set_autonomy_level', 'delete_project']\nassert ['set_autonom...lete_project'] == ['set_autonom...lete_project']\n  \n  At index 1 diff: 'set_autonomy_level' != 'delete_project'\n  Left contains one more item: 'delete_project'\n  \n  Full diff:\n    [\n  +     'set_autonomy_level',\n        'set_autonomy_level',\n        'delete_project',\n    ]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-7",
+    "property": "Each Projects pane wholly contains the box of >=1 hit-testable control, and the root reaches FILL_FLOOR",
+    "targets": "PANE_HEALTHY containment: the pane wholly contains the box of at least one HIT_TESTABLE descendant",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/dom.py\n230:    assert result[\"contains\"] is None, (  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "PANE_HEALTHY containment: the pane wholly contains the box of at least one HIT_TESTABLE descendant",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave5_browser.py::test_s24_intra_page_collapse_at_the_panes"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave5_browser.py::test_s24_intra_page_collapse_at_the_panes"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013626Z-2038830.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "THS:\n            page, console = harness.open(nav=\"projects\", width=width, label=f\"S24-{width}\")\n            page.wait_for_selector(\"#proj-list .proj-row\")\n            page.click(f\"#proj-list .proj-row[data-project-id='{p3}']\")\n            page.wait_for_selector(\"#proj-detail .path-text\")\n>           readings[f\"{width}:projects\"] = _two_pane_health(\n                page, f\"S24 {width}\", \"#page-projects\", (\"#proj-list\", \"#proj-detail\")\n            )\n\ntests/qa5/test_wave5_browser.py:893: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \ntests/qa5/test_wave5_browser.py:876: in _two_pane_health\n    pane: assert_pane_healthy(page, pane, root, f\"{label} at {pixels}px {pane}:\")\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npage = <Page url='http://127.0.0.1:44235/'>, pane = '#proj-detail'\nroot = '#page-projects', context = 'S24 w760 at 760px #proj-detail:'\n\n    def assert_pane_healthy(page: Page, pane: str, root: str, context: str = \"\") -> dict[str, Any]:\n        \"\"\"Both halves of \u00a73d, and the second is the one that defeats B2/B18.\n    \n        The root-rectangle check is structurally blind to intra-page grid collapse,\n        so the containment half is measured at the **pane**; and *\"non-zero\"* is a\n        one-pixel floor, so the fill half is the product's own `FILL_FLOOR`.\n        \"\"\"\n        result = pane_healthy(page, pane, root)\n        assert result[\"found\"], f\"{context} pane or root missing: {result}\"\n>       assert result[\"contains\"] is None, (  # MUTANT\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^\n            f\"{context} {pane} wholly contains no HIT_TESTABLE control's box \u2014 \"\n            f\"pane box {result['paneBox']}\"\n        )\nE       AssertionError: S24 w760 at 760px #proj-detail: #proj-detail wholly contains no HIT_TESTABLE control's box \u2014 pane box {'top': 56, 'bottom': 1024, 'left': 0, 'right': 760, 'width': 760, 'height': 968}\n\ntests/qa5/dom.py:230: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave5_browser.py::test_s24_intra_page_collapse_at_the_panes - AssertionError: S24 w760 at 760px #proj-detail: #proj-detail wholly contains no HIT_TESTABLE control's box \u2014 pane box {'top': 56, 'bottom': 1024, 'left': 0, 'right': 760, 'width': 760, 'height': 968}\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  },
+  {
+    "pp": "PP-8",
+    "property": "Frame id values are strictly monotonic, and under two concurrent writers no frame is lost or duplicated",
+    "targets": "S27: id: values are strictly increasing at each client",
+    "applied_evidence": "$ grep -n 'MUTANT' tests/qa5/test_wave6_sinks.py\n153:        assert seqs == sorted(seqs, reverse=True), (name, seqs)  # MUTANT",
+    "outcome": "assertion_falsified",
+    "failing_assertion": "S27: id: values are strictly increasing at each client",
+    "exit_code": 1,
+    "node_ids": [
+      "tests/qa5/test_wave6_sinks.py::test_s27_ordering_and_coalescing_under_real_concurrency"
+    ],
+    "baseline_control": {
+      "targets": [
+        "tests/qa5/test_wave6_sinks.py::test_s27_ordering_and_coalescing_under_real_concurrency"
+      ],
+      "exit_code": 0,
+      "green": true,
+      "output_tail": ".                                                                        [100%]qa5 report: /root/Shepherd/.cc10x/qa/wf-20260921T212808Z-9172ed6b/runs/qa5-run-20260923T013635Z-2039330.json\nqa5 counts: {'PASS': 1, 'FAIL': 0, 'BLOCKED': 0, 'PARTIAL': 0}\nqa5 latest: REFUSED (missing=['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'BRINGUP', 'WAVE2-LIVENESS']; extra=[]; duplicated=[]) \u2014 qa5-latest.json left untouched\n\n"
+    },
+    "output_tail": "it.mark()\n        mark = harness.rig.open_window()\n    \n        def rename(project_id: str) -> None:\n            client.rename_project(project_id, f\"S27-renamed-{project_id[-4:]}\")\n    \n        def describe(project_id: str) -> None:\n            client.describe_project(project_id, f\"described {project_id[-4:]}\")\n    \n        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:\n            futures = [pool.submit(rename, project_id) for project_id in targets[:5]]\n            futures += [pool.submit(describe, project_id) for project_id in targets[5:]]\n            for future in futures:\n                future.result()\n    \n        per_client: dict[str, list[int]] = {}\n        for name in (\"A\", \"B\"):\n            frames = harness.rig.await_count(mark, 10, name)\n            assert len(frames) == 10, [frame.kind for frame in frames]\n            seqs = [frame.seq for frame in frames]\n>           assert seqs == sorted(seqs, reverse=True), (name, seqs)  # MUTANT\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AssertionError: ('A', [23, 24, 25, 26, 27, 28, ...])\nE           assert [23, 24, 25, 26, 27, 28, ...] == [32, 31, 30, 29, 28, 27, ...]\nE             \nE             At index 0 diff: 23 != 32\nE             \nE             Full diff:\nE               [\nE             +     23,\nE             +     24,\nE             +     25,\nE             +     26,\nE             +     27,\nE             +     28,\nE             +     29,\nE             +     30,\nE             +     31,\nE                   32,\nE             -     31,\nE             -     30,\nE             -     29,\nE             -     28,\nE             -     27,\nE             -     26,\nE             -     25,\nE             -     24,\nE             -     23,\nE               ]\n\ntests/qa5/test_wave6_sinks.py:153: AssertionError\n=========================== short test summary info ============================\nFAILED tests/qa5/test_wave6_sinks.py::test_s27_ordering_and_coalescing_under_real_concurrency - AssertionError: ('A', [23, 24, 25, 26, 27, 28, ...])\nassert [23, 24, 25, 26, 27, 28, ...] == [32, 31, 30, 29, 28, 27, ...]\n  \n  At index 0 diff: 23 != 32\n  \n  Full diff:\n    [\n  +     23,\n  +     24,\n  +     25,\n  +     26,\n  +     27,\n  +     28,\n  +     29,\n  +     30,\n  +     31,\n        32,\n  -     31,\n  -     30,\n  -     29,\n  -     28,\n  -     27,\n  -     26,\n  -     25,\n  -     24,\n  -     23,\n    ]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+  }
+]

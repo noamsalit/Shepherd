@@ -1,0 +1,500 @@
+{
+  "workflow": "wf-20260921T212808Z-9172ed6b",
+  "revision": "r5-remfix1",
+  "started_at": "2026-09-23T03:54:39.276138+00:00",
+  "finished_at": "2026-09-23T03:56:14.846079+00:00",
+  "counts": {
+    "PASS": 36,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "PARTIAL": 1
+  },
+  "scenarios": [
+    {
+      "scenario": "BRINGUP",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "eleven bring-up steps arrive: run root, runtime dir, env, store, four panes, controld bound, /api/fleet 200, seed, chromium, rig live, controls green",
+      "actual": "port=44477, panes=['shepherd_r5a', 'shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d'], socket=shepherd-qa, projects=8",
+      "detail": {}
+    },
+    {
+      "scenario": "S0",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "200; deleted=false; a non-empty refusal; five projection keys; KILLABLE==[S-own-1], UNKILLABLE==[S-att-1]; P4 intact; no stop_failed; one allow/claimed_human audit record; zero frames in the window",
+      "actual": "binding=B-OWNED killable=['01M366DEZ78DHKVG3XKKVEJ3AN'] unkillable=['01M366DEZN5K1CWKVAFEHG1YKM'] doomed=5 running=['01M366DEZN5K1CWKVAFEHG1YKM', '01M366DEZ78DHKVG3XKKVEJ3AN'] refused='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned'",
+      "detail": {
+        "killable": [
+          "01M366DEZ78DHKVG3XKKVEJ3AN"
+        ],
+        "unkillable": [
+          "01M366DEZN5K1CWKVAFEHG1YKM"
+        ],
+        "doomed": [
+          "01M366DF02XTBVH6N6NFDJHEXR",
+          "01M366DF07PHBWRPS3F5BMQCTX",
+          "01M366DF0BP2PPYBRWFJXGC39Q",
+          "01M366DEZN5K1CWKVAFEHG1YKM",
+          "01M366DEZ78DHKVG3XKKVEJ3AN"
+        ],
+        "running": [
+          "01M366DEZN5K1CWKVAFEHG1YKM",
+          "01M366DEZ78DHKVG3XKKVEJ3AN"
+        ]
+      }
+    },
+    {
+      "scenario": "S1",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "exactly one [id^=page-] visible at arrival and after every nav click; aria-current follows; the two stubs render; zero console.error/pageerror",
+      "actual": "roots seen in order: ['page-shepherd', 'page-flock', 'page-projects', 'page-queues', 'page-kanban', 'page-settings']",
+      "detail": {}
+    },
+    {
+      "scenario": "S2",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "eight workspaces; two ids share 'Shepherd'; read-path repo_count 2 and 1; last_activity_at derived; #proj-list eight rows; unassigned has no #proj-edit and no #proj-delete child; the empty class renders a sentence",
+      "actual": "names=['Attached-only', 'Doomed', 'Flock', 'Orphan-subject', 'Shepherd', 'Shepherd', 'Stale-handle', 'Unassigned']; detail_keys=['found', 'project']; empty_pane='Shepherd\\nEdit\\nDelete\\n\\nDESCRIPTION\\n\\nNo description.\\n\\nREPOSITORY PATHS\\n\\nNo paths yet \u2014 no session can be started here.\\n\\nWO'",
+      "detail": {}
+    },
+    {
+      "scenario": "S3",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "both streams 200 text/event-stream + no-store + nosniff; `: open` seen; both clients get project.created with `id: <seq>` and no `event:` name; a wrong-Origin stream is 403 with no stream body",
+      "actual": "seqs={'A': 15, 'B': 15}; refusal=403",
+      "detail": {}
+    },
+    {
+      "scenario": "WAVE2-LIVENESS",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "the rig is still live at the start of wave 2: the control's two frames, project.created then project.deleted, at both clients",
+      "actual": "interior carried [2, 2] frames from wave 1",
+      "detail": {}
+    },
+    {
+      "scenario": "S4",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "six 200s, each with its own positive key true; six frames at the second client in the fixed order, each with project_id promoted to the envelope top level and strictly increasing id:; six audit records",
+      "actual": "kinds=['project.created', 'project.renamed', 'project.described', 'project.repo_added', 'project.repo_removed', 'project.deleted']; seqs=[19, 20, 21, 22, 23, 24]; audit=['create_project', 'rename_project', 'set_project_description', 'add_repo', 'remove_repo', 'delete_project']",
+      "detail": {}
+    },
+    {
+      "scenario": "S5",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "200 with renamed=false, project=null, a non-empty refusal naming the reserved project; the name is unchanged; no row added or removed; one audit record for the refused invoke; zero frames in the counted window",
+      "actual": "refused='the Unassigned project cannot be renamed: it is the reserved landing place for work that matched no declared project, and every discovered session binds to it (D59)'; audit=['rename_project']",
+      "detail": {}
+    },
+    {
+      "scenario": "S6",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "described=true twice; the text lands then an absent field clears it; repo_count=0/last_activity_at=null on both write records while P1 has two repos (X3); the edges are untouched; two project.described frames; two audit records; #p-desc-note reflects the cleared state",
+      "actual": "#p-desc after clear=''; #p-desc-note='Saved by set_project_description when you press Save.'; frames=['project.described', 'project.described']",
+      "detail": {
+        "measurement": "S6's UI row names `#p-desc-note` as reflecting the cleared state. `projects.js:544` writes a fixed sentence there in edit mode and '' outside one \u2014 it reflects the dialog mode, never the description. `#p-desc` is the element that carries the claim, and it is empty."
+      }
+    },
+    {
+      "scenario": "S7",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "project_id promoted to the envelope top level and absent from the payload; the payload is JSON-whitelisted; the frame is `id: <seq>` with no `event:` line",
+      "actual": "fields=['data', 'id']; envelope_project_id=01M366DH94VGSSW1GZNVRS4RPZ; payload_keys=[]",
+      "detail": {}
+    },
+    {
+      "scenario": "S8",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "a reattach with a stale Last-Event-ID resumes strictly after it, with no duplicate and no frame lost; a stream.gap notice, if issued, arrives before any replayed frame",
+      "actual": "stale_seq=31; replayed=[32, 33, 34, 35]; gap_notices=0",
+      "detail": {
+        "known_window": "sse.py:124-128 \u2014 a single missed frame here is BLOCKED, not FAIL"
+      }
+    },
+    {
+      "scenario": "S9",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "the dialog names P4 by name and id; #dlg-delete-doomed renders the server's own ids, one per id; #dlg-delete-live lists both running sessions; Wait and #dlg-delete-cancel each close, write nothing and fire no POST; no second /api/sessions read; zero frames in the window",
+      "actual": "choices at open=['delete']; after the refusal=['cancel', 'kill_sessions', 'orphan']; posts=['POST http://127.0.0.1:44477/api/projects/01M366DEXYMPEZ31NXPQQZV1HQ/delete']",
+      "detail": {
+        "measurement": "S9's UI row asks for five co-resident choices in #dlg-delete-choices. The group is two-phase: one at open, three from the server's refusal (projects.js:940-1005), and #dlg-delete-cancel is outside the group. Five distinct controls exist; they are never simultaneous."
+      }
+    },
+    {
+      "scenario": "S10",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "on P4 (killable non-empty) the kill_sessions choice is enabled; on P5 (attached-only) it is disabled, and the disabled state is visible before any click; both match answer.killable.length === 0 exactly; zero frames",
+      "actual": "{'P4': {'disabled': False, 'killable': ['01M366DEZ78DHKVG3XKKVEJ3AN']}, 'P5': {'disabled': True, 'killable': []}}",
+      "detail": {}
+    },
+    {
+      "scenario": "S12",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "deleted=false; killed=[]; kill_failures==[] (a no_pane is a False, not a raise \u2014 see measurement); a non-empty refusal; P5 kept; no ended_at moved; stop_failed UNCHANGED; the kill choice is disabled and the dialog's live region names every still-running session id with no .dlg-reason node; the body carries the default-refuse sentence; exactly two delete_project audit records; zero project.* frames in the window",
+      "actual": "failures=[]; running=['01M366DEZYHFHJFYR0TVQKZYJS', '01M366DEZXG2DDGRMZXX6T1KVF']; stop_failed 0->0; reasons=[]; body='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned This deletes the project and 2 session records.'",
+      "detail": {
+        "measurement": "SUPERSEDED PLAN WORDING (test-plan S12, API and UI rows): 'deleted=false, killed=[], one kill_failure per attached session with a reason naming no_pane, a non-empty refusal; ... stop_failed up by exactly the failure count; the dialog renders what was not stopped and why, naming the session id'. That is what the plan asked for; the `expected` field above is what this scenario asserts, because the `expected` field is the one a reader scans and it must not state the opposite of the code. Why they differ: kill_failures records a RAISE only (tools_projects_delete.py:174-178); kill_for_delete turns no_pane into False (compose.py:451-462). The sessions appear under `running` and in '#dlg-delete-live' as 'Still running:', with the why carried by the refusal sentence in #dlg-delete-body. stop_failed does not move. A finding about the plan's reading, not a product FAIL."
+      }
+    },
+    {
+      "scenario": "S11",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "killed == [S-own-1]; S-att-1 is in `running` and named by `refused`; the pane shepherd_r5a is gone from the shepherd-qa socket; S-own-1 has ended_at and S-att-1 does not; the project's fate matches `deleted`; one claimed_human audit record; a project.deleted frame iff deleted",
+      "actual": "deleted=False; killed=['01M366DEZ78DHKVG3XKKVEJ3AN']; failures=[]; frames=['session.killed']; sessions_left_on_socket=['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']",
+      "detail": {
+        "inferred_row": "`deleted` was an I row (\u00a70 rule 5): the plan read `commit_project_delete` as re-deriving and refusing while a live session remains. Measured: False, and now PINNED rather than read off the answer \u2014 an expectation derived from the value under test agrees with whatever the product says.",
+        "measurement": "S11's API row expects kill_failures to contain S-att-1 'with a reason naming no_pane'. Measured empty: kill_landed turns no_pane into False and only a raise is recorded as a failure."
+      }
+    },
+    {
+      "scenario": "S13",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "deleted=true; orphaned names both running sessions; destroyed names the three finished ones; severed carries exactly one {session_id, column} link \u2014 S-att-4's retry_of into P6 \u2014 and the column is NULL afterwards; both survivors belong to unassigned; the three finished rows are gone; the workspace row is gone; the pane shepherd_r5d still exists; exactly one project.deleted frame; after a reload the Flock lists no P6 and shows both orphans as cards under Unassigned, with no destroyed session among them",
+      "actual": "orphaned=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']; destroyed=['01M366DF0FCJ00BE2ZKVD8SPKN', '01M366DF0JBSTJCTJ8Q48GJ2Q5', '01M366DF0NFM40E9EVSG2T6W8F']; severed=[{'session_id': '01M366DEZVZ9EMGJ457MBRWMY9', 'column': 'retry_of'}]; flock_head='UNASSIGNED'; orphan_cards_under_unassigned=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']; cards=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']",
+      "detail": {}
+    },
+    {
+      "scenario": "S14",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "HTTP 101; the first binary frame carries the pane's own bytes including the marker the fixture wrote, byte-transparent; the pane survives the read; a wrong-Origin upgrade is 403 with no frame handed over; one terminal_stream audit record",
+      "actual": "snapshot=157 bytes; frames=[2]; refused=403; close_code=None",
+      "detail": {
+        "measurement": "PLAN CLAUSE NOT RUN (test-plan S14: '...and the socket closes with CLOSE_NORMAL'). `wsclient.Upgrade.close_code()` implements the read and is called by nothing, because on a LIVE pane there is no close to read: `server.py::_terminal` writes the snapshot, then every chunk `runner.attach()` yields, and only then a close frame \u2014 against a real tmux pane that is a stream with no end. `read_frames` therefore stops at a caller-named frame COUNT and closes from this side, so the close code reported here is whatever the client observed (None when the harness closed first), never the server's CLOSE_NORMAL. A helper that read 'to the close frame' would hang forever on exactly the ground round 5 exists to drive. The clause is a real gap in this scenario's coverage and is stated rather than omitted from the PASS."
+      }
+    },
+    {
+      "scenario": "S15",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "data-terminal-cols/rows are >0 at both viewports and differ between them; the terminal box stays inside the viewport; the pane's own geometry is still -x 160 -y 45 at both, and the page's reported geometry differs from it at at least one \u2014 terminal_resize has no route",
+      "actual": "page={'w1280': {'cols': 59, 'rows': 30}, 'w390': {'cols': 45, 'rows': 23}}; pane=(160, 45); diverged_at=['w1280', 'w390']",
+      "detail": {}
+    },
+    {
+      "scenario": "S16",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "404 after a valid handshake, with no 101 and no frame; the session pane renders a sentence explaining there is no pane; one audit record; zero console.error/pageerror",
+      "actual": "status=404; pane_text=\"UNCLASSIFIED\\n\u2014\\n\u270e\\nstarting\\nattached\\n\u2014\\n\\n\u2014\\n\\nnothing to do\\nwhy?\\n\\nread-only \u2014 this session wasn't started here. Open it in the platform to get a terminal.\"",
+      "detail": {}
+    },
+    {
+      "scenario": "S17",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "the stale handle is in killable; killed == []; exactly one kill_failure naming the session with a reason beginning RunnerRefusal:; stop_failed up by exactly 1; the project's fate matches `deleted`; the pane is absent before and after; one audit record and no GENERIC_ERROR",
+      "actual": "deleted=False; failure={'session_id': '01M366DEZFK23AQK73KT4B4RER', 'reason': 'RunnerRefusal: tmux exited 1 for [\\'kill-session\\', \\'-t\\', \\'=shepherd_r5c:\\']: \"can\\'t find session: shepherd_r5c\"'}; stop_failed 0->1; cleanup branch: deleted == false; P7 survives",
+      "detail": {
+        "cleanup_branch": "deleted == false; P7 survives"
+      }
+    },
+    {
+      "scenario": "S18",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "tab B shows the new project and the rename with no reload and no user action; #stream-status reads live throughout; tab B issues no mutation; GET /api/projects in the burst is at most two per envelope, counted at page.on('request'); two frames; zero console errors in both tabs",
+      "actual": "rows 7->8; burst list reads=2; frames=['project.created', 'project.renamed']",
+      "detail": {}
+    },
+    {
+      "scenario": "S19",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "every real touch tap reaches its handler; #shell[data-rail] flips both ways and the nav stays reachable; the dialog's primary control is HIT_TESTABLE; in EDIT mode #p-paths-section is visible and Enter on #p-new-path issues exactly one \u2026/repos/add answering added==false without submitting the form; P1's repo set is unchanged; zero frames in the window",
+      "actual": "rail open->collapsed->open (#collapse collapses, #mark restores \u2014 two controls, not one toggle); refusal=\"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/work/no-such-path-for-s19' is not a path that exis\"; repos_add_requests=1; drawer_controls_excluded_by_name=['nav-shepherd', 'nav-flock', 'nav-projects', 'nav-queues', 'nav-kanban', 'nav-settings']",
+      "detail": {}
+    },
+    {
+      "scenario": "S20",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "every CONTROL_SET selector resolves to >=1 element on the page its control lives on, in both passes, and the two resolution maps are identical; for every id, HIT_TESTABLE holds under reduced motion wherever it held in the baseline pass; the ids that were False on BOTH sides are named rather than dropped; the legend sheet opens and closes in both passes; dialogs open and close; zero console errors",
+      "actual": "baseline={'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}; reduce={'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}; sheet={'baseline': True, 'reduce': True}; resolution={'legend-info': 1, 'proj-new': 1, 'nav-shepherd': 1, 'nav-flock': 1, 'nav-projects': 1, 'nav-queues': 1, 'nav-kanban': 1, 'nav-settings': 1, 'drawer-open': 1, 'collapse': 1}; hit_testable_in_baseline=['collapse', 'legend-info', 'nav-flock', 'nav-kanban', 'nav-projects', 'nav-queues', 'nav-settings', 'nav-shepherd']; vacuous_on_both_sides=['drawer-open', 'proj-new']",
+      "detail": {}
+    },
+    {
+      "scenario": "S21",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "exactly one [id^=page-] visible per navigation in both modes; no horizontal overflow beyond SLACK_PX measured against the VIEWPORT; every CONTROL_SET id stays HIT_TESTABLE wherever the baseline pass had it; under RTL both Projects panes satisfy PANE_HEALTHY; every CONTROL_SET selector resolves to >=1 element on the page its control lives on at each width; the ids False on BOTH sides of each differential are named",
+      "actual": "widths=['w390', 'w820', 'w1280'] (from ROUND5_WIDTHS by reference); modes=['forced-colors@w1280', 'forced-colors@w390', 'forced-colors@w820', 'rtl@w1280', 'rtl@w390', 'rtl@w820']; baseline={'w390': {'nav-shepherd': False, 'nav-flock': False, 'nav-projects': False, 'nav-queues': False, 'nav-kanban': False, 'nav-settings': False, 'drawer-open': True, 'collapse': False, 'legend-info': True, 'proj-new': False}, 'w820': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}, 'w1280': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}}; snapshots={'forced-colors@w390': {'nav-shepherd': False, 'nav-flock': False, 'nav-projects': False, 'nav-queues': False, 'nav-kanban': False, 'nav-settings': False, 'drawer-open': True, 'collapse': False, 'legend-info': True, 'proj-new': False}, 'forced-colors@w820': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}, 'forced-colors@w1280': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}, 'rtl@w390': {'nav-shepherd': False, 'nav-flock': False, 'nav-projects': False, 'nav-queues': False, 'nav-kanban': False, 'nav-settings': False, 'drawer-open': True, 'collapse': False, 'legend-info': True, 'proj-new': False}, 'rtl@w820': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}, 'rtl@w1280': {'nav-shepherd': True, 'nav-flock': True, 'nav-projects': True, 'nav-queues': True, 'nav-kanban': True, 'nav-settings': True, 'drawer-open': False, 'collapse': True, 'legend-info': True, 'proj-new': False}}; resolution={'w390': {'legend-info': 1, 'proj-new': 1, 'nav-shepherd': 1, 'nav-flock': 1, 'nav-projects': 1, 'nav-queues': 1, 'nav-kanban': 1, 'nav-settings': 1, 'drawer-open': 1, 'collapse': 1}, 'w820': {'legend-info': 1, 'proj-new': 1, 'nav-shepherd': 1, 'nav-flock': 1, 'nav-projects': 1, 'nav-queues': 1, 'nav-kanban': 1, 'nav-settings': 1, 'drawer-open': 1, 'collapse': 1}, 'w1280': {'legend-info': 1, 'proj-new': 1, 'nav-shepherd': 1, 'nav-flock': 1, 'nav-projects': 1, 'nav-queues': 1, 'nav-kanban': 1, 'nav-settings': 1, 'drawer-open': 1, 'collapse': 1}}; vacuous_on_both_sides={'forced-colors@w390': ['collapse', 'nav-flock', 'nav-kanban', 'nav-projects', 'nav-queues', 'nav-settings', 'nav-shepherd', 'proj-new'], 'forced-colors@w820': ['drawer-open', 'proj-new'], 'forced-colors@w1280': ['drawer-open', 'proj-new'], 'rtl@w390': ['collapse', 'nav-flock', 'nav-kanban', 'nav-projects', 'nav-queues', 'nav-settings', 'nav-shepherd', 'proj-new'], 'rtl@w820': ['drawer-open', 'proj-new'], 'rtl@w1280': ['drawer-open', 'proj-new']}",
+      "detail": {}
+    },
+    {
+      "scenario": "S22",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "at 200% and 50%: containment against the viewport at all four live pages; the Projects panes satisfy PANE_HEALTHY (>=1 HIT_TESTABLE control wholly inside the pane AND the root at FILL_FLOOR, read from render_check.py, never re-spelled); the nav stays reachable",
+      "actual": "base width=w1280 (by reference); css viewports={'200%': 640, '50%': 2560}",
+      "detail": {
+        "measurement": "The plan's `body { zoom }` emulation does not move media queries, so it asks the desktop layout to fit half the pixels and overflows by 276px on the Flock \u2014 a state no browser produces. Zoom is emulated as device_scale_factor plus a scaled CSS viewport instead."
+      }
+    },
+    {
+      "scenario": "S23",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "at 320, 1920 and 2560: exactly one root visible per nav, the nav reachable (via the drawer where it is off-canvas), all ten Settings sections selectable with a control in each panel, no horizontal overflow against the viewport; with the rail collapsed at the widest width the nav is still reachable and every root still meets FILL_FLOOR; screenshots under the run root's shots/, never the static tree (B8)",
+      "actual": "widths=['w320', 'w1920', 'w2560'] (by reference); settings_sections={'w320': {'sections': 10, 'with_controls': 1, 'nav': 'via drawer'}, 'w1920': {'sections': 10, 'with_controls': 1, 'nav': 'direct'}, 'w2560': {'sections': 10, 'with_controls': 1, 'nav': 'direct'}}",
+      "detail": {}
+    },
+    {
+      "scenario": "S24",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "at 760, 761, 820 and 900: #proj-list and #proj-detail, and the Settings nav column and detail panel, each wholly contain the box of >=1 HIT_TESTABLE control, and the owning root reaches FILL_FLOOR; P3's long repo path is clipped and carries the full value as its title; the rail-open half holds at the desktop width",
+      "actual": "widths=['w760', 'w761', 'w820', 'w900'] (by reference); path_title_len=165; clipped=1254>704",
+      "detail": {}
+    },
+    {
+      "scenario": "S25",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "each of #dlg-project, #dlg-delete and #dlg-legend reports open:true with a computed display that is not none, and its primary control satisfies HIT_TESTABLE (which subsumes non-zero box, not painted over and not pointer-events:none); Escape closes each one",
+      "actual": "{'dlg-project': {'open': True, 'display': 'block'}, 'dlg-delete': {'open': True, 'display': 'block'}, 'dlg-legend': {'open': True, 'display': 'block'}}",
+      "detail": {}
+    },
+    {
+      "scenario": "S32",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "the dialog opens in edit mode pre-filled with P1's values; the add and the remove each issue exactly one POST at the moment they are pressed; the draft list goes 2 -> 3 -> 2 before any Save; Save issues exactly one \u2026/description and ZERO \u2026/rename; P1's name is byte-identical and its description is the new text; exactly two repo edges, the removed one gone; frames repo_added, repo_removed, described and no renamed",
+      "actual": "calls=['POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/remove', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/description']; repos_after=['01M366DEYTFREYBMZ561WSAK1A', '01M366DGS2K6HPF7NT8FWYWGZA']",
+      "detail": {}
+    },
+    {
+      "scenario": "S26",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "exactly three new JSONL records for the three calls under test, in order, each with at/tool/decision/approved_by and a mapping of redacted args; GET /api/autonomy reads back 2; the project is gone; audit_line_lost is 0; one project.deleted frame and zero for the two autonomy POSTs; the control's own two gated invokes are asserted separately",
+      "actual": "tools=['set_autonomy_level', 'set_autonomy_level', 'delete_project']; delete record decision='allow' approved_by='claimed_human'; control=['create_project', 'delete_project']",
+      "detail": {
+        "records": [
+          {
+            "at": "2026-09-23T03:55:26.796Z",
+            "correlation_id": "cfff258982714c768c0d79d3dd66bf07",
+            "actor_kind": "human",
+            "actor_id": "web",
+            "tool": "set_autonomy_level",
+            "blast_class": "local_destructive",
+            "autonomy_level": 0,
+            "decision": "allow",
+            "approved_by": "claimed_human",
+            "approval_id": null,
+            "result": "ok",
+            "failure": null,
+            "duration_ms": 3
+          },
+          {
+            "at": "2026-09-23T03:55:26.800Z",
+            "correlation_id": "7acb7b9225d047148d029afa10ef7202",
+            "actor_kind": "human",
+            "actor_id": "web",
+            "tool": "set_autonomy_level",
+            "blast_class": "local_destructive",
+            "autonomy_level": 0,
+            "decision": "allow",
+            "approved_by": "claimed_human",
+            "approval_id": null,
+            "result": "ok",
+            "failure": null,
+            "duration_ms": 2
+          },
+          {
+            "at": "2026-09-23T03:55:26.805Z",
+            "correlation_id": "5cb7f3530f744c81b7e1024780b13e6e",
+            "actor_kind": "human",
+            "actor_id": "web",
+            "tool": "delete_project",
+            "blast_class": "local_destructive",
+            "autonomy_level": 0,
+            "decision": "allow",
+            "approved_by": "claimed_human",
+            "approval_id": null,
+            "result": "ok",
+            "failure": null,
+            "duration_ms": 3
+          }
+        ],
+        "measured_claim": "approved_by for the destructive call is 'claimed_human' \u2014 policy.TABLE allows LOCAL_DESTRUCTIVE for Audience.HUMAN at both autonomy levels."
+      }
+    },
+    {
+      "scenario": "S27",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "each client receives exactly ten frames with strictly increasing id: and no duplicate; the two clients' frame sets are equal; ten mutations landed with no lost update; ten audit records; an observer tab runs refreshAll at most twice per burst, counted at page.on('request')",
+      "actual": "A=[82, 83, 84, 85, 86, 87, 88, 89, 90, 91]; B=[82, 83, 84, 85, 86, 87, 88, 89, 90, 91]; observer_reads=1",
+      "detail": {}
+    },
+    {
+      "scenario": "S28",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "two Create clicks in one tick produce ONE POST, ONE workspace row and ONE frame; the composer's three keyboard cases behave (Enter sends, Shift+Enter newlines, empty is a no-op)",
+      "actual": "create_posts=1; rows=1; master_sends=1",
+      "detail": {
+        "declared_uncovered": "Four other POST handlers are deliberately unguarded on an idempotency bet. Driving them would assert the bet, not the guard."
+      }
+    },
+    {
+      "scenario": "S33",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "(a) issues EXACTLY ZERO requests and is refused by `required` itself; (b) issues EXACTLY ZERO requests and renders NEEDS_NAME in #p-refusal; (c) warns, warns again on a second duplicate, re-arms and warns on the first name again, then creates on the fourth press \u2014 one workspace; (d),(e) each issue exactly one \u2026/repos/add answering added==false with a refusal naming the path, and P1's two existing draft paths are unchanged; exactly one new workspace row net of the control; no new edge",
+      "actual": "empty: #p-refusal='' with validity.valueMissing=True; space: 'A project needs a name \u2014 this one is only whitespace.'; warnings='There is already a project named \"Shepherd\".' / 'There is already a project named \"Flock\". A ' / 'There is already a project named \"Shepherd\".'; path refusals={'missing': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/\", 'non-directory': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/\"}; posts=['POST http://127.0.0.1:44477/api/projects', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add']",
+      "detail": {
+        "measurement": "(a) an empty name is refused by the browser's own `required`, not by the page: submitProject never runs and #p-refusal stays empty. NEEDS_NAME is (b)'s sentence. (c) re-arms only through a second *duplicate* name \u2014 duplicate.armed is set on a warned press and cleared on a successful create, so typing a name and typing it back does not re-arm."
+      }
+    },
+    {
+      "scenario": "S34",
+      "tier": "e2e_backend",
+      "verdict": "PASS",
+      "expected": "(a) 403, (b) 400, (c) 404, each with exactly {\"ok\":false,\"data\":null,\"error\":\"GENERIC_ERROR\",\"correlation_id\":\"<32 hex>\"} and the id matched as a pattern; (d) 200, the rename lands on P1 and the body's project_id redirects nothing while the undeclared colour is dropped; (e) added==false with a refusal naming the directory; exactly one project.renamed frame and none from the four refusals; audit records for (d) and (e) only",
+      "actual": "correlation ids=['94d443431b034357bdffa3e8860e5b35', 'f0b3eee363864eb3a090294eaa30bf08', '75308c72bfc247d2baa05dcf1b52c080']; decoy name 'S34-DECOY' -> 'S34-DECOY'; audit=['rename_project', 'add_repo']",
+      "detail": {
+        "deferred_gap": "This seam cannot separate routes.py's two no-redirect guards: removing either alone leaves the assertion green. The unit seam that can is tests/web/test_routes_m3.py::test_no_declared_field_shadows_a_path_parameter."
+      }
+    },
+    {
+      "scenario": "S30",
+      "tier": "ui",
+      "verdict": "PASS",
+      "expected": "render_check.py against the SERVED url with --fail-on-empty and --must-fill exits 0 over every entry of render_check.VIEWPORTS, read from the module and never re-spelled",
+      "actual": "argv=['/root/Shepherd/tools/render_check.py', '--url', 'http://127.0.0.1:44477/', '--fail-on-empty', '--must-fill', '/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/shots/s30']; viewports=['phone', 'tablet', 'desktop']; exit=0; summary=['18 pages checked \u00b7 18 screenshots \u00b7 0 failures', 'screenshots in /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/shots/s30']; screenshots=18 over 6 page roots",
+      "detail": {
+        "declaration": "AC-28's final clause was **not run**. Its command invokes `pytest -m live`, which starts real `claude` processes against the user's real `~/.claude.json` and is forbidden by a standing user constraint. S30 is a substitute sweep carrying no `live` marker, and a PASS here does not discharge AC-28.",
+        "unfalsifiable_here": "--fail-on-empty is a whole-body emptiness check and index.html ships the nav, the wordmark and the section labels as static markup, so the body can never be empty while the shell is served. It costs nothing and catches a server answering 200 with nothing; it is not evidence about layout. --must-fill is the flag that engages FILL_FLOOR."
+      }
+    },
+    {
+      "scenario": "S31",
+      "tier": "integration",
+      "verdict": "PASS",
+      "expected": "BODY_ARGS == 16 (AC-16 says 15 \u2014 stale); post_milestone.edits == 7 (AC-21 says 6 \u2014 stale); terminal.js digest != its manifest baseline (AC-23 assumes byte-clean \u2014 stale); API_ROUTES == 14; POST_ROUTES == 16; sha256(web/server.py) equals the manifest baseline",
+      "actual": "{'BODY_ARGS': 16, 'API_ROUTES': 14, 'POST_ROUTES': 16, 'post_milestone.edits': 7}; server_sha256=215b223bda4aacde\u2026; terminal_sha256=781bed86a4092e0f\u2026; stale=['AC-16 says BODY_ARGS == 15', 'AC-21 says post_milestone.edits == 6', 'AC-23 assumes terminal.js is byte-clean']",
+      "detail": {}
+    },
+    {
+      "scenario": "S29",
+      "tier": "ui",
+      "verdict": "PARTIAL",
+      "expected": "with controld stopped: #shepherd-status and #p-refusal carry app.js's string, #settings-note carries settings.js's different one, and the Flock's failure surfaces in the shell's shared banner, unhidden, with #stream-status not reading live; every string compared against the constant read out of the module; zero console.error/pageerror \u2014 a network failure must be handled, not thrown",
+      "actual": "observed={'shepherd': 'The request did not reach the server \u2014 Shepherd may not be running.', 'projects': 'The request did not reach the server \u2014 Shepherd may not be running.', 'settings': 'The request did not reach the server \u2014 Shepherd may not be running, so these num', 'flock': 'The request did not reach the server \u2014 Shepherd may not be running.'}; stream_status='live' (noticed=False); shutdown_hung=(); browser network notices (not page errors)=4",
+      "detail": {}
+    }
+  ],
+  "bindings": {
+    "KILLABLE": [
+      "01M366DEZ78DHKVG3XKKVEJ3AN"
+    ],
+    "UNKILLABLE": [
+      "01M366DEZN5K1CWKVAFEHG1YKM"
+    ],
+    "DOOMED": [
+      "01M366DF02XTBVH6N6NFDJHEXR",
+      "01M366DF07PHBWRPS3F5BMQCTX",
+      "01M366DF0BP2PPYBRWFJXGC39Q",
+      "01M366DEZN5K1CWKVAFEHG1YKM",
+      "01M366DEZ78DHKVG3XKKVEJ3AN"
+    ],
+    "RUNNING": [
+      "01M366DEZN5K1CWKVAFEHG1YKM",
+      "01M366DEZ78DHKVG3XKKVEJ3AN"
+    ],
+    "S0_BINDING": "B-OWNED"
+  },
+  "declarations": [
+    "PRODUCT DEFECT, reproduced and worked around, not fixed: `web/static/projects.js:252-256` \u2014 `projectRow`'s click handler calls `loadDetail(project.project_id)` WITHOUT awaiting it and then `renderList()`, while `submitProject`'s create branch already has a `loadDetail` of its own in flight. Two unawaited reads race and the later one to RESOLVE wins, so the detail pane can show a project for a frame and then be overwritten \u2014 leaving `#proj-edit` bound to a different project and the draft path list stuck at zero. Measured at approximately one full-suite run in four. A real user hits it by clicking a project row while a create is still settling. The harness settles on `networkidle` before reading the pane, which is sound on this page specifically (the product runs no timers: zero setInterval / setTimeout / requestAnimationFrame across its JS, so 'no requests in flight' is a stable state rather than a gap between ticks) \u2014 but a settle in the test does not fix the product, and the defect is shipped.",
+    "AC-28's final clause was **not run**. Its command invokes `pytest -m live`, which starts real `claude` processes against the user's real `~/.claude.json` and is forbidden by a standing user constraint. S30 is a substitute sweep carrying no `live` marker, and a PASS here does not discharge AC-28.",
+    "AC-16 is STALE: routes.BODY_ARGS is 16, not 15.",
+    "AC-21 is STALE: consumer_manifest post_milestone.edits is 7, not 6.",
+    "AC-23 is STALE: web/static/terminal.js no longer matches its manifest baseline digest, so the criterion's byte-clean assumption does not hold.",
+    "PRODUCT QUESTION, measured not invented: flock.js has no UNREACHABLE constant of its own. Its failure path runs through app.js's read() into the shell's shared banner (#stream-message-text). Whether one shell banner is correct for the one page whose read path IS the shell's, or a gap beside three modules that say it themselves, is a product decision."
+  ],
+  "losses": [
+    "S29 PARTIAL: `#stream-status` still read `live` 30s after `controld.stop`. The banner and all three per-module sentences were evaluated and hold; this one named assertion was not evaluated. MEASUREMENT, not a FAIL: no source states how fast the page must notice a dropped stream, and an in-process shutdown may hold the socket open longer than a process exit would. Worth a product look: a page claiming `live` over a dead stream is the one state the indicator exists to deny."
+  ],
+  "teardown": [
+    "close contexts: 0 closed, 0 already closed by their scenario",
+    "close chromium: True",
+    "stop playwright: ok",
+    "close SSE readers: ok",
+    "controld: already stopped by S29; control socket unlinked",
+    "kill panes: shepherd_r5a=gone, shepherd_r5b=killed, shepherd_r5c=gone, shepherd_r5d=killed, shepherd_r5z=gone",
+    "socket empty: no session remains on shepherd-qa",
+    "files: ['runtime dir removed: /tmp/shq5-2153092', 'run root removed: /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092', 'session scratchpad intact: /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad', 'src/ tools/ docs/probes/ clean', 'git worktree list identical to the bring-up baseline']"
+  ],
+  "measurements": {
+    "run_root": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092",
+    "runtime_dir": "/tmp/shq5-2153092",
+    "socket_bytes_spent": 40,
+    "tmux_version": "tmux 3.4",
+    "environment": {
+      "XDG_DATA_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_data",
+      "XDG_CONFIG_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_config",
+      "XDG_STATE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_state",
+      "XDG_CACHE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_cache",
+      "HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/home",
+      "TMPDIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/tmp",
+      "XDG_RUNTIME_DIR": "/tmp/shq5-2153092",
+      "CLAUDE_CONFIG_DIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/engine-config",
+      "PLAYWRIGHT_BROWSERS_PATH": "/root/.cache/ms-playwright",
+      "TMUX": null
+    },
+    "data_dir": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_data/shepherd",
+    "pane_sweep": "shepherd-qa was already empty",
+    "schema_version": 4,
+    "chromium": "/root/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "rig_probe": {
+      "A": 2,
+      "B": 2
+    },
+    "fixture_side_controls": [
+      "pane-kill mechanics: created, listed, killed, not listed",
+      "S-own-1 -> local|shepherd-qa|shepherd_r5a",
+      "S-own-2 -> local|shepherd-qa|shepherd_r5b",
+      "S-own-3 -> local|shepherd-qa|shepherd_r5d",
+      "S-own-4 -> local|shepherd-qa|shepherd_r5c",
+      "handle round-trip: four owned sessions, three-field form, known panes",
+      "socket knob: runner_socket == 'shepherd-qa' after controld.start"
+    ],
+    "s19_edit_dialog_presses": 1,
+    "s32_edit_dialog_presses": 1,
+    "s33_edit_dialog_presses": 1,
+    "s31": {
+      "BODY_ARGS": 16,
+      "API_ROUTES": 14,
+      "POST_ROUTES": 16,
+      "post_milestone.edits": 7,
+      "server_sha256": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
+      "terminal_sha256": "781bed86a4092e0f8df0f1811ed754d7c2fdcf2b39020c35d05501d880942017"
+    },
+    "teardown_controld_branch": "skipped (S29)",
+    "record_set": {
+      "planned": 37,
+      "recorded": 37,
+      "missing": [],
+      "extra": [],
+      "duplicated": [],
+      "complete": true,
+      "pytest_exitstatus": 0
+    }
+  }
+}
