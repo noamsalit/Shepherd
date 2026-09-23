@@ -229,6 +229,20 @@ distinction survives colourblindness and greyscale.
 Slate is deliberately desaturated: a blocked session should read as *parked*,
 not as demanding.
 
+**Status 2026-09-22 — the keys above are the bucket *values*; three of the
+*labels* the UI draws have changed, and the values deliberately have not.**
+`core.stops.PALETTE` is the one place both live: `Bucket.UNFINISHED` now reads
+**stranded**, `Bucket.PAUSED` reads **limit exceeded**, and the eighth bucket
+this project added, `Bucket.UNCLASSIFIED`, reads **unknown**. The renames landed
+in `PALETTE` and nowhere else — there is no UI-side label table — so a reader
+comparing this section to the screen should expect the column above to be the
+identifier and not the caption. The `Herd` → **Flock** rename is the same shape:
+a page title, not a model change.
+
+**There are eight buckets, not seven.** The seven above are §12's; `unclassified`
+is ours, and it exists because a classifier that guesses to avoid saying *I don't
+know* is worse than one that says it. It is counted and displayed.
+
 ---
 
 ## 5. Architecture

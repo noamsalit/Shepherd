@@ -16,3 +16,22 @@ __pycache__/
 # The *harness* is committed so the evidence is regenerable (see its header);
 # the pixels it produces are derived and are not.
 tests/web/fixtures/shots/
+
+# QA run residue. `tests/qa5/` writes one JSON per scenario run and one pytest
+# log per execution; 222 of the first and 3 of the second had accumulated by
+# 2026-09-23, 4.3 MB of it, and the round-5 report cites none of them. What is
+# worth keeping was curated into the four tracked files beside them —
+# `qa5-latest.json` (the run the report is written from), `qa5-mutation-checks.json`,
+# `qa5-mutation-driver.py` and `report-qa3.md`. The screenshots are the same
+# story: derived pixels, regenerable from the harness, and unreferenced.
+# Frozen evidence lives in `docs/probes/`, deliberately and under its own rules.
+.cc10x/qa/*/runs/qa5-run-*.json
+.cc10x/qa/*/runs/*-pytest.log
+.cc10x/qa/*/runs/*.png
+.cc10x/qa/*/runs/qa4/
+
+# Agent worktree scratch. Claude Code checks out per-agent worktrees here; they
+# are registered with `git worktree`, so they are removed with
+# `git worktree remove`, never with `rm -rf`. Fourteen of them (543 MB) had
+# accumulated by 2026-09-23.
+.claude/

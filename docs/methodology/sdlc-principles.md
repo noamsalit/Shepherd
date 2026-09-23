@@ -25,7 +25,12 @@
 ## 1.1 The shape
 
 ```
-  user request
+  ticket          from the owner of the outcome — never inferred (§1.11)
+       │          serves · user story · success criteria · non-goals
+       ▼
+  ┌──────────┐   Definition of Ready. A thin ticket is RETURNED
+  │  INTAKE  │   with a drafted attempt at the gaps — never interpreted.
+  └────┬─────┘
        │
        ▼
   ┌─────────┐   routes by PRIMARY DELIVERABLE, not keyword
@@ -54,7 +59,7 @@ Three separations do the real work:
 | **Doing vs. judging** | The agent that wrote the code never certifies it. Advisory routes cannot start write work. The route that measures cannot repair. |
 | **State vs. conversation** | Every fact a later step needs lives in a file, not in the transcript. Compaction must cost nothing. |
 
-## 1.2 The seventeen principles
+## 1.2 The nineteen principles
 
 | # | Principle | Mechanism | Why |
 |---|---|---|---|
@@ -75,6 +80,8 @@ Three separations do the real work:
 | P15 | **Compound the knowledge** | Learnings, gotchas and verification results persist after every workflow. Cross a threshold — 3+ failed hypotheses, the same defect in 3+ files, a fix that contradicts a documented assumption — and it becomes a permanent write-up. | Otherwise every session re-learns the same constraint. |
 | P16 | **Never assume a shape at a boundary you do not own** | Every external data shape, signal and protocol behaviour is **observed against a live instance** and the capture is committed. Documentation, SDK typings, memory and model priors are hypotheses, not facts. An unprobed shape is a recorded gap, never a detail. See §1.7. | The shape you assume is the one nobody tests. It is wrong silently, and it is wrong at the one boundary where you cannot see inside the other side. |
 | P17 | **Sequence is a consequence, not a default** | The plan emits a dependency **graph**, not a list. The executor dispatches on unblock, never on a wave boundary. Independence is tested before two units run together, and re-checked at the join. See §1.9. | Most plans are straight lines only because they were written in order. Every dependency that isn't real is idle time, and it compounds across the whole build. |
+| P18 | **Intent is an input, never an inference** | Purpose and deliberate behaviours are supplied **from outside** by the owner of the outcome, held in durable product-level artifacts, and handed to every dispatch. The framework may draft one and may refuse to run without one; it may not author one. Findings resolve to `defect`, `intended`, or **`unspecified`**. See §1.10. | An agent holding the mechanism and no purpose will infer a purpose and be confidently, well-evidencedly wrong. Intended behaviour filed as a defect is the cheap version of this failure; the expensive version is work that does the wrong thing correctly. |
+| P19 | **The problem is handed over, not the solution** | Intake receives the problem, the outcome and the constraints. The solution is the framework's to propose. A constraint arrives **with its reason**, so it can be argued with; a design smuggled in as a requirement cannot. See §1.11. | A team that cannot see the problem cannot offer the cheaper answer. It will build the expensive one, faithfully and on time. |
 
 ## 1.3 Reviewer taxonomy — four postures
 
@@ -128,6 +135,8 @@ Two framing rules:
 
 | Gate | Where | Blocks on |
 |---|---|---|
+| **Intake — Definition of Ready** | before routing | A ticket missing its purpose link, an outcome-bearing user story, verifiable success criteria, or its non-goals. The ticket is **returned with a drafted attempt at the gaps** — never interpreted, never completed by inference. |
+| **Purpose of record** | before any route that judges correctness or changes behaviour | No signed purpose record, or a register entry the code now contradicts. An inferred purpose is never a substitute. ORIENT and CODEBASE-HEALTH are exempt — they are read-only, and ORIENT is how the record gets written in the first place. |
 | **Intent readiness** | before plan or build | Intent not context-bounded (needs >5 files to understand → decompose), a criterion contradicting a constraint, or a criterion with no verifiable scenario. |
 | **Plan completeness** | before the plan is saved | 10 checks: every task has a test, exact paths, exit criteria, explicit dependencies, named scope drift, verbatim-matched consumes/produces, a validation level, a risk matrix, no TBD, open decisions listed. |
 | **Plan review** | after the plan is saved | 3 checks: **feasibility** (does it survive contact with the real repo), **completeness** (every sentence of the request mapped to a plan item), **scope & alignment** (right-sized, faithful, honest about defaults). No "approved with comments" — comments get ignored, fails get fixed. |
@@ -150,6 +159,7 @@ Two framing rules:
 1. **Workflow artifact** — intent, phases, per-agent results, evidence, baseline, telemetry, decision history, pending gate.
 2. **Event log** — append-only, one line per state change. An artifact mutation without an event is a desync, and a desync breaks the audit trail.
 3. **The plan** (if any), with its open decisions resolved or explicitly deferred.
+3a. **Any amendment to the purpose record or the decision register** the work produced (§1.10) — signed, with the date and the person.
 4. **Memory** — learnings, gotchas, verification record.
 5. **A permanent write-up** when the knowledge-compounding threshold is crossed.
 
@@ -334,6 +344,183 @@ Say it plainly, so the choice is made rather than assumed:
 
 ---
 
+## 1.10 Purpose and decided behaviour — intent is an input, never an inference
+
+**The failure.** An agent can be entirely right about what the code does and entirely
+wrong about whether that is good, because "good" is defined outside the code. Denied the
+definition, it infers one from the mechanism — and then produces confident, well-evidenced,
+wrong verdicts. The cheap version is deliberate behaviour filed as a defect. The expensive
+version is work that does the wrong thing correctly.
+
+**The rule.** Purpose is supplied **from outside the framework**, by the person who owns
+the outcome. The framework may refuse to run without it, may draft one for a human to
+correct, and may report that it has gone stale. It may never author one, and it may never
+proceed on an inferred one.
+
+Two artifacts, both **durable and product-level** — not per change, because the route that
+most needs them (testing code that already exists) has no plan to inherit from.
+
+### The purpose record — what this is for
+
+Handed to **every** agent, always, in every route. This is not anchoring: anchoring is
+about the *implementation*, and this is about the *goal*. A reviewer that knows the end
+game finds better defects, including the class no test catches — *it works, and nobody can
+use it*.
+
+It holds:
+
+- who uses this, and what they are trying to accomplish
+- what "working" looks like **from outside the system**
+- what the product deliberately does **not** try to do
+- the vocabulary of the domain, in the user's words rather than the code's
+
+### The decision register — behaviours that are deliberate
+
+Handed only to routes that judge or change behaviour. This one **is** anchoring-adjacent,
+so it carries rules:
+
+| Rule | Why |
+|---|---|
+| **Stated as a fact with its reason, never as an instruction.** "Ctrl-C ends the session, because X" — not "do not flag termination." | An instruction suppresses findings. A fact gets argued with. |
+| **Registered before the work.** | A decision produced *in response to* a finding is a rationalization. The ordering is the entire safeguard. |
+| **Binds only the behaviour described.** Every entry carries an explicit *does not cover*. | A decision is a point, not an umbrella. The most dangerous defect is the one adjacent to a documented decision. |
+| **Challengeable.** A reviewer may answer "intended, and the intent is wrong", or "the decision does not reach this case". | It changes shape; it does not vanish. |
+| **No stated user-visible consequence → not a decision, just a preference.** | Forces the author to say what the user actually experiences. |
+
+Entry shape: **id · the behaviour in user-visible terms · the reason · what it does not
+cover · the date · who signed it.**
+
+### Three outcomes, not two
+
+The machinery must have somewhere for "surprising and correct" to land, or it will
+manufacture defects:
+
+| Outcome | Meaning | Routes to |
+|---|---|---|
+| `defect` | The product is wrong. | remediation / DEBUG |
+| `intended` | Matches a registered decision. Closes, **citing the entry**, and the closure is logged and surfaced at the end so it can be audited. | closed, with provenance |
+| **`unspecified`** | Surprising, and **nothing anywhere says what should happen.** | the owner, or PLAN — as a missing decision |
+
+`unspecified` is the valuable one. Most "false positives" of the intended-behaviour kind
+are really this: nobody ever decided, so the tester inferred one thing and the implementer
+another. The observation was real signal, mislabelled. Routing it as a **missing decision**
+turns the framework's most irritating failure mode into its best source of spec gaps.
+
+### Who provides it, and when
+
+| Moment | Who | What happens |
+|---|---|---|
+| **Adoption — once** | the owner of the outcome | Writes the purpose record. The framework may draft it from a structured interview; the human edits and **signs**. A record with no signature is not a record. |
+| **Plan time** | planner **surfaces**, owner **rules** | Any choice with a user-visible consequence is raised as a *candidate* decision. The planner may not rule on it. |
+| **Mid-flight** | builder or investigator **stops**, owner **rules** | A fork with a user-visible consequence is a checkpoint (P13), not a judgement call to be made quietly inside a phase. |
+| **Continuously** | any route | A register entry the code now contradicts is itself a finding: either the code drifted or the decision did. Someone must say which. |
+
+**The framework drafts; the human signs.** Drafting is not authoring. Without provenance —
+who said it, and when — an inferred purpose is laundered into authority, which is precisely
+the failure this section exists to prevent.
+
+**Where the gate sits.** Routes that judge correctness (REVIEW, QA, TRIAGE) or change
+behaviour (BUILD, DEBUG) do not start without a signed purpose record. Stopping to ask for
+one is legitimate under P13 — it is input only the human can give. ORIENT and
+CODEBASE-HEALTH are exempt: they are read-only, and ORIENT is how the understanding needed
+to write the record gets built.
+
+**The cost, stated honestly.** This puts an authoring burden at the front, on a human, before
+anything runs. Three things keep it affordable: it is mostly one-time; it is the
+highest-leverage text in the repo; and it can start very small — a paragraph of purpose
+plus the decisions you have already made and never wrote down. A project that already keeps
+a purpose statement and a numbered decision log is not authoring these, only extracting
+them.
+
+---
+
+## 1.11 Intake — the ticket is the handover
+
+P18 says intent is supplied from outside. This is the **form** it arrives in. A rule with
+no form is a rule people route around.
+
+### Two scopes, one link
+
+| | Lives in | Changes |
+|---|---|---|
+| **Product / feature purpose** | the purpose record (§1.10) | rarely |
+| **Task purpose** | the ticket | per unit of work |
+
+**The ticket cites the record; it never restates it.** If every ticket re-explains why the
+product exists, the record is not doing its job and nobody reads either. But every ticket
+must name **which part** of the purpose it serves. That link is the thing that lets a
+reviewer ask *"does this serve the goal?"* rather than only *"does this work?"*
+
+### The template — required
+
+| Field | Contains | The rule that makes it real |
+|---|---|---|
+| **Serves** | which part of the purpose record this advances | A ticket that serves nothing identifiable is a preference, not work. |
+| **User story** | who, what they can now do, and what outcome that produces for them | **The *so that* must name an outcome outside the system.** "So that I can use the new button" is a tautology wearing the costume of a reason. |
+| **Success criteria** | observable from outside, each one verifiable | If you cannot name how it would be proven, it is not a criterion. This is the Intent Readiness Gate, moved to where it is cheap. |
+| **Non-goals** | behaviour deliberately **not** included | Behaviour-level, not work-level. This is where you pre-empt the finding that is correct and not a defect. |
+| **Decisions touched** | register entries this relies on or would change | Changing one is a product decision, never an implementation detail discovered mid-build. |
+
+### The template — conditional
+
+| Field | When | Why |
+|---|---|---|
+| **User-visible consequence** | always, but "none" is allowed | If nothing changes for anyone, say so and justify it. Feeds PLAN W5. |
+| **Boundaries** | when external systems are involved | Schedules the probes (P16, PLAN W3) before anyone designs an adapter. |
+| **Provenance** | always worth one line | Incident, customer, or hypothesis. A hypothesis labelled as a requirement is how teams build the wrong thing with total confidence. |
+| **Who to ask** | always | A named, reachable person. A ticket nobody owns is an unanswerable ticket. |
+
+### What does not belong on a ticket
+
+- **The solution.** A ticket that specifies the implementation has pre-empted PLAN and
+  discarded every cheaper option. Where product genuinely does know the answer, it enters
+  as a **constraint with its reason** — a constraint can be argued with; a design smuggled
+  in as a requirement cannot.
+- **Acceptance criteria written as implementation steps.** "Adds a column to the users
+  table" is not a criterion. It is a task with a checkbox on it.
+- **A link instead of content.** A ticket that is a pointer to a conversation is a
+  conversation.
+- **An epic with no slice.** Hand over something shippable end to end. Layers are not
+  slices, and only slices create width (§1.9).
+
+### The intake gate — return, do not interpret
+
+A ticket that fails Definition of Ready is **returned**. Interpreting a thin ticket is
+exactly the inference P18 forbids, performed at the one moment when preventing it is
+almost free.
+
+**Returned with a draft.** Rejection carries a real social cost, and a gate that is pure
+friction gets switched off in week two. So the framework returns the ticket **with its own
+drafted attempt at the missing fields** — *"here is my reading of your success criteria;
+confirm or correct."* Draft, never author (§1.10). That is what lets this survive contact
+with people.
+
+### Product-to-dev handover — what actually works
+
+| Practice | The rule | What breaks without it |
+|---|---|---|
+| **Hand over the problem** | Product owns the problem, the outcome and the constraints. Engineering owns the solution. | Engineering cannot propose the cheaper answer it was never shown. |
+| **Outcome over output** | State the change in the world, not the artifact to be built. | "Add a progress bar" cannot be evaluated; "reduce abandoned checkouts" can. |
+| **Thin vertical slices** | Hand over something shippable end to end. | Layer-shaped handovers cannot be validated until the last layer lands, and they serialize the graph. |
+| **Examples beat specifications** | Concrete examples with real data and real values, not prose rules. | A rule is interpretable; an example is testable. Ambiguity survives prose and dies on an example. |
+| **Three-way review before commitment** | Product, engineering and test read the ticket **together, before work starts**. Test's question — *"how would I prove this?"* — is what surfaces ambiguity. | **This framework already has the three:** the planner, the fresh plan reviewer, and QA's coverage lens. Running them against the ticket at intake is that conversation, automated. |
+| **Ready and Done are different gates** | Ready = it may be started. Done = it may be believed. | Conflating them means work starts on hope and finishes on assertion. |
+| **A named person, not a document throw** | Handover is a conversation that begins with a document. | An unanswerable question stops a lane, and the lane guesses. |
+| **Decisions outlive the work** | Why beats what, and it goes in the register (§1.10), not in a closed ticket. | The reasoning is lost exactly when someone later asks "why is it like this?" |
+| **The loop closes back to product** | Report what was learned and whether the outcome moved. | **Named gap:** today the framework's learnings persist to *engineering* memory. What product needs back — did the outcome move, what did we learn about the user — has no channel at all. |
+
+### Intake anti-patterns
+
+| Anti-pattern | Tell |
+|---|---|
+| The solution-shaped ticket | It names files, tables or components before anyone planned. |
+| The tautological user story | The *so that* restates the *want*. |
+| Unmeasurable success criteria | Proving it needs access nobody on the team has. |
+| The epic with no slice | Nothing in it could ship on its own. |
+| The ticket written after the work | It describes what was built. It is a changelog with a ticket number. |
+
+---
+
 ---
 
 # Part 2 — The routes
@@ -431,6 +618,20 @@ dependency names the artifact it consumes, and the plan states its critical path
 width*. The plan reviewer's scope-and-alignment check gains a matching question: **could
 any two of these units have run at the same time?**
 
+**W5 — the plan surfaces candidate decisions; it never rules on them.**
+
+Follows from P18 (§1.10). Planning is where most user-visible consequences are chosen, and
+it is the point at which they are cheapest to notice and most likely to be decided by
+accident.
+
+| Requirement | Detail |
+|---|---|
+| **Read purpose first** | The purpose record is an input to planning, ahead of the code. A plan that solves the mechanism without the goal is the failure P18 describes, one stage earlier. |
+| **Flag every user-visible fork** | Any choice a user would notice is raised explicitly as a **candidate decision** — behaviour, reason, what it would not cover — and the owner rules. The planner may not settle it by picking a default and moving on. |
+| **Candidates are Open Decisions** | They land in the plan's Open Decisions, which already block the build. No new machinery needed. |
+| **Amend, do not fork** | Ruled decisions are appended to the register with their date and signer, not restated inside the plan where they die with it. |
+| **Say what changes for the user** | Every plan states, in the user's vocabulary, what will be different once it is built. A plan whose user-visible consequence is "none" should say so and justify it. |
+
 **[undecided] Further candidates**
 - A standing "what would make this plan wrong?" adversarial pass on the key decision, before the plan is finalized rather than after the build discovers it.
 - A dependency-order proof: walk the phases and show each prerequisite exists in an earlier one.
@@ -496,6 +697,7 @@ before verifying.
 **[undecided] Candidates**
 - **Every root cause answers: why did no existing gate catch this?** The fix is the code change; the outcome is the missing check. Make it a required field.
 - **Variant sweep is explicit** — name the dimensions that must keep working (config, platform, data shape, concurrency) and show the fix holds across them.
+- **Check the decision register before repairing anything.** An investigator that does not know a behaviour is deliberate will fix it, competently, and the repair is the regression. A bug report that contradicts a register entry stops and goes back to the owner.
 - **Suspect the observation before the system at a boundary.** When a third party behaves impossibly, re-probe the shape before theorizing about the code — a moved field name mimics a logic bug perfectly.
 - **A repro that survives the workflow** — promote the repro loop into a permanent regression test, or state why it cannot be.
 
@@ -514,6 +716,7 @@ may only *offer* to start a build.
 **[undecided] Candidates**
 - **Review against the plan's interfaces and architecture document**, not only the diff. Once PLAN produces both (W1/W2), REVIEW gains a spec surface it does not have today.
 - **A review has a declared scope** — diff, module, or whole branch — stated up front, because the three find different classes of defect.
+- **Review against purpose, not only against the plan.** The defect class no diff review catches is the one where every line is correct and the result is not worth having. A reviewer holding the purpose record can raise it; one holding only the spec cannot.
 - **Flag every unprobed external shape as a finding.** A field name read off documentation and typed into code is a defect waiting for runtime, and it is invisible in a diff unless someone is looking for it.
 - **Standing lenses beyond code quality**: operability, failure modes, and whether the change is observable in production.
 
@@ -539,6 +742,21 @@ that may become a bug candidate). A failing check with no class is invalid outpu
 
 ### Wanted
 
+**W1 — judge against intent, and report three outcomes.**
+
+Follows from P18 (§1.10). This is the route where the failure actually happened here: the
+technical observation was correct and the verdict was wrong, because the end game was
+missing.
+
+| Requirement | Detail |
+|---|---|
+| **Purpose record is a required input** | QA does not start without it. It is the route most exposed, because testing existing code means there is no plan to inherit intent from. |
+| **The feature map covers purpose, not only mechanism** | Today it describes what the system does. It must also carry what the feature is *for* and what counts as working from outside — sourced from the record, never inferred from the code under test. |
+| **Three outcomes** | Every finding resolves to `defect`, `intended` (citing the register entry) or `unspecified`. A finding with no outcome is invalid output — the same rule the route already applies to its failure classes. |
+| **`unspecified` routes to the owner, not to DEBUG** | It is a missing decision, not a bug. Handing it to DEBUG produces a "fix" for behaviour nobody ever specified. |
+| **An `intended` closure is logged and surfaced** | Every closure cites its entry and appears in the end-of-run summary. This is the audit trail that stops the register becoming a suppression list. |
+| **Register conflicts are findings** | Behaviour that contradicts a registered decision is reported as exactly that, and someone says whether the code drifted or the decision did. |
+
 **[undecided] Candidates**
 - **Resolve the draft.** The route still carries placeholders and two recorded gaps: no machine-readable mutation log, and no verifier for a plan amended after the second review pass.
 - **The test plan's scenario matrix derives from the plan's flow mapping** — so a flow the plan named cannot be a flow QA forgot to test.
@@ -562,6 +780,7 @@ project's own vocabulary — not generic abstractions. Stop at understanding.
 
 **[undecided] Candidates**
 - **Orientation should read the architecture document first** once PLAN produces one, rather than re-deriving structure from source every time.
+- **ORIENT is the natural author's-assistant for the purpose record.** It is exempt from the gate precisely so it can run first, and a structured orientation is the cheapest way to draft a record the owner then corrects and signs.
 - **Cheap upkeep:** when orientation finds the committed architecture document is wrong, say so. It is the only route that routinely reads structure with fresh eyes.
 
 **Your notes:**
@@ -578,6 +797,7 @@ writes code, never auto-routes. Category and won't-fix decisions stop for a huma
 ### Wanted
 
 **[undecided] Candidates**
+- **Triage is the first place "bug or intended?" gets asked** — so the decision register belongs here, and `unspecified` is a legitimate triage state. An issue that is really a missing decision should be routed to the owner, not filed as a defect for someone to argue with later.
 - **A brief is only "ready" if it carries a repro or an explicit statement that none exists.**
 - **Check the compounded knowledge before triaging** — a prior write-up may already answer it.
 - **Decide whether this route matters at all here**, given this is currently a single-author project.
@@ -623,3 +843,10 @@ is not an adapter).
 5. **Who owns re-probing, and on what trigger?** A drift check only helps if something
    runs it. Dependency upgrade, engine upgrade, scheduled, or all three — and which route
    owns the failure when it exits non-zero.
+6. **Who retires a decision, and how is the register kept from rotting?** Entries
+   accumulate, and a stale one is worse than a missing one — it closes findings on
+   behaviour nobody still wants. ORIENT can audit it; only the owner can retire an entry.
+7. **Does the return-path to product get built, or stay a known gap?** The framework
+   persists learnings to engineering memory and nothing flows back to whoever wrote the
+   ticket. Closing it means a product-facing summary per workflow — outcome moved or not,
+   what was learned about the user — which nothing currently produces.

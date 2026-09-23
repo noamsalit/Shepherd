@@ -1,6 +1,14 @@
 # UI redesign — decisions, 2026-09-21
 
-**Status: design only. No file under `src/shepherd/web/` has been changed.**
+**Status: BUILT, 2026-09-22.** This file was written as design-only, before any code existed;
+it is kept in that voice because it is the record of *why* each decision was taken. What it
+describes now ships. `web/static/` gained `flock.js`, `projects.js` and `settings.js`, and
+`app.css`, `app.js` and `index.html` were rewritten — see
+`docs/plans/2026-09-21-projects-and-ui-plan.md` for what was executed and
+`docs/plans/projects-ui-blockers/` for the per-task ledgers.
+
+Two decisions were taken *after* this file and live in the spec rather than here: **D66** (the
+Needs-You rail leaves the shell) and **D67** (the session view becomes the Flock's third pane).
 
 The design is a working prototype, published as an artifact:
 **https://claude.ai/artifact/1HFNab8sksQdz7WAP4SfFc**
@@ -16,7 +24,8 @@ compared: **https://claude.ai/artifact/JMSzca6pWM38GHuFVmNQeE**
 **Read this before touching `web/`.** `web/static/` is byte-frozen by
 `tests/boundaries/consumer_manifest.json`, so every real edit there costs a
 `post_milestone` declaration. That is a reason to implement a settled design
-once, not fifteen iterations of one.
+once, not fifteen iterations of one. The freeze now carries **seven**
+`post_milestone` entries; they are per *path*, not per edit.
 
 ---
 

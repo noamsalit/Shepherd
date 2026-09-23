@@ -2,11 +2,22 @@
 
 ## Current Focus
 
-**2026-09-21 — BUILD in flight: the projects backend, then the UI redesign.**
-Workflow `wf-20260921T212808Z-9172ed6b`, cc10x PLAN → BUILD → QA, `execution_plan` at
-`critical_path` rigor. Plan: `docs/plans/2026-09-21-projects-and-ui-plan.md` — 11 phases,
-29 tasks, 24 acceptance clauses. Design: `docs/plans/2026-09-21-projects-and-ui-design.md`.
-Measurements the plan is built on: `docs/plans/recon/2026-09-21-backend-and-frontend-recon.md`.
+**2026-09-23 — nothing in flight. The tree is clean and published.**
+
+`wf-20260921T212808Z-9172ed6b` (cc10x PLAN → BUILD → QA, `execution_plan` at `critical_path`
+rigor) is **closed**. The projects backend and the UI redesign shipped on 2026-09-22 and QA
+round 5 ran the full seven-link route over them; both bug candidates it raised are dispositioned
+(BC-1 fixed, BC-2 open and low). `main` is the only branch, local and remote, and they are
+byte-identical.
+
+**What to pick up next** is in `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`:
+W2 (discovery switches, D62), W3 (work sources, D63/D64), W5, and W6's documentation debt —
+of which Appendix A is now unblocked, because migration 004 removed the `root_path` it waited on.
+
+*The account below is the record of how the milestone was planned and run. It is history, not an
+instruction.* Plan: `docs/plans/2026-09-21-projects-and-ui-plan.md` — 11 phases, 29 tasks, 24
+acceptance clauses. Design: `docs/plans/2026-09-21-projects-and-ui-design.md`. Measurements the
+plan was built on: `docs/plans/recon/2026-09-21-backend-and-frontend-recon.md`.
 
 The owner's instruction was to run the whole thing autonomously and to stop only when done
 or fully blocked — see `## Session Settings`, reaffirmed today.

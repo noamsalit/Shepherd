@@ -1,42 +1,58 @@
 # Shepherd — handoff
 
-**Last updated 2026-09-21.** M1 through M4 are built, verified and QA'd. This file is what you need
-to take the project anywhere, plus an honest list of what is **proved**, what is **recorded as
-unverified**, and what is **still open**.
+**Last updated 2026-09-23.** M1 through M4 are built, verified and QA'd, and so are the Projects
+backend and the dark UI that sit on top of them. This file is what you need to take the project
+anywhere, plus an honest list of what is **proved**, what is **recorded as unverified**, and what
+is **still open**.
 
 ## State
 
 | | |
 |---|---|
-| default suite | **1866 passed, 2 skipped, 75 deselected** on Linux |
-| live lane (`pytest -m live`) | **75 passed** — starts real `claude` processes and real tmux panes |
+| default suite | **2185 passed, 2 skipped, 76 deselected — and 39 failed, 60 errors.** Measured 2026-09-23 under `-p no:randomly`, because the run is order-dependent. Every failure is in the browser lane and none implicates product code; written up as **W7.1** in the forward-work register |
+| live lane (`pytest -m live`) | **75 passed as last measured on 2026-09-21**, not re-run since — it starts real `claude` processes against your own config |
 | boundary rules | **105 passed** |
-| `mypy --strict src` | clean over **127** files, `disallow_any_explicit` on |
+| `mypy --strict src` | clean over **131** files, `disallow_any_explicit` on |
 | composition root | `daemons/controld.py` still **140** lines, guard constants unedited |
-| decisions | **65** (D1–D65, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
+| decisions | **68** (D1–D67, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
 | your settings file | `~/.claude/settings.json` sha256 `375e5322…d6ac` — **never written, checked on both sides of every live test**. Shepherd's hooks are **not installed**. |
 | your tmux | socket `shepherd` never named in a write. The **socket** is the invariant; session *names* are not, and any check written against them goes red the next time you open a terminal. |
 
-## Git state, as of 2026-09-21
+## Git state, as of 2026-09-23
 
-Read this before assuming anything about the repository — an earlier version of this file said
-*"nothing is committed"*, which stopped being true on 2026-09-18.
+The publish plan in earlier versions of this file — *"delete and recreate the remote from
+`integration`"* — is **done**. There is now one branch, in one place, and nothing to reconcile.
 
-- **`main`** `bd10b01` — M1–M4, and the history that was pushed public before the identifier scrub.
-- **`docs/publish-prep`** `85000d5` — the scrub, plus the 2026-09-20/21 documentation.
-- **`clean-root`** `8685558` — a **parentless** commit carrying the scrubbed tree, made with
-  `git commit-tree` so nothing destructive ran.
-- **`integration`** — `clean-root` plus the macOS port, six commits, **author and committer
-  `Noam Salit <nsalit@gmail.com>` throughout**, and **zero employer-identifier hits in every
-  commit's tree**, not only at the tip. This is the branch intended to become the published `main`.
-- **`macos-original`** `dade5685` — the macOS branch as it arrived, kept for comparison.
+- **`main`** `9bfb87e` — 112 commits, everything: M1–M4, the macOS port, the identifier scrub on a
+  clean parentless root, the Projects backend and the UI redesign, and the QA harness that tested
+  them. Author and committer `Noam Salit <nsalit@gmail.com>` throughout, with zero
+  employer-identifier hits in every commit's tree rather than only at the tip.
+- **`origin/main`** — byte-identical to local `main`. `origin` holds **no other branch**.
 
-A remote exists: `origin git@github.com:noamsalit/Shepherd.git`. The published repository predates
-the scrub, which is why the plan of record is to delete and recreate it from `integration` rather
-than to rewrite history in place.
+`origin` is `git@github.com:noamsalit/Shepherd.git`. The pre-scrub published history was replaced,
+not rewritten in place.
 
-**Backups** live at `/root/shepherd-backup-20260920/` — bundles and worktree tarballs, each verified
-by restoring it and comparing tree hashes rather than by checking the file exists.
+**Local branches, cleaned up on 2026-09-23.** `integration` was fast-forwarded into `main` and
+deleted. `clean-root` and the fourteen `worktree-agent-*`/`remfix4-lane-*` branches are gone: each
+was fully merged, carrying no commit unreachable from `main`. Fourteen agent worktrees under
+`.claude/worktrees/` were removed with them (543 MB).
+
+**Three remain and are safe to force-delete**, each verified to carry nothing unique:
+
+| branch | why it is redundant |
+|---|---|
+| `docs/publish-prep` `667b0c3` | the pre-scrub lineage (root `22d9ef2`). Shares **no merge-base** with `main`; every "mirror of integration" commit on it landed on `main`, and its tree is a net −11,193 lines against it |
+| `macos-original` `dade568` | the macOS port as it arrived, before the identity rewrite. All five commits exist on `main` as re-authored copies — `1dc1713`, `769cdb3`, `09671c0`, `b601a8e`, `e82d86c` |
+| `worktree-agent-ab6cfa80ec1636e6f` `41f9504` | T8.1 `read_decision`. `main` holds a strict superset of both files it touches |
+
+Verified by comparing content, not by trusting subject lines. They survive only because the cc10x
+git guard blocks `git branch -D` without an approval token.
+
+**Backups.** `/root/shepherd-backup-20260920/` holds bundles and worktree tarballs from the publish
+preparation, each verified by restoring it and comparing tree hashes rather than by checking the
+file exists. `/root/shepherd-branch-archive-20260923.bundle` (5.7 MB, `git bundle verify` clean) is
+a complete archive of every ref as it stood immediately before the branch cleanup above — so the
+deletions are reversible even though nothing unique was in them.
 
 ## What changed on 2026-09-20 / 21
 
@@ -47,19 +63,63 @@ and one test was repaired — see below. That repair exists on **`integration`**
 
 - Every employer-associated identifier was removed from the tree. The override that allowed editing
   frozen probe evidence, and its three standing conditions, are recorded in `CLAUDE.md`.
-- **D56–D64** added. D56 fixes which seam a future engine class may arrive through. **D57–D64 describe
-  work that is not built**: project lifecycle, `Unassigned`, repo↔project many-to-many, delete
-  semantics, discovery switches, per-project work sources, provider-declared filters.
+- **D56–D64** added. D56 fixes which seam a future engine class may arrive through. D57–D64 described
+  work that was **not built at the time**: project lifecycle, `Unassigned`, repo↔project
+  many-to-many, delete semantics, discovery switches, per-project work sources, provider-declared
+  filters. **D57–D61 were built on 2026-09-22**; D62–D64 are still unbuilt — see the next section.
 - New documents: `docs/specs/logical-architecture.md`, `docs/specs/harness-contract.md`,
   `docs/specs/credentials-and-auth.md`, `docs/design/ui-decisions.md`,
   `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`.
-- **A dark-mode UI redesign**, as a clickable prototype and not as code:
+- **A dark-mode UI redesign**, at that point a clickable prototype and not code:
   https://claude.ai/artifact/1HFNab8sksQdz7WAP4SfFc — with the pre-redesign UI rebuilt beside it at
   https://claude.ai/artifact/JMSzca6pWM38GHuFVmNQeE. Decisions in `docs/design/ui-decisions.md`.
-  **No file under `src/shepherd/web/` was changed.**
+  No file under `src/shepherd/web/` had been changed **yet**; that happened on 2026-09-22.
 - **One test repaired** (`tests/engines/test_hook_dispatch_delivery.py`): a negative control passed on
   macOS and failed on Linux because its 40 KB frame fits inside Linux's 212,992-byte socket send
   buffer and so never wedged. It now uses a 1 MB frame, sized clear of both platforms.
+
+## What changed on 2026-09-22 / 23 — the Projects backend and the UI
+
+This is the first body of work since M4, and the first that touched `web/static/` at all. Plan:
+`docs/plans/2026-09-21-projects-and-ui-plan.md` (revision 7), design:
+`docs/plans/2026-09-21-projects-and-ui-design.md`, ledgers: `docs/plans/projects-ui-blockers/`.
+
+**Built — D57–D61, the Projects backend:**
+
+- **Migration 004** (`store/migrations/004_projects.sql`) — `workspace.root_path` dropped,
+  `workspace.description` added, `repo.workspace_id` replaced by a repo↔project join table (D60).
+- **Seven verbs registered as `ToolDef`s**, so the master and the HTTP API share one implementation
+  rather than two: `create_project`, `rename_project`, `delete_project`, `add_repo`, `remove_repo`,
+  `list_projects`, `list_repos`. `web/routes.py` maps a path to a tool name.
+- **`Unassigned`** (D59) — a reserved project that cannot be deleted, with the policy in
+  `bind_cwd_to_repo`, the one function both discovery lanes call.
+- **Delete cascades and refuses** (D61): a project with running sessions forces a three-way choice
+  rather than being taken silently.
+- **`upsert_workspace`'s match-on-name is gone.** That closed a live defect — `/work/api` and
+  `/personal/api` collapsed into one project and the second silently overwrote the first.
+
+**Built — the dark-only UI.** `web/static/` gained `flock.js`, `projects.js` and `settings.js`;
+`app.css`, `app.js` and `index.html` were rewritten. The vocabulary changed in `core.stops.PALETTE`
+and nowhere else: Herd → **Flock**, `unfinished` → **stranded**, `paused` → **limit exceeded**,
+`unclassified` → **unknown**. **D66** takes the Needs-You rail off the shell and **D67** relocates
+the session view into the Flock's third pane — a relocation, not a deletion: `session.js`,
+`terminal.js` and the vendored `xterm.js` are retained and reachable.
+
+**Not built, still:** D62 (discovery switches) and D63/D64 (work sources and provider-declared
+filters). Those are §W2 and §W3 of the backlog register and are untouched.
+
+**QA — five rounds, and the fifth ran the full route.** Rounds 1–4 raised 22 defects but none of
+them ran the whole seven-link QA lane. Round 5 did, against a purpose-built harness
+(`tests/qa5/`, 22 files, 35 scenarios over six waves). It found **one real product defect** and a
+low-severity candidate, and — more usefully — **eleven defects inside the harness built to report
+them**, including a run report that could not express a failure at all. The report is
+`.cc10x/qa/wf-20260921T212808Z-9172ed6b/report.md`.
+
+The product defect, fixed in `7487f1a` and `b24d46a`, is worth naming because it is a class rather
+than an incident: **the pane belonged to the last read that resolved, not the last one asked for.**
+An async read wrote shared view state and painted without checking that its write was still wanted,
+so tapping B then A while A was slow left B's data under A's heading. Both fixes make the *intent*
+(`view.openId`, `view.openSessionId`) a synchronous write that the async continuation re-checks.
 
 **Start here for what to do next:** `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` is the
 consolidated forward-work register, including everything still open from before.
@@ -78,7 +138,8 @@ your real config. That cost an incident. The exclusion is in `addopts`, not only
 
 ## Taking it to the Mac
 
-**The macOS port landed on 2026-09-20** and the suite passes there; its commits are on `integration`.
+**The macOS port landed on 2026-09-20** and the suite passes there; its commits are on `main`
+(`1dc1713`, `769cdb3`, `09671c0`, `b601a8e`, `e82d86c`).
 `MacHost` is still `verified() == False`, and the five G1 captures M1 asks for are **not in the tree** —
 treat macOS as working-but-unattested rather than verified.
 
@@ -92,8 +153,11 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 .venv/bin/shepherd-controld --port 8787
 ```
 
-Then open `http://127.0.0.1:8787/` — chat is the default landing, the fleet is page 2.
-(The redesign renames these *Shepherd* and *Flock*; that is design only and not in the code.)
+Then open `http://127.0.0.1:8787/` — six page roots behind one nav: **Shepherd** (the
+orchestrator chat, and the landing page), **Flock**, **Projects**, **Queues**, **Kanban**,
+**Settings**. Queues and Kanban are placeholders. The redesign's renames are **in the code** as of
+2026-09-22; `chat`/`fleet` survive only as the two nav element ids, deliberately, because frozen
+assertions name them.
 
 **Two rough edges on that path, both measured and both minor:** `shepherd --help` answers
 `unknown command '--help'` (exit 64), and `shepherd-sessiond` with no arguments is an argparse error
@@ -103,18 +167,30 @@ re-base, so they are recorded rather than patched.
 
 ## What a human must check, because this host cannot
 
-**No browser, no node, no npm here.** Every web claim in the tree is bytes on disk or bytes on a
-socket; **nothing claims the page renders.** On the Mac:
+**This is a narrower gap than earlier versions of this file described.** There is now a headless
+Chromium here, and `tests/qa5/` drives all six pages through it across 35 scenarios — so *the pages
+render* is proved, and so is a good deal of their behaviour. What no automated run settles is
+whether the result is **usable**, and that is what this list is for. On the Mac:
 
 1. the conversation streams line by line when you send the master a message;
 2. an approval card appears **and both buttons resolve it** — and it leaves both the sidebar and its
    inline position;
-3. the autonomy toggle shows the current level and changes it;
+3. **Settings** shows the current autonomy level and changes it. It lives there and nowhere else now
+   (**D65**); if you find that control on any other page, that is a defect;
 4. the wake summary opens a turn after a session stopped while you were away;
 5. nothing renders as `[object Object]` or an empty card;
-6. the nav moves between the chat and fleet pages and the Needs-You rail survives both;
-7. **with JavaScript disabled, the browser shows the fleet, not an empty chat frame** — two seconds,
-   and it is the degrade a mutation proved was unguarded.
+6. the nav moves between all six roots — Shepherd, Flock, Projects, Queues, Kanban, Settings — and
+   **exactly one is visible at a time**. Queues and Kanban are placeholders and should say so rather
+   than look broken. The Needs-You rail is **gone from the shell by decision** (**D66**), so its
+   absence is correct and its return anywhere but the Flock page is not;
+7. the Flock's third pane still gives you a real terminal — **D67** relocated the session view
+   rather than deleting it, and the terminal is the one part of this product that cannot be
+   re-derived from a projection;
+8. **with JavaScript disabled, what do you get?** This is the weakest claim in the tree and it got
+   weaker on 2026-09-22. There is no `<noscript>` anywhere in `src/` and there never has been; the
+   shell is now one document that `app.js` reveals a root of, so with JS off the likely result is an
+   empty frame. Two seconds to check, and it was already recorded as *unguarded* before the
+   redesign. Treat a bad answer here as expected, not as a surprise.
 
 Also worth your eye once: `docs/probes/2026-09-17-m4-sdk/FINDINGS.md` (what the engine actually does),
 `docs/evidence/m4-master-system-init.json` and `docs/evidence/m4-live-master-run.json` (what a real master was
@@ -125,6 +201,39 @@ run on a Mac and the suite passes, but the five named captures at M1's G1 were n
 flag stays `False` and this paragraph stays true.
 
 ## What the QA pass found, and what is still open
+
+### QA round 5 (2026-09-22/23) — the Projects backend and the UI
+
+The most recent pass, and the first to run the full seven-link cc10x QA route. Harness:
+`tests/qa5/` — 22 files, 6,974 lines, 35 scenarios over six waves, mutation floor 11/11. Report:
+`.cc10x/qa/wf-20260921T212808Z-9172ed6b/report.md`.
+
+**One real product defect, and it is a class rather than an incident.** *The pane belonged to the
+last read that resolved, not the last one asked for.* An async read wrote shared view state and
+painted without checking its write was still wanted, so tapping B while A was still loading left
+B's data under A's heading. Found on Projects, then found again on sessions. Fixed in `7487f1a`
+and `b24d46a` by making the intent (`view.openId`, `view.openSessionId`) a synchronous write the
+async continuation re-checks. Reproduced deterministically — a page-level `fetch` shim that parks
+one read and releases it after a newer one has painted, not a timing guess.
+
+**One candidate open, low:** `#stream-status` still reads `live` 30 s after the daemon stops.
+No oracle for what the correct timeout is, so it is recorded rather than patched.
+
+**The round's real yield was eleven defects inside the harness built to find defects** — which is
+this repo's dominant failure mode recurring one level up, and the reason the round was worth
+running. The worst of them: **the run report could not express a failure at all.** Measured: 140
+emitted artifacts, `FAIL` total 0, and 47 all-green reports carrying `scenarios: 0`, each of which
+had gone on to overwrite the published `qa5-latest.json`. Publication is now gated on record-set
+completeness. Two others are worth naming because each had a precedent in this tree: the harness
+re-introduced a `"kill-server" in argv` membership test — the exact check tmux defeats by prefix
+resolution, which the product had already fixed and documented at `tmux_cmd.py:326` after an
+incident — and it hard-coded a `760` width literal inside the instrument written to report
+hard-coded widths.
+
+**A preflight near-miss worth remembering:** `rm -rf $SCRATCH` would have destroyed a registered
+git worktree of the repo under test, while teardown's `git status --porcelain` reported clean.
+
+### The earlier M1–M4 pass
 
 The first pass to test the four milestones **composed** rather than each one's own seams found five
 defects. Two are fixed:

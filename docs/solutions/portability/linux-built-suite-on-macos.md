@@ -1,6 +1,10 @@
 # A suite built on Linux as root, run on macOS for the first time
 
-**Date:** 2026-09-20 · **Branch:** `fix/macos-port` (`59261db`, `8d068bf`, `499f450`)
+**Date:** 2026-09-20 · **On `main`:** `1dc1713`, `769cdb3`, `09671c0` (plus `b601a8e`, `e82d86c`)
+
+*Originally branch `fix/macos-port` (`59261db`, `8d068bf`, `499f450`). That branch was rewritten
+onto the scrubbed parentless root during publish preparation, so the shas above are the ones that
+exist today; the originals resolve only inside `/root/shepherd-branch-archive-20260923.bundle`.*
 
 ## Problem
 

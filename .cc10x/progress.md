@@ -2,33 +2,50 @@
 
 ## Current Workflow
 
-QA round 5 (wf-20260921T212808Z-9172ed6b) — full seven-link route, verdict **BLOCKED**. Harness `tests/qa5/` (6081 lines, 35 scenarios, mutation floor 11/11). Two bug candidates open: BC-1 high, BC-2 low.
+**None in flight.** `wf-20260921T212808Z-9172ed6b` (PLAN → BUILD → QA) is closed.
 
-**M1–M4 are built, verified and QA'd.** There is no workflow in flight.
+**The Projects backend and the dark UI shipped 2026-09-22** — D57–D61 plus the six-page shell,
+`flock.js` / `projects.js` / `settings.js`, and D65/D66/D67 resolving the rail and the session
+view. Plan: `docs/plans/2026-09-21-projects-and-ui-plan.md` (executed at revision 5, acceptance
+surface corrected to revision 7). Ledgers: `docs/plans/projects-ui-blockers/`.
 
-**2026-09-21 — documentation and design only.** Nothing under `src/` changed; the one change
-under `tests/` is recorded below. A dark-mode UI redesign was worked through as a clickable
-prototype rather than as code (`docs/design/ui-decisions.md`), and eight new decisions D57–D64
-were added to the spec describing work that is **not built**.
+**QA round 5 ran the full seven-link route** and returned **BLOCKED** on the day; the two findings
+that caused it are now closed. Harness `tests/qa5/` — 22 files, 6,974 lines, 35 scenarios over six
+waves, mutation floor 11/11. Post-fix the harness runs **36 PASS / 0 FAIL / 1 PARTIAL**, stable
+across three consecutive runs with the edit-dialog retry never needed (1 press each).
 
-**Start here for what to do next:** `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`
-is the consolidated forward-work register.
+- **BC-1 — fixed** (`7487f1a`, `b24d46a`). *Last-resolver-wins*: an async read wrote shared view
+  state and painted without checking its write was still wanted, so a slow read for A repainted
+  under B. Both fixes make the intent (`view.openId`, `view.openSessionId`) a synchronous write the
+  continuation re-checks. Reproduced deterministically with a page-level `fetch` shim that parks one
+  read and releases it after a newer one has painted.
+- **BC-2 — open, low, no oracle.** `#stream-status` still reads `live` 30 s after the daemon stops.
 
-Closed the same day: **bring your own harness**, decided in outline and deferred
-(`docs/specs/harness-contract.md`, six open questions in its §4); **credentials and
-authentication**, recorded as four open questions the owner explicitly did **not** sign off on
-(`docs/specs/credentials-and-auth.md`); and **real sandboxing**, recorded in spec §17 with the
-honest statement that none exists today.
+**The round's real yield was the harness, not the product.** Eleven defects were found *inside* the
+instrument built to report defects — including a run report that could not express a failure at all
+(140 artifacts, `FAIL` total 0, 47 all-green with `scenarios: 0`), a `"kill-server" in argv`
+membership test that tmux defeats by prefix resolution, and a hard-coded `760` inside the probe
+written to catch hard-coded widths. That is this repo's dominant defect class recurring one level
+up, and it is the reason the round was worth running.
+
+**Recorded, unassigned:** DUP-2 (`loadList()`'s unconditional `renderDetail()` rebuilds `#proj-edit`
+under an in-flight click); `loadDraftPaths()` at `projects.js:592` can show project A's repo paths
+in project B's Edit dialog (unreproduced); SI-1 (C-8 viewport parametrisation — 34 retirement
+entries, 102 node ids, needs its own BUILD); AC-28's live-render clause undischarged.
 
 ## Tasks
 
 None open. The four milestones ran as four plan → implementation cycles, each with its own plan
 and its own `*-BLOCKERS.md` ledger under `docs/plans/`. 86 tasks across the four, all closed.
 
-The next body of work has a register but no plan yet: see W1–W5 in
-`docs/backlog/2026-09-21-projects-work-sources-and-ui.md`. **W1 (the Projects backend) should be
-routed as PLAN, not BUILD** — migration 004, a schema change from an FK to a join table, five
-gated verbs, and a policy change both discovery lanes hit.
+**W1 and W4 are done.** Routing W1 as PLAN rather than BUILD was the right call: the plan-review
+gate ran two fresh passes returning 7 and 5 blocking findings, and the QA round that followed found
+three of the plan's own acceptance criteria had gone stale against the tree.
+
+The next body of work has a register but no plan: **W2** (discovery switches, D62), **W3** (work
+sources, D63/D64) and **W5** in `docs/backlog/2026-09-21-projects-work-sources-and-ui.md`. W6's
+documentation debt is the cheapest thing on the list, and item 6 — Appendix A — is now unblocked,
+because migration 004 removed the `root_path` it was waiting on.
 
 ## Completed
 
@@ -60,6 +77,17 @@ and every wake test passed because each planted its own row.
 tree; the frozen-evidence override and its three standing conditions recorded in `CLAUDE.md`; the
 macOS port merged onto a clean parentless root with the work identity rewritten out of every
 commit; D56–D64 written; five new documents added.
+
+**2026-09-22 — Projects backend + the dark UI (D57–D61, D65–D67).** Migration 004, seven
+project verbs registered once as `ToolDef`s so the master and the HTTP API share them, `Unassigned`
+as a reserved undeletable project, a delete that cascades and refuses rather than killing silently,
+and the six-page shell. `upsert_workspace`'s match-on-name went with it, closing a live defect where
+`/work/api` and `/personal/api` collapsed into one project.
+
+**2026-09-23 — publish and cleanup.** `integration` fast-forwarded into `main` and deleted;
+`origin` reduced to a single branch, byte-identical to local. Fourteen merged branches and their
+agent worktrees removed (543 MB). A module-level `mkdtemp` in `tests/runner/test_local.py` was
+found leaking one directory per collection — 1,516 had accumulated — and now cleans up at exit.
 
 ## Verification
 

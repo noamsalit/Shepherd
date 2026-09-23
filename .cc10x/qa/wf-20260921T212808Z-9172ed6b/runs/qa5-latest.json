@@ -1,8 +1,8 @@
 {
   "workflow": "wf-20260921T212808Z-9172ed6b",
   "revision": "r5-remfix1",
-  "started_at": "2026-09-23T03:54:39.276138+00:00",
-  "finished_at": "2026-09-23T03:56:14.846079+00:00",
+  "started_at": "2026-09-23T10:15:33.308929+00:00",
+  "finished_at": "2026-09-23T10:19:06.196404+00:00",
   "counts": {
     "PASS": 36,
     "FAIL": 0,
@@ -15,7 +15,7 @@
       "tier": "integration",
       "verdict": "PASS",
       "expected": "eleven bring-up steps arrive: run root, runtime dir, env, store, four panes, controld bound, /api/fleet 200, seed, chromium, rig live, controls green",
-      "actual": "port=44477, panes=['shepherd_r5a', 'shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d'], socket=shepherd-qa, projects=8",
+      "actual": "port=36977, panes=['shepherd_r5a', 'shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d'], socket=shepherd-qa, projects=8",
       "detail": {}
     },
     {
@@ -23,24 +23,24 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "200; deleted=false; a non-empty refusal; five projection keys; KILLABLE==[S-own-1], UNKILLABLE==[S-att-1]; P4 intact; no stop_failed; one allow/claimed_human audit record; zero frames in the window",
-      "actual": "binding=B-OWNED killable=['01M366DEZ78DHKVG3XKKVEJ3AN'] unkillable=['01M366DEZN5K1CWKVAFEHG1YKM'] doomed=5 running=['01M366DEZN5K1CWKVAFEHG1YKM', '01M366DEZ78DHKVG3XKKVEJ3AN'] refused='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned'",
+      "actual": "binding=B-OWNED killable=['01M36W6XDA10MEPH9SJYYAHTQ2'] unkillable=['01M36W6XDW17AWC7HQFBRRRGE2'] doomed=5 running=['01M36W6XDW17AWC7HQFBRRRGE2', '01M36W6XDA10MEPH9SJYYAHTQ2'] refused='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned'",
       "detail": {
         "killable": [
-          "01M366DEZ78DHKVG3XKKVEJ3AN"
+          "01M36W6XDA10MEPH9SJYYAHTQ2"
         ],
         "unkillable": [
-          "01M366DEZN5K1CWKVAFEHG1YKM"
+          "01M36W6XDW17AWC7HQFBRRRGE2"
         ],
         "doomed": [
-          "01M366DF02XTBVH6N6NFDJHEXR",
-          "01M366DF07PHBWRPS3F5BMQCTX",
-          "01M366DF0BP2PPYBRWFJXGC39Q",
-          "01M366DEZN5K1CWKVAFEHG1YKM",
-          "01M366DEZ78DHKVG3XKKVEJ3AN"
+          "01M36W6XED4MY4T36KV3M6B269",
+          "01M36W6XEMAJQTDD7D1S00WGS2",
+          "01M36W6XERBJBA7RGE8NY2GM7X",
+          "01M36W6XDW17AWC7HQFBRRRGE2",
+          "01M36W6XDA10MEPH9SJYYAHTQ2"
         ],
         "running": [
-          "01M366DEZN5K1CWKVAFEHG1YKM",
-          "01M366DEZ78DHKVG3XKKVEJ3AN"
+          "01M36W6XDW17AWC7HQFBRRRGE2",
+          "01M36W6XDA10MEPH9SJYYAHTQ2"
         ]
       }
     },
@@ -107,7 +107,7 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "project_id promoted to the envelope top level and absent from the payload; the payload is JSON-whitelisted; the frame is `id: <seq>` with no `event:` line",
-      "actual": "fields=['data', 'id']; envelope_project_id=01M366DH94VGSSW1GZNVRS4RPZ; payload_keys=[]",
+      "actual": "fields=['data', 'id']; envelope_project_id=01M36W6ZT16VKCJHHGA9PTTP4B; payload_keys=[]",
       "detail": {}
     },
     {
@@ -125,7 +125,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "the dialog names P4 by name and id; #dlg-delete-doomed renders the server's own ids, one per id; #dlg-delete-live lists both running sessions; Wait and #dlg-delete-cancel each close, write nothing and fire no POST; no second /api/sessions read; zero frames in the window",
-      "actual": "choices at open=['delete']; after the refusal=['cancel', 'kill_sessions', 'orphan']; posts=['POST http://127.0.0.1:44477/api/projects/01M366DEXYMPEZ31NXPQQZV1HQ/delete']",
+      "actual": "choices at open=['delete']; after the refusal=['cancel', 'kill_sessions', 'orphan']; posts=['POST http://127.0.0.1:36977/api/projects/01M36W6XC0R7S0RBDZ91GNPBR7/delete']",
       "detail": {
         "measurement": "S9's UI row asks for five co-resident choices in #dlg-delete-choices. The group is two-phase: one at open, three from the server's refusal (projects.js:940-1005), and #dlg-delete-cancel is outside the group. Five distinct controls exist; they are never simultaneous."
       }
@@ -135,7 +135,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "on P4 (killable non-empty) the kill_sessions choice is enabled; on P5 (attached-only) it is disabled, and the disabled state is visible before any click; both match answer.killable.length === 0 exactly; zero frames",
-      "actual": "{'P4': {'disabled': False, 'killable': ['01M366DEZ78DHKVG3XKKVEJ3AN']}, 'P5': {'disabled': True, 'killable': []}}",
+      "actual": "{'P4': {'disabled': False, 'killable': ['01M36W6XDA10MEPH9SJYYAHTQ2']}, 'P5': {'disabled': True, 'killable': []}}",
       "detail": {}
     },
     {
@@ -143,7 +143,7 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "deleted=false; killed=[]; kill_failures==[] (a no_pane is a False, not a raise \u2014 see measurement); a non-empty refusal; P5 kept; no ended_at moved; stop_failed UNCHANGED; the kill choice is disabled and the dialog's live region names every still-running session id with no .dlg-reason node; the body carries the default-refuse sentence; exactly two delete_project audit records; zero project.* frames in the window",
-      "actual": "failures=[]; running=['01M366DEZYHFHJFYR0TVQKZYJS', '01M366DEZXG2DDGRMZXX6T1KVF']; stop_failed 0->0; reasons=[]; body='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned This deletes the project and 2 session records.'",
+      "actual": "failures=[]; running=['01M36W6XE89BSGY5594VXBNT7F', '01M36W6XE6PXQJ1HS3FTB6MZ85']; stop_failed 0->0; reasons=[]; body='2 session(s) are still running in this project; choose whether to stop them or move them to Unassigned This deletes the project and 2 session records.'",
       "detail": {
         "measurement": "SUPERSEDED PLAN WORDING (test-plan S12, API and UI rows): 'deleted=false, killed=[], one kill_failure per attached session with a reason naming no_pane, a non-empty refusal; ... stop_failed up by exactly the failure count; the dialog renders what was not stopped and why, naming the session id'. That is what the plan asked for; the `expected` field above is what this scenario asserts, because the `expected` field is the one a reader scans and it must not state the opposite of the code. Why they differ: kill_failures records a RAISE only (tools_projects_delete.py:174-178); kill_for_delete turns no_pane into False (compose.py:451-462). The sessions appear under `running` and in '#dlg-delete-live' as 'Still running:', with the why carried by the refusal sentence in #dlg-delete-body. stop_failed does not move. A finding about the plan's reading, not a product FAIL."
       }
@@ -153,7 +153,7 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "killed == [S-own-1]; S-att-1 is in `running` and named by `refused`; the pane shepherd_r5a is gone from the shepherd-qa socket; S-own-1 has ended_at and S-att-1 does not; the project's fate matches `deleted`; one claimed_human audit record; a project.deleted frame iff deleted",
-      "actual": "deleted=False; killed=['01M366DEZ78DHKVG3XKKVEJ3AN']; failures=[]; frames=['session.killed']; sessions_left_on_socket=['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']",
+      "actual": "deleted=False; killed=['01M36W6XDA10MEPH9SJYYAHTQ2']; failures=[]; frames=['session.killed']; sessions_left_on_socket=['shepherd_r5b', 'shepherd_r5c', 'shepherd_r5d']",
       "detail": {
         "inferred_row": "`deleted` was an I row (\u00a70 rule 5): the plan read `commit_project_delete` as re-deriving and refusing while a live session remains. Measured: False, and now PINNED rather than read off the answer \u2014 an expectation derived from the value under test agrees with whatever the product says.",
         "measurement": "S11's API row expects kill_failures to contain S-att-1 'with a reason naming no_pane'. Measured empty: kill_landed turns no_pane into False and only a raise is recorded as a failure."
@@ -164,7 +164,7 @@
       "tier": "integration",
       "verdict": "PASS",
       "expected": "deleted=true; orphaned names both running sessions; destroyed names the three finished ones; severed carries exactly one {session_id, column} link \u2014 S-att-4's retry_of into P6 \u2014 and the column is NULL afterwards; both survivors belong to unassigned; the three finished rows are gone; the workspace row is gone; the pane shepherd_r5d still exists; exactly one project.deleted frame; after a reload the Flock lists no P6 and shows both orphans as cards under Unassigned, with no destroyed session among them",
-      "actual": "orphaned=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']; destroyed=['01M366DF0FCJ00BE2ZKVD8SPKN', '01M366DF0JBSTJCTJ8Q48GJ2Q5', '01M366DF0NFM40E9EVSG2T6W8F']; severed=[{'session_id': '01M366DEZVZ9EMGJ457MBRWMY9', 'column': 'retry_of'}]; flock_head='UNASSIGNED'; orphan_cards_under_unassigned=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']; cards=['01M366DEZJWNGNT8ACXV5CEARX', '01M366DF00T6J74YSAJBMA1A3H']",
+      "actual": "orphaned=['01M36W6XDRNYQQM4APXDQ81K6Y', '01M36W6XEAESYZ1W8DXTDZN8QD']; destroyed=['01M36W6XEZ41VW6CD1ZPAED7HN', '01M36W6XF4CNE0NS1FN3Q0KQQM', '01M36W6XF85HFDZ810AJ21R8BB']; severed=[{'session_id': '01M36W6XE33Y5XR92DSVXXY379', 'column': 'retry_of'}]; flock_head='UNASSIGNED'; orphan_cards_under_unassigned=['01M36W6XDRNYQQM4APXDQ81K6Y', '01M36W6XEAESYZ1W8DXTDZN8QD']; cards=['01M36W6XDRNYQQM4APXDQ81K6Y', '01M36W6XEAESYZ1W8DXTDZN8QD']",
       "detail": {}
     },
     {
@@ -198,7 +198,7 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "the stale handle is in killable; killed == []; exactly one kill_failure naming the session with a reason beginning RunnerRefusal:; stop_failed up by exactly 1; the project's fate matches `deleted`; the pane is absent before and after; one audit record and no GENERIC_ERROR",
-      "actual": "deleted=False; failure={'session_id': '01M366DEZFK23AQK73KT4B4RER', 'reason': 'RunnerRefusal: tmux exited 1 for [\\'kill-session\\', \\'-t\\', \\'=shepherd_r5c:\\']: \"can\\'t find session: shepherd_r5c\"'}; stop_failed 0->1; cleanup branch: deleted == false; P7 survives",
+      "actual": "deleted=False; failure={'session_id': '01M36W6XDKRSRCY5CZDW20WC6J', 'reason': 'RunnerRefusal: tmux exited 1 for [\\'kill-session\\', \\'-t\\', \\'=shepherd_r5c:\\']: \"can\\'t find session: shepherd_r5c\"'}; stop_failed 0->1; cleanup branch: deleted == false; P7 survives",
       "detail": {
         "cleanup_branch": "deleted == false; P7 survives"
       }
@@ -216,7 +216,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "every real touch tap reaches its handler; #shell[data-rail] flips both ways and the nav stays reachable; the dialog's primary control is HIT_TESTABLE; in EDIT mode #p-paths-section is visible and Enter on #p-new-path issues exactly one \u2026/repos/add answering added==false without submitting the form; P1's repo set is unchanged; zero frames in the window",
-      "actual": "rail open->collapsed->open (#collapse collapses, #mark restores \u2014 two controls, not one toggle); refusal=\"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/work/no-such-path-for-s19' is not a path that exis\"; repos_add_requests=1; drawer_controls_excluded_by_name=['nav-shepherd', 'nav-flock', 'nav-projects', 'nav-queues', 'nav-kanban', 'nav-settings']",
+      "actual": "rail open->collapsed->open (#collapse collapses, #mark restores \u2014 two controls, not one toggle); refusal=\"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/work/no-such-path-for-s19' is not a path that exis\"; repos_add_requests=1; drawer_controls_excluded_by_name=['nav-shepherd', 'nav-flock', 'nav-projects', 'nav-queues', 'nav-kanban', 'nav-settings']",
       "detail": {}
     },
     {
@@ -274,7 +274,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "the dialog opens in edit mode pre-filled with P1's values; the add and the remove each issue exactly one POST at the moment they are pressed; the draft list goes 2 -> 3 -> 2 before any Save; Save issues exactly one \u2026/description and ZERO \u2026/rename; P1's name is byte-identical and its description is the new text; exactly two repo edges, the removed one gone; frames repo_added, repo_removed, described and no renamed",
-      "actual": "calls=['POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/remove', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/description']; repos_after=['01M366DEYTFREYBMZ561WSAK1A', '01M366DGS2K6HPF7NT8FWYWGZA']",
+      "actual": "calls=['POST http://127.0.0.1:36977/api/projects/01M36W6XBMVCXRMXSR3H8B64KW/repos/add', 'POST http://127.0.0.1:36977/api/projects/01M36W6XBMVCXRMXSR3H8B64KW/repos/remove', 'POST http://127.0.0.1:36977/api/projects/01M36W6XBMVCXRMXSR3H8B64KW/description']; repos_after=['01M36W6XCVSZHXWCKDD4H939W0', '01M36W6Z9CCC1R6WWRR7WH8ZBH']",
       "detail": {}
     },
     {
@@ -286,8 +286,8 @@
       "detail": {
         "records": [
           {
-            "at": "2026-09-23T03:55:26.796Z",
-            "correlation_id": "cfff258982714c768c0d79d3dd66bf07",
+            "at": "2026-09-23T10:16:22.021Z",
+            "correlation_id": "4d1b96a4195e448fa923e112f790cc2f",
             "actor_kind": "human",
             "actor_id": "web",
             "tool": "set_autonomy_level",
@@ -301,8 +301,8 @@
             "duration_ms": 3
           },
           {
-            "at": "2026-09-23T03:55:26.800Z",
-            "correlation_id": "7acb7b9225d047148d029afa10ef7202",
+            "at": "2026-09-23T10:16:22.025Z",
+            "correlation_id": "22b6a3fe44704cb2b69626510936a5e0",
             "actor_kind": "human",
             "actor_id": "web",
             "tool": "set_autonomy_level",
@@ -316,8 +316,8 @@
             "duration_ms": 2
           },
           {
-            "at": "2026-09-23T03:55:26.805Z",
-            "correlation_id": "5cb7f3530f744c81b7e1024780b13e6e",
+            "at": "2026-09-23T10:16:22.028Z",
+            "correlation_id": "7fcb8116077d4d888a19f44f65147817",
             "actor_kind": "human",
             "actor_id": "web",
             "tool": "delete_project",
@@ -328,7 +328,7 @@
             "approval_id": null,
             "result": "ok",
             "failure": null,
-            "duration_ms": 3
+            "duration_ms": 2
           }
         ],
         "measured_claim": "approved_by for the destructive call is 'claimed_human' \u2014 policy.TABLE allows LOCAL_DESTRUCTIVE for Audience.HUMAN at both autonomy levels."
@@ -357,7 +357,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "(a) issues EXACTLY ZERO requests and is refused by `required` itself; (b) issues EXACTLY ZERO requests and renders NEEDS_NAME in #p-refusal; (c) warns, warns again on a second duplicate, re-arms and warns on the first name again, then creates on the fourth press \u2014 one workspace; (d),(e) each issue exactly one \u2026/repos/add answering added==false with a refusal naming the path, and P1's two existing draft paths are unchanged; exactly one new workspace row net of the control; no new edge",
-      "actual": "empty: #p-refusal='' with validity.valueMissing=True; space: 'A project needs a name \u2014 this one is only whitespace.'; warnings='There is already a project named \"Shepherd\".' / 'There is already a project named \"Flock\". A ' / 'There is already a project named \"Shepherd\".'; path refusals={'missing': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/\", 'non-directory': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/\"}; posts=['POST http://127.0.0.1:44477/api/projects', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add', 'POST http://127.0.0.1:44477/api/projects/01M366DEXHP9FJ364CW07AZFG8/repos/add']",
+      "actual": "empty: #p-refusal='' with validity.valueMissing=True; space: 'A project needs a name \u2014 this one is only whitespace.'; warnings='There is already a project named \"Shepherd\".' / 'There is already a project named \"Flock\". A ' / 'There is already a project named \"Shepherd\".'; path refusals={'missing': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/\", 'non-directory': \"'/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/\"}; posts=['POST http://127.0.0.1:36977/api/projects', 'POST http://127.0.0.1:36977/api/projects/01M36W6XBMVCXRMXSR3H8B64KW/repos/add', 'POST http://127.0.0.1:36977/api/projects/01M36W6XBMVCXRMXSR3H8B64KW/repos/add']",
       "detail": {
         "measurement": "(a) an empty name is refused by the browser's own `required`, not by the page: submitProject never runs and #p-refusal stays empty. NEEDS_NAME is (b)'s sentence. (c) re-arms only through a second *duplicate* name \u2014 duplicate.armed is set on a warned press and cleared on a successful create, so typing a name and typing it back does not re-arm."
       }
@@ -367,7 +367,7 @@
       "tier": "e2e_backend",
       "verdict": "PASS",
       "expected": "(a) 403, (b) 400, (c) 404, each with exactly {\"ok\":false,\"data\":null,\"error\":\"GENERIC_ERROR\",\"correlation_id\":\"<32 hex>\"} and the id matched as a pattern; (d) 200, the rename lands on P1 and the body's project_id redirects nothing while the undeclared colour is dropped; (e) added==false with a refusal naming the directory; exactly one project.renamed frame and none from the four refusals; audit records for (d) and (e) only",
-      "actual": "correlation ids=['94d443431b034357bdffa3e8860e5b35', 'f0b3eee363864eb3a090294eaa30bf08', '75308c72bfc247d2baa05dcf1b52c080']; decoy name 'S34-DECOY' -> 'S34-DECOY'; audit=['rename_project', 'add_repo']",
+      "actual": "correlation ids=['249f53b99518406dabd2d713b439ed71', '799e76194cec4d7391e88d16adedd17b', '5436ed7d29014de98c0c9cb3dc7414cb']; decoy name 'S34-DECOY' -> 'S34-DECOY'; audit=['rename_project', 'add_repo']",
       "detail": {
         "deferred_gap": "This seam cannot separate routes.py's two no-redirect guards: removing either alone leaves the assertion green. The unit seam that can is tests/web/test_routes_m3.py::test_no_declared_field_shadows_a_path_parameter."
       }
@@ -377,7 +377,7 @@
       "tier": "ui",
       "verdict": "PASS",
       "expected": "render_check.py against the SERVED url with --fail-on-empty and --must-fill exits 0 over every entry of render_check.VIEWPORTS, read from the module and never re-spelled",
-      "actual": "argv=['/root/Shepherd/tools/render_check.py', '--url', 'http://127.0.0.1:44477/', '--fail-on-empty', '--must-fill', '/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/shots/s30']; viewports=['phone', 'tablet', 'desktop']; exit=0; summary=['18 pages checked \u00b7 18 screenshots \u00b7 0 failures', 'screenshots in /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/shots/s30']; screenshots=18 over 6 page roots",
+      "actual": "argv=['/root/Shepherd/tools/render_check.py', '--url', 'http://127.0.0.1:36977/', '--fail-on-empty', '--must-fill', '/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/shots/s30']; viewports=['phone', 'tablet', 'desktop']; exit=0; summary=['18 pages checked \u00b7 18 screenshots \u00b7 0 failures', 'screenshots in /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/shots/s30']; screenshots=18 over 6 page roots",
       "detail": {
         "declaration": "AC-28's final clause was **not run**. Its command invokes `pytest -m live`, which starts real `claude` processes against the user's real `~/.claude.json` and is forbidden by a standing user constraint. S30 is a substitute sweep carrying no `live` marker, and a PASS here does not discharge AC-28.",
         "unfalsifiable_here": "--fail-on-empty is a whole-body emptiness check and index.html ships the nav, the wordmark and the section labels as static markup, so the body can never be empty while the shell is served. It costs nothing and catches a server answering 200 with nothing; it is not evidence about layout. --must-fill is the flag that engages FILL_FLOOR."
@@ -402,21 +402,21 @@
   ],
   "bindings": {
     "KILLABLE": [
-      "01M366DEZ78DHKVG3XKKVEJ3AN"
+      "01M36W6XDA10MEPH9SJYYAHTQ2"
     ],
     "UNKILLABLE": [
-      "01M366DEZN5K1CWKVAFEHG1YKM"
+      "01M36W6XDW17AWC7HQFBRRRGE2"
     ],
     "DOOMED": [
-      "01M366DF02XTBVH6N6NFDJHEXR",
-      "01M366DF07PHBWRPS3F5BMQCTX",
-      "01M366DF0BP2PPYBRWFJXGC39Q",
-      "01M366DEZN5K1CWKVAFEHG1YKM",
-      "01M366DEZ78DHKVG3XKKVEJ3AN"
+      "01M36W6XED4MY4T36KV3M6B269",
+      "01M36W6XEMAJQTDD7D1S00WGS2",
+      "01M36W6XERBJBA7RGE8NY2GM7X",
+      "01M36W6XDW17AWC7HQFBRRRGE2",
+      "01M36W6XDA10MEPH9SJYYAHTQ2"
     ],
     "RUNNING": [
-      "01M366DEZN5K1CWKVAFEHG1YKM",
-      "01M366DEZ78DHKVG3XKKVEJ3AN"
+      "01M36W6XDW17AWC7HQFBRRRGE2",
+      "01M36W6XDA10MEPH9SJYYAHTQ2"
     ],
     "S0_BINDING": "B-OWNED"
   },
@@ -439,26 +439,26 @@
     "controld: already stopped by S29; control socket unlinked",
     "kill panes: shepherd_r5a=gone, shepherd_r5b=killed, shepherd_r5c=gone, shepherd_r5d=killed, shepherd_r5z=gone",
     "socket empty: no session remains on shepherd-qa",
-    "files: ['runtime dir removed: /tmp/shq5-2153092', 'run root removed: /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092', 'session scratchpad intact: /tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad', 'src/ tools/ docs/probes/ clean', 'git worktree list identical to the bring-up baseline']"
+    "PROBLEM files: HarnessBlocked('git worktree list changed across the run \u2014 a worktree was pruned, moved or destroyed.\\nbaseline:\\n/root/Shepherd                                                                      9bfb87e [main]\\n/root/Shepherd/.claude/worktrees/agent-a377e9e352405bde7                            8062df7 [worktree-agent-a377e9e352405bde7]\\n/root/Shepherd/.claude/worktrees/agent-a546a2d54ee38dca8                            f391020 [remfix4-lane-a]\\n/root/Shepherd/.claude/worktrees/agent-a707de229afd3fe16                            8cf0e4d [worktree-agent-a707de229afd3fe16]\\n/root/Shepherd/.claude/worktrees/agent-a731892fccd97a8dc                            76a7ad8 [worktree-agent-a731892fccd97a8dc]\\n/root/Shepherd/.claude/worktrees/agent-a77a3c5feee3e88a2                            dd45fc7 [worktree-agent-a77a3c5feee3e88a2]\\n/root/Shepherd/.claude/worktrees/agent-a8484f887e0c8c6d2                            34f4b83 [remfix4-lane-b]\\n/root/Shepherd/.claude/worktrees/agent-ab17891c0d50ee88f                            34755f3 [worktree-agent-ab17891c0d50ee88f]\\n/root/Shepherd/.claude/worktrees/agent-ab6cfa80ec1636e6f                            41f9504 [worktree-agent-ab6cfa80ec1636e6f]\\n/root/Shepherd/.claude/worktrees/agent-ac357e4e88ca5c263                            62bad83 [worktree-agent-ac357e4e88ca5c263]\\n/root/Shepherd/.claude/worktrees/agent-af94e2c302e58b42f                            e1d2fe2 [worktree-agent-af94e2c302e58b42f]\\n/root/Shepherd/.claude/worktrees/agent-aff252e79c236746a                            71cbb7e [worktree-agent-aff252e79c236746a]\\n/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/macwt  dade568 (detached HEAD)\\n\\nnow:\\n/root/Shepherd  9bfb87e [main]\\n')"
   ],
   "measurements": {
-    "run_root": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092",
-    "runtime_dir": "/tmp/shq5-2153092",
+    "run_root": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981",
+    "runtime_dir": "/tmp/shq5-2175981",
     "socket_bytes_spent": 40,
     "tmux_version": "tmux 3.4",
     "environment": {
-      "XDG_DATA_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_data",
-      "XDG_CONFIG_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_config",
-      "XDG_STATE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_state",
-      "XDG_CACHE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_cache",
-      "HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/home",
-      "TMPDIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/tmp",
-      "XDG_RUNTIME_DIR": "/tmp/shq5-2153092",
-      "CLAUDE_CONFIG_DIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/engine-config",
+      "XDG_DATA_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/xdg_data",
+      "XDG_CONFIG_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/xdg_config",
+      "XDG_STATE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/xdg_state",
+      "XDG_CACHE_HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/xdg_cache",
+      "HOME": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/home",
+      "TMPDIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/tmp",
+      "XDG_RUNTIME_DIR": "/tmp/shq5-2175981",
+      "CLAUDE_CONFIG_DIR": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/engine-config",
       "PLAYWRIGHT_BROWSERS_PATH": "/root/.cache/ms-playwright",
       "TMUX": null
     },
-    "data_dir": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2153092/xdg_data/shepherd",
+    "data_dir": "/tmp/claude-0/-root-Shepherd/fe792a67-63e7-4d03-b537-ea06fb5701f9/scratchpad/qa5-2175981/xdg_data/shepherd",
     "pane_sweep": "shepherd-qa was already empty",
     "schema_version": 4,
     "chromium": "/root/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome",
@@ -494,7 +494,7 @@
       "extra": [],
       "duplicated": [],
       "complete": true,
-      "pytest_exitstatus": 0
+      "pytest_exitstatus": 1
     }
   }
 }

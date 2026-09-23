@@ -30,3 +30,6 @@
 {"ts": "2026-09-23T00:58:35Z", "event": "re_qa_build_dispatched", "phase": "re-qa-build", "round": 1, "critical": 2, "high": 9}
 {"ts": "2026-09-23T01:40:36Z", "event": "qa_execute_dispatched", "phase": "qa-execute"}
 {"ts": "2026-09-23T01:58:19Z", "event": "bug_candidates_recorded", "phase": "memory-finalize", "count": 2}
+{"ts": "2026-09-23T09:25:34.521870+00:00", "wf": "wf-20260921T212808Z-9172ed6b", "event": "compact_occurred", "phase": "unknown", "task_id": null, "agent": "hook", "decision": "logged", "reason": "manual", "details": "<analysis>\nLet me work through this conversation chronologically.\n\n**Opening context:** This session continues from a prior conversation that ran out of context. The inherited master instruction was t"}
+{"ts": "2026-09-23T10:27:31Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "phase_status_reconciled", "phase": "memory-finalize", "agent": "router", "decision": "reconciled", "reason": "2026-09-23 cleanup: artifact vs. merged tree"}
+{"ts": "2026-09-23T10:27:31Z", "wf": "wf-20260921T212808Z-9172ed6b", "event": "plan_revision_synced", "phase": "memory-finalize", "agent": "router", "decision": "reconciled", "reason": "2026-09-23 cleanup: artifact vs. merged tree"}

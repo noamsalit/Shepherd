@@ -11,20 +11,37 @@ except the one marked, reversible hook block it installs and can remove.
 
 ## Status
 
-**M1–M4 of seven slices are built, verified and QA'd.** M4.5 (connectors),
-M5 (queues) and M6 (packaging and ship) are not started.
+**M1–M4 of seven slices are built, verified and QA'd**, plus the Projects
+backend and the dark-only UI redesign on top of them (2026-09-22). M4.5
+(connectors), M5 (queues) and M6 (packaging and ship) are not started.
+
+Measured on 2026-09-23 with `pytest -p no:randomly` — a **named ordering**, because the
+default run is currently order-dependent (see below):
 
 | | |
 |---|---|
-| suite | 1,866 passed, 2 skipped |
-| live lane (`pytest -m live`) | 75 passed — real `claude` processes, real tmux panes |
+| suite | 2,185 passed, 2 skipped · **39 failed, 60 errors** — all in the browser lane, see the note |
+| live lane (`pytest -m live`) | 75 passed **as last measured on 2026-09-21** — not re-run since; it starts real `claude` processes against the developer's own config |
 | import-boundary rules | 105 |
-| `mypy --strict src` | clean over 127 files, `disallow_any_explicit` on |
+| `mypy --strict src` | clean over **131** files, `disallow_any_explicit` on |
 | verified hosts | **Linux only.** `MacHost` is written and reports `verified() == False` |
 
-There is no installer yet, and the browser UI has never been opened by a human —
-every web claim in the tree is bytes on disk or bytes on a socket. `HANDOFF.md`
-lists exactly what that leaves unproven, with the seven-item manual checklist.
+**The suite is not currently green, and the failures are in the harness rather than the
+product.** Every one of the 99 is a browser-driven test failing with *"Playwright Sync API
+inside the asyncio loop"* or *"asyncio.run() cannot be called when another asyncio event loop
+is running"* — some earlier test leaves a running event loop in the main thread and everything
+downstream of it falls over. `pytest-randomly` is installed, so which tests are downstream
+changes per run. It is written up, with the measurements and the first real clue, as **W7.1**
+in the forward-work register. **No product defect has been shown** — the failures are all in
+fixture setup, not in assertions about the pages — but that is not the same as the product
+being proved fine, and the register says so rather than rounding it off.
+
+There is no installer yet, and **the browser UI has never been opened by a
+human.** That gap is narrower than it was: a purpose-built QA harness
+(`tests/qa5/`) drives all six pages through a real headless Chromium across 35
+scenarios, so the pages demonstrably render. Whether they are *usable* is a
+different question and nothing here answers it — `HANDOFF.md` carries the
+seven-item manual checklist that does.
 
 ## What it does
 
@@ -61,7 +78,11 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 .venv/bin/shepherd-controld --port 8787
 ```
 
-Then open `http://127.0.0.1:8787/`. Chat is the landing page; the fleet is page 2.
+Then open `http://127.0.0.1:8787/`. One document, six page roots, one nav:
+**Shepherd** (the orchestrator chat, and the landing page), **Flock**,
+**Projects**, **Queues**, **Kanban** and **Settings**. Queues and Kanban are
+placeholders. Exactly one root is visible at a time — that exclusivity is
+asserted on arrival and after every nav click, not assumed.
 
 Loopback only, in every deployment shape, with no knob to bind wider. Reaching
 it from elsewhere is an SSH tunnel, not a configuration flag — see §13.
@@ -79,6 +100,14 @@ comment**. Declaring a pytest marker does not deselect it, and for three
 milestones a plain `pytest` was starting real `claude` subprocesses against the
 developer's own config.
 
+**Two things to know before you run it.** The default lane now includes
+`tests/qa5/`, the round-5 QA harness: it starts a headless Chromium and a tmux
+server on the throwaway `shepherd-qa` socket, and it is most of the five-odd
+minutes the run takes. That was never a decision — it fell out of committing the
+harness under `tests/` — and it is open as **W7.2**. And **never run two pytest
+processes at once**: `tests/qa5/` refuses to sweep a run root belonging to a live
+pid, which is the guard working correctly and looks like a failure.
+
 ## The documents
 
 Read in this order. The spec is self-contained; nothing in it depends on the
@@ -86,14 +115,15 @@ conversation that produced it.
 
 | File | What it is |
 |---|---|
-| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 65 decisions **with their reasoning** — the most important section |
+| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 68 decisions (D1–D67 plus D38.1) **with their reasoning** — the most important section |
 | [`docs/specs/logical-architecture.md`](docs/specs/logical-architecture.md) | what may import what. Enforced as AST properties, not spellings |
 | [`docs/specs/data-schemas.md`](docs/specs/data-schemas.md) | every external shape, with a **real captured example**. Check one here before building on it |
 | [`docs/specs/implementation-constraints.md`](docs/specs/implementation-constraints.md) | 24 facts that change *how* a thing is built |
 | [`docs/specs/harness-contract.md`](docs/specs/harness-contract.md) | what a third-party harness must supply to join the flock. Deferred, decided in outline |
 | [`docs/specs/credentials-and-auth.md`](docs/specs/credentials-and-auth.md) | four authentication questions, open. Nothing is stored today and nothing needs to be |
-| [`docs/design/ui-decisions.md`](docs/design/ui-decisions.md) | the 2026-09-21 dark-mode redesign — what is settled, what is open, and the prototype links |
+| [`docs/design/ui-decisions.md`](docs/design/ui-decisions.md) | the dark-mode redesign, **built 2026-09-22** — why each decision was taken, and the prototype links |
 | [`docs/backlog/2026-09-21-projects-work-sources-and-ui.md`](docs/backlog/2026-09-21-projects-work-sources-and-ui.md) | **the forward-work register.** Start here for what to do next |
+| [`docs/plans/2026-09-21-projects-and-ui-plan.md`](docs/plans/2026-09-21-projects-and-ui-plan.md) | the most recent milestone: the Projects backend and the UI, as executed |
 | [`HANDOFF.md`](HANDOFF.md) | current state: what is proved, what is recorded unverified, what is open |
 | `docs/plans/` | one plan per milestone, each with its own `*-BLOCKERS.md` ledger |
 | `docs/probes/` | frozen evidence. Read-only — the captures are what commands actually printed |

@@ -1,11 +1,23 @@
 # Forward work — projects, work sources, and the UI redesign
 
-**Written 2026-09-21.** This is the register for everything decided on
-2026-09-21 that is **not built**. It supersedes nothing; it is the milestone
-plan that D57–D64 and the UI redesign do not otherwise have.
+**Written 2026-09-21. Updated 2026-09-23.** This is the register for everything
+decided on 2026-09-21 that was **not built** at the time.
 
-Nothing here has been implemented. `git diff` for 2026-09-21 touches
-documentation only, plus one test-fixture repair (see W0).
+**W1 and W4 have since been built** — the Projects backend (D57–D61) and the dark
+UI — and are marked DONE below with the record kept rather than deleted, so the
+register still reads as the account of what was decided and when it landed.
+**W2, W3 and W5 are untouched**, and W6's documentation debt is partly discharged.
+
+| | status |
+|---|---|
+| W0 — Linux-only test failure | **DONE** 2026-09-21 |
+| W1 — Projects backend (D57–D61) | **DONE** 2026-09-22 — `docs/plans/2026-09-21-projects-and-ui-plan.md` |
+| W2 — Discovery switches (D62) | open |
+| W3 — Work sources (D63, D64) | open |
+| W4 — The UI | **DONE** 2026-09-22, with D65/D66/D67 resolving the open questions |
+| W5 — Not started | open |
+| W6 — Documentation debt | items 1–5 and 7 open; item 6 (Appendix A) **unblocked** — migration 004 has landed |
+| W7 — Test-suite health | W7.3 **DONE**; W7.1 (order-dependent suite) and W7.2 (qa5 in the default lane) open |
 
 ---
 
@@ -30,7 +42,14 @@ documentation only, plus one test-fixture repair (see W0).
   sized clear of both rather than probed — a test that reads the tunable it
   depends on can be made to pass by changing the machine.
 
-## W1 — Projects backend (D57–D61)
+## W1 — Projects backend (D57–D61) — **DONE 2026-09-22**
+
+Executed as `docs/plans/2026-09-21-projects-and-ui-plan.md` revision 5, with the
+acceptance surface corrected to revision 7 after QA round 5. All seven items
+below shipped; `list_repos` gained both a tool and a route, and the verbs became
+**seven** rather than five (`list_projects` and `list_repos` joined the
+lifecycle five). The original text is kept below as the record of what was asked
+for.
 
 The largest piece, and **not a UI change**. It can land without touching
 `web/static/` at all, which keeps the D38 byte-freeze out of it entirely.
@@ -90,7 +109,17 @@ Arrives with M5's `queue` table, or earlier as configuration-only.
 5. `queue.enabled` stays `FALSE` by default. *Connected but paused* is a normal
    state the page renders plainly, not a warning.
 
-## W4 — The UI
+## W4 — The UI — **DONE 2026-09-22**
+
+The open questions this section names were answered before implementation:
+**U1–U4 and U15** were resolved in `docs/design/ui-decisions.md`, and the two
+that mattered most were settled as spec decisions rather than UI notes — the
+autonomy toggle is Settings-only (**D65**), and the Needs-You rail leaves the
+shell entirely (**D66**), with the session view relocating into the Flock's
+third pane (**D67**). The projection behind the rail was **not** retired; only
+its renderer went.
+
+The original text is kept below as the record of what was open.
 
 Blocked on nothing technical; the owner gates it. See
 `docs/design/ui-decisions.md` for the settled list and, more importantly, for
@@ -135,9 +164,11 @@ section rewrite rather than a sentence fix. **Each is a real inaccuracy, not a n
 5. **§8's hook-dispatcher code sample is the shape that was rejected.** Flagged in place;
    the real one-liner lives in §15 and in `hookd_command.py`.
 6. **Appendix A needs a rewrite** (C22): `repo_id` values contradict D48, and the
-   `workspace` row is built on `root_path`, which D57 removes. **Blocked on W1 (Phase 1)
-   landing** — migration 004 is in concurrent flight and will remove `root_path`;
-   rewriting against a mid-change schema would be wrong twice.
+   `workspace` row is built on `root_path`, which D57 removes. **No longer blocked** —
+   migration 004 landed on 2026-09-22 and `root_path` is gone, so the schema this
+   appendix must be rewritten against is now settled. This is the oldest open
+   documentation item in the tree: C22's *"when: before M1"* is unmet five
+   milestones later.
 7. **§12's ASCII mockups took damage in the 2026-09-20 scrub** — box borders at the
    fleet-page mockup no longer align after the substitutions changed string widths.
 
@@ -146,6 +177,92 @@ symbolic claim against the source* rather than to read for plausibility. That is
 found them: the counts a reader trusts most (105 boundary rules, 127 mypy files, 140
 lines, 20 stop reasons, 64 decisions) were all **correct**, and the errors were in prose
 that looked settled.
+
+## W7 — Test-suite health, found by the 2026-09-23 cleanup
+
+Two findings, both about the **default lane** rather than about any product code.
+
+### W7.1 — the default run is order-dependent, and can fail ~100 tests
+
+A plain `.venv/bin/pytest` on `9bfb87e` produced roughly **100 failures and errors** across
+`tests/web/`, `tests/tools/test_render_check_args.py` and
+`tests/testkit/test_scripted_master.py`. Every one carried one of two messages:
+
+- `playwright._impl._errors.Error: It looks like you are using Playwright Sync API inside the
+  asyncio loop.`
+- `asyncio.run() cannot be called when another asyncio event loop is running in the same thread.`
+
+Both say the same thing: **some earlier test leaves a running event loop in the main thread**,
+and every later test that needs the main thread free then fails. `pytest-randomly` is installed,
+so which tests land downstream of the leak changes per run — the suite is green or badly red
+depending on ordering. That is why it has not been noticed: it is not flaky in the usual sense,
+it is *positional*.
+
+**Measured, deterministically.** `.venv/bin/pytest -p no:randomly` on `9bfb87e`:
+
+```
+39 failed, 2185 passed, 2 skipped, 76 deselected, 9 warnings, 60 errors in 322.77s
+```
+
+The 60 errors are all *at setup* — the browser fixture never comes up — and they are confined to
+`tests/web/test_decision_live.py`, `test_projects_page.py`, `test_settings_live.py`,
+`test_shell_live.py` and `test_terminal_fit_live.py`. Files immediately around them
+(`test_chat_page.py`, `test_flock_page.py`, `test_projects_stream.py`, `test_routes*.py`) pass.
+
+**The clue worth chasing first.** pytest's `unraisableexception` plugin surfaces this during the
+first failing file:
+
+```
+RuntimeWarning: coroutine 'drain' was never awaited
+```
+
+`drain` is the helper in `tests/testkit/test_scripted_master.py` and
+`tests/contracts/test_master_contract.py`, both of which call it through `asyncio.run(...)`. A
+`drain(...)` coroutine is therefore being **constructed and abandoned**, and the warning only
+surfaces later, when the garbage collector gets to it — inside whichever test happens to be
+running. That is the shape of an `asyncio.run` that raised before awaiting, leaving its loop
+behind. `tests/testkit/` runs at roughly 78% and the web failures begin at 86%, which fits.
+
+**And it is worse than an ordering problem.** `tests/web/test_projects_page.py` run **on its
+own** does not fail — it **hangs**, at 0% CPU with no output, still alive after eight minutes.
+So "run the file by itself to check the product" is not available either, and no claim should be
+made that these pages are fine on the strength of the suite. Whatever holds the loop may also be
+holding a fixture open.
+
+**Ruled out so far:** `tests/master/test_sdk_tools.py` and `tests/testkit/test_scripted_master.py`
+are each clean when run immediately before `tests/tools/test_render_check_args.py`, so it is not
+either module alone. There is no `new_event_loop`, `set_event_loop`, `run_forever` or
+`get_event_loop` anywhere in `tests/`, `src/` or `tools/`. `anyio` is installed and its pytest
+plugin auto-loads; there is no `pytest-asyncio` and no `asyncio_mode` setting.
+
+**This is the reason the suite totals quoted in `README.md` and `HANDOFF.md` are marked as
+measured under a named ordering rather than stated flat.** A count that depends on the shuffle
+is not a count.
+
+**One thing that is *not* a defect:** `tests/qa5/test_guards.py::test_sweep_removes_a_run_root_whose_pid_is_gone`
+fails when a second pytest process is running, because it refuses to sweep a run root belonging
+to a live pid. That is the guard doing its job. Never run two pytest processes at once here.
+
+### W7.2 — `tests/qa5/` runs in the default lane, and nobody decided that
+
+`testpaths = ["tests"]`, so the round-5 harness runs on a plain `pytest`: it starts a headless
+Chromium and a tmux server on the throwaway `shepherd-qa` socket, and it takes the default run
+from roughly two minutes to roughly **fourteen**. `addopts` excludes only `-m live`, which is
+about real `claude` processes and does not cover this.
+
+It fell out of committing the harness under `tests/`; it was never chosen. The trade-off is real
+in both directions — the browser lane is what caught the last milestone's only product defect,
+and it is also what makes the edit-test loop slow enough to discourage running it. Three options:
+leave it, give it its own marker deselected in `addopts` exactly as `live` is, or move it out of
+`testpaths`. **If it is ever deselected, `README.md` must say so** — that file currently implies
+one command covers everything.
+
+### W7.3 — a module-level `mkdtemp` was leaking a directory per run
+
+**Fixed 2026-09-23.** `tests/runner/test_local.py` created `SINK_DIR` with `tempfile.mkdtemp`
+at import and never removed it, leaking one directory into the system temp dir on **every
+collection**; 1,516 had accumulated. It now registers an `atexit` cleanup. Proved by measuring
+the directory count either side of a run: delta 0, where it had been +1.
 
 ## Still open from before 2026-09-21
 
@@ -167,7 +284,10 @@ Carried forward so this file is a complete register. Detail in
 7. **`MacHost` is unverified** (`verified() == False`). A macOS port landed on
    2026-09-20 and the suite passes there, but the five G1 captures the spec asks
    for are not in the tree.
-8. **The browser UI has never been opened by a human.** HANDOFF's manual
-   checklist is outstanding, including the no-JavaScript degrade.
-9. **Appendix A of the spec is stale** (C22) — and now doubly so, because D57
-   removes the `root_path` its example row is built on.
+8. **The browser UI has never been opened by a human.** Still true, and now a
+   narrower gap than it was: QA round 5 drove all six pages through a real
+   headless Chromium across 35 scenarios, so *rendering* is no longer unproven.
+   What no automated run can settle is whether the pages are **usable** —
+   HANDOFF's manual checklist stands, including the no-JavaScript degrade.
+9. **Appendix A of the spec is stale** (C22) — see W6 item 6. Migration 004 has
+   landed, so it is no longer blocked, only undone.

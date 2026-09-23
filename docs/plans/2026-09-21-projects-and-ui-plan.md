@@ -27,11 +27,14 @@
 - Prior revisions: 4 (fresh-review pass 2: 5 blocking + 10 advisories), 3 (two
   router corrections), 2 (fresh-review pass 1: 7 blocking + 6 major + the
   minors), 1 (initial)
-- Status: draft
+- Status: **executed and QA'd.** BUILD ran revision 5; QA round 5 ran the full
+  seven-link route against it and the acceptance surface was corrected to
+  revision 7. Report: `.cc10x/qa/wf-20260921T212808Z-9172ed6b/report.md`.
 - Plan Mode: `execution_plan`
 - Verification Rigor: `critical_path` (irreversible migration · security-adjacent
   allowlist · a delete state machine · two concurrent discovery lanes)
-- Branch / base: `integration` @ `4761c1d`
+- Branch / base: written against `integration` @ `4761c1d`. That branch was
+  fast-forwarded into `main` on 2026-09-22 and deleted; the work is on `main`.
 - Python: `/root/Shepherd/.venv/bin/python` (3.12)
 - Supersedes: `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` §W1, with
   real tasks. §W2 and §W3 stay in the backlog.

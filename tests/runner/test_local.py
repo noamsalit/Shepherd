@@ -16,10 +16,12 @@ cries wolf gets an exemption bolted onto it.
 from __future__ import annotations
 
 import ast
+import atexit
 import dataclasses
 import importlib.util
 import inspect
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -108,7 +110,15 @@ SPEC = SessionSpec(
 
 #: One directory for every `pipe-pane` sink in this module. A temporary path, so
 #: the argv table can state the sink it expects without writing into the repo.
+#:
+#: It is created at import rather than through `tmp_path` because the argv table
+#: below is built at class-definition time, before any fixture can run. That
+#: makes the teardown ours to arrange: without the `atexit` hook this module
+#: leaked one empty directory into the system temp dir on **every collection**,
+#: and 1,516 of them had accumulated by 2026-09-23. `ignore_errors` because a
+#: failed cleanup must never turn a green run red.
 SINK_DIR = Path(tempfile.mkdtemp(prefix="shepherd-t8-"))
+atexit.register(shutil.rmtree, SINK_DIR, ignore_errors=True)
 PIPE_SINK = SINK_DIR / f"{NAME}.pipe"
 
 NO_PREFIX = DetachedLaunch(prefix=(), mechanism="none", detail="", verified=True)

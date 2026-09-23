@@ -314,8 +314,8 @@
   "qa-run-3": "completed",
   "qa-remfix-3": "completed",
   "qa-run-4": "completed",
-  "qa-remfix-4-lane-a": "in_progress",
-  "qa-remfix-4-lane-b": "in_progress"
+  "qa-remfix-4-lane-a": "complete",
+  "qa-remfix-4-lane-b": "complete"
  },
  "deferred_findings": [
   {
@@ -1314,7 +1314,7 @@
   "F13 advisory, decided: playwright would become an undeclared suite dependency via the path-loaded render_check import. Fix is pytest.importorskip('playwright')."
  ],
  "planning_review_status": "passed",
- "plan_revision": 5,
+ "plan_revision": 7,
  "last_reviewed_revision": 5,
  "memory_notes": [],
  "pending_gate": null,
@@ -1548,10 +1548,24 @@
    "phase": "memory-finalize",
    "verdict": "BLOCKED",
    "detail": "full seven-link route completed; memory persisted to .cc10x/*.md"
+  },
+  {
+   "event": "phase_status_reconciled",
+   "ts": "2026-09-23T10:27:31Z",
+   "phase": "memory-finalize",
+   "detail": "qa-remfix-4-lane-a and qa-remfix-4-lane-b were left in_progress by a session that ended between the lanes finishing and the artifact being written. Both are closed: each lane's ledger records its verdict (docs/plans/projects-ui-blockers/qa-remfix-4-lane-{a,b}.md), and both branches (f391020, 34f4b83) are merged into main with zero commits unreachable from it. Closed on evidence, not on assumption."
+  },
+  {
+   "event": "plan_revision_synced",
+   "ts": "2026-09-23T10:27:31Z",
+   "phase": "memory-finalize",
+   "from": 5,
+   "to": 7,
+   "detail": "The plan reached revision 7 (post-QA acceptance-surface correction) after this artifact last wrote. last_reviewed_revision stays 5 \u2014 the two fresh-review passes ran against revision 5 and the cap is spent; revision 7 changed no task, contract or build baseline."
   }
  ],
  "remediation_history": [],
  "created_at": "2026-09-21T21:28:40Z",
- "updated_at": "2026-09-23T01:59:07Z",
+ "updated_at": "2026-09-23T10:27:31Z",
  "incomplete_phases": []
 }
