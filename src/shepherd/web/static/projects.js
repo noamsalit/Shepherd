@@ -181,9 +181,40 @@ async function loadList() {
   renderDetail();
 }
 
+//: **BC-1. The pane belongs to the last project ASKED for, not to the last
+//: read that resolved.** `view.openId` is that intent and it is written
+//: synchronously — at the click, at the create — so a read that comes back for
+//: a project the page has since navigated away from is dropped whole: it
+//: writes no `view.detail` and it paints nothing.
+//:
+//: Ordering the *requests* would not have done it, and that is the part worth
+//: keeping. `projectRow`'s click handler starts a read and does not await it,
+//: and `submitProject`'s create branch issues a read of its own **after** that
+//: click has already landed — so the stale answer is sometimes the one
+//: requested later. Only the recorded intent can say which answer the page
+//: still wants.
+//:
+//: The symptom QA round 5 measured (S33, and the settle bolted onto S19 and
+//: S32) was one full-suite run in four where the detail pane settled on a
+//: project the user had left, taking `#proj-edit`'s closure — captured at
+//: render time, `renderDetail` below — with it: Edit opened the dialog on the
+//: wrong workspace and the draft path list never reached the clicked project's
+//: repos. Render and closure are the same project by construction, so both
+//: halves are closed by the same guard rather than by two.
 async function loadDetail(projectId) {
   view.openId = projectId;
+  await refreshDetail(projectId);
+}
+
+//: The read half, with no claim on the pane. It exists for the one caller that
+//: declared its intent a whole round trip earlier: re-asserting `openId` there
+//: would let a deferred navigation overwrite a click the user made in the
+//: meantime, which is the defect rather than the fix.
+async function refreshDetail(projectId) {
   const data = await read(`${API}/${encodeURIComponent(projectId)}`);
+  if (view.openId !== projectId) {
+    return;
+  }
   // `found` is a value, not an exception (principle 5): a project deleted in
   // another tab renders as "no such project" rather than as a crash.
   view.detail = data && data.found ? data.project : null;
@@ -675,10 +706,21 @@ async function submitProject() {
     }
     duplicate.armed = null;
     document.getElementById("dlg-project").close();
-    await loadList();
+    // BC-1. The intent is declared **here**, synchronously, one statement after
+    // the create — ahead of both awaits below, so a row clicked while this
+    // branch settles supersedes it instead of losing to it. `dataset.level`
+    // moves up for the same reason: set after `loadList()` it also undid a Back
+    // pressed during the read.
+    view.openId = answer.project.project_id;
     root().dataset.level = "detail";
-    await loadDetail(answer.project.project_id);
-    renderList();
+    await loadList();
+    // `refreshDetail` and not `loadDetail`: this branch must not re-assert an
+    // intent it recorded a round trip ago.
+    await refreshDetail(answer.project.project_id);
+    // `renderList()` used to follow, to pick up the `aria-current` that
+    // `loadDetail` had only just made true. `openId` is now true before
+    // `loadList()` paints the list, so the second pass is redundant — and a
+    // redundant pass rebuilds every row under whatever click is in flight.
     return;
   }
   if (name !== editing.name) {

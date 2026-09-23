@@ -1394,3 +1394,182 @@ def test_a_delete_that_succeeded_still_says_which_stop_did_not_land(
     assert owned in outcome, outcome
     assert f"RunnerRefusal: {KILL_ARGV_REASON}" in outcome, outcome
     assert console.messages == []
+
+
+# ----- BC-1: the detail pane belongs to the last project ASKED FOR ------------
+#
+# The defect QA round 5 reproduced (S33, and the same settle bolted onto S19 and
+# S32): `loadDetail()` wrote `view.detail` and painted from **whichever read
+# resolved last**, not from the project the page had last been asked to open.
+# Two reads are routinely in flight at once — `projectRow`'s click handler
+# starts one and does not await it, and `submitProject`'s create branch has one
+# of its own — so the pane could settle on a project the user had already
+# navigated away from, and `#proj-edit`'s closure, captured at render time,
+# went with it. Pressing Edit then opened the dialog on the wrong workspace and
+# the draft path list never reached the clicked project's two repos.
+#
+# **Both tests below make the race deterministic rather than hoping for it.**
+# `HOLD_MATCHING_FETCH` parks the fetches whose URL matches a pattern — the
+# product's own `fetch` calls, untouched otherwise — and hands the test a
+# release. That turns "the later read to resolve wins" from a 1-in-4 flake into
+# a fact the test states: the stale read is released *after* the newer one has
+# already painted, which is the losing interleaving every time.
+#
+# **They assert on the DIALOG, not only on the pane.** The pane's title proves
+# the render; `#p-name` and `#p-paths` prove what `#proj-edit`'s closure was
+# bound to. A fix that ordered the reads but left a stale closure on the button
+# would pass the first assertion and fail the second.
+
+#: Installed into the page before the race. `real.call(window, ...)` and not
+#: `real(...)`: a detached `fetch` reference is an illegal invocation in
+#: chromium. `__delivered` counts released responses so the test waits on a
+#: fact rather than on a duration.
+HOLD_MATCHING_FETCH = """(pattern) => {
+  const real = window.fetch;
+  const held = [];
+  const expression = new RegExp(pattern);
+  window.__held = held;
+  window.__delivered = 0;
+  window.fetch = (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    if (!expression.test(url)) {
+      return real.call(window, input, init);
+    }
+    return new Promise((resolve, reject) => {
+      held.push(() =>
+        real.call(window, input, init).then(
+          (response) => { window.__delivered += 1; resolve(response); },
+          (error) => { window.__delivered += 1; reject(error); }
+        )
+      );
+    });
+  };
+  window.__release = () => {
+    const queued = held.splice(0, held.length);
+    for (const send of queued) { send(); }
+    return queued.length;
+  };
+}"""
+
+
+def hold_fetches(page: Page, pattern: str) -> None:
+    page.evaluate(HOLD_MATCHING_FETCH, pattern)
+
+
+def release_and_settle(page: Page, expected: int) -> None:
+    """Release the parked reads and wait for the page to be quiet again.
+
+    The settle is `networkidle` and it is sound **on this page specifically**:
+    §12 forbids polling and the product runs no timers at all, so "nothing in
+    flight" is a resting state rather than a gap between ticks. It is needed
+    because the assertions that follow are negative — that the stale read
+    changed *nothing* — and a negative needs a point after which nothing more
+    can happen.
+    """
+    assert page.evaluate("() => window.__release()") == expected
+    page.wait_for_function(
+        "(n) => window.__delivered === n", arg=expected, timeout=5000
+    )
+    page.wait_for_load_state("networkidle")
+
+
+def seed_two_repos(store: Store, project_id: str) -> list[str]:
+    paths = [f"/code/acme/{project_id}-api", f"/code/acme/{project_id}-worker"]
+    for path in paths:
+        store.add_repo(
+            workspace_id=project_id,
+            root_path=path,
+            name=path.rsplit("/", 1)[-1],
+            git_common_dir=f"{path}/.git",
+            vcs_remote=None,
+        )
+    return paths
+
+
+def test_a_row_clicked_while_a_create_settles_keeps_the_pane_on_the_clicked_row(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """BC-1, the interleaving QA round 5 hit: click a row while a create settles.
+
+    `submitProject`'s create branch closes the dialog and only *then* reads the
+    new project's detail, so a row clicked in that window starts a second read.
+    The create's read is the one issued later, so serialising by request order
+    would not save it either — the page has to honour the **intent** (`openId`,
+    set synchronously at the click) and drop a read that no longer matches it.
+    """
+    payments = store.create_project(name="payments", description=None)
+    seed_two_repos(store, payments.id)
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    projects_page.wait_for_selector("#proj-list .proj-row")
+
+    # Park the *new* project's detail read — every detail URL but payments'.
+    hold_fetches(projects_page, f"/api/projects/(?!{payments.id}$)[^/?]+$")
+
+    projects_page.click("#proj-new")
+    projects_page.fill("#p-name", "billing")
+    projects_page.click("#p-save")
+    projects_page.wait_for_function(
+        "() => document.getElementById('dlg-project').open === false", timeout=5000
+    )
+    # The create's own `loadDetail(newId)` is now issued and parked.
+    projects_page.wait_for_function("() => window.__held.length === 1", timeout=5000)
+
+    projects_page.click(f'#proj-list .proj-row[data-project-id="{payments.id}"]')
+    projects_page.wait_for_selector(
+        '#proj-detail .proj-title:text-is("payments")', timeout=5000
+    )
+
+    release_and_settle(projects_page, 1)
+
+    assert projects_page.locator("#proj-detail .proj-title").inner_text() == "payments"
+    projects_page.click("#proj-edit")
+    projects_page.wait_for_selector("#dlg-project[open]", timeout=5000)
+    assert projects_page.input_value("#p-name") == "payments"
+    projects_page.wait_for_function(
+        "() => document.querySelectorAll('#p-paths .path').length === 2", timeout=5000
+    )
+    assert console.messages == []
+
+
+def test_a_detail_read_that_resolves_after_a_newer_click_paints_nothing(
+    projects_page: Page, store: Store, console: Console
+) -> None:
+    """The same defect with no create anywhere near it — row to row.
+
+    The variant matters because it fixes the ordering the other way round: here
+    the **stale** read is the one issued first and the fresh one second, so a
+    guard that only taught `submitProject` to behave would leave this red. Two
+    ordinary row clicks in quick succession are enough, which is what makes
+    this a user-reachable bug and not a dialog artefact.
+    """
+    payments = store.create_project(name="payments", description=None)
+    seed_two_repos(store, payments.id)
+    billing = store.create_project(name="billing", description=None)
+    projects_page.reload()
+    projects_page.click('.nav-item[data-page="projects"]')
+    projects_page.wait_for_selector("#proj-list .proj-row")
+
+    hold_fetches(projects_page, f"/api/projects/{payments.id}$")
+
+    projects_page.click(f'#proj-list .proj-row[data-project-id="{payments.id}"]')
+    projects_page.wait_for_function("() => window.__held.length === 1", timeout=5000)
+    projects_page.click(f'#proj-list .proj-row[data-project-id="{billing.id}"]')
+    projects_page.wait_for_selector(
+        '#proj-detail .proj-title:text-is("billing")', timeout=5000
+    )
+
+    release_and_settle(projects_page, 1)
+
+    assert projects_page.locator("#proj-detail .proj-title").inner_text() == "billing"
+    projects_page.click("#proj-edit")
+    projects_page.wait_for_selector("#dlg-project[open]", timeout=5000)
+    assert projects_page.input_value("#p-name") == "billing"
+    # Not `.path === 0` — that is true before the read as well, so it would pass
+    # on a draft list that never loaded. The sentence only exists once
+    # `renderDraftPaths` has run on an empty answer.
+    projects_page.wait_for_function(
+        "() => document.getElementById('p-paths').innerText.includes('No paths yet')",
+        timeout=5000,
+    )
+    assert console.messages == []

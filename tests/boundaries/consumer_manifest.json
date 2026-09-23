@@ -56,7 +56,7 @@
     "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
     "web/static/flock.js": "ab30606b7d5143d9f75eccd57fffa65367ea66afd991a1d4b419715fa0a9f3b7",
     "web/static/index.html": "2fcbda41d6a16611932480a546bf344bc4507bf8b448b690ece2241e4adcb503",
-    "web/static/projects.js": "f309fdf90fce6026de265ba1a06242c798766d651bd23cd41646281caa32fd89",
+    "web/static/projects.js": "627b680afe21e06591c9f114332359a0936ddac6cf8af53ad0baa4a320a12a52",
     "web/static/session.js": "393b7f6bb50303074c9c63bd72bbf7b12e3eeda340bca5042691409791838d26",
     "web/static/settings.js": "0f57db4d51805368369daa07f616cabf8805460dc6f90f108e86baa077b5c44d",
     "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
@@ -85,8 +85,8 @@
       {
         "path": "web/static/projects.js",
         "at": "2026-09-22T00:00:00Z",
-        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Added.** T9.1's Projects page \u2014 the first consumer of the seven project verbs, which is what made five gaps in them findable."
+        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then QA round 5 remediation (BC-1)",
+        "why": "**Added, then changed once.** T9.1's Projects page \u2014 the first consumer of the seven project verbs, which is what made five gaps in them findable. Changed by QA round 5's BC-1: `loadDetail` wrote `view.detail` and painted from whichever read RESOLVED last rather than from the project the page had last been ASKED to open, so with two reads in flight \u2014 `projectRow` starts one and does not await it, `submitProject`'s create branch issues its own afterwards \u2014 the pane could settle on a project the user had left, taking `#proj-edit`'s render-time closure with it. `view.openId` is now the intent, written synchronously at the click and at the create, and a read whose project no longer matches it is dropped whole. No route, no envelope field and no node id moved: this is render ORDERING only. Proved at tests/web/test_projects_page.py by two held-fetch tests, one per interleaving."
       },
       {
         "path": "web/static/rail.js",
