@@ -14,6 +14,20 @@ requires-python = ">=3.12"
 # moves, and a lower floor would claim a version nobody ran.
 dependencies = ["claude-agent-sdk>=0.2.153,<0.3", "anyio>=4.15"]
 
+# QA round 5's harness (`tests/qa5/`) drives a real headless chromium, and
+# `tools/render_check.py` and `tools/js_syntax_check.py` have needed playwright
+# since M4 without ever saying so. The omission was not harmless: both tools sit
+# behind `pytest.importorskip`, so on a machine without playwright they COLLECTED
+# AND PASSED — a gate reporting green because it never ran. `tests/qa5/` imports
+# `playwright.sync_api` at module scope on purpose, so its absence is now a
+# collection error rather than a silent skip, and this declaration is what makes
+# that error avoidable rather than merely loud.
+#
+# It is an optional group, not a runtime dependency: `shepherd` itself never
+# imports playwright, and a wheel that pulled a browser driver in would be wrong.
+[project.optional-dependencies]
+test = ["playwright>=1.63"]
+
 # T17-3 / T18: the three processes this build is, on `PATH`. `run()` in each
 # module is the body; `main(argv)` stays importable so the tests drive it
 # without a subprocess.

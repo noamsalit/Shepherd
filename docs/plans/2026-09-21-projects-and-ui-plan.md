@@ -3,12 +3,22 @@
 ## Metadata
 
 - Created: 2026-09-21
-- **Revision: 6** — **QA-scope amendment.** The acceptance surface was written
+- **Revision: 7** — **post-QA correction of the acceptance surface.** QA round 5
+  measured AC-16, AC-21 and AC-23 against the tree and found all three stale:
+  `BODY_ARGS` is 16 not 15, `post_milestone` holds seven entries not six, and
+  `terminal.js` has left its baseline. Each moved because a *later correct
+  change* shifted a count this plan restates. AC-21 and AC-23 were additionally
+  checking `git diff` — the working tree — so they passed because the change had
+  been committed rather than because the bytes were unchanged; both now compare
+  digests against `consumer_manifest.json`. AC-28's final clause invoked
+  `pytest -m live`, which is forbidden here, and is rewritten to the runnable
+  form with the debt **recorded undischarged**. **No task, contract or build
+  baseline changed** — revision 5 remains what BUILD executed.
+- Revision: 6 — **QA-scope amendment.** The acceptance surface was written
   as *six pages × two viewports* in four places; QA round 4 found a defect
   140px wide sitting between those two widths, so AC-28 could pass green over
   an unusable page. The scope now names `tools/render_check.py::VIEWPORTS` as
-  its single definition site rather than restating a width count. **No task,
-  contract or build baseline changed** — revision 5 remains what BUILD executed.
+  its single definition site rather than restating a width count.
 - Revision: 5 — **final router-directed amendment**, applying the
   amendment-verification findings (F1's definitive enumeration + 8 stale
   cross-references). The two-pass fresh-review cap is spent; this is the
@@ -25,6 +35,37 @@
 - Python: `/root/Shepherd/.venv/bin/python` (3.12)
 - Supersedes: `docs/backlog/2026-09-21-projects-work-sources-and-ui.md` §W1, with
   real tasks. §W2 and §W3 stay in the backlog.
+
+### What changed in revision 7
+
+**QA round 5 measured three acceptance criteria against the tree and found them stale.** Each moved
+because a *later correct change* shifted a count this plan restates — which is finding **F-QA1**
+recurring, one revision after it was written down:
+
+| AC | Said | Measured on `c243773` | Why it moved |
+| --- | --- | --- | --- |
+| AC-16 | `len(BODY_ARGS) == 15` | **16** | `set_project_description`, the eighth verb, built deliberately at `41c4174` |
+| AC-21 | exactly **six** `post_milestone` entries | **seven** | D6 fitted the terminal at `34f4b83`. **A11 predicted this exact move and said the plan would be wrong by one** |
+| AC-23 | `terminal.js` byte-clean | changed, `ace78240` → `781bed86` | same change, correctly declared in the manifest |
+
+**Two of those clauses were also checking the wrong thing.** AC-21's `escape.js` test and AC-23 both
+read `git diff --name-only`, which reports the **working tree** — so they passed because the change
+had been *committed*, not because the bytes were unchanged. A criterion that quietly becomes "no
+uncommitted edits" is not the criterion anyone agreed to. Both now compare digests against
+`consumer_manifest.json`, which is what the claim always meant.
+
+**AC-28's final clause cannot be run in this workflow and is recorded undischarged.** It invoked
+`pytest -m live`, which starts real `claude` processes against the user's real `~/.claude.json`. QA
+round 5 substituted a served-`controld` sweep and passed it three times — and said plainly, in five
+places, that **a PASS on the substitute does not discharge the original**. The clause is rewritten to
+the runnable form and the debt is stated rather than closed by substitution.
+
+**The reusable lesson, which is the same one revision 6 recorded and did not prevent:** a restated
+constant is a second definition site, and the gap between the two is where a defect hides from every
+check that quotes them. Revision 6 repaired the *viewport* count and left three other restated counts
+standing. **The plan was deliberately NOT amended during the QA run** — amending it mid-run would have
+meant the run rewrote its own exam and then passed it — so these land here, afterwards, with the
+measurement that found them.
 
 ### What changed in revision 6
 
@@ -1922,7 +1963,7 @@ headless chromium on this host.
   anything but loopback; any `tmux` invocation without `-L`; touching the
   `shepherd` socket.
 - **Required Checks:**
-  `.venv/bin/python -m pytest -m live tests/web/test_render_live.py -q`
+  `.venv/bin/python tools/render_check.py --url "$CONTROLD_URL"`  <!-- r7: was `pytest -m live tests/web/test_render_live.py -q`, which starts real `claude` processes against the user's real `~/.claude.json` and is forbidden by a standing user constraint. QA round 5 substituted S30, a served-`controld` sweep over `render_check.VIEWPORTS` carrying no `live` marker; it passed 18 pages / 18 screenshots / 0 failures in all three runs. **A PASS on the substitute does not discharge the original clause, and AC-28 is recorded undischarged until someone runs the live lane deliberately.** -->
 - **Validation Level:** **Live.**
 - **Checkpoint Type:** **human_verify** — the eighteen screenshots.
 - **Exit Criteria:** P11 passes; zero console errors at **every width in
@@ -2354,14 +2395,14 @@ whose command named a file nobody built.
 | AC-13 | Seven project tools register and freeze, and all seven schemas spell `project_id` | `.venv/bin/python -m pytest tests/toolsurface/test_tools_projects.py -q` |
 | AC-14 | Every new tool module is held to the 450-line cap | `.venv/bin/python -m pytest tests/toolsurface/test_tools_m3.py::test_the_three_modules_are_each_under_the_cap -q` |
 | AC-15 | `list_projects` over N projects issues a bounded number of statements (**M4**) | `.venv/bin/python -m pytest tests/toolsurface/test_tools_m1.py::test_the_project_list_issues_a_bounded_number_of_statements -q` |
-| AC-16 | Every POST body field is a property of its tool's schema, arrival count 14, `len(BODY_ARGS) == 15` | `.venv/bin/python -m pytest tests/web/test_routes_m3.py -q` |
+| AC-16 | Every POST body field is a property of its tool's schema, arrival count 14, `len(BODY_ARGS) == 16` (**r7: was 15**; `set_project_description` is the eighth verb, built deliberately at `41c4174`) | `.venv/bin/python -m pytest tests/web/test_routes_m3.py -q` |
 | AC-17 | No body field shadows a path parameter, for `project_id` as well as `session_id` (**M1**) | `.venv/bin/python -m pytest tests/web/test_routes_m3.py::test_no_body_field_shadows_a_path_parameter tests/web/test_routes_projects.py -q` |
 | AC-18 | The GET closed-set literal names all 14 paths by hand | `.venv/bin/python -m pytest tests/web/test_routes.py::test_every_api_route_names_a_registered_tool -q` |
 | AC-19 | The pre-M4 route mappings are unchanged (additive only) | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_additive.py -q` |
 | AC-20 | `web/server.py` is byte-identical | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_additive.py::test_web_server_is_byte_unchanged -q` |
-| AC-21 | The byte-freeze equality and disjointness hold, with exactly **six** `post_milestone` entries, and `escape.js` byte-unchanged | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_frozen.py -q && .venv/bin/python -c "import json,sys; n=len(json.load(open('tests/boundaries/consumer_manifest.json'))['post_milestone']['edits']); sys.exit(0 if n==6 else f'post_milestone has {n} entries, expected 6')" && test -z "$(git diff --name-only src/shepherd/web/static/escape.js)"` |
+| AC-21 | The byte-freeze equality and disjointness hold, with exactly **seven** `post_milestone` entries (**r7: was six**; `terminal.js` earned the seventh at `34f4b83` — A11 predicted exactly this move), and `escape.js` byte-unchanged | `.venv/bin/python -m pytest tests/boundaries/test_consumer_surface_frozen.py -q && .venv/bin/python -c "import json,sys; n=len(json.load(open('tests/boundaries/consumer_manifest.json'))['post_milestone']['edits']); sys.exit(0 if n==7 else f'post_milestone has {n} entries, expected 7')" && test -z "$(git diff --name-only src/shepherd/web/static/escape.js)"` |
 | AC-22 | `chat.js` still exists at its own path | `test -f src/shepherd/web/static/chat.js` |
-| AC-23 | D67's retained modules still ship and are still byte-clean where promised | `test -f src/shepherd/web/static/session.js && test -f src/shepherd/web/static/terminal.js && test -f src/shepherd/web/static/vendor/xterm.js && test -z "$(git diff --name-only src/shepherd/web/static/terminal.js src/shepherd/web/static/sse.js)"` |
+| AC-23 | D67's retained modules still ship; `sse.js` is still byte-clean, and `terminal.js` is **declared-changed, not byte-clean** (**r7**: D6 fitted the emulator at `34f4b83`, baseline `ace78240` -> `781bed86`, declared as the seventh `post_milestone` entry). **The old command checked `git diff`, i.e. the WORKING TREE, so it passed merely because the change was committed** — it is now a digest comparison against the manifest baseline, which is what the claim always meant | `test -f src/shepherd/web/static/session.js && test -f src/shepherd/web/static/terminal.js && test -f src/shepherd/web/static/vendor/xterm.js && .venv/bin/python -c "import json,hashlib,pathlib,sys; m=json.load(open('tests/boundaries/consumer_manifest.json')); d=lambda p: hashlib.sha256(pathlib.Path('src/shepherd/'+p).read_bytes()).hexdigest(); sys.exit(0 if d('web/static/sse.js')==m['baseline']['web/static/sse.js'] and d('web/static/terminal.js')==m['files']['web/static/terminal.js'] else 'AC-23: a retained module left the digest it is declared at')"` |
 | AC-24 | No frozen test vanished without a retirement entry the gate accepts | `.venv/bin/python -m pytest tests/boundaries/test_collected_node_ids.py -q` |
 | AC-25 | Zero HTML sinks; the shipped module list matches the directory | `.venv/bin/python -m pytest tests/web/test_frontend_escaping.py -q` |
 | AC-26 | The page never re-derives the order; its labels are `PALETTE`'s; the stop-summary strip renders | `.venv/bin/python -m pytest tests/web/test_palette.py tests/web/test_shell.py -q` |
