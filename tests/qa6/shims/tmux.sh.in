@@ -1,0 +1,6 @@
+#!/bin/sh
+# QA6 logging `tmux` shim (test-plan §6). Appends the argv it was given as one
+# JSON array per line, then execs the real tmux with the argv UNCHANGED. It adds
+# nothing, removes nothing, and never names a socket itself.
+/usr/bin/perl -MJSON::PP -MEncode -e 'my $log = shift @ARGV; open(my $f, ">>", $log) or exit 0; print $f JSON::PP->new->encode(["tmux", map { Encode::decode("UTF-8", $_) } @ARGV]) . "\n"; close $f;' '@TMUX_LOG@' "$@"
+exec '@TMUX@' "$@"

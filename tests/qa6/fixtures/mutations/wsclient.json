@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "wsclient.py",
+ "old": "            length = int.from_bytes(buffer[2:4], \"big\")",
+ "new": "            length = int.from_bytes(buffer[2:4], \"little\")",
+ "proof": "test_proof_wsclient",
+ "expect": "proof_wsclient.decodes_126_length_frame",
+ "why": "the 16-bit extended payload length is read in the wrong byte order (RFC 6455 \u00a75.2 network order)"
+}

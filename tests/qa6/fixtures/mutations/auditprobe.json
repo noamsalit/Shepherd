@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "auditprobe.py",
+ "old": "        return self.records()[mark:]",
+ "new": "        return self.records()[mark + 1:]",
+ "proof": "test_proof_auditprobe",
+ "expect": "proof_auditprobe.since_mark_counts_new_records",
+ "why": "the counted span skips one record (an off-by-one every count-since-mark clause would inherit)"
+}
