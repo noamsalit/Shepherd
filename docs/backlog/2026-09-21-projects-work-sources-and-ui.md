@@ -262,7 +262,23 @@ one command covers everything.
 **Fixed 2026-09-23.** `tests/runner/test_local.py` created `SINK_DIR` with `tempfile.mkdtemp`
 at import and never removed it, leaking one directory into the system temp dir on **every
 collection**; 1,516 had accumulated. It now registers an `atexit` cleanup. Proved by measuring
-the directory count either side of a run: delta 0, where it had been +1.
+the directory count either side of a run: delta 0, where it had been +1. All 1,521 were swept the
+same day, after checking that every file inside was the known 11-byte test sink.
+
+**The wider sweep, for the record.** `/tmp` went from 2.2 GB to 286 MB: the repo's own pytest
+basetemp `shp-0` (1.2 GB, nine run trees), pytest's default `pytest-of-root` (496 MB), scenario
+S9's throwaway venv (281 MB), 44 generic `tmp*` fixture dirs, 12 stale chromium profiles, and
+seven `*.orig.py` mutation-run backups of product source — those last checked against `HEAD`
+first, because a backup that does **not** match a committed blob could have meant a mutation left
+sitting in the tree. Four did not match; they are snapshots of files that have since changed, and
+the working tree was clean, which is the assertion that settles it.
+
+`shp-0` was **emptied rather than removed**: `tests/conftest.py` validates that it is owned by us
+at mode `0700` before using it, and leaving the directory in place closes the window where an
+unprivileged local user could pre-create it.
+
+**`shp-0` is not leaking.** A suite run after the sweep left **zero** directories behind, so the
+nine trees came from runs killed mid-flight — unlike the `shepherd-t8` leak above, which was real.
 
 ## Still open from before 2026-09-21
 

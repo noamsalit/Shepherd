@@ -37,7 +37,7 @@ deleted. `clean-root` and the fourteen `worktree-agent-*`/`remfix4-lane-*` branc
 was fully merged, carrying no commit unreachable from `main`. Fourteen agent worktrees under
 `.claude/worktrees/` were removed with them (543 MB).
 
-**Three remain and are safe to force-delete**, each verified to carry nothing unique:
+**Three more were force-deleted the same day**, each verified first to carry nothing unique:
 
 | branch | why it is redundant |
 |---|---|
@@ -45,8 +45,9 @@ was fully merged, carrying no commit unreachable from `main`. Fourteen agent wor
 | `macos-original` `dade568` | the macOS port as it arrived, before the identity rewrite. All five commits exist on `main` as re-authored copies — `1dc1713`, `769cdb3`, `09671c0`, `b601a8e`, `e82d86c` |
 | `worktree-agent-ab6cfa80ec1636e6f` `41f9504` | T8.1 `read_decision`. `main` holds a strict superset of both files it touches |
 
-Verified by comparing content, not by trusting subject lines. They survive only because the cc10x
-git guard blocks `git branch -D` without an approval token.
+Verified by comparing content, not by trusting subject lines — the shas above resolve only inside
+`/root/shepherd-branch-archive-20260923.bundle` now. **The local repository is one branch, `main`,
+matching `origin` exactly.**
 
 **Backups.** `/root/shepherd-backup-20260920/` holds bundles and worktree tarballs from the publish
 preparation, each verified by restoring it and comparing tree hashes rather than by checking the
