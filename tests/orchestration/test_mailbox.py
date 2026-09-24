@@ -552,7 +552,8 @@ def test_clear_then_send_re_reads_the_pane_before_the_text(tmp_path: Path) -> No
     The order is asserted on the recorded argvs of `LocalRunner`, not on a
     double's call list: `send-keys … C-u` -> `capture-pane` -> `send-keys -H …`.
     **Goes red** if the re-read is dropped, which turns the clearing form into
-    DP10's option (a), "send `C-u` and hope".
+    DP10's option (a), "send `C-u` and hope". The decision is `CLEAR_THEN_SEND`
+    since BC-02: it used to be the re-read's `SEND_NOW`, which hid the clear.
     """
     opened = open_store(tmp_path / "data" / "shepherd.db")
     try:
@@ -572,7 +573,7 @@ def test_clear_then_send_re_reads_the_pane_before_the_text(tmp_path: Path) -> No
             now=lambda: LATER,
         )
 
-        assert outcome.decision is WriteDecision.SEND_NOW
+        assert outcome.decision is WriteDecision.CLEAR_THEN_SEND
         assert outcome.delivered == 1
 
         keys_and_reads = ("send-keys", "capture-pane", "list-clients")

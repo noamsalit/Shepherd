@@ -23,7 +23,7 @@ from pathlib import Path
 from shepherd.core.mailbox import MailboxOrigin
 from shepherd.core.runner import RunnerRefusal, WriteDecision
 from shepherd.orchestration.ask import AskResult, ForkRunner, ask_session
-from shepherd.orchestration.mailbox import Delivery, deliver_now, queue_message
+from shepherd.orchestration.mailbox import DELIVERY_LOCK, Delivery, deliver_now, queue_message
 from shepherd.orchestration.write_policy import refusal_text
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
@@ -135,42 +135,45 @@ def send(*, store: Store, runner: Runner, now: Clock, args: ToolArgs) -> dict[st
             "delivered": 0,
             "deferred": 0,
         }
-    message = queue_message(
-        store=store,
-        session_id=session_id,
-        body=arg_str(args, "body"),
-        origin=_origin(args),
-        idempotency_key=arg_str(args, "idempotency_key"),
-        now=now,
-    )
-    handle = row.runner_handle
-    if handle is None:
-        # A row with no pane of ours — attached, or T12's orphan. The message
-        # stays queued and says so with the policy's own member, not with a
-        # bespoke string a page cannot branch on.
-        return project_delivery(
-            Delivery(
-                decision=WriteDecision.REFUSE_NO_PTY,
-                reason=WriteDecision.REFUSE_NO_PTY.value,
-                delivered=0,
-                deferred=1,
-            ),
-            message.id,
-        )
-    try:
-        delivery = deliver_now(
+    # BC-02: held from the queueing through this attempt, so the sweep cannot
+    # deliver the message in between and have it typed twice.
+    with DELIVERY_LOCK:
+        message = queue_message(
             store=store,
-            runner=runner,
-            handle=handle,
             session_id=session_id,
-            state=row.state,
-            ownership=row.ownership,
+            body=arg_str(args, "body"),
+            origin=_origin(args),
+            idempotency_key=arg_str(args, "idempotency_key"),
             now=now,
         )
-    except RunnerRefusal as refusal:
-        return project_delivery(
-            Delivery(decision=None, reason=refusal.reason, delivered=0, deferred=1), message.id
-        )
+        handle = row.runner_handle
+        if handle is None:
+            # A row with no pane of ours — attached, or T12's orphan. The message
+            # stays queued and says so with the policy's own member, not with a
+            # bespoke string a page cannot branch on.
+            return project_delivery(
+                Delivery(
+                    decision=WriteDecision.REFUSE_NO_PTY,
+                    reason=WriteDecision.REFUSE_NO_PTY.value,
+                    delivered=0,
+                    deferred=1,
+                ),
+                message.id,
+            )
+        try:
+            delivery = deliver_now(
+                store=store,
+                runner=runner,
+                handle=handle,
+                session_id=session_id,
+                state=row.state,
+                ownership=row.ownership,
+                now=now,
+            )
+        except RunnerRefusal as refusal:
+            return project_delivery(
+                Delivery(decision=None, reason=refusal.reason, delivered=0, deferred=1), message.id
+            )
     return project_delivery(delivery, message.id)
 
 
