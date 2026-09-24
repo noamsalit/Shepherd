@@ -248,7 +248,14 @@ REQUIRED_ASSIGNMENTS = {
     # rename. The engine write-back stays behind `can_set_title`, server-side.
     'input.className = "session-rename-input"',
     'input.type = "text"',
-    'input.value = row.title === null || row.title === undefined ? "" : String(row.title)',
+    # BC-25 (qa6 plan rev 4): the editor starts from the title the header last
+    # painted, not the row it was opened from — a completed rename would
+    # otherwise pre-fill the old title and Enter would rename it back.
+    'shownTitle = title',
+    'input.value = shownTitle === null || shownTitle === undefined ? "" : String(shownTitle)',
+    # BC-36 / B10 (qa6 plan rev 4): a session Shepherd killed says so and
+    # opens no terminal.
+    "banner.textContent = KILLED_BANNER",
     'status.textContent = ""',
     "status.textContent = `${RENAME_FAILED}: ${body.error} (${body.correlation_id})`",
     "status.textContent = `${RENAME_FAILED}: ${body.data.reason}`",

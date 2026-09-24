@@ -23,7 +23,7 @@
 import { loadShepherd, mountShepherd, onShepherdEvent } from "./chat.js";
 import { mountFlock, renderFlock, renderStatus, showLevel } from "./flock.js";
 import { mountProjects } from "./projects.js";
-import { renderSession } from "./session.js";
+import { refreshSessionHeader, renderSession } from "./session.js";
 import { loadSettings, mountSettings, onSettingsEvent } from "./settings.js";
 import { connect } from "./sse.js";
 
@@ -195,6 +195,28 @@ async function openSession(sessionId) {
   renderSession(answer.session);
 }
 
+// BC-13: the open session's header follows an event the way its card does.
+// The card is rebuilt from the fleet read; the header is `get_session`'s, so
+// the same refresh re-reads the session on screen and hands the row to
+// `refreshSessionHeader`, which never touches the terminal. The intent guard
+// is `openSession`'s: an answer for a session the reader has already left, or
+// one arriving while a newer open is in flight, paints nothing. A session
+// swept while open (`found: false`) is left as it is — the fleet read already
+// says it is gone, and this pass has nothing to add on the stream line.
+async function refreshOpenSession() {
+  const sessionId = view.sessionId;
+  if (sessionId === null || view.openSessionId !== sessionId) {
+    return;
+  }
+  const answer = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}`);
+  if (view.openSessionId !== sessionId || answer === null) {
+    return;
+  }
+  if (answer.found && answer.session !== null) {
+    refreshSessionHeader(answer.session);
+  }
+}
+
 function openProject(projectId) {
   view.projectId = projectId;
   showLevel("sessions");
@@ -308,6 +330,7 @@ async function refreshAll() {
     do {
       refresh.stale = false;
       await loadFleet();
+      await refreshOpenSession();
       if (projects !== null) {
         // The Projects page lists each project's sessions, so it follows the
         // same event rather than a timer of its own (§12: no polling).
