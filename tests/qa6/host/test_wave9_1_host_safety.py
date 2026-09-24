@@ -34,7 +34,7 @@ import re
 from collections.abc import Mapping
 from pathlib import Path
 
-from .. import hostprobe, paths, realclaude
+from .. import hostprobe, paths, realclaude, tmuxctl
 from ..mutations import active
 from ..sandbox import TMP_CANONICAL, RunContext
 from ..scenario import scenario
@@ -254,6 +254,15 @@ def product_tmux_log(run: RunContext, rec: Recorder) -> tuple[list[list[str]] | 
     return None, "absent"
 
 
+def pane_tmux_log(run: RunContext) -> tuple[list[dict[str, object]], str]:
+    """In-pane tmux calls (`{"argv", "tmux"}`), from the runner's ledger, else wave 8's copy, else the live file."""
+    for source in (run.run_dir / "ledgers" / "pane-tmux-argv.log", run.run_dir / "wave8-ledgers" / "pane-tmux-argv.log",
+                   run.pane_tmux_argv_log):
+        if source.exists():
+            return jsonl(source), str(source)
+    return [], "absent (no tmux call was made inside a pane)"
+
+
 def socket_violations(lines: list[list[str]], run: RunContext) -> list[list[str]]:
     pattern = paths.runner_socket_pattern(run.pid)
     return [argv for argv in lines if argv != ["tmux", "-V"]
@@ -336,6 +345,12 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
         kill_servers = [argv for argv in evaluated if any(w.startswith("kill-ser") for w in argv)
                         and not (len(argv) >= 3 and pattern.fullmatch(argv[2]))]
         rec.equal("tmux.kill_server_ours_only", [], kill_servers)
+    pane_entries, pane_source = pane_tmux_log(run)
+    rec.record("files.pane_log_source", {"source": pane_source, "entries": len(pane_entries)})
+    pane_bad = tmuxctl.pane_argv_violations(pane_entries, run.pid)
+    rec.check("tmux.pane_argv_effective_socket", not pane_bad,
+              "every tmux call made inside a pane (the real engine's; $TMUX set) resolves -S, -L, else $TMUX to "
+              "shepherd-m3-q6<pid>-<k>", {"violations": pane_bad[:10], "entries": len(pane_entries)})
     unseeded = argv_lines(run.run_dir / "ledgers" / "unseeded-tmux-argv.log")
     rec.record("tmux.unseeded_log", {"lines": len(unseeded), "sockets": sorted({a[2] for a in unseeded if len(a) >= 3})})
     rec.equal("tmux.unseeded_no_user_socket", [], [a for a in unseeded if len(a) >= 3 and a[2] in paths.USER_TMUX_SOCKETS])

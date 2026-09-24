@@ -45,7 +45,7 @@ if __package__ in (None, ""):
     sys.path[:] = [entry for entry in sys.path if os.path.realpath(entry or ".") != _here]
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, teardown  # noqa: E402
+from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, teardown, tmuxctl  # noqa: E402
 from qa6.catalog import SCENARIOS  # noqa: E402
 from qa6.report import LaneExit, append_record, build_record, load_records, record_path, write_report  # noqa: E402
 from qa6.sandbox import (  # noqa: E402
@@ -118,6 +118,7 @@ def ledger_copies(run: RunContext) -> list[tuple[Path, str]]:
     return [
         (run.tmux_argv_log, "tmux-argv.log"),
         (run.unseeded_tmux_argv_log, "unseeded-tmux-argv.log"),
+        (run.pane_tmux_argv_log, "pane-tmux-argv.log"),
         (run.claude_argv_log, "claude-argv.log"),
         (run.pid_ledger, run.pid_ledger.name),
         (run.controld_argv_ledger, run.controld_argv_ledger.name),
@@ -138,13 +139,12 @@ def write_blocked(run: RunContext, blocked: dict[str, str]) -> None:
 
 
 def z2_violations(run: RunContext) -> list[str]:
-    """Any product tmux argv that is not exactly `tmux -V` and not `-L <our socket>`."""
+    """Any product tmux argv that is not exactly `tmux -V` and not `-L <our socket>`, and any
+    in-pane (engine) tmux call whose effective socket (`-S`, `-L`, else `$TMUX`) is not ours."""
     violations: list[str] = []
     log = run.tmux_argv_log
-    if not log.exists():
-        return violations
     pattern = paths.runner_socket_pattern(run.pid)
-    for line in log.read_text(encoding="utf-8").splitlines():
+    for line in (log.read_text(encoding="utf-8").splitlines() if log.exists() else []):
         if not line.strip():
             continue
         argv = json.loads(line)
@@ -152,6 +152,13 @@ def z2_violations(run: RunContext) -> list[str]:
             continue
         if not (isinstance(argv, list) and len(argv) >= 3 and argv[1] == "-L" and pattern.fullmatch(str(argv[2]))):
             violations.append(line[:300])
+    pane_log = run.pane_tmux_argv_log
+    entries: list[dict[str, object]] = []
+    for line in (pane_log.read_text(encoding="utf-8").splitlines() if pane_log.exists() else []):
+        if line.strip():
+            decoded: object = json.loads(line)
+            entries.append({str(k): v for k, v in decoded.items()} if isinstance(decoded, dict) else {"argv": decoded})
+    violations.extend(f"in-pane: {json.dumps(v)[:300]}" for v in tmuxctl.pane_argv_violations(entries, run.pid))
     return violations
 
 

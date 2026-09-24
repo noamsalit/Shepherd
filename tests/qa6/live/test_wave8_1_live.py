@@ -730,6 +730,7 @@ def product_log_copy(qa6_run: RunContext) -> Iterator[None]:
     target = qa6_run.run_dir / "wave8-ledgers"
     target.mkdir(parents=True, exist_ok=True)
     for source, name in ((qa6_run.tmux_argv_log, "tmux-argv.product.log"),
+                         (qa6_run.pane_tmux_argv_log, "pane-tmux-argv.log"),
                          (qa6_run.claude_argv_log, "claude-argv.log")):
         if source.exists():
             (target / name).write_bytes(source.read_bytes())

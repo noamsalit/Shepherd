@@ -43,11 +43,13 @@ def forks_log(run: RunContext) -> Path:
 
 
 def write_shims(run: RunContext) -> None:
-    tmux_text = _render("tmux.sh.in", {"TMUX_LOG": str(run.tmux_argv_log), "TMUX": str(paths.TMUX_BIN)})
+    pane_log = str(run.pane_tmux_argv_log)
+    tmux_text = _render("tmux.sh.in", {"TMUX_LOG": str(run.tmux_argv_log), "PANE_LOG": pane_log, "TMUX": str(paths.TMUX_BIN)})
     for directory in (run.shims, run.shims_live, run.shims_d9):
         _write(directory / "tmux", tmux_text)
     _write(run.shims_unseeded / "tmux",
-           _render("tmux.sh.in", {"TMUX_LOG": str(run.unseeded_tmux_argv_log), "TMUX": str(paths.TMUX_BIN)}))
+           _render("tmux.sh.in", {"TMUX_LOG": str(run.unseeded_tmux_argv_log), "PANE_LOG": pane_log,
+                                  "TMUX": str(paths.TMUX_BIN)}))
     _write(
         run.shims / "claude",
         _render(

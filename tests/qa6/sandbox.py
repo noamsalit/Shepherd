@@ -126,6 +126,11 @@ class RunContext:
         return self.shims / "tmux-argv.log"
 
     @property
+    def pane_tmux_argv_log(self) -> Path:
+        """tmux calls made from inside a pane (`$TMUX` set): the engine's, never the product's."""
+        return self.shims / "pane-tmux-argv.log"
+
+    @property
     def claude_argv_log(self) -> Path:
         return self.shims / "claude-argv.log"
 

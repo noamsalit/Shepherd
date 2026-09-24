@@ -19,13 +19,20 @@ ways, each forced by the qa6 topology:
    still refused through the product's own `is_server_teardown`.
 
 `tmux -V` is the one argv without `-L`; it contacts no server.
+
+`effective_socket` / `pane_argv_violations` (pure, no tmux is run) judge the
+tmux calls made from **inside** a pane — the real engine queries its own pane
+(`display-message -p`, `show -gv …`) with no `-L`, and tmux resolves that
+through the pane's `$TMUX`. The logging shim writes those, with `$TMUX`, to
+`run.pane_tmux_argv_log`; each must resolve to one of this run's sockets.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from shepherd.runner.tmux_cmd import is_server_teardown
@@ -48,6 +55,58 @@ class TmuxResult:
 def socket_allowed(socket: str, run_pid: int) -> bool:
     """True only for this run's `shepherd-m3-q6<pid>-<k>` sockets."""
     return re.fullmatch(paths.runner_socket_pattern(run_pid).pattern, socket) is not None
+
+
+#: tmux's own global options that take a value (so the value is not a command name).
+_VALUED_GLOBALS = ("-c", "-f", "-T")
+
+
+def _socket_name(path: str) -> str:
+    """A socket path's name if it lives in this uid's tmux socket dir, else the path itself."""
+    return os.path.basename(path) if os.path.dirname(path) == str(paths.TMUX_SOCKET_DIR) else path
+
+
+def effective_socket(argv: Sequence[str], tmux_env: str | None) -> str | None:
+    """The socket a tmux client would contact, in tmux's own order: `-S`, `-L`, `$TMUX`, `default`.
+
+    `None` for `tmux -V` (it contacts no server). A `-S` path or `$TMUX` outside
+    this uid's socket dir comes back as the full path, which no socket pattern
+    matches.
+    """
+    words = list(argv[1:]) if argv and argv[0] == "tmux" else list(argv)
+    if words == ["-V"]:
+        return None
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if not word.startswith("-") or word == "--":
+            break
+        if word in ("-L", "-S"):
+            if index + 1 >= len(words):
+                return f"<{word} without a value>"
+            value = words[index + 1]
+            return value if word == "-L" else _socket_name(value)
+        if word.startswith("-L"):
+            return word[2:]
+        if word.startswith("-S"):
+            return _socket_name(word[2:])
+        index += 2 if word in _VALUED_GLOBALS else 1
+    if tmux_env:
+        return _socket_name(tmux_env.split(",", 1)[0])
+    return "default"
+
+
+def pane_argv_violations(entries: Sequence[Mapping[str, object]], run_pid: int) -> list[dict[str, object]]:
+    """In-pane tmux calls (`{"argv", "tmux"}` records) whose effective socket is not this run's."""
+    found: list[dict[str, object]] = []
+    for entry in entries:
+        raw = entry.get("argv")
+        argv = [str(word) for word in raw] if isinstance(raw, list) else []
+        tmux_env = entry.get("tmux")
+        socket = effective_socket(argv, tmux_env if isinstance(tmux_env, str) else None)
+        if socket is not None and not socket_allowed(socket, run_pid):
+            found.append({"argv": argv, "tmux": tmux_env, "effective_socket": socket})
+    return found
 
 
 def _argv(socket: str, run_pid: int, *words: str, allow_kill_server: bool = False) -> list[str]:

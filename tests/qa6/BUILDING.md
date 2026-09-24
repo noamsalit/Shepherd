@@ -150,7 +150,12 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   absolute binary (never in the shim log). `sessions`, `run`, `run_bytes`,
   `target(name)`, `kill_server` (teardown backstop only). The product's own
   tmux calls go through `<run0>/shims/tmux` → `run.tmux_argv_log` (one JSON
-  array per line).
+  array per line). A tmux call made **inside a pane** (`$TMUX` set — the real
+  engine queries its own pane with `display-message -p` / `show -gv …` and no
+  `-L`) goes to `run.pane_tmux_argv_log` as `{"argv", "tmux": $TMUX}` instead;
+  `effective_socket(argv, tmux_env)` / `pane_argv_violations(entries, pid)`
+  judge it by the socket tmux would contact (`-S`, `-L`, else `$TMUX`), and the
+  runner's Z2 scan and Z2's `tmux.pane_argv_effective_socket` both apply it.
 * **browser.py waits** — `pump(page)` and `settle(predicate, bound_s=UI_BOUND_S,
   page=None) -> (value | None, elapsed)`. **Sync Playwright dispatches page
   events (request, response, console, websocket) only while a Playwright call
@@ -248,7 +253,7 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
 * Wave 9 runs **after** the runner's teardown (run roots removed; Z3 expects
   that): `<run_dir>/baseline.json` (pre-run host), `<run_dir>/host-after/<lane>-
   w<N>.json` (after every lane) and `after-teardown.json`,
-  `<run_dir>/ledgers/{tmux-argv.log, unseeded-tmux-argv.log, claude-argv.log,
+  `<run_dir>/ledgers/{tmux-argv.log, unseeded-tmux-argv.log, pane-tmux-argv.log, claude-argv.log,
   pids.jsonl, controld-argv.jsonl, port-refusals.log}` (SI-2: the product log
   and the unseeded log are distinct files; `run.ledger_copies` names them),
   `<run_dir>/teardown-problems.jsonl`, `<run_dir>/real-claude.json` (which engine

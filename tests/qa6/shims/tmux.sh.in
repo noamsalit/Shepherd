@@ -2,5 +2,14 @@
 # QA6 logging `tmux` shim (test-plan §6). Appends the argv it was given as one
 # JSON array per line, then execs the real tmux with the argv UNCHANGED. It adds
 # nothing, removes nothing, and never names a socket itself.
-/usr/bin/perl -MJSON::PP -MEncode -e 'my $log = shift @ARGV; open(my $f, ">>", $log) or exit 0; print $f JSON::PP->new->encode(["tmux", map { Encode::decode("UTF-8", $_) } @ARGV]) . "\n"; close $f;' '@TMUX_LOG@' "$@"
+#
+# A call made from INSIDE a pane ($TMUX set: tmux sets it in every pane, and the
+# product's own env never carries it) is the engine's or the pane's, not the
+# product's: it goes to the pane log as {"argv", "tmux": $TMUX}, where the runner
+# and Z2 check that its effective socket (-S, -L, else $TMUX) is this run's.
+if [ -n "$TMUX" ]; then
+  /usr/bin/perl -MJSON::PP -MEncode -e 'my $log = shift @ARGV; my $pane = shift @ARGV; open(my $f, ">>", $log) or exit 0; print $f JSON::PP->new->canonical->encode({argv => ["tmux", map { Encode::decode("UTF-8", $_) } @ARGV], tmux => $pane}) . "\n"; close $f;' '@PANE_LOG@' "$TMUX" "$@"
+else
+  /usr/bin/perl -MJSON::PP -MEncode -e 'my $log = shift @ARGV; open(my $f, ">>", $log) or exit 0; print $f JSON::PP->new->encode(["tmux", map { Encode::decode("UTF-8", $_) } @ARGV]) . "\n"; close $f;' '@TMUX_LOG@' "$@"
+fi
 exec '@TMUX@' "$@"

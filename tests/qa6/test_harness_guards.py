@@ -423,6 +423,31 @@ def test_proof_real_claude_resolution() -> None:
     assert changed is not None and "ln -sfn" in changed, f"proof_real_claude.a_repair_or_repoint_is_a_change: {changed}"
 
 
+def test_proof_pane_argv_effective_socket() -> None:
+    """In-pane tmux calls are judged by the socket tmux would actually contact (-S, -L, else $TMUX)."""
+    from .tmuxctl import effective_socket, pane_argv_violations
+
+    pid = 424242
+    ours = f"{paths.TMUX_SOCKET_DIR}/shepherd-m3-q6{pid}-3,12345,0"
+    planted: list[dict[str, object]] = [
+        {"argv": ["tmux", "display-message", "-p", "#{client_termtype}"], "tmux": ours},
+        {"argv": ["tmux", "-L", "shepherd", "list-sessions"], "tmux": ours},
+        {"argv": ["tmux", "show", "-gv", "focus-events"], "tmux": f"{paths.TMUX_SOCKET_DIR}/default,1,0"},
+        {"argv": ["tmux", "-S", "/elsewhere/shepherd-m3-q6424242-3", "ls"], "tmux": ours},
+        {"argv": ["tmux", "-V"], "tmux": ours},
+    ]
+    flagged = [entry["argv"] for entry in pane_argv_violations(planted, pid)]
+    problems: list[str] = []
+    if planted[0]["argv"] in flagged:
+        problems.append("proof_pane_argv.allows_our_socket_via_TMUX")
+    for index, label in ((1, "flags_user_socket_in_pane"), (2, "flags_default_via_TMUX"), (3, "flags_foreign_S_path")):
+        if planted[index]["argv"] not in flagged:
+            problems.append(f"proof_pane_argv.{label}")
+    if effective_socket(["tmux", "-V"], None) is not None or effective_socket(["tmux", "ls"], None) != "default":
+        problems.append("proof_pane_argv.version_contacts_nothing_and_bare_is_default")
+    assert not problems, f"pane argv judgement: {problems}"
+
+
 # ----- the proofs of the five copied qa5 helpers -----------------------------------------------
 
 
@@ -550,7 +575,7 @@ def mutation_results() -> Iterator[list[dict[str, object]]]:
 
 
 @pytest.mark.parametrize("module", ["sse_rig", "auditprobe", "wsclient", "constants", "tmuxctl",
-                                    "sandbox_xdg", "sandbox_checker", "sandbox_autoupdater"])
+                                    "sandbox_xdg", "sandbox_checker", "sandbox_autoupdater", "tmuxctl_pane"])
 def test_mutation_reproves_copied_module(module: str, mutation_results: list[dict[str, object]]) -> None:
     from .mutations import load_module_mutation, run_module_mutation
 
