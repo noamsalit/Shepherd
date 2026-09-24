@@ -348,13 +348,17 @@ def build_authorizer(
         )
 
     def _authorize(tool: ToolDef, args: ToolArgs, ctx: CallerContext) -> AuthzOutcome:
-        decision = decide(tool.blast_class, level(), ctx.audience)
+        # Read once: the level the table decided on is the level the audit
+        # record states (T6-3), even if a person moves it while a card is up.
+        current = level()
+        decision = decide(tool.blast_class, current, ctx.audience)
         if decision.verdict is Verdict.ALLOW:
             return AuthzOutcome(
                 allowed=True,
                 approved_by=decision.approved_by,
                 approval_id=None,
                 reason=None,
+                autonomy_level=int(current),
             )
         approval = store.create(tool, args, ctx)
         _publish(
@@ -376,6 +380,7 @@ def build_authorizer(
             approved_by=approved_by,
             approval_id=approval.id,
             reason=reason,
+            autonomy_level=int(current),
         )
 
     return _authorize

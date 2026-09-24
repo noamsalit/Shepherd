@@ -164,6 +164,8 @@ def create_project(store: Store, *, name: str, description: str | None) -> dict[
     """A project, declared. **Never keyed by name** (E1) — `/work/api` and
     `/personal/api` are two projects, and the verb this replaced made them one
     row where the second registration overwrote the first."""
+    if not name.strip():
+        return _refused("created", "a project name cannot be blank", "project")
     created = store.create_project(name=name, description=description)
     return {
         "created": True,
