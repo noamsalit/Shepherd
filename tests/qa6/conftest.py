@@ -67,7 +67,19 @@ def scenario_id(item: pytest.Item) -> str | None:
     return str(marker.args[0])
 
 
+@pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Refuse `pytest-randomly` only when qa6 items are about to RUN.
+
+    `trylast`, so `items` is what survives `-m`/`-k` deselection: the default
+    lane's `addopts` deselects qa6, and a hook that ran before that saw qa6 items
+    in every whole-tree collection and refused the default run itself. And never
+    under `--collect-only`: collection runs nothing, so wave order cannot matter,
+    and `tests/boundaries/test_collected_node_ids.py` collects the whole tree
+    (qa6 included, `pytest-randomly` active) to freeze node ids.
+    """
+    if config.option.collectonly:
+        return
     selected = [item for item in items if _is_qa6(item)]
     if not selected:
         return

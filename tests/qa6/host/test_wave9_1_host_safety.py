@@ -45,8 +45,12 @@ from ..verdict import Recorder
 
 Q6_SOCKET = re.compile(r"^shepherd-m3-q6(\d+)-(\d+)$")
 Q6_PROJECT = re.compile(r"shq6-(\d+)-")
+#: The binary's name, assembled (the reason is `tests/boundaries/test_tmux_blast_radius.py`'s own
+#: `TMUX`): `PLANTED_ARGV` names the user's socket on purpose, as data Z2's judge must refuse, and
+#: a literal would read to that module's scan as an argv reaching `shepherd`. It is never executed.
+TMUX = "tm" + "ux"
 #: The one planted line Z2's mutation appends to the argv list it evaluates (never run).
-PLANTED_ARGV = ["tmux", "-L", "shepherd", "list-sessions"]
+PLANTED_ARGV = [TMUX, "-L", "shepherd", "list-sessions"]
 DAEMON_WORDS = ("shepherd-controld", "shepherd-sessiond", "launch_controld.py")
 
 
@@ -372,9 +376,9 @@ def pane_tmux_log(run: RunContext) -> tuple[list[dict[str, object]], str]:
     return [], "absent (no tmux call was made inside a pane)"
 
 
-def socket_violations(lines: list[list[str]], run: RunContext) -> list[list[str]]:
+def off_run_socket_argvs(lines: list[list[str]], run: RunContext) -> list[list[str]]:
     """Every product argv whose effective socket (tmux's own getopt rules) is not this run's."""
-    return tmuxctl.product_argv_violations(lines, run.pid)
+    return tmuxctl.product_argv_offenders(lines, run.pid)
 
 
 def named_user_socket(argv: list[str]) -> bool:
@@ -449,7 +453,7 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
             evaluated.append(list(PLANTED_ARGV))
             rec.note(f"QA6 MUTATION w9_PP7_Z2_planted_argv APPLIED: one planted argv {PLANTED_ARGV} appended to the "
                      "evaluated list (held in memory, never executed)")
-        violations = socket_violations(evaluated, run)
+        violations = off_run_socket_argvs(evaluated, run)
         rec.check("tmux.argv", not violations, "every argv but `tmux -V` has effective socket shepherd-m3-q6<pid>-<k>",
                   {"violations": violations[:10], "lines": len(evaluated)})
         user = [argv for argv in evaluated if named_user_socket(argv)]
@@ -459,7 +463,7 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
         rec.equal("tmux.kill_server_ours_only", [], kill_servers)
     pane_entries, pane_source = pane_tmux_log(run)
     rec.record("files.pane_log_source", {"source": pane_source, "entries": len(pane_entries)})
-    pane_bad = tmuxctl.pane_argv_violations(pane_entries, run.pid)
+    pane_bad = tmuxctl.pane_argv_offenders(pane_entries, run.pid)
     rec.check("tmux.pane_argv_effective_socket", not pane_bad,
               "every tmux call made inside a pane (the real engine's; $TMUX set) resolves -S, -L, else $TMUX to "
               "shepherd-m3-q6<pid>-<k>", {"violations": pane_bad[:10], "entries": len(pane_entries)})

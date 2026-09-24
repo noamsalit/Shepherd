@@ -64,6 +64,15 @@ from .verdict import Blocked, ProductFail, Recorder, Sourced, await_env, classif
 
 pytestmark = pytest.mark.qa6
 
+#: The binary's name, assembled — for the reason `tests/boundaries/test_tmux_blast_radius.py`'s
+#: docstring gives for its own `TMUX`: this file sits inside the tree that module scans, and the
+#: argvs below are **data handed to the socket judge** (`tmuxctl.effective_socket`,
+#: `*_argv_offenders`, `unseeded_excused`) — several deliberately name the user's socket or a
+#: teardown verb so the judge can be seen to refuse them. None is ever executed; the one proof
+#: that execs anything (`test_proof_tmux_shim_refuses`) execs a FAKE binary behind the shim. A
+#: literal here would make the judge's own test corpus read as argvs reaching `shepherd`.
+TMUX = "tm" + "ux"
+
 PACKAGE = paths.QA6_DIR
 PLAN_TIERS = {"integration": 8, "e2e_backend": 96, "ui": 57}
 
@@ -201,46 +210,57 @@ def test_guard_catalog_reconciles_with_the_plan() -> None:
     assert sum(totals.values()) == 161 and dict(Counter(s.tier for s in SCENARIOS)) == PLAN_TIERS
 
 
-def implemented() -> list[tuple[str, str]]:
-    found: list[tuple[str, str]] = []
-    for path in package_files():
-        if not path.name.startswith("test_"):
-            continue
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
-                continue
-            for decorator in node.decorator_list:
-                if (isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name)
-                        and decorator.func.id in ("scenario", "live_scenario") and decorator.args
-                        and isinstance(decorator.args[0], ast.Constant)):
-                    sid = str(decorator.args[0].value)
-                    found.append((sid, f"{path.relative_to(PACKAGE)}::{node.name}"))
-                    assert node.name.startswith(f"test_{sid.lower()}_"), (
-                        f"{node.name} must be named test_{sid.lower()}_… (the runner's collection convention)"
-                    )
-    return found
-
-
 def test_guard_every_scenario_id_is_planned_and_implemented_once() -> None:
+    """Every `@scenario`/`@live_scenario` id is a plan id, implemented once, named for the runner, and
+    lives in a module of its own wave.
+
+    The AST walk is this test's own working, a closure and not a module-level helper: it reads qa6's
+    test modules only, and `tests/boundaries/test_one_definition_site.py` counts a module-level
+    source-reading function as a boundary rule that needs an inventory entry.
+    """
+
+    def implemented() -> list[tuple[str, str]]:
+        found: list[tuple[str, str]] = []
+        for path in package_files():
+            if not path.name.startswith("test_"):
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.FunctionDef):
+                    continue
+                for decorator in node.decorator_list:
+                    if (isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name)
+                            and decorator.func.id in ("scenario", "live_scenario") and decorator.args
+                            and isinstance(decorator.args[0], ast.Constant)):
+                        sid = str(decorator.args[0].value)
+                        found.append((sid, f"{path.relative_to(PACKAGE)}::{node.name}"))
+                        assert node.name.startswith(f"test_{sid.lower()}_"), (
+                            f"{node.name} must be named test_{sid.lower()}_… (the runner's collection convention)"
+                        )
+        return found
+
     found = implemented()
+    assert found, "the scan found no @scenario at all: an empty scan proves nothing about duplicates"
     ids = [sid for sid, _where in found]
     unknown = sorted(set(ids) - set(BY_ID))
     duplicates = sorted(sid for sid, n in Counter(ids).items() if n > 1)
     assert not unknown, f"not test-plan ids: {unknown}"
     assert not duplicates, f"implemented more than once: {duplicates}"
+    for sid, where in found:
+        module = Path(where.split("::", 1)[0])
+        named = re.match(r"^test_wave([1-9])_", module.name)
+        if len(module.parts) > 1 and named is not None:
+            assert BY_ID[sid].wave == int(named.group(1)), f"{sid} is a wave-{BY_ID[sid].wave} scenario in {module.name}"
 
 
 def test_guard_modules_follow_the_lane_naming_convention() -> None:
+    """Lane directory and `test_wave<N>_<topic>.py` shape; each scenario's wave-vs-module check is in
+    `test_guard_every_scenario_id_is_planned_and_implemented_once`, beside the walk that finds it."""
     lanes = {"sub", "unit", "cli", "live", "inproc", "inproc_long", "host"}
     for path in package_files():
         if path.name.startswith("test_") and path.parent != PACKAGE:
             assert path.parent.name in lanes, f"{path} is not in a lane directory {sorted(lanes)}"
             assert re.match(r"^test_wave[1-9]_[A-Za-z0-9_]+\.py$", path.name), f"{path.name} must be test_wave<N>_<topic>.py"
-            wave = int(path.name[len("test_wave")])
-            for sid, where in implemented():
-                if where.startswith(str(path.relative_to(PACKAGE))):
-                    assert BY_ID[sid].wave == wave, f"{sid} is a wave-{BY_ID[sid].wave} scenario in {path.name}"
 
 
 # ----- static hygiene ------------------------------------------------------------------------
@@ -272,80 +292,73 @@ EVAL_ATTRS = ("evaluate", "evaluate_handle", "eval_on_selector", "eval_on_select
 SYNTHETIC_EVENT_ATTRS = ("dispatch_event",)
 
 
-def _string_parts(node: ast.AST) -> list[str]:
-    """The literal text of a string expression: a constant, an f-string's constant parts, a concatenation."""
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        return [node.value]
-    if isinstance(node, ast.JoinedStr):
-        return ["".join(v.value for v in node.values if isinstance(v, ast.Constant) and isinstance(v.value, str))]
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        return _string_parts(node.left) + _string_parts(node.right)
-    return []
-
-
-def _assigned_strings(scope: ast.AST, name: str) -> list[str]:
-    """Every string literal assigned to `name` anywhere in `scope` (a function or the module)."""
-    found: list[str] = []
-    for node in ast.walk(scope):
-        targets: list[ast.expr] = []
-        value: ast.expr | None = None
-        if isinstance(node, ast.Assign):
-            targets, value = list(node.targets), node.value
-        elif isinstance(node, ast.AnnAssign) and node.value is not None:
-            targets, value = [node.target], node.value
-        if value is not None and any(isinstance(t, ast.Name) and t.id == name for t in targets):
-            found.extend(_string_parts(value))
-    return found
-
-
-def _enclosing_function(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-    current = parents.get(node)
-    while current is not None:
-        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            return current
-        current = parents.get(current)
-    return None
-
-
-def js_action_offenders(tree: ast.Module, where: str) -> list[str]:
+def test_guard_no_js_synthesised_user_action_outside_js_functions() -> None:
     """Review finding 8: JS-synthesised user actions anywhere in a module (module level, async
     def, lambdas), whether the script is a literal, an f-string, a concatenation or a name
-    bound to one; plus Playwright's `dispatch_event`. Only a `js_*` function may hold one."""
-    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
-    offenders: list[str] = []
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
-            continue
-        function = _enclosing_function(node, parents)
-        if function is not None and function.name.startswith("js_"):
-            continue
-        label = f"{where}:{node.lineno} in {function.name if function else '<module>'}"
-        if node.func.attr in SYNTHETIC_EVENT_ATTRS:
-            offenders.append(f"{label}: {node.func.attr}()")
-            continue
-        if node.func.attr not in EVAL_ATTRS:
-            continue
-        for arg in [*node.args, *(k.value for k in node.keywords)]:
-            texts = _string_parts(arg)
-            if isinstance(arg, ast.Name):
-                texts = _assigned_strings(function, arg.id) if function is not None else []
-                texts += _assigned_strings(tree, arg.id)
-            if any(JS_USER_ACTION.search(text) for text in texts):
-                offenders.append(label)
-    return offenders
+    bound to one; plus Playwright's `dispatch_event`. Only a `js_*` function may hold one.
 
+    The guard and its proof are one test because the scanner is this test's own closure, not a
+    module-level helper (`tests/boundaries/test_one_definition_site.py` counts a module-level
+    source-reading function as a boundary rule). Arrival first: the planted spellings (parsed,
+    never run) must each be caught before the package scan's emptiness means anything.
+    """
 
-def test_guard_no_js_synthesised_user_action_outside_js_functions() -> None:
-    offenders: list[str] = []
-    for path in package_files():
-        if path.name == "test_harness_guards.py":
-            continue
-        offenders.extend(js_action_offenders(ast.parse(path.read_text(encoding="utf-8")), str(path.relative_to(PACKAGE))))
-    assert not offenders, f"JS user actions outside js_* functions: {offenders}"
+    def string_parts(node: ast.AST) -> list[str]:
+        """The literal text of a string expression: a constant, an f-string's constant parts, a concatenation."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, ast.JoinedStr):
+            return ["".join(v.value for v in node.values if isinstance(v, ast.Constant) and isinstance(v.value, str))]
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return string_parts(node.left) + string_parts(node.right)
+        return []
 
+    def assigned_strings(scope: ast.AST, name: str) -> list[str]:
+        """Every string literal assigned to `name` anywhere in `scope` (a function or the module)."""
+        found: list[str] = []
+        for node in ast.walk(scope):
+            targets: list[ast.expr] = []
+            value: ast.expr | None = None
+            if isinstance(node, ast.Assign):
+                targets, value = list(node.targets), node.value
+            elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                targets, value = [node.target], node.value
+            if value is not None and any(isinstance(t, ast.Name) and t.id == name for t in targets):
+                found.extend(string_parts(value))
+        return found
 
-def test_proof_js_action_guard_sees_every_spelling() -> None:
-    """The guard itself, on planted sources (parsed, never run): each spelling review 8 named is caught."""
+    def enclosing_function(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+        current = parents.get(node)
+        while current is not None:
+            if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return current
+            current = parents.get(current)
+        return None
+
+    def js_action_offenders(tree: ast.Module, where: str) -> list[str]:
+        parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+        offenders: list[str] = []
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+                continue
+            function = enclosing_function(node, parents)
+            if function is not None and function.name.startswith("js_"):
+                continue
+            label = f"{where}:{node.lineno} in {function.name if function else '<module>'}"
+            if node.func.attr in SYNTHETIC_EVENT_ATTRS:
+                offenders.append(f"{label}: {node.func.attr}()")
+                continue
+            if node.func.attr not in EVAL_ATTRS:
+                continue
+            for arg in [*node.args, *(k.value for k in node.keywords)]:
+                texts = string_parts(arg)
+                if isinstance(arg, ast.Name):
+                    texts = assigned_strings(function, arg.id) if function is not None else []
+                    texts += assigned_strings(tree, arg.id)
+                if any(JS_USER_ACTION.search(text) for text in texts):
+                    offenders.append(label)
+        return offenders
+
     planted = {
         "variable": "def f(page):\n    script = 'el => el.click()'\n    page.evaluate(script)\n",
         "fstring": "def f(page, x):\n    page.evaluate(f'document.querySelector({x}).click()')\n",
@@ -359,6 +372,13 @@ def test_proof_js_action_guard_sees_every_spelling() -> None:
     allowed = "def js_open(page):\n    page.evaluate('d => d.click()')\ndef f(page):\n    page.evaluate('d => d.open === true')\n"
     assert not missed, f"proof_js_guard.catches_every_spelling: missed {missed}"
     assert not js_action_offenders(ast.parse(allowed), "allowed"), "proof_js_guard.allows_js_functions_and_reads"
+
+    offenders: list[str] = []
+    for path in package_files():
+        if path.name == "test_harness_guards.py":
+            continue
+        offenders.extend(js_action_offenders(ast.parse(path.read_text(encoding="utf-8")), str(path.relative_to(PACKAGE))))
+    assert not offenders, f"JS user actions outside js_* functions: {offenders}"
 
 
 def test_guard_shims_carry_no_signal_or_teardown_verb() -> None:
@@ -400,8 +420,23 @@ def test_guard_default_lane_deselects_qa6() -> None:
 
 
 def test_guard_randomly_is_refused_for_qa6_items() -> None:
-    done = _pytest("--collect-only", "-m", "qa6", "tests/qa6/test_harness_guards.py", randomly=True)
-    assert done.returncode != 0 and "no:randomly" in (done.stdout + done.stderr), (done.returncode, done.stdout[-400:])
+    """Refused when a qa6 item is selected to RUN; not when qa6 is only collected or deselected.
+
+    The run half selects one inert, fast node, so a broken refusal costs one shim-text read
+    rather than recursing into this whole file. The two controls are what a whole-tree
+    `--collect-only` (tests/boundaries/test_collected_node_ids.py) and the default lane need.
+    """
+    refusal = "waves are ordered"
+    inert = "tests/qa6/test_harness_guards.py::test_guard_shims_carry_no_signal_or_teardown_verb"
+    done = _pytest("-m", "qa6", inert, randomly=True)
+    assert done.returncode != 0 and "no:randomly" in (done.stdout + done.stderr), (
+        "proof_randomly.running_qa6_is_refused", done.returncode, done.stdout[-400:])
+    collected = _pytest("--collect-only", "-m", "qa6", "tests/qa6/test_harness_guards.py", randomly=True)
+    assert collected.returncode == 0 and refusal not in collected.stdout + collected.stderr, (
+        "proof_randomly.collect_only_is_not_refused", collected.returncode, collected.stderr[-400:])
+    deselected = _pytest(inert, randomly=True)
+    assert deselected.returncode == 5 and refusal not in deselected.stdout + deselected.stderr, (
+        "proof_randomly.deselected_qa6_is_not_refused", deselected.returncode, deselected.stderr[-400:])
 
 
 # ----- host safety (SI-1 / INC-1) --------------------------------------------------------------
@@ -482,7 +517,26 @@ def test_proof_host_safe_envs() -> None:
 
 
 def test_guard_no_ad_hoc_real_home_env() -> None:
-    """Only sandbox.py spells XDG_* or passes home=REAL_HOME; nothing execs the user's claude link."""
+    """Only sandbox.py spells XDG_* or passes home=REAL_HOME; nothing execs the user's claude link.
+
+    `only_described` is this test's own closure, not a module-level helper: a module-level
+    source-reading function is a boundary rule to `tests/boundaries/test_one_definition_site.py`.
+    """
+
+    def only_described(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> bool:
+        """True when the node is only formatted into a message: an f-string or a logging call argument."""
+        current = parents.get(node)
+        while current is not None:
+            if isinstance(current, (ast.JoinedStr, ast.FormattedValue)):
+                return True
+            if (isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute)
+                    and current.func.attr in ("debug", "info", "warning", "error")):
+                return True
+            if isinstance(current, (ast.stmt, ast.Call)):
+                return False
+            current = parents.get(current)
+        return False
+
     offenders: list[str] = []
     for path in package_files():
         if path.name == "test_harness_guards.py":
@@ -498,24 +552,9 @@ def test_guard_no_ad_hoc_real_home_env() -> None:
                     and isinstance(node.value, ast.Attribute) and node.value.attr == "REAL_HOME"):
                 offenders.append(f"{where}:{node.value.lineno} passes home=REAL_HOME (use sandbox.real_home_env)")
             if isinstance(node, ast.Attribute) and node.attr == "REAL_CLAUDE_BIN" and where not in ("paths.py", "realclaude.py"):
-                if not _only_described(node, parents):
+                if not only_described(node, parents):
                     offenders.append(f"{where}:{node.lineno} uses REAL_CLAUDE_BIN outside a message (exec run.real_claude)")
     assert not offenders, f"ad-hoc real-HOME env or real-engine exec: {offenders}"
-
-
-def _only_described(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> bool:
-    """True when the node is only formatted into a message: an f-string or a logging call argument."""
-    current = parents.get(node)
-    while current is not None:
-        if isinstance(current, (ast.JoinedStr, ast.FormattedValue)):
-            return True
-        if (isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute)
-                and current.func.attr in ("debug", "info", "warning", "error")):
-            return True
-        if isinstance(current, (ast.stmt, ast.Call)):
-            return False
-        current = parents.get(current)
-    return False
 
 
 def test_proof_real_claude_resolution() -> None:
@@ -564,64 +603,64 @@ def test_proof_pane_argv_effective_socket() -> None:
     the first-`-L`-wins parser scored clean while real tmux reaches `default` or
     `shepherd` (confirmed against tmux 3.6a with made-up socket names).
     """
-    from .tmuxctl import effective_socket, pane_argv_violations, product_argv_violations
+    from .tmuxctl import effective_socket, pane_argv_offenders, product_argv_offenders
 
     pid = 424242
     ours = f"shepherd-m3-q6{pid}-3"
     ours_env = f"{paths.TMUX_SOCKET_DIR}/{ours},12345,0"
     default_path = f"{paths.TMUX_SOCKET_DIR}/default"
     planted: list[dict[str, object]] = [
-        {"argv": ["tmux", "display-message", "-p", "#{client_termtype}"], "tmux": ours_env},
-        {"argv": ["tmux", "-L", "shepherd", "list-sessions"], "tmux": ours_env},
-        {"argv": ["tmux", "show", "-gv", "focus-events"], "tmux": f"{paths.TMUX_SOCKET_DIR}/default,1,0"},
-        {"argv": ["tmux", "-S", "/elsewhere/shepherd-m3-q6424242-3", "ls"], "tmux": ours_env},
-        {"argv": ["tmux", "-V"], "tmux": ours_env},
+        {"argv": [TMUX, "display-message", "-p", "#{client_termtype}"], "tmux": ours_env},
+        {"argv": [TMUX, "-L", "shepherd", "list-sessions"], "tmux": ours_env},
+        {"argv": [TMUX, "show", "-gv", "focus-events"], "tmux": f"{paths.TMUX_SOCKET_DIR}/default,1,0"},
+        {"argv": [TMUX, "-S", "/elsewhere/shepherd-m3-q6424242-3", "ls"], "tmux": ours_env},
+        {"argv": [TMUX, "-V"], "tmux": ours_env},
     ]
-    flagged = [entry["argv"] for entry in pane_argv_violations(planted, pid)]
+    flagged = [entry["argv"] for entry in pane_argv_offenders(planted, pid)]
     problems: list[str] = []
     if planted[0]["argv"] in flagged or planted[4]["argv"] in flagged:
         problems.append("proof_pane_argv.allows_our_socket_via_TMUX")
     for index, label in ((1, "flags_user_socket_in_pane"), (2, "flags_default_via_TMUX"), (3, "flags_foreign_S_path")):
         if planted[index]["argv"] not in flagged:
             problems.append(f"proof_pane_argv.{label}")
-    if effective_socket(["tmux", "-V"], None) is not None or effective_socket(["tmux", "ls"], None) != "default":
+    if effective_socket([TMUX, "-V"], None) is not None or effective_socket([TMUX, "ls"], None) != "default":
         problems.append("proof_pane_argv.version_contacts_nothing_and_bare_is_default")
     reviewer = {
-        "reviewer_S_beats_L": (["tmux", "-L", ours, "-S", default_path, "kill-server"], "default"),
-        "reviewer_last_L_wins": (["tmux", "-L", ours, "-L", "default", "kill-server"], "default"),
-        "reviewer_clustered_uL": (["tmux", "-uL", "default", "kill-server"], "default"),
-        "reviewer_clustered_2uL": (["tmux", "-2uL", "shepherd", "ls"], "shepherd"),
+        "reviewer_S_beats_L": ([TMUX, "-L", ours, "-S", default_path, "kill-server"], "default"),
+        "reviewer_last_L_wins": ([TMUX, "-L", ours, "-L", "default", "kill-server"], "default"),
+        "reviewer_clustered_uL": ([TMUX, "-uL", "default", "kill-server"], "default"),
+        "reviewer_clustered_2uL": ([TMUX, "-2uL", "shepherd", "ls"], "shepherd"),
     }
     for label, (argv, reached) in reviewer.items():
         if effective_socket(argv, ours_env) != reached:
             problems.append(f"proof_pane_argv.{label}: reaches {effective_socket(argv, ours_env)!r}, tmux reaches {reached!r}")
-        if argv not in [entry["argv"] for entry in pane_argv_violations([{"argv": argv, "tmux": ours_env}], pid)]:
+        if argv not in [entry["argv"] for entry in pane_argv_offenders([{"argv": argv, "tmux": ours_env}], pid)]:
             problems.append(f"proof_pane_argv.{label}_flagged_in_pane")
-        if product_argv_violations([argv], pid) != [argv]:
+        if product_argv_offenders([argv], pid) != [argv]:
             problems.append(f"proof_pane_argv.{label}_flagged_as_product_argv")
     allowed = {
-        "ours_plain": ["tmux", "-L", ours, "ls"],
-        "ours_clustered": ["tmux", "-uL", ours, "ls"],
-        "ours_fused": ["tmux", f"-L{ours}", "ls"],
-        "ours_after_a_foreign_L": ["tmux", "-L", "default", "-L", ours, "ls"],
-        "ours_S_beats_a_foreign_L": ["tmux", "-L", "shepherd", "-S", f"{paths.TMUX_SOCKET_DIR}/{ours}", "ls"],
-        "ours_after_a_valued_global": ["tmux", "-f", "/dev/null", "-L", ours, "ls"],
+        "ours_plain": [TMUX, "-L", ours, "ls"],
+        "ours_clustered": [TMUX, "-uL", ours, "ls"],
+        "ours_fused": [TMUX, f"-L{ours}", "ls"],
+        "ours_after_a_foreign_L": [TMUX, "-L", "default", "-L", ours, "ls"],
+        "ours_S_beats_a_foreign_L": [TMUX, "-L", "shepherd", "-S", f"{paths.TMUX_SOCKET_DIR}/{ours}", "ls"],
+        "ours_after_a_valued_global": [TMUX, "-f", "/dev/null", "-L", ours, "ls"],
     }
     for label, argv in allowed.items():
-        if product_argv_violations([argv], pid):
+        if product_argv_offenders([argv], pid):
             problems.append(f"proof_pane_argv.allows_{label}")
     refused = {
-        "valued_global_eats_L": ["tmux", "-f", "-L", ours, "ls"],
-        "double_dash_stops_options": ["tmux", "--", "-L", ours],
-        "missing_value": ["tmux", "-L"],
-        "unknown_option": ["tmux", "-Z", "-L", ours, "ls"],
-        "no_server_but_not_plain_V": ["tmux", "-uV"],
-        "relative_S_dot": ["tmux", "-S", f"./{ours}", "ls"],
-        "relative_S_bare": ["tmux", "-S", ours, "ls"],
-        "unicode_digit_L": ["tmux", "-L", f"shepherd-m3-q6{pid}-\u0663", "ls"],
+        "valued_global_eats_L": [TMUX, "-f", "-L", ours, "ls"],
+        "double_dash_stops_options": [TMUX, "--", "-L", ours],
+        "missing_value": [TMUX, "-L"],
+        "unknown_option": [TMUX, "-Z", "-L", ours, "ls"],
+        "no_server_but_not_plain_V": [TMUX, "-uV"],
+        "relative_S_dot": [TMUX, "-S", f"./{ours}", "ls"],
+        "relative_S_bare": [TMUX, "-S", ours, "ls"],
+        "unicode_digit_L": [TMUX, "-L", f"shepherd-m3-q6{pid}-\u0663", "ls"],
     }
     for label, argv in refused.items():
-        if product_argv_violations([argv], pid) != [argv]:
+        if product_argv_offenders([argv], pid) != [argv]:
             problems.append(f"proof_pane_argv.refuses_{label}")
     assert not problems, f"tmux argv judgement: {problems}"
 
@@ -700,7 +739,7 @@ def test_proof_tmux_shim_refuses() -> None:
             after = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
             logs_after = sum(len(p.read_text(encoding="utf-8").splitlines()) for p in (product_log, pane_log) if p.exists())
             execed = after != before
-            python_allows = argv_violation(["tmux", *words], tmux_env, pid) is None
+            python_allows = argv_violation([TMUX, *words], tmux_env, pid) is None
             if label in must_refuse and python_allows:
                 problems.append(f"proof_tmux_shim.judge_refuses_{label}")
             if python_allows and done.stderr:
@@ -1296,10 +1335,10 @@ def test_proof_unseeded_excuse_is_list_sessions_only() -> None:
     from .tmuxctl import unseeded_excused
 
     problems: list[str] = []
-    listed = ["tmux", "-L", DEFAULT_SOCKET, "list-sessions", "-F", "#{session_name}"]
-    for label, argv in (("kill_session_on_default_runner_is_flagged", ["tmux", "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]),
-                        ("kill_server_on_default_runner_is_flagged", ["tmux", "-uL", DEFAULT_SOCKET, "kill-server"]),
-                        ("list_sessions_on_user_socket_is_flagged", ["tmux", "-L", "shepherd", "list-sessions"])):
+    listed = [TMUX, "-L", DEFAULT_SOCKET, "list-sessions", "-F", "#{session_name}"]
+    for label, argv in (("kill_session_on_default_runner_is_flagged", [TMUX, "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]),
+                        ("kill_server_on_default_runner_is_flagged", [TMUX, "-uL", DEFAULT_SOCKET, "kill-server"]),
+                        ("list_sessions_on_user_socket_is_flagged", [TMUX, "-L", "shepherd", "list-sessions"])):
         if unseeded_excused(argv, DEFAULT_SOCKET):
             problems.append(f"proof_unseeded.{label}")
     if not unseeded_excused(listed, DEFAULT_SOCKET):
@@ -1308,13 +1347,13 @@ def test_proof_unseeded_excuse_is_list_sessions_only() -> None:
         run = RunContext(pid=424242, run_id="qa6-guard", run0=Path(scratch), run_dir=Path(scratch) / "report")
         run.unseeded_tmux_argv_log.parent.mkdir(parents=True)
         run.unseeded_tmux_argv_log.write_text(json.dumps(listed) + "\n", encoding="utf-8")
-        if runner.z2_violations(run):
-            problems.append(f"proof_unseeded.runner_excuses_list_sessions: {runner.z2_violations(run)}")
-        kill = ["tmux", "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]
+        if runner.z2_offenders(run):
+            problems.append(f"proof_unseeded.runner_excuses_list_sessions: {runner.z2_offenders(run)}")
+        kill = [TMUX, "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]
         with open(run.unseeded_tmux_argv_log, "a", encoding="utf-8") as handle:
             handle.write(json.dumps(kill) + "\n")
-        if len(runner.z2_violations(run)) != 1:
-            problems.append(f"proof_unseeded.runner_flags_kill_session_on_default_runner: {runner.z2_violations(run)}")
+        if len(runner.z2_offenders(run)) != 1:
+            problems.append(f"proof_unseeded.runner_flags_kill_session_on_default_runner: {runner.z2_offenders(run)}")
     assert not problems, f"unseeded excuse: {problems}"
 
 

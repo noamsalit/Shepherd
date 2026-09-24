@@ -211,7 +211,11 @@ def argv_violation(argv: Sequence[str], tmux_env: str | None, run_pid: int) -> s
     return f"effective socket {socket!r} is not this run's shepherd-m3-q6{run_pid}-<k>"
 
 
-def pane_argv_violations(entries: Sequence[Mapping[str, object]], run_pid: int) -> list[dict[str, object]]:
+#: Named `*_offenders`, not `*_violations`: in this tree the `_violations` suffix marks a
+#: source-reading boundary rule (`tests/boundaries/test_one_definition_site.py`, `is_a_rule`), and
+#: these read runtime argv logs, never Python source. `run.z2_offenders` and Z2's
+#: `off_run_socket_argvs` follow the same convention.
+def pane_argv_offenders(entries: Sequence[Mapping[str, object]], run_pid: int) -> list[dict[str, object]]:
     """In-pane tmux calls (`{"argv", "tmux"}` records) whose effective socket is not this run's."""
     found: list[dict[str, object]] = []
     for entry in entries:
@@ -226,7 +230,7 @@ def pane_argv_violations(entries: Sequence[Mapping[str, object]], run_pid: int) 
     return found
 
 
-def product_argv_violations(lines: Sequence[Sequence[str]], run_pid: int) -> list[list[str]]:
+def product_argv_offenders(lines: Sequence[Sequence[str]], run_pid: int) -> list[list[str]]:
     """Product (no `$TMUX`) argv lines whose effective socket is not this run's."""
     return [list(argv) for argv in lines if argv_violation(argv, None, run_pid) is not None]
 

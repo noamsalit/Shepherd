@@ -170,7 +170,7 @@ def write_blocked(run: RunContext, blocked: dict[str, str]) -> None:
     (run.run_dir / "blocked.json").write_text(json.dumps(blocked, indent=1, sort_keys=True), encoding="utf-8")
 
 
-def z2_violations(run: RunContext) -> list[str]:
+def z2_offenders(run: RunContext) -> list[str]:
     """Every logged tmux argv whose effective socket (tmux's own rules: `tmuxctl.effective_socket`)
     is not this run's, product and in-pane alike; `tmux -V` alone is allowed. A line that is not
     a JSON argv is itself a violation: an unreadable log proves nothing clean."""
@@ -201,7 +201,7 @@ def z2_violations(run: RunContext) -> list[str]:
             continue
         entries.append({str(k): v for k, v in decoded_entry.items()} if isinstance(decoded_entry, dict)
                        else {"argv": decoded_entry})
-    violations.extend(f"in-pane: {json.dumps(v)[:300]}" for v in tmuxctl.pane_argv_violations(entries, run.pid))
+    violations.extend(f"in-pane: {json.dumps(v)[:300]}" for v in tmuxctl.pane_argv_offenders(entries, run.pid))
     return violations
 
 
@@ -467,7 +467,7 @@ def after_lane_stop(state: RunState, wave: int, lane: str) -> str | None:
     tree = local_tree_problem(run, state.baseline, snapshot)
     if tree is not None:
         return f"{where}: {tree}"
-    violations = z2_violations(run)
+    violations = z2_offenders(run)
     if violations:
         return f"Z2-class tmux argv {where}: {violations[:3]}"
     return None

@@ -185,7 +185,7 @@ D10 and U39 show the shape; remfix 2 / H2).
   `effective_socket(argv, tmux_env)` is the ONE judge of the socket tmux would
   contact, by tmux 3.6a's getopt (`2c:CDdf:hlL:NqS:T:uUvV`): clustered flags,
   the last `-L`, `-S` over `-L`, `$TMUX` only when neither; `argv_violation`,
-  `product_argv_violations` and `pane_argv_violations` apply it for this run,
+  `product_argv_offenders` and `pane_argv_offenders` apply it for this run,
   in the runner's post-lane scan, Z2 (`tmux.argv`, `tmux.kill_server_ours_only`,
   `tmux.pane_argv_effective_socket`) and the wave-4 `socket_ok`. Never read a
   socket from a fixed argv position.
