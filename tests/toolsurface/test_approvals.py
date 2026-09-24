@@ -272,6 +272,7 @@ def test_an_unanswered_approval_times_out_and_counts() -> None:
         approved_by=ApprovedBy.TIMEOUT,
         approval_id=outcome.approval_id,
         reason=TIMED_OUT_TEXT,
+        autonomy_level=int(AutonomyLevel.LEVEL_2),
     )
     assert outcome.approval_id is not None
     assert recorder.bumps == [AnomalyKind.APPROVAL_TIMED_OUT]
@@ -603,6 +604,7 @@ def test_a_withdrawal_denies_the_blocked_call_and_counts() -> None:
             approved_by=ApprovedBy.WITHDRAWN,
             approval_id=carded[0].id,
             reason=WITHDRAWN_TEXT,
+            autonomy_level=int(AutonomyLevel.LEVEL_2),
         )
     ]
     assert recorder.bumps == [AnomalyKind.APPROVAL_WITHDRAWN]
@@ -655,6 +657,7 @@ def test_a_click_is_the_only_thing_that_produces_user_and_the_declared_denial() 
                 approved_by=expected.approved_by,
                 approval_id=carded[0].id,
                 reason=expected.reason,
+                autonomy_level=int(AutonomyLevel.LEVEL_2),
             )
         ]
         # A decision is not an anomaly: neither a click nor a decline is counted.

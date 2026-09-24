@@ -95,23 +95,19 @@ _RESULT_OF: Mapping[Failure | None, str] = {
     Failure.UNAVAILABLE: "unavailable",
 }
 
-#: What the record says about the autonomy level when **this process cannot know
-#: it** (K23, and it is the same shape as `ApprovedBy.CLAIMED_HUMAN`).
+#: What the record says about the autonomy level when **the authorizer did not
+#: report one** (K23, and it is the same shape as `ApprovedBy.CLAIMED_HUMAN`).
 #:
-#: `AuthzOutcome` carries `allowed`, `approved_by`, `approval_id` and `reason`
-#: and **not the level the gate read**; `install_chokepoint(authorizer, sink)` is
-#: pinned at two parameters; and `invoke()` has no other route to a `Store`. So
-#: the level is not available at the one place ADR-M4-1 asks for it. Writing `2`
-#: — the default — would be the overclaim K23 is about, in the artefact the next
-#: incident is reconstructed from: it would say *this ran at level 2* when the
-#: process never asked. `0` is not a member of `AutonomyLevel` ({2, 3}), so a
-#: reader can tell *unreported* from *reported*, and
+#: The level in force arrives on `AuthzOutcome.autonomy_level` — the shipped
+#: authorizer reads `level()` once per call and hands that value on (T6-3,
+#: `docs/plans/m4-blockers/t6.md`, closed by qa6 BC-22). An authorizer that
+#: leaves it `None` gets this value instead. Writing `2` — the default — would
+#: be the overclaim K23 is about, in the artefact the next incident is
+#: reconstructed from: it would say *this ran at level 2* when nothing asked.
+#: `0` is not a member of `AutonomyLevel` ({2, 3}), so a reader can tell
+#: *unreported* from *reported*, and
 #: `test_the_unreported_autonomy_level_is_not_a_real_level` asserts that against
 #: the enum enumerated at test time.
-#:
-#: **The one-line fix is a field on `AuthzOutcome`** (`types.py`, T3's file, not
-#: T6's to change): the authorizer already calls `level()`. Recorded as
-#: `docs/plans/m4-blockers/t6.md` §T6-3, owner: router.
 UNREPORTED_AUTONOMY_LEVEL = 0
 
 SCHEMA_TYPE_KEY = "type"
@@ -429,7 +425,11 @@ def _audit(
             tool=tool.name,
             blast_class=tool.blast_class,
             args=dict(args),
-            autonomy_level=UNREPORTED_AUTONOMY_LEVEL,
+            autonomy_level=(
+                outcome.autonomy_level
+                if outcome.autonomy_level is not None
+                else UNREPORTED_AUTONOMY_LEVEL
+            ),
             decision=decision,
             approved_by=outcome.approved_by,
             approval_id=outcome.approval_id,

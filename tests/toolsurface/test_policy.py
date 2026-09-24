@@ -185,6 +185,7 @@ def test_the_caller_context_field_is_defaulted() -> None:
         "approved_by",
         "approval_id",
         "reason",
+        "autonomy_level",
     }
     assert {field.name for field in dataclasses.fields(AuditRecord)} == {
         "at",

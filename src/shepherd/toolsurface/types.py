@@ -241,12 +241,18 @@ class ToolResult:
 @dataclass(frozen=True)
 class AuthzOutcome:
     """What the gate decided about one call, as the injected `Authorizer`
-    returns it. `approval_id` is `None` when no card was raised (DP2)."""
+    returns it. `approval_id` is `None` when no card was raised (DP2).
+
+    `autonomy_level` is the level the gate **read** for this call (T6-3), so the
+    audit record states the level in force rather than a guess. `None` means
+    the authorizer did not report one, and the record says *unreported*.
+    """
 
     allowed: bool
     approved_by: str | None
     approval_id: str | None
     reason: str | None
+    autonomy_level: int | None = None
 
 
 @dataclass(frozen=True)
