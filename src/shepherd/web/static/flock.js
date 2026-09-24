@@ -104,6 +104,11 @@ const LOUD = { needs_you: true, error: true };
 const UNKNOWN = "unknown";
 const UNTITLED = "untitled";
 
+//: BC-11: what the Flock says when the fleet read did not answer. A stopped
+//: daemon is an unknown, and drawing it as F16's empty fleet — with a
+//: `registry: 0 sessions` nobody measured — is principle 5 broken twice.
+export const FLEET_UNKNOWN = "the fleet is unknown — Shepherd did not answer";
+
 //: U8's scale, in seconds. `year` first so the loop never has to compare.
 const SCALE = [
   [31536000, "year"],
@@ -463,20 +468,63 @@ function currentProject(view) {
   return null;
 }
 
+// BC-18 (the Flock half). Every event re-renders the cards, and a
+// `replaceChildren()` of freshly built nodes destroyed the one a keyboard user
+// was standing on. A card whose rendered content is unchanged keeps its node —
+// `isEqualNode` compares exactly what was rendered — and only the changed ones
+// are swapped in, in the payload's order. When the focused card itself changed
+// (or moved), focus follows its `data-session-id` to the node now carrying it.
+function keyOf(node) {
+  return node === null ? null : node.dataset.sessionId || null;
+}
+
+function focusedCardKey(host) {
+  const active = document.activeElement;
+  return active !== null && host.contains(active) ? keyOf(active.closest("[data-session-id]")) : null;
+}
+
+function reconcileCards(host, fresh) {
+  const kept = new Map();
+  for (const node of host.children) {
+    kept.set(keyOf(node), node);
+  }
+  const wanted = fresh.map((node) => {
+    const old = kept.get(keyOf(node));
+    return old !== undefined && old.isEqualNode(node) ? old : node;
+  });
+  wanted.forEach((node, index) => {
+    if (host.children[index] !== node) {
+      host.insertBefore(node, host.children[index] || null);
+    }
+  });
+  while (host.children.length > wanted.length) {
+    host.lastElementChild.remove();
+  }
+}
+
+function restoreFocus(host, key) {
+  if (key === null || keyOf(document.activeElement) === key) {
+    return;
+  }
+  for (const node of host.children) {
+    if (keyOf(node) === key) {
+      node.focus({ preventScroll: true });
+      return;
+    }
+  }
+}
+
 function renderCards(view, now) {
   const project = currentProject(view);
   document.getElementById("flock-sessions-head").textContent =
     project === null ? "Sessions" : project.name || UNKNOWN;
   const host = document.getElementById("flock-cards");
-  host.replaceChildren();
-  if (project === null) {
-    return;
-  }
+  const focused = focusedCardKey(host);
   // The order arrives with the payload (`fleet_bucket_sort_key`, §16). This
-  // loop renders an order it was handed rather than learning one.
-  for (const session of project.sessions || []) {
-    host.appendChild(sessionCard(session, view, now));
-  }
+  // map renders an order it was handed rather than learning one.
+  const sessions = project === null ? [] : project.sessions || [];
+  reconcileCards(host, sessions.map((session) => sessionCard(session, view, now)));
+  restoreFocus(host, focused);
 }
 
 // ----- F16: the first thing anyone sees on a fresh install -------------------
@@ -522,15 +570,30 @@ export function mountFlock(handlers) {
   return handlers;
 }
 
+// BC-11: `view.fleetReadable` is `app.js`'s — whether the last fleet read
+// answered. With nothing to show and nothing answered, the page says the fleet
+// is unknown rather than drawing F16's empty fleet.
+function renderFleetUnknown(visible) {
+  const slot = document.getElementById("fleet-unknown");
+  slot.textContent = FLEET_UNKNOWN;
+  slot.hidden = !visible;
+}
+
 export function renderFlock(view, handlers, now) {
   renderStopSummary(view);
 
   if (view.workspaces.length === 0) {
     renderProjects(view, handlers);
     renderCards(view, now);
-    renderEmptyState(view);
+    renderFleetUnknown(!view.fleetReadable);
+    if (view.fleetReadable) {
+      renderEmptyState(view);
+    } else {
+      document.getElementById("empty-state").hidden = true;
+    }
     return;
   }
+  renderFleetUnknown(false);
   document.getElementById("empty-state").hidden = true;
   renderProjects(view, handlers);
   renderCards(view, now);

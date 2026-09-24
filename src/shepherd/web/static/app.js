@@ -53,8 +53,12 @@ const shell = document.getElementById("shell");
 // session this page was last asked to open, and it is written synchronously at
 // the tap while `sessionId` is written only once an answer for it has arrived.
 // Two slots because they are two facts — see `openSession` (DUP-1).
+//
+// `fleetReadable` (BC-11) is whether the last fleet read answered. It starts
+// `false`: until Shepherd has said something, the fleet is unknown, not empty.
 const view = {
   fleet: null,
+  fleetReadable: false,
   workspaces: [],
   sessionCount: 0,
   projectId: null,
@@ -123,6 +127,7 @@ function drawFlock() {
 
 async function loadFleet() {
   const [fleet, tree] = await Promise.all([read(FLEET), read(TREE)]);
+  view.fleetReadable = fleet !== null && tree !== null;
   if (fleet) {
     view.fleet = fleet;
   }
@@ -365,12 +370,26 @@ document.getElementById("drawer-open").addEventListener("click", () => {
     shell.setAttribute("data-drawer", "open");
   }
 });
-document.getElementById("collapse").addEventListener("click", () => {
-  shell.dataset.rail = "collapsed";
-});
-document.getElementById("mark").addEventListener("click", () => {
+//
+// BC-19: `#mark` is the only expander, so it is a tab stop exactly while the
+// rail is collapsed, and Enter or Space expands it as a click does.
+const mark = document.getElementById("mark");
+
+function setRail(state) {
+  shell.dataset.rail = state;
+  mark.tabIndex = state === "collapsed" ? 0 : -1;
+}
+
+document.getElementById("collapse").addEventListener("click", () => setRail("collapsed"));
+mark.addEventListener("click", () => {
   if (shell.dataset.rail === "collapsed") {
-    shell.dataset.rail = "open";
+    setRail("open");
+  }
+});
+mark.addEventListener("keydown", (event) => {
+  if ((event.key === "Enter" || event.key === " ") && shell.dataset.rail === "collapsed") {
+    event.preventDefault();
+    setRail("open");
   }
 });
 

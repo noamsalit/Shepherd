@@ -27,7 +27,12 @@
       <!-- ===================== the side pane ============================ -->
       <nav class="pane" aria-label="Pages">
         <div class="pane-top">
-          <span class="mark" id="mark" title="Expand the side pane">
+          <!-- BC-19: `#mark` is the only control that expands a collapsed
+               rail, so it is a button to a keyboard too. `app.js` gives it a
+               tab stop only while the rail is collapsed — beside an open rail
+               it is decoration next to a reachable `#collapse`. -->
+          <span class="mark" id="mark" title="Expand the side pane" role="button"
+                tabindex="-1" aria-label="Expand the side pane">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 17V9a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v8" /><path d="M8 17v3" /><path d="M16 17v3" />
@@ -237,6 +242,11 @@
               <span id="flock-sessions-head">Sessions</span>
             </div>
             <div class="cards" id="flock-cards"></div>
+
+            <!-- BC-11: nothing answered, so nothing is known — a stopped
+                 daemon is not an empty fleet. `flock.js` fills this with
+                 `FLEET_UNKNOWN` and shows it *instead of* the panel below. -->
+            <p id="fleet-unknown" class="fleet-unknown" role="status" hidden></p>
 
             <!-- F16: a fresh install with no database and no sessions sees
                  this, not a blank area and not an error. It names what
