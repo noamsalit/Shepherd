@@ -23,7 +23,7 @@
 import { loadShepherd, mountShepherd, onShepherdEvent } from "./chat.js";
 import { mountFlock, renderFlock, renderStatus, showLevel } from "./flock.js";
 import { mountProjects } from "./projects.js";
-import { renderSession } from "./session.js";
+import { refreshSessionHeader, renderSession } from "./session.js";
 import { loadSettings, mountSettings, onSettingsEvent } from "./settings.js";
 import { connect } from "./sse.js";
 
@@ -53,8 +53,12 @@ const shell = document.getElementById("shell");
 // session this page was last asked to open, and it is written synchronously at
 // the tap while `sessionId` is written only once an answer for it has arrived.
 // Two slots because they are two facts — see `openSession` (DUP-1).
+//
+// `fleetReadable` (BC-11) is whether the last fleet read answered. It starts
+// `false`: until Shepherd has said something, the fleet is unknown, not empty.
 const view = {
   fleet: null,
+  fleetReadable: false,
   workspaces: [],
   sessionCount: 0,
   projectId: null,
@@ -123,6 +127,7 @@ function drawFlock() {
 
 async function loadFleet() {
   const [fleet, tree] = await Promise.all([read(FLEET), read(TREE)]);
+  view.fleetReadable = fleet !== null && tree !== null;
   if (fleet) {
     view.fleet = fleet;
   }
@@ -188,6 +193,28 @@ async function openSession(sessionId) {
   view.sessionId = sessionId;
   drawFlock();
   renderSession(answer.session);
+}
+
+// BC-13: the open session's header follows an event the way its card does.
+// The card is rebuilt from the fleet read; the header is `get_session`'s, so
+// the same refresh re-reads the session on screen and hands the row to
+// `refreshSessionHeader`, which never touches the terminal. The intent guard
+// is `openSession`'s: an answer for a session the reader has already left, or
+// one arriving while a newer open is in flight, paints nothing. A session
+// swept while open (`found: false`) is left as it is — the fleet read already
+// says it is gone, and this pass has nothing to add on the stream line.
+async function refreshOpenSession() {
+  const sessionId = view.sessionId;
+  if (sessionId === null || view.openSessionId !== sessionId) {
+    return;
+  }
+  const answer = await read(`${SESSIONS}/${encodeURIComponent(sessionId)}`);
+  if (view.openSessionId !== sessionId || answer === null) {
+    return;
+  }
+  if (answer.found && answer.session !== null) {
+    refreshSessionHeader(answer.session);
+  }
 }
 
 function openProject(projectId) {
@@ -303,6 +330,7 @@ async function refreshAll() {
     do {
       refresh.stale = false;
       await loadFleet();
+      await refreshOpenSession();
       if (projects !== null) {
         // The Projects page lists each project's sessions, so it follows the
         // same event rather than a timer of its own (§12: no polling).
@@ -365,12 +393,26 @@ document.getElementById("drawer-open").addEventListener("click", () => {
     shell.setAttribute("data-drawer", "open");
   }
 });
-document.getElementById("collapse").addEventListener("click", () => {
-  shell.dataset.rail = "collapsed";
-});
-document.getElementById("mark").addEventListener("click", () => {
+//
+// BC-19: `#mark` is the only expander, so it is a tab stop exactly while the
+// rail is collapsed, and Enter or Space expands it as a click does.
+const mark = document.getElementById("mark");
+
+function setRail(state) {
+  shell.dataset.rail = state;
+  mark.tabIndex = state === "collapsed" ? 0 : -1;
+}
+
+document.getElementById("collapse").addEventListener("click", () => setRail("collapsed"));
+mark.addEventListener("click", () => {
   if (shell.dataset.rail === "collapsed") {
-    shell.dataset.rail = "open";
+    setRail("open");
+  }
+});
+mark.addEventListener("keydown", (event) => {
+  if ((event.key === "Enter" || event.key === " ") && shell.dataset.rail === "collapsed") {
+    event.preventDefault();
+    setRail("open");
   }
 });
 

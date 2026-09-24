@@ -37,6 +37,16 @@ import { openTerminal, FIT_LIMITATION, INPUT_UNAVAILABLE } from "./terminal.js";
 const READ_ONLY_BANNER =
   "read-only — this session wasn't started here. Open it in the platform to get a terminal.";
 
+// BC-36. `stop_reason === "killed"` is the one projection field that means
+// Shepherd removed the tmux session (`lifecycle.py`'s kill), so its terminal
+// socket can only 404. **Not `ended_at`:** every turn end stamps it on a live
+// pane, and keying on it would hide the terminal of every session that has
+// answered once. A session whose process exited on its own keeps its pane
+// (`remain-on-exit on`) and still opens. Limit, recorded (BC-37 residual): a
+// session killed after a turn keeps that turn's `stop_reason` and still opens
+// a socket that 404s.
+export const KILLED_BANNER = "this session was killed — its terminal is gone";
+
 // D29/RD9: exactly §12's words. "local only" is the difference between a
 // degrade and a lie, and the string is what a reviewer greps for when DP1 is
 // decided.
@@ -76,6 +86,16 @@ export function localOnly(row) {
 // socket still open would hold a `pipe-pane` alive for the life of the tab,
 // which is the thing `close()` exists to prevent.
 let attached = null;
+
+// The title the header last painted for the session on screen (BC-25). The
+// rename input's Escape repaints *this*, not the row `renderSession` was
+// handed — after a completed rename that row is the pre-rename one.
+let shownTitle = null;
+
+// Sessions whose rename POST has not answered yet (BC-25): a second Enter
+// while one is in flight posts nothing. Keyed by session id, so a rename in
+// flight for one session never blocks another's.
+const renaming = new Set();
 
 function slot(id) {
   return document.getElementById(id);
@@ -234,14 +254,26 @@ function whyNote(row) {
 // D29's marker, after a rename that has been answered. `local_only` is the
 // server's own verdict (`toolsurface/tools_rename.py::project_rename`), not a
 // re-derivation: the page renders the answer it was given.
+function paintTitle(title) {
+  shownTitle = title;
+  fill("session-title", title);
+}
+
 function applyRename(data) {
-  fill("session-title", data.title);
+  paintTitle(data.title);
   const marker = slot("session-local-only");
   marker.textContent = data.local_only ? LOCAL_ONLY_MARKER : "";
   marker.hidden = !data.local_only;
 }
 
+// BC-12 R3: every reply paints only if the pane still shows the session it
+// renamed. A slow reply for A that lands while B is open is A's news, and B's
+// header is not where it goes — the fleet's next read carries A's new title.
 async function commitRename(row, title) {
+  if (renaming.has(row.session_id)) {
+    return;
+  }
+  renaming.add(row.session_id);
   const status = slot("session-rename-status");
   status.textContent = "";
   try {
@@ -251,6 +283,9 @@ async function commitRename(row, title) {
       body: JSON.stringify({ title: title }),
     });
     const body = await response.json();
+    if (showing !== row.session_id) {
+      return;
+    }
     if (!body.ok) {
       status.textContent = `${RENAME_FAILED}: ${body.error} (${body.correlation_id})`;
       return;
@@ -263,7 +298,11 @@ async function commitRename(row, title) {
     }
     applyRename(body.data);
   } catch (unreachable) {
-    status.textContent = RENAME_UNREACHABLE;
+    if (showing === row.session_id) {
+      status.textContent = RENAME_UNREACHABLE;
+    }
+  } finally {
+    renaming.delete(row.session_id);
   }
 }
 
@@ -274,17 +313,57 @@ function beginRename(row) {
   const input = document.createElement("input");
   input.className = "session-rename-input";
   input.type = "text";
-  input.value = row.title === null || row.title === undefined ? "" : String(row.title);
+  input.value = shownTitle === null || shownTitle === undefined ? "" : String(shownTitle);
   slot("session-title").replaceChildren(input);
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       commitRename(row, input.value);
     }
     if (event.key === "Escape") {
-      fill("session-title", row.title);
+      fill("session-title", shownTitle);
     }
   });
   input.focus();
+}
+
+function editingTitle() {
+  return slot("session-title").querySelector(".session-rename-input") !== null;
+}
+
+// The line the stopped band reads as `why`: the ask, the way the Flock's card
+// reads it (`flock.js::askOf`). A waiting session's ask is `needs_you_reason`;
+// a stopped one's is the classifier's `why`. U45's oracle is the ask on this
+// line, and a waiting session carries no `why` at all.
+function askOf(row) {
+  const reason = row.needs_you_reason;
+  if (typeof reason === "string" && reason.trim() !== "") {
+    return reason;
+  }
+  return row.why;
+}
+
+// BC-36's discriminator, stated once (see `KILLED_BANNER`).
+function killedByShepherd(row) {
+  return row.ownership === "owned" && row.stop_reason === "killed";
+}
+
+// BC-13: the header's derived fields for a fresh read of the session on
+// screen — title, chip, state, `why` and the actions — and nothing else. It
+// never touches the terminal, the decision card or the rename wiring, and a
+// row for any other session paints nothing: the read that produced it may
+// have been started before the pane moved on. A title a person is editing is
+// left alone; the next refresh after the edit repaints it.
+export function refreshSessionHeader(row) {
+  if (showing !== row.session_id) {
+    return;
+  }
+  if (!editingTitle()) {
+    paintTitle(row.title);
+  }
+  fill("session-chip", row.bucket);
+  fill("session-state", row.state);
+  fill("session-why", askOf(row));
+  slot("session-actions").replaceChildren(actionList(row), whyNote(row));
 }
 
 function closeAttached() {
@@ -315,7 +394,7 @@ export function renderSession(row) {
 
   showing = row.session_id;
 
-  fill("session-title", row.title);
+  paintTitle(row.title);
   fill("session-chip", row.bucket);
   fill("session-state", row.state);
   fill("session-ownership", row.ownership);
@@ -329,7 +408,7 @@ export function renderSession(row) {
   // ordered list. `why` is null on a session nobody classified, which renders as
   // the em dash `fill` uses everywhere — an unknown shown, not hidden
   // (principle 5) — with the honest `[why?]` disclosure beside it.
-  fill("session-why", row.why);
+  fill("session-why", askOf(row));
   slot("session-actions").replaceChildren(actionList(row), whyNote(row));
 
   // U17's card. Not awaited: the terminal below is what this function returns,
@@ -344,8 +423,15 @@ export function renderSession(row) {
   const banner = slot("session-banner");
   const terminal = slot("session-terminal");
   const note = slot("session-input-note");
-  if (row.ownership === "attached") {
-    banner.textContent = READ_ONLY_BANNER;
+  // Two panes with no terminal of ours, one refusal shape: an attached
+  // session (K6/§9 — never a pty of ours) and an owned one Shepherd killed
+  // (BC-36 — the tmux session is gone, so the socket could only 404).
+  if (row.ownership === "attached" || killedByShepherd(row)) {
+    if (row.ownership === "attached") {
+      banner.textContent = READ_ONLY_BANNER;
+    } else {
+      banner.textContent = KILLED_BANNER;
+    }
     banner.hidden = false;
     terminal.replaceChildren();
     terminal.hidden = true;
