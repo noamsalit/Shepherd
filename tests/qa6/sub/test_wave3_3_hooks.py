@@ -353,5 +353,5 @@ def test_c4_uninstall_replay_recompute_from_the_cli(hooks: Hooks, rec: Recorder)
             rec.check(f"proc.{label}_changed_no_column",
                       "this run changed no column. Pass --apply to overwrite them." in ran.stdout,
                       "the no-change sentence", ran.stdout[-200:])
-    rec.equal("files.real_settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.real_settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
     rec.finish()

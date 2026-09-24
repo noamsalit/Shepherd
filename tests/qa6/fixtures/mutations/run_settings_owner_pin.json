@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "    return hostprobe.sha256(paths.REAL_SETTINGS) == paths.expected_settings_sha()\n",
+ "new": "    return hostprobe.sha256(paths.REAL_SETTINGS) == paths.OWNER_SETTINGS_SHA\n",
+ "proof": "test_proof_settings_mid_run_change_stops",
+ "expect": "proof_settings.owner_value_is_not_the_invariant",
+ "why": "INC-3 re-qa-build: the after-lane check reverts to the owner pin, so a mid-run change that happens to restore the owner's value passes and an unchanged run-start value stops every run"
+}

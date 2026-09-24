@@ -151,7 +151,7 @@ def run_scenario_mutation(name: str, report_dir: Path) -> int:
     run_dir = report_dir / "mutations" / run_id
     run = bootstrap.mint(os.getpid(), run_id, run_dir)
     knobs = {"QA6_RUN_PID": str(run.pid), "QA6_RUN_ID": run_id, "QA6_RUN_DIR": str(run_dir), "QA6_LANE": "mutation",
-             "QA6_WAVE": "m"}
+             "QA6_WAVE": "m", paths.ENV_RUN_SETTINGS_SHA: paths.expected_settings_sha()}
     base = [str(paths.PYTEST), "-p", "no:randomly", "-p", "no:cacheprovider", "-m", "qa6 or qa6live", "-q"]
     argv = [*base, mutation.node]
     prerequisite: dict[str, object] = {}

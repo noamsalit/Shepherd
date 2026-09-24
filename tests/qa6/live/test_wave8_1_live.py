@@ -766,8 +766,8 @@ def product_log_copy(qa6_run: RunContext) -> Iterator[None]:
 @pytest.fixture(scope="module")
 def live(product_log_copy: None, pool: InstancePool, qa6_run: RunContext) -> Iterator[Live]:
     mode = live_mode()
-    if hostprobe.sha256(paths.REAL_SETTINGS) != paths.EXPECTED_SETTINGS_SHA:
-        raise Blocked("the real settings sha is not the owner's value before wave 8 (U2)")
+    if hostprobe.sha256(paths.REAL_SETTINGS) != paths.expected_settings_sha():
+        raise Blocked("the real settings sha is not its run-start value before wave 8 (U2)")
     realclaude.require(qa6_run)  # BLOCKED when this run has no real engine (realclaude.py)
     link_start = realclaude.start_link_state(qa6_run.run_dir)
     if link_start is None:
@@ -802,7 +802,7 @@ def live(product_log_copy: None, pool: InstancePool, qa6_run: RunContext) -> Ite
 
 def files_clause(rec: Recorder, live: Live, name: str, before: Mapping[str, object], after: Mapping[str, object]) -> None:
     """Z1's per-mode rule, applied at the scenario: settings unchanged; only run-slug projects."""
-    rec.equal(f"{name}.settings_sha", paths.EXPECTED_SETTINGS_SHA, after.get("settings_sha"))
+    rec.equal(f"{name}.settings_sha", paths.expected_settings_sha(), after.get("settings_sha"))
     delta = real_delta(before, after)
     added = [str(n) for n in as_list(delta["projects_added"])]
     if live.mode == "sandbox_ok":
@@ -1111,7 +1111,7 @@ def test_l5_real_owned_session_trust_ready_idle_sidecar(live: Live, rec: Recorde
             rec.check(f"files.sidecar_{key}_ms", isinstance(value, int) and abs(value - now_ms) < 5 * 60 * 1000 + IDLE_WINDOW_S * 1000,
                       "an int in epoch ms within ±5 min (+ the idle window) of now", value)
         live.notes["L5_sidecar"] = {"path": str(path), "pid": pid, "sessionId": body.get("sessionId")}
-    rec.equal("files.settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
     rec.record("files.real_claude_writes", real_delta(before, real_claude_state()))
     rec.finish()
 
@@ -1410,7 +1410,7 @@ def test_l6_real_permission_dialog_as_decision_card(live: Live, browser_session:
             rec.block("db.leaves_needs_you", f"the row was never needs_you (bucket {bucket_before!r})")
     finally:
         kill_owned(live, spawned, "L6")
-    rec.equal("files.settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
     rec.finish()
 
 
@@ -1537,7 +1537,7 @@ def test_l4_real_claude_fires_installed_hooks(live: Live, rec: Recorder) -> None
         directory, keys = reference
         missing = sorted({key for f in frames if f.get("hook_event_name") == event for key in keys - set(f)})
         rec.check(f"files.keyset.{event}", not missing, f"real ⊇ {directory}'s keys", {"missing": missing})
-    rec.equal("files.settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
     listed = fleet_tree_ids(a.client)
     view = {k: row.get(k) for k in ("id", "ephemeral", "ownership", "state")} if row is not None else None
     in_fleet = row is not None and str(row.get("id")) in listed

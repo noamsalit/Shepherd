@@ -6,9 +6,14 @@ launch/close in a child process. Each check is `{tier, command, expected,
 actual, result, classification}`; a missing prerequisite is BLOCKED for the
 run, never a product verdict.
 
-The settings-sha row is special: a mismatch **stops** the run (U2 names the
-exact value; a different one means the user changed it, and that is not ours to
-judge — env-plan §3).
+The settings-sha rows are special (`settings_checks`). The stopping row compares
+the real file against the sha the runner measured at run start
+(`paths.expected_settings_sha()`): a mismatch **stops** the run, because the
+harness never writes that file. A second row compares it against the value the
+owner named (U2): since INC-3 the file differs from that value without any run
+having written it, so a mismatch there is a visible, non-stopping WARN — the
+owner's to judge, not ours (env-plan §3). A WARN is `ok` (it never stops a tier)
+and carries its line in `warn`; the runner logs it and publishes it in the report.
 """
 
 from __future__ import annotations
@@ -37,13 +42,20 @@ class Check:
     ok: bool
     classification: str = ""
     stop: bool = False
+    #: A non-stopping finding the reader must see (the row stays `ok`): its one-line text.
+    warn: str = ""
 
     def as_json(self) -> dict[str, object]:
         return {
             "tier": self.tier, "name": self.name, "command": self.command, "expected": self.expected,
-            "actual": self.actual[:1500], "result": "pass" if self.ok else "fail",
-            "classification": self.classification, "stop": self.stop,
+            "actual": self.actual[:1500], "result": ("warn" if self.warn else "pass") if self.ok else "fail",
+            "classification": self.classification, "stop": self.stop, "warn": self.warn,
         }
+
+
+def warnings(checks: list[Check]) -> list[str]:
+    """Every WARN line, in check order: what the runner logs and the report publishes."""
+    return [f"preflight {check.tier} {check.name}: {check.warn}" for check in checks if check.warn]
 
 
 def claude_probe_env() -> dict[str, str]:
@@ -89,14 +101,27 @@ def tier1() -> list[Check]:
     checks.append(_exists("T1", "chromium-headless-shell 1243", shell, executable=False))
     for probe in (paths.PROMPT_READY_FRAME, paths.DIALOG_CAPTURE, paths.SIDECAR_CAPTURE, paths.HOOKS_LIVE / "S01_startup_tools" / "events.jsonl"):
         checks.append(_exists("T1", f"probe {probe.name}", probe, executable=False))
-    sha = hostprobe.sha256(paths.REAL_SETTINGS)
-    ok = sha == paths.EXPECTED_SETTINGS_SHA
-    checks.append(Check("T1", "real settings sha (U2)", f"shasum -a 256 {paths.REAL_SETTINGS}", paths.EXPECTED_SETTINGS_SHA,
-                        sha, ok, "" if ok else "missing-input", stop=not ok))
+    checks.extend(settings_checks(hostprobe.sha256(paths.REAL_SETTINGS), paths.expected_settings_sha()))
     budget_path = MacHost(environ={"HOME": "/tmp/x", "TMPDIR": "/private/tmp/shq6-99999999-999/t"}).control_socket("controld").path
     size = len(str(budget_path).encode())
     checks.append(Check("T1", "socket budget", "MacHost(environ).control_socket('controld')", "<= 103 bytes",
                         f"{size} bytes: {budget_path}", size <= 103, "wrong-guess"))
+    return checks
+
+
+def settings_checks(current: str, run_start: str, owner: str = paths.OWNER_SETTINGS_SHA) -> list[Check]:
+    """T1: the stopping row (unchanged since run start) and, when it differs, the owner-value WARN.
+
+    Pure: the caller measures `current` and names `run_start`. A difference from
+    the owner's value never passes silently — it is a WARN row, `ok` but visible.
+    """
+    command = f"shasum -a 256 {paths.REAL_SETTINGS}"
+    ok = current == run_start
+    checks = [Check("T1", "real settings sha unchanged since run start", command, run_start, current, ok,
+                    "" if ok else "missing-input", stop=not ok)]
+    if current != owner:
+        checks.append(Check("T1", "real settings sha (U2)", command, owner, current, True, "wrong-guess",
+                            warn=f"owner-named sha (U2) differs: expected {owner[:8]}…, actual {current} — INC-3"))
     return checks
 
 

@@ -290,9 +290,10 @@ def test_z1_user_claude_settings_and_projects_as_they_were(qa6_run: RunContext, 
     mode = live_auth_mode(run)
     rec.record("given.live_auth_mode", mode)
     checks = settings_checks(run, rec)
-    mismatched = {name: sha for name, sha in checks.items() if sha != paths.EXPECTED_SETTINGS_SHA}
+    expected = paths.expected_settings_sha()  # the run-start sha the runner exported (owner's value when unset)
+    mismatched = {name: sha for name, sha in checks.items() if sha != expected}
     rec.check("files.settings_sha", not mismatched and "now" in checks,
-              f"sha256 == {paths.EXPECTED_SETTINGS_SHA} at every check",
+              f"sha256 == {expected} at every check",
               {"checks": sorted(checks), "mismatched": mismatched})
     baseline = read_json(run.run_dir / "baseline.json")
     now = hostprobe.snapshot().as_json()

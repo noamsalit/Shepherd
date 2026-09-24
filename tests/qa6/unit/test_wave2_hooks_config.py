@@ -77,7 +77,7 @@ def backups(directory: Path) -> list[str]:
 
 
 def sha_clause(rec: Recorder) -> None:
-    rec.equal("files.real_settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.real_settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
 
 
 USER_CONTENT: dict[str, object] = {

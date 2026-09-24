@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import pwd
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
@@ -46,9 +47,28 @@ REAL_SHEPHERD_DATA: Final[Path] = REAL_HOME / "Library" / "Application Support" 
 BROWSERS_PATH: Final[Path] = REAL_HOME / "Library" / "Caches" / "ms-playwright"
 
 #: U2: the owner named this exact value. A mismatch before a run stops the run.
-EXPECTED_SETTINGS_SHA: Final[str] = (
+#: (Since INC-3 the real file differs from it without any harness run having
+#: written it; a difference is now a visible, non-stopping preflight WARN, and
+#: the stopping invariant is `expected_settings_sha()`: unchanged since run start.)
+OWNER_SETTINGS_SHA: Final[str] = (
     "28067dc4591aaaa659aea971845be01717abadbd078ad1651d926311bef61b4c"
 )
+
+#: The real settings sha the runner measured ONCE at run start, before preflight
+#: and before any lane, and exported to every lane process (`run.capture_settings_sha`).
+ENV_RUN_SETTINGS_SHA: Final[str] = "QA6_RUN_SETTINGS_SHA"
+
+
+def expected_settings_sha(environ: Mapping[str, str] | None = None) -> str:
+    """The sha every settings check compares against: the run-start sha, else U2's owner value.
+
+    The run's invariant is "the sha at every check == the sha at run start": the
+    harness never writes the real settings, so any change during a run stops it.
+    A bare pytest of one test (no runner, so no exported value) keeps the owner's
+    value, exactly as before. An empty value counts as unset.
+    """
+    source = os.environ if environ is None else environ
+    return source.get(ENV_RUN_SETTINGS_SHA) or OWNER_SETTINGS_SHA
 
 #: R1: the user's WatchTower daemon. The ONE place this number is spelled; a
 #: guard test greps the package for it everywhere else.

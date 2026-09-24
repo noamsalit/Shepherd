@@ -8,9 +8,12 @@
     .venv/bin/python tests/qa6/run.py --mutation PP14-D2   # one scenario mutation proof
 
 One pytest process per (wave, lane), each `-p no:randomly`, over
-`tests/qa6/<lane>/test_wave<N>_*.py`, in `stopifs.WAVE_LANES` order. After
-each lane process the runner re-checks the real settings sha (a change stops
-the run, U2), compares the user's `~/.local/bin/claude` against its run-START
+`tests/qa6/<lane>/test_wave<N>_*.py`, in `stopifs.WAVE_LANES` order. The real
+settings sha is measured ONCE, at run start before preflight and before any
+lane, and exported to every lane as `QA6_RUN_SETTINGS_SHA` (`capture_settings_sha`);
+after each lane process the runner re-checks the real settings sha against that
+run-start value (a change stops the run, U2; a run-start value other than the
+owner's is a published preflight WARN, INC-3), compares the user's `~/.local/bin/claude` against its run-START
 state (a change stops the run: INC-1, realclaude.py) and scans the tmux shim
 log for a Z2-class argv (stops the run);
 after each wave it applies the plan's stop-ifs by writing `blocked.json`,
@@ -95,6 +98,7 @@ def lane_env(run: RunContext, report_dir: Path, wave: int | str, lane: str, extr
         ENV_REPORT_DIR: str(report_dir), ENV_LANE: lane, ENV_WAVE: str(wave),
         ENV_BLOCKED_FILE: str(run.run_dir / "blocked.json"),
         "QA6_REAL_TMPDIR": os.environ.get("TMPDIR", "/tmp"),
+        paths.ENV_RUN_SETTINGS_SHA: paths.expected_settings_sha(),
         **(extra or {}),
     }
     mode_file = run.run_dir / "live_auth_mode.json"
@@ -261,8 +265,30 @@ def snapshot_host(run: RunContext, label: str) -> hostprobe.Baseline | None:
     return snapshot
 
 
+SETTINGS_START_FILE = "settings-start.json"
+
+
+def capture_settings_sha() -> str:
+    """Measure the real settings sha ONCE, at run start, and export it for this process and every lane.
+
+    Unconditional: a value inherited from the caller's environment is replaced by
+    the measurement, so the invariant is always "unchanged since THIS run began".
+    Read-only (`hostprobe.sha256` opens the file for reading).
+    """
+    sha = hostprobe.sha256(paths.REAL_SETTINGS)
+    os.environ[paths.ENV_RUN_SETTINGS_SHA] = sha
+    return sha
+
+
+def write_settings_start(run_dir: Path, sha: str) -> None:
+    (run_dir / SETTINGS_START_FILE).write_text(json.dumps(
+        {"run_start": sha, "owner": paths.OWNER_SETTINGS_SHA, "differs_from_owner": sha != paths.OWNER_SETTINGS_SHA},
+        indent=1, sort_keys=True), encoding="utf-8")
+
+
 def settings_ok() -> bool:
-    return hostprobe.sha256(paths.REAL_SETTINGS) == paths.EXPECTED_SETTINGS_SHA
+    """The U2 guard: the real settings sha is still what it was at run start (the harness never writes it)."""
+    return hostprobe.sha256(paths.REAL_SETTINGS) == paths.expected_settings_sha()
 
 
 def keep_awake() -> subprocess.Popen[bytes] | None:
@@ -283,6 +309,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s qa6 %(levelname)s %(message)s", stream=sys.stderr)
 
+    settings_start = capture_settings_sha()
+    LOG.info("run-start sha of %s: %s (owner-named U2: %s)", paths.REAL_SETTINGS, settings_start,
+             "same" if settings_start == paths.OWNER_SETTINGS_SHA else f"DIFFERS, {paths.OWNER_SETTINGS_SHA}")
     if args.mutation:
         from qa6 import mutations
         return mutations.run_scenario_mutation(args.mutation, args.report_dir)
@@ -290,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     run_id = time.strftime("qa6-%Y%m%dT%H%M%SZ", time.gmtime())
     run_dir = args.report_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
+    write_settings_start(run_dir, settings_start)
     # Tree identity (verification: evidence names the revision it ran): HEAD and every
     # uncommitted path under the code the run executes, measured before anything runs.
     (run_dir / TREE_FILE).write_text(json.dumps(tree_identity(), indent=1, sort_keys=True), encoding="utf-8")
@@ -324,6 +354,8 @@ class RunState:
     baseline: hostprobe.Baseline
     reached: str
     selected: set[int]
+    #: The preflight's non-stopping WARN lines (`preflight.warnings`): published in the report.
+    warnings: list[str] = field(default_factory=list)
     lane_exits: list[LaneExit] = field(default_factory=list)
     blocked: dict[str, str] = field(default_factory=dict)
     implemented: set[str] = field(default_factory=set)
@@ -333,10 +365,10 @@ class RunState:
     runner_errors: list[str] = field(default_factory=list)
 
 
-def preflight_blocked(report_dir: Path, run_id: str, reasons: list[str]) -> int:
+def preflight_blocked(report_dir: Path, run_id: str, reasons: list[str], warnings: list[str] | None = None) -> int:
     """A run that never minted still leaves a history line (H6): nothing is invisible."""
     report.append_history(report_dir, {"run_id": run_id, "status": "INCOMPLETE", "stage": "preflight",
-                                       "counts": {}, "reasons": reasons[:20]})
+                                       "counts": {}, "reasons": reasons[:20], "warnings": list(warnings or [])})
     LOG.error("the run is BLOCKED before any wave: %s", "; ".join(reasons)[:1500])
     return 3
 
@@ -344,20 +376,25 @@ def preflight_blocked(report_dir: Path, run_id: str, reasons: list[str]) -> int:
 def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
     report_dir: Path = args.report_dir
     checks, reached = preflight.run_tiers(include_t4=not args.skip_t4)
-    (run_dir / "preflight.json").write_text(json.dumps({"reached": reached, "checks": [c.as_json() for c in checks]}, indent=1),
-                                            encoding="utf-8")
+    warned = preflight.warnings(checks)
+    (run_dir / "preflight.json").write_text(json.dumps({"reached": reached, "checks": [c.as_json() for c in checks],
+                                                        "warnings": warned}, indent=1), encoding="utf-8")
     failed = [c for c in checks if not c.ok]
     for check in failed:
         LOG.error("preflight %s %s: expected %s, got %s", check.tier, check.name, check.expected, check.actual[:300])
+    for line in warned:
+        LOG.warning("WARN (non-stopping) %s", line)
     if args.preflight_only:
-        LOG.info("preflight reached %s with %d failure(s)", reached, len(failed))
+        LOG.info("preflight reached %s with %d failure(s) and %d warning(s)", reached, len(failed), len(warned))
         return 0 if not failed else 3
     if failed:
-        return preflight_blocked(report_dir, run_id, [f"preflight {c.tier} {c.name}: {c.actual[:200]}" for c in failed])
+        return preflight_blocked(report_dir, run_id, [f"preflight {c.tier} {c.name}: {c.actual[:200]}" for c in failed],
+                                 warned)
     try:
         sweep = teardown.sweep_dead_runs()
         if sweep.live_owners:
-            return preflight_blocked(report_dir, run_id, [f"live owners hold qa6 state (another run?): {sweep.live_owners}"])
+            return preflight_blocked(report_dir, run_id, [f"live owners hold qa6 state (another run?): {sweep.live_owners}"],
+                                     warned)
         for line in sweep.orphans_stopped:
             LOG.warning("pre-run sweep: %s", line)
         baseline = hostprobe.snapshot()
@@ -365,10 +402,10 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
         run = bootstrap.mint(os.getpid(), run_id, run_dir)
     except Exception as error:  # noqa: BLE001 - recorded, never swallowed: the history says why
         return preflight_blocked(report_dir, run_id, [f"before mint: {type(error).__name__}: {error}",
-                                                      traceback.format_exc()[-1500:]])
+                                                      traceback.format_exc()[-1500:]], warned)
     LOG.info("run %s minted at %s", run_id, run.run0)
     state = RunState(args=args, run=run, baseline=baseline, reached=reached,
-                     selected=set(args.wave) if args.wave else set(WAVE_LANES))
+                     selected=set(args.wave) if args.wave else set(WAVE_LANES), warnings=warned)
     for line in [*sweep.orphans_stopped, *sweep.problems]:
         run.teardown_problem("pre-run sweep", line)
     return guarded(lambda: _waves(state), lambda crash: _finish(state, run_id, crash))
@@ -460,7 +497,8 @@ def after_lane_stop(state: RunState, wave: int, lane: str) -> str | None:
     snapshot = snapshot_host(run, f"{lane}-w{wave}")
     where = f"after wave {wave} lane {lane}"
     if not settings_ok():
-        return f"the real settings sha changed during wave {wave} lane {lane} (U2): the run is stopped"
+        return (f"the real settings sha changed during wave {wave} lane {lane} (U2: it is no longer its run-start "
+                f"value {paths.expected_settings_sha()}): the run is stopped")
     link_changed = realclaude.link_change(run.run_dir)
     if link_changed is not None:
         return f"{where}: {link_changed}"
@@ -525,6 +563,8 @@ def _finish(state: RunState, run_id: str, crash: str | None) -> int:
         _publish_last_resort(args.report_dir, run_id, crash, publish_error, errors)
         return 1
     LOG.info("report %s: %s — %s", run_id, decision.status, "; ".join(decision.reasons)[:1500])
+    for line in state.warnings:
+        LOG.warning("report %s WARN (non-stopping) %s", run_id, line)
     return 0 if decision.status == "GREEN" else 1
 
 
@@ -537,8 +577,9 @@ def _publish(state: RunState, run_id: str, crash: str | None) -> report.Decision
                                "runner_crash": crash, "tree": read_json(run.run_dir / TREE_FILE),
                                "real_claude": read_json(run.run_dir / realclaude.RESOLUTION_FILE),
                                "claude_link": {"start": realclaude.start_link_state(run.run_dir),
-                                               "end": realclaude.link_state()}},
-                        harness_problems=harness_problems, runner_crash=crash)
+                                               "end": realclaude.link_state()},
+                               "settings_sha": read_json(run.run_dir / SETTINGS_START_FILE)},
+                        harness_problems=harness_problems, runner_crash=crash, warnings=state.warnings)
 
 
 def _publish_last_resort(report_dir: Path, run_id: str, crash: str | None, publish_error: str,
@@ -592,7 +633,7 @@ def _teardown(state: RunState) -> None:
 def _post_teardown_checks(state: RunState) -> None:
     run = state.run
     if not settings_ok():
-        run.teardown_problem("runner", "the real ~/.claude/settings.json sha changed (U2)")
+        run.teardown_problem("runner", "the real ~/.claude/settings.json sha changed since run start (U2)")
     link_changed = realclaude.link_change(run.run_dir)
     if link_changed is not None:
         run.teardown_problem("runner", link_changed)

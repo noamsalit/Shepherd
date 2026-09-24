@@ -73,7 +73,7 @@ def test_c3_install_hooks_dry_run_then_yes(cli_env: CliEnv, rec: Recorder) -> No
     rec.check("files.managed_entries_after_yes", target.exists() and "_shepherd_managed" in target.read_text(encoding="utf-8"),
               "the managed entries (H1's shape)", target.exists())
     rec.equal("logs.yes_stderr_empty", "", applied.stderr)
-    rec.equal("files.real_settings_sha", paths.EXPECTED_SETTINGS_SHA, hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.equal("files.real_settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
     rec.finish()
 
 

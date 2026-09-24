@@ -210,10 +210,14 @@ def write_report(
     extra: Mapping[str, object] | None = None,
     harness_problems: Sequence[str] = (),
     runner_crash: str | None = None,
+    warnings: Sequence[str] = (),
 ) -> Decision:
     """Write the immutable run file, the markdown, and the latest copy.
 
     A torn record line is a harness problem here, never an exception (hunter N1).
+    `warnings` (the preflight's non-stopping WARN lines) never change the status;
+    they are published beside it — in the run file, the markdown and the history
+    line — so a WARN is never silent.
     """
     record_problems: list[str] = []
     records = load_records(run_dir, record_problems)
@@ -227,6 +231,7 @@ def write_report(
         "run_id": run_id,
         "status": decision.status,
         "reasons": list(decision.reasons),
+        "warnings": list(warnings),
         "counts": decision.counts,
         "planned": PLANNED_TOTAL,
         "lane_exits": [
@@ -242,7 +247,8 @@ def write_report(
     run_file.write_text(json.dumps(payload, indent=1, sort_keys=True), encoding="utf-8")
     run_file.chmod(0o444)
     (run_dir / "report.md").write_text(render_markdown(payload), encoding="utf-8")
-    append_history(report_dir, {"run_id": run_id, "status": decision.status, "counts": decision.counts})
+    append_history(report_dir, {"run_id": run_id, "status": decision.status, "counts": decision.counts,
+                                "warnings": list(warnings)})
     read = read_objects(report_dir / HISTORY)
     history: list[object] = [*read.rows, *({"malformed_history_line": problem} for problem in read.problems)]
     latest = dict(payload)
@@ -278,6 +284,9 @@ def render_markdown(payload: Mapping[str, object]) -> str:
     reasons = payload.get("reasons")
     if isinstance(reasons, list):
         lines += [f"- {reason}" for reason in reasons]
+    warned = payload.get("warnings")
+    lines += ["", "**Warnings (non-stopping):**", ""]
+    lines += [f"- WARN {line}" for line in warned] if isinstance(warned, list) and warned else ["none"]
     lines += ["", f"Counts: {payload.get('counts')}", "", "| id | wave | verdict | kind | predicted | reason |", "|---|---|---|---|---|---|"]
     records = payload.get("records")
     if isinstance(records, list):

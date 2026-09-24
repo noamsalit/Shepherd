@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "        paths.ENV_RUN_SETTINGS_SHA: paths.expected_settings_sha(),\n",
+ "new": "",
+ "proof": "test_proof_settings_env_unset_uses_owner",
+ "expect": "proof_settings.lane_env_exports_run_start",
+ "why": "INC-3 re-qa-build: lane processes no longer receive the run-start sha, so their assertions silently fall back to the owner's value"
+}

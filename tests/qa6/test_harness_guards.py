@@ -22,7 +22,14 @@ The runner runs this file before any wave and stops the run if it fails:
   planted mutations of `sandbox.py`); no module builds such an env or execs the
   real engine outside the shared builders (`test_guard_no_ad_hoc_real_home_env`);
   the real-engine resolution order and the run-start link comparison hold
-  (`test_proof_real_claude_resolution`).
+  (`test_proof_real_claude_resolution`);
+* **the settings guard (U2, INC-3)**: the runner measures the real settings sha
+  once at run start and exports it to every lane; a change after that stops the
+  run even when it restores the owner's value (`test_proof_settings_mid_run_change_stops`);
+  with no exported value the owner's value is the expectation
+  (`test_proof_settings_env_unset_uses_owner`); and a sha other than the owner's is
+  a published, non-stopping WARN, never silence (`test_proof_settings_owner_mismatch_warns`,
+  `test_proof_preflight_warn_is_published`).
 """
 
 from __future__ import annotations
@@ -1554,6 +1561,139 @@ def test_proof_tmuxctl() -> None:
     assert _argv(ours, pid, "kill-server", allow_kill_server=True)[-1] == "kill-server", "proof_tmuxctl.backstop_on_ours"
 
 
+# ----- the settings guard (U2, INC-3) ------------------------------------------------------------
+
+#: Independent source for U2: the value the owner named, spelled here from the plan (env-plan §3 / U2)
+#: rather than read back from `paths`, so a drifted constant cannot agree with itself.
+U2_OWNER_SHA = "28067dc4591aaaa659aea971845be01717abadbd078ad1651d926311bef61b4c"
+_SHA_A = "a" * 64
+_SHA_B = "b" * 64
+
+
+def test_proof_settings_mid_run_change_stops(monkeypatch: pytest.MonkeyPatch) -> None:
+    """U2: after every lane the REAL `after_lane_stop` compares the sha against its run-start value.
+
+    The sha reader is replaced by a planted value (the real file is never opened, never written);
+    the host snapshot, link, ~/.local and Z2 checks are replaced by clean answers, so the settings
+    check is the only thing that can stop the lane. Nothing is started.
+    """
+    import argparse
+
+    from . import hostprobe, realclaude
+    from . import run as runner
+
+    current = [_SHA_A]
+    monkeypatch.setenv(paths.ENV_RUN_SETTINGS_SHA, _SHA_A)
+    monkeypatch.setattr(hostprobe, "sha256", lambda _path: current[0])
+    monkeypatch.setattr(runner, "snapshot_host", lambda _run, _label: None)
+    monkeypatch.setattr(realclaude, "link_change", lambda _run_dir: None)
+    monkeypatch.setattr(runner, "local_tree_problem", lambda _run, _baseline, _snapshot: None)
+    monkeypatch.setattr(runner, "z2_offenders", lambda _run: [])
+    run, _root = _guard_run()
+    state = runner.RunState(args=argparse.Namespace(report_dir=Path("/nonexistent-qa6-guard-report-dir"), lane=[]),
+                            run=run, baseline=_dummy_baseline(), reached="T4", selected={1})
+    problems: list[str] = []
+    stopped = runner.after_lane_stop(state, 3, "sub")
+    if stopped is not None or not runner.settings_ok():
+        problems.append(f"proof_settings.unchanged_since_start_does_not_stop: {stopped!r}")
+    current[0] = _SHA_B
+    stopped = runner.after_lane_stop(state, 3, "sub")
+    if stopped is None or "settings sha changed during wave 3 lane sub" not in stopped or "U2" not in stopped:
+        problems.append(f"proof_settings.mid_run_change_stops: {stopped!r}")
+    current[0] = U2_OWNER_SHA  # restored to the owner's value mid-run: still a change since run start
+    stopped = runner.after_lane_stop(state, 3, "sub")
+    if stopped is None or "settings sha changed" not in stopped:
+        problems.append(f"proof_settings.owner_value_is_not_the_invariant: {stopped!r}")
+    assert not problems, f"settings mid-run guard: {problems}"
+
+
+def test_proof_settings_env_unset_uses_owner(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bare pytest (no runner export) expects the owner's value; the runner's capture replaces an
+    inherited value with its own measurement and every lane env carries it. Pure (planted sha)."""
+    from . import hostprobe
+    from . import run as runner
+
+    problems: list[str] = []
+    monkeypatch.delenv(paths.ENV_RUN_SETTINGS_SHA, raising=False)
+    if paths.expected_settings_sha() != U2_OWNER_SHA:
+        problems.append(f"proof_settings.env_unset_uses_owner: {paths.expected_settings_sha()}")
+    if paths.expected_settings_sha({}) != U2_OWNER_SHA or paths.expected_settings_sha(
+            {paths.ENV_RUN_SETTINGS_SHA: ""}) != U2_OWNER_SHA:
+        problems.append("proof_settings.empty_env_uses_owner")
+    if paths.expected_settings_sha({paths.ENV_RUN_SETTINGS_SHA: _SHA_A}) != _SHA_A:
+        problems.append("proof_settings.env_set_is_the_run_start")
+    monkeypatch.setenv(paths.ENV_RUN_SETTINGS_SHA, "stale-inherited-from-the-caller")
+    monkeypatch.setattr(hostprobe, "sha256", lambda _path: _SHA_B)
+    captured = runner.capture_settings_sha()
+    if captured != _SHA_B or os.environ.get(paths.ENV_RUN_SETTINGS_SHA) != _SHA_B or paths.expected_settings_sha() != _SHA_B:
+        problems.append(f"proof_settings.capture_replaces_inherited_value: {captured} "
+                        f"{os.environ.get(paths.ENV_RUN_SETTINGS_SHA)}")
+    run, _root = _guard_run()
+    exported = runner.lane_env(run, Path("/nonexistent-qa6-guard-report-dir"), 2, "unit").get(paths.ENV_RUN_SETTINGS_SHA)
+    if exported != _SHA_B:
+        problems.append(f"proof_settings.lane_env_exports_run_start: {exported!r}")
+    assert not problems, f"settings expectation: {problems}"
+
+
+def test_proof_settings_owner_mismatch_warns() -> None:
+    """T1: unchanged-since-start passes; a sha other than the owner's adds a visible WARN row (never
+    silence, never a stop); a change since run start stops. Pure."""
+    from .preflight import settings_checks, warnings
+
+    problems: list[str] = []
+    rows = settings_checks(_SHA_B, _SHA_B, U2_OWNER_SHA)
+    warned = [row for row in rows if row.warn]
+    expected_line = f"owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    if not warned or warned[0].warn != expected_line or warned[0].as_json().get("result") != "warn" \
+            or not warnings(rows) or expected_line not in warnings(rows)[0]:
+        problems.append(f"proof_settings.owner_mismatch_warns: {[row.as_json() for row in rows]}")
+    if not all(row.ok and not row.stop for row in rows):
+        problems.append(f"proof_settings.owner_mismatch_does_not_stop: {[row.as_json() for row in rows]}")
+    same = settings_checks(U2_OWNER_SHA, U2_OWNER_SHA, U2_OWNER_SHA)
+    if len(same) != 1 or not same[0].ok or warnings(same):
+        problems.append(f"proof_settings.owner_match_is_silent: {[row.as_json() for row in same]}")
+    changed = settings_checks(_SHA_B, _SHA_A, U2_OWNER_SHA)
+    if changed[0].ok or not changed[0].stop or changed[0].as_json().get("result") != "fail":
+        problems.append(f"proof_settings.change_since_start_stops_preflight: {changed[0].as_json()}")
+    assert not problems, f"preflight settings rows: {problems}"
+
+
+def test_proof_preflight_warn_is_published(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The REAL `run._finish` publishes the preflight's WARN lines in the run file, the markdown and the
+    history line, and they do not change the status. The host-touching finalizer steps are recorders;
+    everything from `fill_missing` to `write_report` is real, writing into a temp report dir."""
+    import argparse
+
+    from . import run as runner
+
+    for name in ("_copy_ledgers", "_remove_worktree", "_post_teardown_checks", "_teardown"):
+        monkeypatch.setattr(runner, name, lambda *_a: None)
+    line = f"preflight T1 real settings sha (U2): owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="qa6warn-", dir="/tmp") as scratch:
+        report_dir = Path(scratch) / "runs"
+        statuses: dict[str, object] = {}
+        for run_id, warned in (("qa6-guard-warn", [line]), ("qa6-guard-nowarn", [])):
+            run = RunContext(pid=424242, run_id=run_id, run0=Path(scratch) / "run0-absent", run_dir=report_dir / run_id)
+            (run.run_dir / "records").mkdir(parents=True)
+            state = runner.RunState(args=argparse.Namespace(report_dir=report_dir, lane=[]), run=run,
+                                    baseline=_dummy_baseline(), reached="T4", selected={1}, warnings=warned)
+            runner._finish(state, run_id, None)
+            payload = json.loads((report_dir / f"{run_id}.json").read_text(encoding="utf-8"))
+            statuses[run_id] = payload.get("status")
+            if warned:
+                markdown = (run.run_dir / "report.md").read_text(encoding="utf-8")
+                history = [json.loads(h) for h in (report_dir / "qa6-history.jsonl").read_text(encoding="utf-8").splitlines()
+                           if h.strip()]
+                mine: dict[str, object] = next((h for h in history if h.get("run_id") == run_id), {})
+                if payload.get("warnings") != [line] or f"WARN {line}" not in markdown or mine.get("warnings") != [line]:
+                    problems.append(f"proof_settings.report_publishes_warn: warnings={payload.get('warnings')} "
+                                    f"history={mine.get('warnings')} md_has_line={f'WARN {line}' in markdown}")
+        if statuses["qa6-guard-warn"] != statuses["qa6-guard-nowarn"]:
+            problems.append(f"proof_settings.warn_does_not_change_status: {statuses}")
+    assert not problems, f"preflight WARN publication: {problems}"
+
+
 # ----- the mutation drivers ------------------------------------------------------------------------
 
 
@@ -1585,7 +1725,10 @@ def test_guard_module_mutation_floor_is_present() -> None:
                 "httpclient_socket_wrap", "verdict_unreachable_after_answer", "httpclient_answer_epoch",
                 "teardown_incremental", "teardown_ledger_torn", "hostprobe_pid_probe_unknown", "teardown_sweep_unknown",
                 "shim_exec_warning", "shim_relative_S", "tmuxctl_relative_S", "paths_ascii_digits",
-                "tmuxctl_unseeded_verb", "hostprobe_tmux_servers", "hostprobe_signalled_baseline"}
+                "tmuxctl_unseeded_verb", "hostprobe_tmux_servers", "hostprobe_signalled_baseline",
+                # re-qa-build round 5 (INC-3: the run-start settings sha)
+                "run_settings_mid_run", "run_settings_owner_pin", "run_settings_lane_export",
+                "paths_owner_fallback", "preflight_owner_warn", "report_warn_published"}
     missing = sorted(required - set(MODULE_MUTATIONS))
     assert not missing, f"module mutations not registered: {missing}"
 

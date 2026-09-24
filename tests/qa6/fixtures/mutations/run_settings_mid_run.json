@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "    return hostprobe.sha256(paths.REAL_SETTINGS) == paths.expected_settings_sha()\n",
+ "new": "    current = hostprobe.sha256(paths.REAL_SETTINGS)\n    return current in (paths.expected_settings_sha(), current)\n",
+ "proof": "test_proof_settings_mid_run_change_stops",
+ "expect": "proof_settings.mid_run_change_stops",
+ "why": "INC-3 re-qa-build: the after-lane settings check compares the file with itself, so a change during the run no longer stops it"
+}

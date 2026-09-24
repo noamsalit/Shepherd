@@ -168,7 +168,7 @@ class ShaWatch:
 
     def after(self, probe: str) -> None:
         sha = hostprobe.sha256(paths.REAL_SETTINGS)
-        self.rec.equal(f"files.settings_sha.after_{probe}", paths.EXPECTED_SETTINGS_SHA, sha)
+        self.rec.equal(f"files.settings_sha.after_{probe}", paths.expected_settings_sha(), sha)
 
 
 def real_claude_snapshot() -> dict[str, object]:
