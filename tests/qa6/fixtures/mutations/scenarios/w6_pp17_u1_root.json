@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls (a page.route on one response); no signal, kill or teardown verb is planted anywhere, and the product tree is never edited.",
+ "name": "w6-PP17-U1-root",
+ "prop": "PP-17",
+ "scenario": "U1",
+ "node": "tests/qa6/sub/test_wave6_1_shell.py::test_u1_every_root_by_mouse_exactly_one_visible",
+ "failing_clause": "ui.one_root_visible.0_shepherd",
+ "what": "the served app.css gains '#page-queues { display: block !important; }' (a context route on /static/app.css), so a second page root stays visible after every nav click; U1's exactly-one-root clause must go false"
+}

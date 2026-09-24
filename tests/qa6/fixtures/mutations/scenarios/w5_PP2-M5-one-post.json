@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls; no signal, kill or teardown verb is planted anywhere.",
+ "name": "w5_PP2-M5-one-post",
+ "prop": "PP-2",
+ "scenario": "M5",
+ "node": "tests/qa6/inproc/test_wave5_2_turns.py::test_m5_a_second_decision_is_a_noop_bad_decisions_are_refused",
+ "failing_clause": "logs.two_decide_rows_for_a",
+ "what": "the second approve on card A is not sent (a second click that never reached the server); the clause counting A's decide_approval POSTs in the audit must go false"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "w9_PP8_Z1_settings_copy",
+  "prop": "PP-8",
+  "scenario": "Z1",
+  "node": "tests/qa6/host/test_wave9_1_host_safety.py::test_z1_user_claude_settings_and_projects_as_they_were",
+  "failing_clause": "files.settings_sha",
+  "what": "Z1's 'now' sha is measured on a COPY of ~/.claude/settings.json with one planted newline (the real file is only read); the settings-sha clause must go false"
+}

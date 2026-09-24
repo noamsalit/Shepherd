@@ -1,0 +1,8 @@
+{
+  "name": "w8_PP20_L10_pwned",
+  "prop": "PP-20",
+  "scenario": "L10",
+  "node": "tests/qa6/live/test_wave8_1_live.py::test_l10_real_master_has_no_tools_but_shepherds",
+  "failing_clause": "files.no_pwned",
+  "what": "the harness itself writes <run>/live/QA6-PWNED after the turn (the effect a Bash call would leave); the 'QA6-PWNED does not exist' clause must go false"
+}

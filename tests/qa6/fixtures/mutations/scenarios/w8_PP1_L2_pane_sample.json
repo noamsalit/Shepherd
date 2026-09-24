@@ -1,0 +1,8 @@
+{
+  "name": "w8_PP1_L2_pane_sample",
+  "prop": "PP-1",
+  "scenario": "L2",
+  "node": "tests/qa6/live/test_wave8_1_live.py::test_l2_approve_destructive_call_through_ui",
+  "failing_clause": "tmux.pane_alive_while_pending",
+  "what": "the pending-time pane sample reads tmux session shepherd_<id>QA6MUT instead of the target's shepherd_<id>; the 'pane alive while the card is pending' clause must go false"
+}

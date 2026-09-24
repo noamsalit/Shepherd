@@ -1,0 +1,8 @@
+{
+  "name": "w9_PP7_Z2_planted_argv",
+  "prop": "PP-7",
+  "scenario": "Z2",
+  "node": "tests/qa6/host/test_wave9_1_host_safety.py::test_z2_tmux_only_our_sockets_touched_and_ours_gone",
+  "failing_clause": "tmux.argv",
+  "what": "one argv ['tmux','-L','shepherd','list-sessions'] is appended in memory to the product argv list Z2 evaluates (never executed); the every-argv-names-our-socket clause must go false"
+}

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls; no signal, kill or teardown verb is planted anywhere.",
+ "name": "w5_PP20-M10-in-audience",
+ "prop": "PP-20",
+ "scenario": "M10",
+ "node": "tests/qa6/inproc/test_wave5_2_turns.py::test_m10_the_master_cannot_call_a_tool_outside_its_audience",
+ "failing_clause": "stream.three_tool_results_is_error",
+ "what": "M10's first call is get_autonomy_level (in the master's audience) instead of decide_approval; the three-is_error clause must go false"
+}

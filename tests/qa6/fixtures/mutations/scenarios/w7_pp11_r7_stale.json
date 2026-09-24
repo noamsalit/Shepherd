@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls (a page.route on one response); no signal, kill or teardown verb is planted anywhere, and the product tree is never edited.",
+ "name": "w7-PP11-R7-stale",
+ "prop": "PP-11",
+ "scenario": "R7",
+ "node": "tests/qa6/sub/test_wave7_1_races.py::test_r7_a_slow_project_read_never_paints_over_the_newer_one",
+ "failing_clause": "ui.detail_shows_b",
+ "what": "B's GET /api/projects/<B> is answered in the page (page.route) with project A's envelope, so the detail paints A's data under the last row asked for (B) - PP-11's failure made deterministic; R7's 'the detail shows B' clause must go false"
+}

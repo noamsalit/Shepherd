@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls (a page.route on one response); no signal, kill or teardown verb is planted anywhere, and the product tree is never edited.",
+ "name": "w7-PP2-U29-forged",
+ "prop": "PP-2",
+ "scenario": "U29",
+ "node": "tests/qa6/inproc/test_wave7_1_master_ui.py::test_u29_a_double_click_on_approve_decides_once",
+ "failing_clause": "api.exactly_one_decided_true",
+ "what": "the page's second POST /api/approvals/<A> of the double click is answered in the page (page.route) with a forged {decided: true}, so two answers claim the decision; U29's exactly-one-decided clause must go false"
+}
