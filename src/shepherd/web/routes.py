@@ -73,7 +73,15 @@ QUERY_ARGS: Mapping[str, tuple[str, ...]] = {
     "/api/sessions": ("project_id", "state"),
     "/api/sessions/{session_id}/output": ("scrollback",),
     "/api/mailbox": ("session_id",),
+    # BC-23: `get_audit_log` always declared `limit`; the route never forwarded it.
+    "/api/audit": ("limit",),
 }
+
+#: BC-23: the declared query parameters whose tools take an **integer**. A query
+#: string is text and those tools refuse a string, so these are converted here;
+#: one that is not an integer is dropped (the tool's default applies), never
+#: forwarded as the text it arrived as.
+INTEGER_QUERY_ARGS: frozenset[str] = frozenset({"limit", "scrollback"})
 
 #: M3's mutations (T18). The **first** POST routes there have ever been: M1 and
 #: M2 were read-only, and §13's origin check was proved on the stream handshake
@@ -201,6 +209,16 @@ def _match(template: str, path: str) -> dict[str, object] | None:
     return captured
 
 
+def _query_value(name: str, raw: str) -> object | None:
+    """`raw` as the tool expects it, or `None` to drop it (BC-23)."""
+    if name not in INTEGER_QUERY_ARGS:
+        return raw
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
 def _ordered(table: Mapping[str, str]) -> list[str]:
     """Static templates first, so `/api/sessions` is never read as a session id."""
     return sorted(table, key=lambda item: ("{" in item, item))
@@ -224,8 +242,9 @@ def resolve(path: str, query: Mapping[str, list[str]]) -> Resolved | None:
         args: dict[str, object] = {}
         for name in QUERY_ARGS.get(template, ()):
             values = query.get(name)
-            if values:
-                args[name] = values[0]
+            value = _query_value(name, values[0]) if values else None
+            if value is not None:
+                args[name] = value
         args.update(captured)
         return Resolved(tool=API_ROUTES[template], args=args)
     return None
