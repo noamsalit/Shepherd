@@ -287,7 +287,7 @@ def test_no_declared_field_shadows_a_path_parameter() -> None:
     assert shadowing(routes.QUERY_ARGS) == []
     # M3's seven, T24's three, and the Projects page's six.
     assert len(routes.BODY_ARGS) == 16
-    assert len(routes.QUERY_ARGS) == 3
+    assert len(routes.QUERY_ARGS) == 4  # M1's three, and BC-23's `/api/audit`.
     # The derivation is not vacuous: the templates it reads really do carry
     # path parameters, and one of them is the `approval_id` the enumeration
     # never covered.
