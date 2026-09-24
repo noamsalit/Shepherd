@@ -179,16 +179,20 @@ def is_attached_interactive(entry: RegistryEntry) -> bool:
     return entry.entrypoint == CLI_ENTRYPOINT
 
 
-def scan_registry(config_dir: Path) -> tuple[list[RegistryEntry], tuple[Anomaly, ...]]:
+def scan_registry(
+    config_dir: Path, *, consult_agents_fallback: bool = True
+) -> tuple[list[RegistryEntry], tuple[Anomaly, ...]]:
     """Every readable sidecar under `<config_dir>/sessions/`. Read-only, no clock.
 
     The directory is missing on a host where no session has ever accepted the
     trust dialog. That is the one place the `claude agents --json` fallback is
-    consulted — once, never on a timer (E33, G11).
+    consulted — once, never on a timer (E33, G11). "Once" is the caller's to
+    hold: a scan on a cadence passes `consult_agents_fallback=False` after its
+    first pass, and a missing directory is then simply empty (qa6 BC-17).
     """
     directory = config_dir / SESSIONS_DIRNAME
     if not directory.is_dir():
-        return agents_json_fallback()
+        return agents_json_fallback() if consult_agents_fallback else ([], ())
 
     entries: list[RegistryEntry] = []
     anomalies: list[Anomaly] = []
