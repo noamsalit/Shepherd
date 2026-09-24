@@ -16,6 +16,15 @@ The child environment is built from an **allow-list**, not by scrubbing a copy
 of ours: the runner itself runs inside Claude Code and inherits a dozen
 `CLAUDE*`/`AI_AGENT*` variables (setup.md §2), and a deny-list that missed one
 would leak it into every pane. `TMUX` can never be inherited this way.
+
+**Host safety (INC-1, SI-1).** Every env built here carries
+`DISABLE_AUTOUPDATER=1`, and an env that carries the user's **real** HOME
+carries **no** `XDG_*` variable at all: a real-HOME engine resolves its install
+from the XDG data home but writes its launcher link under the real HOME, so a
+sandboxed `XDG_DATA_HOME` once made it re-point the user's `~/.local/bin/claude`
+into a run root (which teardown then deleted). `host_safety_problems` is the
+one check; every builder here refuses an env it fails, and
+`test_harness_guards.py::test_proof_host_safe_envs` proves the check bites.
 """
 
 from __future__ import annotations
@@ -47,6 +56,13 @@ ENV_LIVE_AUTH_MODE: Final[str] = "QA6_LIVE_AUTH_MODE"
 
 #: Prefixes the child env must never carry (env-plan §2 "Flags that must be OFF").
 SCRUBBED_PREFIXES: Final[tuple[str, ...]] = ("CLAUDE", "ANTHROPIC", "AI_AGENT", "TMUX")
+
+#: SI-1: what every env built here carries (the engine never self-updates in a run).
+HOST_SAFETY_ENV: Final[dict[str, str]] = {"DISABLE_AUTOUPDATER": "1"}
+#: SI-1: what a real-HOME env additionally carries (no installer repair of the user's link).
+REAL_HOME_SAFETY_ENV: Final[dict[str, str]] = {"DISABLE_INSTALLATION_CHECKS": "1"}
+#: SI-1: no env carrying the real HOME may carry a variable with this prefix.
+XDG_PREFIX: Final[str] = "XDG_"
 
 PathMode = Literal["shims", "live", "d9", "bare", "unseeded"]
 
@@ -86,6 +102,16 @@ class RunContext:
     @property
     def unseeded_tmux_argv_log(self) -> Path:
         return self.shims_unseeded / "tmux-argv.log"
+
+    @property
+    def real_claude_bin_dir(self) -> Path:
+        """`<run0>/bin`: holds only `claude`, a symlink to the resolved real engine (realclaude.py)."""
+        return self.run0 / "bin"
+
+    @property
+    def real_claude(self) -> Path:
+        """The run-scoped real engine every live exec uses (never the user's `~/.local/bin/claude`)."""
+        return self.real_claude_bin_dir / "claude"
 
     @property
     def artifacts(self) -> Path:
@@ -173,7 +199,7 @@ def mint_run(pid: int, run_id: str, run_dir: Path) -> RunContext:
     """Create the shared run root `shq6-<pid>-0` (0700) and its ledgers."""
     run0 = TMP_CANONICAL / f"{paths.RUN_ROOT_PREFIX}{pid}-0"
     run0.mkdir(mode=0o700, parents=False, exist_ok=False)
-    for sub in ("shims", "shims-live", "shims-d9", "shims-unseeded", "artifacts", "repos"):
+    for sub in ("shims", "shims-live", "shims-d9", "shims-unseeded", "artifacts", "repos", "bin"):
         (run0 / sub).mkdir(mode=0o700)
     run_dir.mkdir(parents=True, exist_ok=True)
     return RunContext(pid=pid, run_id=run_id, run0=run0, run_dir=run_dir)
@@ -261,10 +287,37 @@ def child_path(run: RunContext, mode: PathMode) -> str:
     elif mode == "unseeded":
         head = [str(run.shims_unseeded)]
     elif mode == "live":
-        head = [str(run.shims_live), str(paths.REAL_CLAUDE_BIN.parent)]
+        head = [str(run.shims_live), str(run.real_claude_bin_dir)]
     else:
         head = [str(run.shims_live)]
     return ":".join([*head, *tail])
+
+
+def is_real_home(home: str | None) -> bool:
+    """True when `home` names the user's real home (any spelling of it)."""
+    return home is not None and os.path.realpath(home) == os.path.realpath(paths.REAL_HOME)
+
+
+def host_safety_problems(env: Mapping[str, str]) -> list[str]:
+    """SI-1: why `env` is unsafe for a child that may run the real engine (empty = safe)."""
+    problems: list[str] = []
+    for name, value in HOST_SAFETY_ENV.items():
+        if env.get(name) != value:
+            problems.append(f"{name} is {env.get(name)!r}, not {value!r}")
+    if is_real_home(env.get("HOME")):
+        xdg = sorted(name for name in env if name.startswith(XDG_PREFIX))
+        if xdg:
+            problems.append(f"the env carries the real HOME and {xdg}")
+        for name, value in REAL_HOME_SAFETY_ENV.items():
+            if env.get(name) != value:
+                problems.append(f"the env carries the real HOME and {name} is {env.get(name)!r}, not {value!r}")
+    return problems
+
+
+def refuse_unsafe(env: Mapping[str, str], what: str) -> None:
+    problems = host_safety_problems(env)
+    if problems:
+        raise ValueError(f"refusing {what}: host-unsafe (SI-1): {problems}")
 
 
 def sandbox_env(
@@ -280,15 +333,12 @@ def sandbox_env(
     """The allow-listed environment for a controld/sessiond/CLI child.
 
     `config_dir="unset"` omits `CLAUDE_CONFIG_DIR` (the `needs_real_home` shape).
+    A real `home` gets no `XDG_*` at all (SI-1); prefer `real_home_env`.
     """
+    home_value = str(home if home is not None else instance.home)
     env: dict[str, str] = {
-        "HOME": str(home if home is not None else instance.home),
+        "HOME": home_value,
         "TMPDIR": str(tmpdir if tmpdir is not None else instance.tmpdir),
-        "XDG_DATA_HOME": str(instance.xdg / "data"),
-        "XDG_CONFIG_HOME": str(instance.xdg / "config"),
-        "XDG_STATE_HOME": str(instance.xdg / "state"),
-        "XDG_CACHE_HOME": str(instance.xdg / "cache"),
-        "XDG_RUNTIME_DIR": str(instance.xdg / "runtime"),
         "PATH": child_path(run, path_mode),
         "PYTHONUNBUFFERED": "1",
         "LANG": "en_US.UTF-8",
@@ -296,7 +346,12 @@ def sandbox_env(
         "SHELL": "/bin/sh",
         "USER": os.environ.get("USER", "qa6"),
         "LOGNAME": os.environ.get("LOGNAME", os.environ.get("USER", "qa6")),
+        **HOST_SAFETY_ENV,
     }
+    if is_real_home(home_value):
+        env.update(REAL_HOME_SAFETY_ENV)
+    else:
+        env.update(sandboxed_xdg(instance))
     if config_dir != "unset":
         env["CLAUDE_CONFIG_DIR"] = str(config_dir if config_dir is not None else instance.cfg)
     if extra:
@@ -304,7 +359,35 @@ def sandbox_env(
     leaked = [name for name in env if name.startswith(SCRUBBED_PREFIXES) and name != "CLAUDE_CONFIG_DIR"]
     if leaked:
         raise ValueError(f"refusing a child env carrying scrubbed variables: {leaked}")
+    refuse_unsafe(env, "a child env")
     return env
+
+
+def sandboxed_xdg(instance: InstanceRoot) -> dict[str, str]:
+    """The instance's own XDG dirs — only ever for a sandboxed HOME."""
+    return {
+        "XDG_DATA_HOME": str(instance.xdg / "data"),
+        "XDG_CONFIG_HOME": str(instance.xdg / "config"),
+        "XDG_STATE_HOME": str(instance.xdg / "state"),
+        "XDG_CACHE_HOME": str(instance.xdg / "cache"),
+        "XDG_RUNTIME_DIR": str(instance.xdg / "runtime"),
+    }
+
+
+def real_home_env(
+    run: RunContext,
+    instance: InstanceRoot,
+    *,
+    path_mode: PathMode = "live",
+    extra: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """The one builder for a child that carries the user's real HOME (`needs_real_home`).
+
+    Real `HOME`, `CLAUDE_CONFIG_DIR` unset, the instance's `TMPDIR`, no `XDG_*`,
+    `DISABLE_AUTOUPDATER=1` and `DISABLE_INSTALLATION_CHECKS=1`. Shepherd's own
+    dirs stay sandboxed by injection (the launcher's `MacHost(environ=...)`).
+    """
+    return sandbox_env(run, instance, path_mode=path_mode, home=paths.REAL_HOME, config_dir="unset", extra=extra)
 
 
 def pytest_process_env(base: Mapping[str, str], extra: Mapping[str, str]) -> dict[str, str]:
@@ -312,17 +395,21 @@ def pytest_process_env(base: Mapping[str, str], extra: Mapping[str, str]) -> dic
 
     The pytest process keeps the **real** HOME on purpose: `tests/conftest.py`'s
     settings guard then protects the user's real `~/.claude/settings.json`
-    during qa6 too. Every product child gets `sandbox_env` instead.
+    during qa6 too. Every product child gets `sandbox_env` instead. Because it
+    carries the real HOME, it carries no `XDG_*` and the SI-1 opt-outs.
     """
     env = {
         name: value
         for name, value in base.items()
-        if not name.startswith(SCRUBBED_PREFIXES) and not name.startswith("QA6_")
+        if not name.startswith(SCRUBBED_PREFIXES) and not name.startswith("QA6_") and not name.startswith(XDG_PREFIX)
     }
+    env.update(HOST_SAFETY_ENV)
+    env.update(REAL_HOME_SAFETY_ENV)
     env["PLAYWRIGHT_BROWSERS_PATH"] = str(paths.BROWSERS_PATH)
     env["PYTHONUNBUFFERED"] = "1"
     env["LANG"] = "en_US.UTF-8"
     env["LC_ALL"] = "en_US.UTF-8"
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.update(extra)
+    refuse_unsafe(env, "a lane process env")
     return env

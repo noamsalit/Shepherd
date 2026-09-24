@@ -17,7 +17,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from . import hostprobe, paths, shims, teardown
+from . import hostprobe, paths, realclaude, shims, teardown
 from .sandbox import (
     ENV_RUN_DIR,
     ENV_RUN_ID,
@@ -91,10 +91,22 @@ def remove_worktree(run: RunContext) -> list[str]:
 
 
 def mint(pid: int, run_id: str, run_dir: Path) -> RunContext:
+    """The shared root, the shims, the repos, and the run-scoped real engine.
+
+    The user's `~/.local/bin/claude` state is recorded first (if the runner has
+    not already done so at its own start), then the real engine is resolved and
+    exposed as `<run0>/bin/claude` (realclaude.py; INC-1).
+    """
+    link = realclaude.record_link_start(run_dir)
+    collision = f"/{paths.RUN_ROOT_PREFIX}{pid}-"
+    if any(collision in str(link.get(key)) for key in ("target", "resolved")):
+        raise RuntimeError(f"refusing to mint run pid {pid}: the user's {paths.REAL_CLAUDE_BIN} points into this "
+                           f"run's namespace ({link}); the harness would create files where the user's link points")
     run = mint_run(pid, run_id, run_dir)
     shims.write_shims(run)
     shims.selftest(run)
     seed_repos(run)
+    realclaude.install(run, realclaude.resolve(os.environ))
     return run
 
 

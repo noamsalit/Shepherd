@@ -34,7 +34,7 @@ import re
 from collections.abc import Mapping
 from pathlib import Path
 
-from .. import hostprobe, paths
+from .. import hostprobe, paths, realclaude
 from ..mutations import active
 from ..sandbox import TMP_CANONICAL, RunContext
 from ..scenario import scenario
@@ -218,14 +218,18 @@ def test_z1_user_claude_settings_and_projects_as_they_were(qa6_run: RunContext, 
                                           "problems": closing.get("problems")})
     alive = [entry for entry in sidecars if entry.get("alive")]
     rec.check("files.no_live_run_sidecar", not alive, "no ~/.claude/sessions file names a run pid still alive", alive)
-    # Not in the plan's Z1 row; added after this build measured a real-HOME engine re-pointing the
-    # user's `~/.local/bin/claude` into a run root (derived oracle: the run must leave it working).
-    link = paths.REAL_CLAUDE_BIN
-    resolved = os.path.realpath(link)
-    rec.check("files.claude_bin_link_intact", Path(resolved).exists() and f"/{paths.RUN_ROOT_PREFIX}" not in resolved,
-              f"{link} resolves to an installed engine outside every qa6 run root",
-              {"target": os.readlink(link) if link.is_symlink() else None, "resolved": resolved,
-               "exists": Path(resolved).exists()})
+    # Not in the plan's Z1 row; added after INC-1 (a real-HOME engine re-pointed the user's
+    # `~/.local/bin/claude` into a run root). Derived oracle: the run leaves the link exactly as it
+    # found it at run START — never "healthy", because it may already have been damaged before
+    # the run (it was: INC-1 is unrepaired), and repairing it is not the harness's to do.
+    link_start = realclaude.start_link_state(run.run_dir)
+    link_now = realclaude.link_state()
+    if link_start is None:
+        rec.block("files.claude_bin_link_unchanged", f"no {realclaude.LINK_START_FILE} in the run directory")
+    else:
+        rec.check("files.claude_bin_link_unchanged", realclaude.compare(link_start, link_now) is None,
+                  f"{paths.REAL_CLAUDE_BIN} is as it was at run start: {link_start}", link_now)
+    rec.record("files.real_claude_resolution", read_json(run.run_dir / realclaude.RESOLUTION_FILE))
     if mode == "sandbox_ok":
         rec.equal("files.no_run_sidecar_in_real_dir", [], sidecars)
     rec.finish()
@@ -235,19 +239,15 @@ def test_z1_user_claude_settings_and_projects_as_they_were(qa6_run: RunContext, 
 
 
 def product_tmux_log(run: RunContext, rec: Recorder) -> tuple[list[list[str]] | None, str]:
-    """The product's argv log. The runner's `ledgers/tmux-argv.log` is overwritten by the
-    unseeded log when both exist (the two files share a name), so wave 8's copy is preferred."""
+    """The product's argv log: the runner's `ledgers/tmux-argv.log` (distinct from
+    `ledgers/unseeded-tmux-argv.log` since SI-2), else wave 8's copy, else the live file."""
+    _ = rec
+    ledger = run.run_dir / "ledgers" / "tmux-argv.log"
+    if ledger.exists():
+        return argv_lines(ledger), str(ledger)
     wave8 = run.run_dir / "wave8-ledgers" / "tmux-argv.product.log"
     if wave8.exists():
         return argv_lines(wave8), str(wave8)
-    ledger = run.run_dir / "ledgers" / "tmux-argv.log"
-    unseeded = run.run_dir / "ledgers" / "unseeded-tmux-argv.log"
-    if ledger.exists() and unseeded.exists() and ledger.read_bytes() == unseeded.read_bytes():
-        rec.note("ledgers/tmux-argv.log is byte-identical to the unseeded log: the runner's ledger copy wrote the "
-                 "unseeded file over the product log (both are named tmux-argv.log)")
-        return None, str(ledger)
-    if ledger.exists():
-        return argv_lines(ledger), str(ledger)
     if run.tmux_argv_log.exists():
         # A run whose root is still present (standalone or --mutation): the live product log itself.
         return argv_lines(run.tmux_argv_log), str(run.tmux_argv_log)

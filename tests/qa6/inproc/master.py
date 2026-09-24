@@ -9,10 +9,16 @@ schema check, the gate or the audit record.
 * A `MasterRuntime` with the six members (`configure`, `send`, `resume`,
   `interrupt`, `close`, `capabilities`).
 * `send(text)` pops one `Turn(says, calls, ends)` from a thread-safe book the
-  scenario fills. For each call it yields `tool_call`, then awaits
+  scenario fills. `says` is one string or a sequence of strings: one `text`
+  event per entry. For each call it yields `tool_call`, then awaits
   `anyio.to_thread.run_sync(client.call, name, args, "master", turn_id)` (a
   worker thread, so a call blocked on an approval does not block the loop),
   then yields `tool_result` with `is_error` and records the result's text.
+* Payloads match the product's own projection (`master/projection.py`):
+  `tool_call` → `{"tool_use_id": id, "input": args}`, `tool_result` →
+  `{"tool_use_id": id, "is_error": …, "text": …}` (the text is also the event's
+  `text`, as the projection sets it), with `id = qa6-toolu-<turn_id>-<n>`,
+  `n` counting the turn's calls from 1.
 * A call's `args` may be a mapping **or a function of the earlier results in
   the same turn** (P10 needs the id `create_project` returned — review pass 1
   finding 14).
@@ -72,9 +78,18 @@ class Call:
 
 @dataclass(frozen=True)
 class Turn:
-    says: str
+    says: str | Sequence[str]
     calls: Sequence[Call] = ()
     ends: MasterEventKind = "turn_ended"
+
+    def texts(self) -> tuple[str, ...]:
+        """One entry per `text` event (a bare string is one event, never one per character)."""
+        return (self.says,) if isinstance(self.says, str) else tuple(self.says)
+
+
+def tool_use_id(turn_id: str, n: int) -> str:
+    """The id a scripted call carries in both its `tool_call` and `tool_result` payloads."""
+    return f"qa6-toolu-{turn_id}-{n}"
 
 
 @dataclass
@@ -159,17 +174,20 @@ class ToolCallingMaster:
             record.ended = "error"
             yield _event("error", text=EMPTY_BOOK)
             return
-        yield _event("text", text=turn.says)
-        for step in turn.calls:
+        for said in turn.texts():
+            yield _event("text", text=said)
+        for n, step in enumerate(turn.calls, start=1):
             if self._interrupted:
                 break
             args = step.args(tuple(record.results)) if callable(step.args) else step.args
-            yield _event("tool_call", tool_name=step.name, payload=dict(args))
+            call_id = tool_use_id(self.turn_id, n)
+            yield _event("tool_call", tool_name=step.name, payload={"tool_use_id": call_id, "input": dict(args)})
             raw = await anyio.to_thread.run_sync(client.call, step.name, dict(args), MASTER_CALLER_ID, self.turn_id)
             result = CallResult(name=step.name, args=dict(args), is_error=bool(raw.get("is_error")),
                                 text=_result_text(raw), raw=dict(raw))
             record.results.append(result)
-            yield _event("tool_result", tool_name=step.name, payload={"is_error": result.is_error, "text": result.text})
+            yield _event("tool_result", text=result.text, tool_name=step.name,
+                         payload={"tool_use_id": call_id, "is_error": result.is_error, "text": result.text})
         record.interrupted = self._interrupted
         record.ended = turn.ends
         yield _event(turn.ends, payload={"interrupted": self._interrupted})

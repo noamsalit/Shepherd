@@ -28,9 +28,15 @@ gone by wave 9). A pane pid still alive after it is a leak and a teardown
 problem.
 
 **The product tmux log is copied out after the pool stops** into
-`<run_dir>/wave8-ledgers/`, because the runner's own ledger copy writes the
-unseeded log over `ledgers/tmux-argv.log` (both files are named
-`tmux-argv.log`). Z2 reads this copy; the runner defect is reported, not edited.
+`<run_dir>/wave8-ledgers/` (Z2 prefers this copy; the runner's own
+`ledgers/tmux-argv.log` and `ledgers/unseeded-tmux-argv.log` are distinct
+since SI-2).
+
+**Host safety (INC-1).** Every real-HOME env comes from `sandbox.real_home_env`
+(no `XDG_*`, `DISABLE_AUTOUPDATER=1`); every direct exec of the real engine uses
+the run's `<run0>/bin/claude` (realclaude.py), never the user's link; and
+`live/conftest.py` compares the user's `~/.local/bin/claude` against its
+run-START state before the module, and around every scenario.
 
 Every signal goes to a pid this module spawned; every tmux call is on this run's
 own `shepherd-m3-q6<pid>-<k>` socket through `tmuxctl` (absolute binary, never
@@ -67,15 +73,15 @@ from shepherd.runner.local import LISTING_FORMAT
 from shepherd.runner.pane import FIELD_SEPARATOR, parse_pane_fields, read_pane
 from shepherd.toolsurface.compose import log_root
 
-from .. import hostprobe, paths, tmuxctl, wsclient
+from .. import hostprobe, paths, realclaude, tmuxctl, wsclient
 from ..auditprobe import AuditProbe, shape_problems
 from ..browser import BrowserSession, click, press, type_text
 from ..hookrig import captured, start_ready_sessiond
 from ..httpclient import Client, Response, as_dict, as_list
-from ..instance import Controld, app_state, db_rows, last_scan_at, ready_instance, seed_db, spawn_drained
+from ..instance import Controld, app_state, db_rows, last_scan_at, ready_instance, seed_db, start_launcher
 from ..mutations import active
 from ..pool import InstancePool
-from ..sandbox import ENV_LIVE_AUTH_MODE, InstanceRoot, RunContext, mint_instance, sandbox_env
+from ..sandbox import ENV_LIVE_AUTH_MODE, InstanceRoot, RunContext, mint_instance, real_home_env, sandbox_env
 from ..scenario import live_scenario
 from ..sessions import fleet_sessions, session_row
 from ..sessions import sidecar as synthetic_sidecar
@@ -475,49 +481,22 @@ def live_mode() -> str:
     return mode
 
 
-#: Every real engine this module starts gets these (the repo's own probes do the same,
-#: docs/probes/2026-09-14-schemas/gap-fill/gaplib.py): a real-HOME engine that self-updates
-#: re-points the user's `~/.local/bin/claude` symlink (measured in this build, see below).
-ENGINE_ENV_EXTRA: dict[str, str] = {"DISABLE_AUTOUPDATER": "1"}
-XDG_KEYS = ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR")
-
-
 def real_home_engine_env(run: RunContext, root: InstanceRoot) -> dict[str, str]:
-    """`needs_real_home`'s child env, minus the sandboxed XDG dirs, plus the autoupdater opt-out.
+    """`needs_real_home`'s child env: `sandbox.real_home_env` (SI-1).
 
-    **Measured, 2026-09-24 (this build's second smoke run):** a real `claude` TUI
-    pane started with the real HOME and `sandbox_env`'s `XDG_DATA_HOME=<root>/xdg/data`
-    installed itself into `<root>/xdg/data/claude/versions/2.1.281` and re-pointed the
-    user's real `~/.local/bin/claude` at it; run teardown then removed the root and left
-    the user's `claude` a dangling symlink. The engine resolves its install from the
-    XDG data home but writes the launcher link under the real HOME, so a real-HOME
-    engine must see the real (unset) XDG dirs. Shepherd's own dirs stay sandboxed:
-    MacHost reads HOME/TMPDIR only, and the launcher injects both explicitly.
+    **Measured, 2026-09-24 (INC-1):** a real `claude` TUI pane started with the
+    real HOME and a sandboxed `XDG_DATA_HOME=<root>/xdg/data` installed itself into
+    `<root>/xdg/data/claude/versions/2.1.281` and re-pointed the user's real
+    `~/.local/bin/claude` at it; run teardown then removed the root and left the
+    user's `claude` a dangling symlink. The shared builder now drops every `XDG_*`
+    for a real HOME and sets `DISABLE_AUTOUPDATER=1` for every child.
     """
-    env = sandbox_env(run, root, path_mode="live", home=paths.REAL_HOME, config_dir="unset", extra=ENGINE_ENV_EXTRA)
-    for key in XDG_KEYS:
-        env.pop(key, None)
-    return env
+    return real_home_env(run, root, path_mode="live")
 
 
 def start_real_home_launcher(run: RunContext, root: InstanceRoot, name: str) -> Controld:
-    """`instance.start_launcher`, with `real_home_engine_env` instead of the shared env (SCOPE_INCREASES)."""
-    env = real_home_engine_env(run, root)
-    argv = [str(paths.PYTHON), str(paths.QA6_DIR / "launch_controld.py"), "--port", "0",
-            "--shepherd-home", str(root.home), "--shepherd-tmpdir", str(root.tmpdir),
-            "--discovery-config-dir", str(root.cfg)]
-    run.ledger(run.controld_argv_ledger, {"k": root.k, "argv": argv, "at": time.time(), "launcher": True})
-    child = spawn_drained(run, argv, env, root.cwd, root.logs, name, "launcher")
-    return Controld(run=run, root=root, child=child, env=env, argv=argv)
-
-
-def claude_link_state() -> dict[str, object]:
-    """Where the user's `~/.local/bin/claude` points, read-only (lstat + readlink + realpath)."""
-    link = paths.REAL_CLAUDE_BIN
-    target = os.readlink(link) if link.is_symlink() else None
-    resolved = os.path.realpath(link)
-    return {"target": target, "resolved": resolved, "exists": Path(resolved).exists(),
-            "inside_a_run_root": f"/{paths.RUN_ROOT_PREFIX}" in resolved}
+    """`instance.start_launcher` (its env is `instance.launcher_env` = `real_home_env`)."""
+    return start_launcher(run, root, name=name)
 
 
 def start_live(run: RunContext, pool: InstancePool, mode: str, *, name: str,
@@ -761,10 +740,10 @@ def live(product_log_copy: None, pool: InstancePool, qa6_run: RunContext) -> Ite
     mode = live_mode()
     if hostprobe.sha256(paths.REAL_SETTINGS) != paths.EXPECTED_SETTINGS_SHA:
         raise Blocked("the real settings sha is not the owner's value before wave 8 (U2)")
-    link_before = claude_link_state()
-    if not link_before["exists"] or link_before["inside_a_run_root"]:
-        raise Blocked(f"the user's {paths.REAL_CLAUDE_BIN} does not resolve to an installed engine outside every run "
-                      f"root ({link_before}); a human must repair it before any live scenario runs")
+    realclaude.require(qa6_run)  # BLOCKED when this run has no real engine (realclaude.py)
+    link_start = realclaude.start_link_state(qa6_run.run_dir)
+    if link_start is None:
+        raise Blocked(f"no run-start record of {paths.REAL_CLAUDE_BIN}: wave 8 cannot tell whether it changed")
     a = open_instance(qa6_run, pool, mode, "LIVE-A")
     alpha = qa6_run.repos / "alpha"
     project = as_dict(a.client.create_project("Alpha").get("project"))
@@ -781,9 +760,9 @@ def live(product_log_copy: None, pool: InstancePool, qa6_run: RunContext) -> Ite
     finally:
         problems = closing_step(state)
         sampler.stop()
-        link_after = claude_link_state()
-        if link_after != link_before:
-            problems.append(f"the user's {paths.REAL_CLAUDE_BIN} changed during wave 8: {link_before} -> {link_after}")
+        link_changed = realclaude.compare(link_start, realclaude.link_state())
+        if link_changed is not None:
+            problems.append(f"during wave 8: {link_changed}")
         for instance in (state.a, state.b):
             if instance is not None:
                 instance.close_stream()
@@ -1451,10 +1430,10 @@ def test_l4_real_claude_fires_installed_hooks(live: Live, rec: Recorder) -> None
     sd, probe_latency = start_ready_sessiond(manager, "SD-L4", argv=dispatch, target_engine_id=engine_id,
                                              target_cwd=str(live.alpha))
     rec.record("given.probe_latency_s", round(probe_latency, 3))
-    argv = [str(paths.REAL_CLAUDE_BIN), "-p", "Reply with QA6-HOOKED", "--settings", str(settings),
+    argv = [str(realclaude.require(run)), "-p", "Reply with QA6-HOOKED", "--settings", str(settings),
             "--model", MODEL, "--session-id", engine_id]
     env = (real_home_engine_env(run, root) if live.mode == "needs_real_home"
-           else sandbox_env(run, root, path_mode="live", extra=ENGINE_ENV_EXTRA))
+           else sandbox_env(run, root, path_mode="live"))
     before = real_claude_state()
     process = subprocess.Popen(argv, env=env, cwd=str(live.alpha), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, text=True)

@@ -15,14 +15,25 @@ case "$1" in
   --version) echo "0.0.0-qa6 (QA6 fake claude)"; exit 0 ;;
   agents) echo "[]"; exit 0 ;;
 esac
+# -p/--print (an option before `--`): the engine's `-p --output-format json`
+# result object, in the captured shape the product parses (fork.py
+# parse_fork_result; docs/probes/2026-09-17-m3-tmux/p2-fork-*/03-*.stdout.json):
+# type, subtype, is_error, result = QA6-FORK-ANSWER, session_id = the
+# --session-id it was given (as P2 measured).
+PRINT=0
+SID=""
+PREV=""
 for arg in "$@"; do
   # Only options count: everything after `--` is the brief (spawn.py A11).
   if [ "$arg" = "--" ]; then break; fi
-  if [ "$arg" = "-p" ] || [ "$arg" = "--print" ]; then
-    echo "QA6-FORK-ANSWER"
-    exit 0
-  fi
+  if [ "$arg" = "-p" ] || [ "$arg" = "--print" ]; then PRINT=1; fi
+  if [ "$PREV" = "--session-id" ]; then SID="$arg"; fi
+  PREV="$arg"
 done
+if [ "$PRINT" = "1" ]; then
+  printf '{"type":"result","subtype":"success","is_error":false,"result":"QA6-FORK-ANSWER","session_id":"%s"}\n' "$SID"
+  exit 0
+fi
 MODE=default
 if [ -f "$HOME/.qa6-shim-mode" ]; then MODE=$(/bin/cat "$HOME/.qa6-shim-mode"); fi
 if [ -n "$QA6_SHIM_MODE" ]; then MODE="$QA6_SHIM_MODE"; fi

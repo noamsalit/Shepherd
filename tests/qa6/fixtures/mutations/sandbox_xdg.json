@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sandbox.py",
+ "old": "return home is not None and os.path.realpath(home) == os.path.realpath(paths.REAL_HOME)",
+ "new": "return False",
+ "proof": "test_proof_host_safe_envs",
+ "expect": "proof_host_safe_envs.real_home_env_has_no_xdg",
+ "why": "the real-HOME test never matches, so a real-HOME env keeps the sandboxed XDG_* dirs (the INC-1 shape) and the checker is blind to it too; only the proof's independent builder check can see it (proved by building dicts: nothing is executed)"
+}

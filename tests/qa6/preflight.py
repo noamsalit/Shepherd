@@ -13,16 +13,18 @@ judge — env-plan §3).
 
 from __future__ import annotations
 
+import os
 import socket
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from shepherd.host.mac import MacHost
 
-from . import hostprobe, paths
+from . import hostprobe, paths, realclaude
 from .catalog import BY_ID
+from .sandbox import HOST_SAFETY_ENV, REAL_HOME_SAFETY_ENV, refuse_unsafe
 
 
 @dataclass(frozen=True)
@@ -44,10 +46,19 @@ class Check:
         }
 
 
-def _run(argv: list[str], timeout_s: float = 60.0, cwd: Path | None = None) -> tuple[int, str]:
+def claude_probe_env() -> dict[str, str]:
+    """The env for `<real claude> --version`: real HOME, so no `XDG_*` and the SI-1 opt-outs."""
+    env = {"HOME": str(paths.REAL_HOME), "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8",
+           **HOST_SAFETY_ENV, **REAL_HOME_SAFETY_ENV}
+    refuse_unsafe(env, "the preflight claude probe env")
+    return env
+
+
+def _run(argv: list[str], timeout_s: float = 60.0, cwd: Path | None = None,
+         env: Mapping[str, str] | None = None) -> tuple[int, str]:
     try:
         done = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s, check=False,
-                              cwd=str(cwd) if cwd else None)
+                              cwd=str(cwd) if cwd else None, env=dict(env) if env is not None else None)
     except (OSError, subprocess.TimeoutExpired) as error:
         return -1, f"{type(error).__name__}: {error}"
     return done.returncode, (done.stdout + done.stderr).strip()
@@ -71,8 +82,9 @@ def tier1() -> list[Check]:
     for name, path in (("controld", paths.CONTROLD_BIN), ("sessiond", paths.SESSIOND_BIN), ("cli", paths.SHEPHERD_BIN),
                        ("pytest", paths.PYTEST), ("mypy", paths.VENV_BIN / "mypy"), ("tmux", paths.TMUX_BIN),
                        ("perl", paths.PERL_BIN), ("nc", paths.NC_BIN), ("lsof", paths.LSOF_BIN), ("ps", paths.PS_BIN),
-                       ("git", paths.GIT_BIN), ("real claude", paths.REAL_CLAUDE_BIN)):
+                       ("git", paths.GIT_BIN)):
         checks.append(_exists("T1", name, path))
+    checks.append(real_claude_check(realclaude.resolve(os.environ)))
     shell = paths.BROWSERS_PATH / "chromium_headless_shell-1243"
     checks.append(_exists("T1", "chromium-headless-shell 1243", shell, executable=False))
     for probe in (paths.PROMPT_READY_FRAME, paths.DIALOG_CAPTURE, paths.SIDECAR_CAPTURE, paths.HOOKS_LIVE / "S01_startup_tools" / "events.jsonl"):
@@ -88,12 +100,25 @@ def tier1() -> list[Check]:
     return checks
 
 
+def real_claude_check(resolution: realclaude.Resolution) -> Check:
+    """T1: the real engine resolves (QA6_REAL_CLAUDE → which → newest versions/*; INC-1 noted)."""
+    actual = f"{resolution.path} via {resolution.source}: {resolution.why}"
+    return Check("T1", "real claude resolves", "realclaude.resolve(os.environ)",
+                 "an executable outside every run root (the source and why are recorded)",
+                 actual, resolution.path is not None, "" if resolution.path is not None else "missing-input")
+
+
 def tier2() -> list[Check]:
     checks: list[Check] = []
     rc, out = _run([str(paths.TMUX_BIN), "-V"], 10)
     checks.append(Check("T2", "tmux -V", "/opt/homebrew/bin/tmux -V", "tmux 3.6a", out, rc == 0 and out.startswith("tmux "), "missing-input"))
-    rc, out = _run([str(paths.REAL_CLAUDE_BIN), "--version"], 20)
-    checks.append(Check("T2", "claude --version (recorded)", "~/.local/bin/claude --version", "a version (recorded)", out, rc == 0, "missing-input"))
+    engine = realclaude.resolve(os.environ).path
+    if engine is None:
+        rc, out = -1, "no real claude resolved (T1)"
+    else:
+        rc, out = _run([engine, "--version"], 20, env=claude_probe_env())
+    checks.append(Check("T2", "claude --version (recorded)", f"{engine} --version (real HOME, no XDG_*, DISABLE_AUTOUPDATER=1)",
+                        "a version (recorded)", out, rc == 0, "missing-input"))
     rc, out = _run([str(paths.GIT_BIN), "--version"], 5)
     checks.append(Check("T2", "git without CLT prompt", "/usr/bin/git --version", "exit 0 in 5 s", out, rc == 0, "missing-input"))
     rc, out = _run([str(paths.PERL_BIN), "-MTime::HiRes", "-e1"], 10)

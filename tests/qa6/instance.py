@@ -43,7 +43,7 @@ from shepherd.store.db import open_store
 
 from . import paths
 from .httpclient import Client
-from .sandbox import InstanceRoot, PathMode, RunContext, mint_instance, sandbox_env
+from .sandbox import InstanceRoot, PathMode, RunContext, mint_instance, real_home_env, sandbox_env
 from .verdict import Blocked, await_env
 
 START_LINE = re.compile(r"^controld: http://127\.0\.0\.1:(\d+) · (\S+)$")
@@ -519,17 +519,27 @@ def start_helper(run: RunContext) -> Helper:
 LAUNCHER = paths.QA6_DIR / "launch_controld.py"
 
 
+def launcher_env(run: RunContext, root: InstanceRoot) -> dict[str, str]:
+    """The launcher's child env: `sandbox.real_home_env` with the LIVE `PATH`.
+
+    Real `HOME`, `CLAUDE_CONFIG_DIR` **unset**, `TMPDIR` = the instance's, the
+    LIVE `PATH` (logging tmux + `<run0>/bin/claude`), **no `XDG_*`**,
+    `DISABLE_AUTOUPDATER=1` (SI-1: the INC-1 shape can never recur here), and
+    everything else allow-listed.
+    """
+    return real_home_env(run, root, path_mode="live")
+
+
 def start_launcher(run: RunContext, root: InstanceRoot, *, port: int = 0, name: str = "launcher") -> Controld:
     """Start `launch_controld.py` with the real HOME and a sandboxed Shepherd.
 
-    Env: real `HOME`, `CLAUDE_CONFIG_DIR` **unset**, `TMPDIR` = the instance's,
-    the LIVE `PATH` (logging tmux + the real `claude`), `PYTHONUNBUFFERED=1`,
-    everything else allow-listed. Discovery is pointed at `<root>/cfg`.
+    Env: `launcher_env` (real `HOME`, no `XDG_*`, the SI-1 opt-outs). Discovery
+    is pointed at `<root>/cfg`.
     """
     if port == paths.FORBIDDEN_PORT:
         run.ledger(run.port_refusals, {"refused": port, "at": time.time()})
         raise Blocked(f"refusing to start the launcher on port {port} (R1)")
-    env = sandbox_env(run, root, path_mode="live", home=paths.REAL_HOME, config_dir="unset")
+    env = launcher_env(run, root)
     argv = [
         str(paths.PYTHON), str(LAUNCHER), "--port", str(port),
         "--shepherd-home", str(root.home), "--shepherd-tmpdir", str(root.tmpdir),

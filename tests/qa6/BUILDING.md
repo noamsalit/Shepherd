@@ -1,10 +1,13 @@
 # Building on tests/qa6 (STAGE B guide)
 
-STAGE A built the shared harness and waves 1-3 (56 scenarios). STAGE B adds
-waves 4-9 **as new test modules only**. Nothing below requires editing a shared
-file: the runner, the stop-ifs (every wave's), the lanes, the manifest, the
-catalog of all 161 ids and every helper already exist. If you believe a shared
-file must change, that is a finding to report, not an edit to make.
+STAGE A built the shared harness and waves 1-3 (56 scenarios). STAGE B added
+waves 4-9 **as new test modules only**. The re-qa-build remfix (after INC-1)
+then changed shared files once, on the three STAGE B builders' requests: host
+safety (SI-1, §9), the real-engine resolution (§5, §9), `ToolCallingMaster`
+payloads and multi-text turns (§4), `browser.pump/settle` (§4), the ledger
+names (SI-2, §6), wave-8 mutations (SI-3, §4) and the shim's `-p` JSON (§5).
+Nothing below otherwise requires editing a shared file. If you believe one must
+change, that is a finding to report, not an edit to make.
 
 Plan: `.cc10x/qa/wf-20260923T182839Z-9adb11fc/test-plan.md` (r3) and
 `env-plan.md` (r3). Setup record: `.cc10x/qa/env/Shepherd-macos/setup.md`.
@@ -148,6 +151,14 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   `target(name)`, `kill_server` (teardown backstop only). The product's own
   tmux calls go through `<run0>/shims/tmux` → `run.tmux_argv_log` (one JSON
   array per line).
+* **browser.py waits** — `pump(page)` and `settle(predicate, bound_s=UI_BOUND_S,
+  page=None) -> (value | None, elapsed)`. **Sync Playwright dispatches page
+  events (request, response, console, websocket) only while a Playwright call
+  is running**: a predicate that reads a `PageLog` while the harness only
+  sleeps polls a list that never grows. `settle(..., page=page)` pumps before
+  every poll; a predicate that queries the DOM through a locator is itself a
+  Playwright call and needs no `page`. `sub/test_wave6_0_uikit.py` re-exports
+  both (and `UI_BOUND_S`) from here.
 * **browser.py** — `with browser_session.context("U1", viewport=(w, h),
   has_touch=, is_mobile=, java_script_enabled=, abort_master_send=True,
   color_scheme=) as (context, log):` listeners attached before `goto`;
@@ -168,6 +179,11 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   Never spell a width literal in a module.
 * **inproc/master.py** + **inp.py** — `inp.send_turn(Turn(says=, calls=[Call(name,
   args_or_fn)], ends=), text=)` pushes onto `BOOK` and posts `/api/master/send`;
+  `says` is a `str` or a `Sequence[str]` (one `master.text` per entry). Payloads
+  match `master/projection.py`: `tool_call` detail `{"tool_use_id", "input"}`,
+  `tool_result` detail `{"tool_use_id", "is_error", "text"}` (and the result
+  text as the event text), `tool_use_id = qa6-toolu-<turn_id>-<n>` (`n` from 1
+  per turn; `master.tool_use_id(turn_id, n)`);
   `Call.args` may be `lambda results: {...}` over the earlier `CallResult`s of
   the same turn (P10). `BOOK.records` (per turn: `results`, `interrupted`,
   `ended`), `BOOK.resumed`, `BOOK.configured_tools`. `inp.client` is allowed to
@@ -187,7 +203,17 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   (`name, prop, scenario, node, failing_clause, what`), wire `active(<name>)`
   at one input in your scenario with a `rec.note("QA6 MUTATION <name> APPLIED:
   …")`, and prove it with `run.py --mutation <name>` (the result lands in
-  `runs/mutations/<id>/mutation-result.json`).
+  `runs/mutations/<id>/mutation-result.json`). A **wave-8** mutation first runs
+  S0 in its own process without the mutation and hands the mode it bound to
+  the mutated node as `QA6_LIVE_AUTH_MODE` (SI-3; `mutations.prerequisite_nodes`).
+* **sandbox.py env builders** — `sandbox_env(...)` (sandboxed HOME: the
+  instance's `XDG_*`), `real_home_env(run, root, path_mode="live")` (the one
+  builder for a child carrying the real HOME), `instance.launcher_env`,
+  `host_safety_problems(env)`; see §9.
+* **realclaude.py** — `resolve(environ)`, `install(run, resolution)` (called by
+  `bootstrap.mint`), `load(run)`, `require(run)`, `link_state()`,
+  `record_link_start(run_dir)`, `link_change(run_dir)`, `compare(start, now)`,
+  `REPAIR_MESSAGE`; see §9.
 
 ## 5. Shims
 
@@ -196,11 +222,17 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   file `$HOME/.qa6-shim-mode` in the instance's sandbox home (the product's tmux
   server inherits `HOME`): `default`, `dialog` (U14: frame, 2 s, clear, the p4
   permission dialog — W5 measured it classifies PERMISSION_DIALOG on macOS),
-  `catv` (O7: `cat -v`), `bare`. `-p/--print` before `--` prints
-  `QA6-FORK-ANSWER` and exits (O10). Argv logged as JSON objects to
-  `run.claude_argv_log`.
+  `catv` (O7: `cat -v`), `bare`. `-p/--print` before `--` prints the engine's
+  captured `-p --output-format json` result object — `{"type":"result",
+  "subtype":"success","is_error":false,"result":"QA6-FORK-ANSWER",
+  "session_id":<its --session-id>}` — and exits (O10; the product's
+  `parse_fork_result` reads it; O10's STAGE B wrapper is gone). Argv logged as
+  JSON objects to `run.claude_argv_log`.
 * D9's counting `claude`: `shims-d9/`, log `shims.forks_log(run)`.
-* `path_mode="live"`: logging tmux + the real `~/.local/bin/claude`.
+* `path_mode="live"`: logging tmux + `<run0>/bin/claude`, a run-scoped symlink to
+  the real engine (never the user's `~/.local/bin/claude`; §9). Any direct exec
+  of the real engine uses `run.real_claude` / `realclaude.require(run)` (BLOCKED
+  when the run has none).
 * `path_mode="unseeded"`: only for an instance started WITHOUT `seed_db` (its
   reconcile names the default socket `shepherd-runner`); its tmux argv go to
   `run.unseeded_tmux_argv_log`, never to the log Z2 reads.
@@ -217,8 +249,10 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   that): `<run_dir>/baseline.json` (pre-run host), `<run_dir>/host-after/<lane>-
   w<N>.json` (after every lane) and `after-teardown.json`,
   `<run_dir>/ledgers/{tmux-argv.log, unseeded-tmux-argv.log, claude-argv.log,
-  pids.jsonl, controld-argv.jsonl, port-refusals.log}`,
-  `<run_dir>/teardown-problems.jsonl`.
+  pids.jsonl, controld-argv.jsonl, port-refusals.log}` (SI-2: the product log
+  and the unseeded log are distinct files; `run.ledger_copies` names them),
+  `<run_dir>/teardown-problems.jsonl`, `<run_dir>/real-claude.json` (which engine
+  and why) and `<run_dir>/claude-link-start.json` (§9).
 * Real `~/.claude/projects` gains `-private-tmp-shq6-<pid>-<k>-cwd` entries under
   `needs_real_home` (S0(b)/(d) create them; G18). Z1 allows only names carrying
   this run's slug.
@@ -246,3 +280,41 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   (P2/E6's rule); one audit row per call is asserted as written.
 * D12 keeps the plan's `session.state stopped` oracle; the hook lane actually
   publishes `session_stopped` and `session.classified` (recorded in the record).
+
+## 9. Host safety after INC-1 (SI-1) — binds every module
+
+**INC-1 (2026-09-24, unrepaired, not the harness's to repair).** A STAGE B smoke
+run gave a real-HOME `claude` TUI pane a sandboxed `XDG_DATA_HOME`; the engine's
+auto-updater installed itself under the run root and re-pointed the user's
+`~/.local/bin/claude` there; teardown deleted the root, and the user's link now
+dangles. Nothing in this package may modify anything under `~/.local`,
+`~/.claude/settings.json` or any other user file.
+
+* **Envs.** Every env built by `sandbox.py` carries `DISABLE_AUTOUPDATER=1`. An
+  env carrying the **real** HOME carries **no `XDG_*`** and also
+  `DISABLE_INSTALLATION_CHECKS=1`: `real_home_env` (S0's real probes, the
+  launcher via `instance.launcher_env`, wave 8's `real_home_engine_env`), the
+  preflight's `claude --version` env, and the lane pytest processes
+  (`pytest_process_env`). Every builder refuses an env that fails
+  `host_safety_problems`. Never build a child env by hand: the guard
+  `test_guard_no_ad_hoc_real_home_env` fails on an `XDG_*` literal or a
+  `home=REAL_HOME` outside `sandbox.py`, and on `REAL_CLAUDE_BIN` used anywhere
+  but in a message. `test_proof_host_safe_envs` checks every builder
+  independently of the checker, and is re-proved by three planted mutations of
+  `sandbox.py` (`fixtures/mutations/sandbox_{xdg,checker,autoupdater}.json`).
+* **The engine.** `realclaude.resolve`: `QA6_REAL_CLAUDE` if set (an invalid
+  value resolves to nothing — never guessed past), else `shutil.which("claude")`
+  if it resolves to an existing executable, else the newest
+  `~/.local/share/claude/versions/*` executable (the INC-1 fallback; the record
+  says so). A candidate inside a qa6 run root is refused. `bootstrap.mint`
+  exposes it as `<run0>/bin/claude` and writes `real-claude.json` to the run
+  root and the run dir; the runner puts it in the report (`real_claude`). The
+  preflight T1 row "real claude resolves" records the path and why.
+* **The link guard.** The runner writes `<run_dir>/claude-link-start.json` (the
+  user's link: lstat + readlink + realpath, reads only) before its preflight;
+  `bootstrap.mint` writes it for standalone and mutation runs. It is compared
+  against that run-START state — never against "healthy" (it is dangling now).
+  The runner stops the run on a change after any lane and records a teardown
+  problem at the end; `live/conftest.py` makes every live module and every live
+  scenario BLOCKED (`realclaude.REPAIR_MESSAGE`) if it changed; Z1's
+  `files.claude_bin_link_unchanged` asserts the run left it as it found it.

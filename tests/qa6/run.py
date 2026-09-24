@@ -10,7 +10,9 @@
 One pytest process per (wave, lane), each `-p no:randomly`, over
 `tests/qa6/<lane>/test_wave<N>_*.py`, in `stopifs.WAVE_LANES` order. After
 each lane process the runner re-checks the real settings sha (a change stops
-the run, U2) and scans the tmux shim log for a Z2-class argv (stops the run);
+the run, U2), compares the user's `~/.local/bin/claude` against its run-START
+state (a change stops the run: INC-1, realclaude.py) and scans the tmux shim
+log for a Z2-class argv (stops the run);
 after each wave it applies the plan's stop-ifs by writing `blocked.json`,
 which the next processes' conftest reads.
 
@@ -43,7 +45,7 @@ if __package__ in (None, ""):
     sys.path[:] = [entry for entry in sys.path if os.path.realpath(entry or ".") != _here]
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from qa6 import bootstrap, hostprobe, paths, preflight, teardown  # noqa: E402
+from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, teardown  # noqa: E402
 from qa6.catalog import SCENARIOS  # noqa: E402
 from qa6.report import LaneExit, append_record, build_record, load_records, record_path, write_report  # noqa: E402
 from qa6.sandbox import (  # noqa: E402
@@ -108,6 +110,23 @@ def run_pytest(argv: list[str], env: dict[str, str], log_path: Path, timeout_s: 
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=30)
             return 124
+
+
+def ledger_copies(run: RunContext) -> list[tuple[Path, str]]:
+    """(source, name under `<run_dir>/ledgers/`). Unique names: the product's tmux log and
+    the unseeded instances' tmux log are both `tmux-argv.log` in their shim dirs (SI-2)."""
+    return [
+        (run.tmux_argv_log, "tmux-argv.log"),
+        (run.unseeded_tmux_argv_log, "unseeded-tmux-argv.log"),
+        (run.claude_argv_log, "claude-argv.log"),
+        (run.pid_ledger, run.pid_ledger.name),
+        (run.controld_argv_ledger, run.controld_argv_ledger.name),
+        (run.port_refusals, run.port_refusals.name),
+    ]
+
+
+def read_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def records_by_id(run: RunContext) -> dict[str, dict[str, object]]:
@@ -198,6 +217,10 @@ def main(argv: list[str] | None = None) -> int:
     run_id = time.strftime("qa6-%Y%m%dT%H%M%SZ", time.gmtime())
     run_dir = args.report_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
+    # INC-1: the user's link is measured before anything else runs, and every
+    # later check compares against THIS state (it may already be damaged).
+    link_start = realclaude.record_link_start(run_dir)
+    LOG.info("run-start state of %s: %s", paths.REAL_CLAUDE_BIN, link_start)
     awake = keep_awake()
     try:
         return _run(args, run_id, run_dir)
@@ -276,6 +299,11 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
                 stopped = f"the real settings sha changed during wave {wave} lane {lane} (U2): the run is stopped"
                 LOG.error(stopped)
                 break
+            link_changed = realclaude.link_change(run_dir)
+            if link_changed is not None:
+                stopped = f"after wave {wave} lane {lane}: {link_changed}"
+                LOG.error(stopped)
+                break
             violations = z2_violations(run)
             if violations:
                 stopped = f"Z2-class tmux argv after wave {wave} lane {lane}: {violations[:3]}"
@@ -302,12 +330,9 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
     # read are copied out of the run root first.
     ledgers = run_dir / "ledgers"
     ledgers.mkdir(exist_ok=True)
-    for source in (run.tmux_argv_log, run.unseeded_tmux_argv_log, run.claude_argv_log, run.pid_ledger,
-                   run.controld_argv_ledger, run.port_refusals):
+    for source, name in ledger_copies(run):
         if source.exists():
-            (ledgers / source.name).write_bytes(source.read_bytes())
-            if source == run.unseeded_tmux_argv_log:
-                (ledgers / "unseeded-tmux-argv.log").write_bytes(source.read_bytes())
+            (ledgers / name).write_bytes(source.read_bytes())
     problems = bootstrap.remove_worktree(run)
     leak = teardown.teardown_run(run)
     problems.extend(leak.problems)
@@ -315,6 +340,9 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
         run.teardown_problem("runner", problem)
     if not settings_ok():
         run.teardown_problem("runner", "the real ~/.claude/settings.json sha changed (U2)")
+    link_changed = realclaude.link_change(run_dir)
+    if link_changed is not None:
+        run.teardown_problem("runner", link_changed)
     snapshot_host(run, "after-teardown")
 
     # Wave 9 runs even when earlier waves stopped (test-plan §3): it is the host check.
@@ -331,7 +359,10 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
     fill_missing(run, selected, blocked, implemented)
     teardown_problems = _read_teardown_problems(run)
     decision = write_report(report_dir, run_id, run_dir, lane_exits, teardown_problems,
-                            extra={"preflight_reached": "T4", "leak_notes": leak.notes})
+                            extra={"preflight_reached": "T4", "leak_notes": leak.notes,
+                                   "real_claude": read_json(run_dir / realclaude.RESOLUTION_FILE),
+                                   "claude_link": {"start": realclaude.start_link_state(run_dir),
+                                                   "end": realclaude.link_state()}})
     LOG.info("report %s: %s — %s", run_id, decision.status, "; ".join(decision.reasons)[:1500])
     return 0 if decision.status == "GREEN" else 1
 

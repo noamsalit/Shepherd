@@ -13,6 +13,8 @@ Two kinds of wait, never a sleep as readiness:
 * `settle(...)` — a UI change the user's own input causes. Its bound
   (`UI_BOUND_S`) is a harness liveness bound: the caller decides whether a
   blown one is FAIL (a same-channel control qualified it) or BLOCKED.
+  `settle`, `pump` and `UI_BOUND_S` are `browser.py`'s (re-exported here for
+  the wave-6/7 modules that import them from this kit).
 * `await_env(...)` — the page or the instance being up at all.
 
 Screenshots go to `<run_dir>/ui/<scenario>/<label>.png` (the same directory
@@ -27,26 +29,24 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from .. import tmuxctl
 from ..bootstrap import git
+from ..browser import UI_BOUND_S as UI_BOUND_S
 from ..browser import PageLog, visible_roots
+from ..browser import pump as pump
+from ..browser import settle as settle
 from ..httpclient import Client, as_dict, as_list
 from ..instance import Controld, Helper, db_rows
 from ..pool import InstancePool
 from ..sandbox import RunContext
 from ..sessions import await_session, now_ms, session_row, sidecar, write_sidecar
-from ..verdict import Blocked, await_env, observe
+from ..verdict import Blocked, await_env
 
 if TYPE_CHECKING:
     from playwright.sync_api import BrowserContext, Locator, Page, Request
 
-T = TypeVar("T")
-
-#: A harness liveness bound for a UI change caused by one user input
-#: (not a product SLO — test-plan §0 rule 1).
-UI_BOUND_S = 10.0
 #: The page's first paint: document, modules, the first reads and the stream.
 LOAD_BOUND_S = 15.0
 
@@ -165,34 +165,7 @@ def xss_fired(page: Page) -> object:
     return page.evaluate("() => window.__xss")
 
 
-# ----- waits ------------------------------------------------------------------------------
-
-
-def pump(page: Page) -> None:
-    """Let Playwright deliver queued page events (request, console, websocket…).
-
-    The sync API dispatches event callbacks only while a Playwright call is in
-    progress, so a predicate that reads the `PageLog` alone would poll a list
-    that never grows. Measured: a fetch the page made 0.6 s after an SSE frame
-    was not in the log 30 s later while the loop only slept.
-    """
-    page.wait_for_timeout(1)
-
-
-def settle(predicate: Callable[[], T | None], bound_s: float = UI_BOUND_S, page: Page | None = None) -> tuple[T | None, float]:
-    """Poll a UI predicate; the caller classifies a blown bound (see module doc).
-
-    Pass `page` whenever the predicate reads the `PageLog` (see `pump`).
-    """
-    if page is None:
-        return observe(predicate, bound_s)
-    target = page
-
-    def pumped() -> T | None:
-        pump(target)
-        return predicate()
-
-    return observe(pumped, bound_s)
+# ----- waits: `settle` / `pump` are browser.py's (re-exported above) -------------------
 
 
 def api_since(log: PageLog, start: int, method: str | None = None) -> list[str]:

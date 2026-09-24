@@ -16,6 +16,12 @@ Listeners (console, pageerror, request, response, websocket) are attached to a
 context **before** any navigation, and each scenario's log is dumped to
 `<run_dir>/ui/<scenario>/` with a screenshot.
 
+**Sync Playwright delivers page events only during a Playwright call.** A
+predicate that reads a `PageLog` (requests, console, websockets) while the
+harness merely sleeps polls a list that never grows. `pump(page)` makes the
+cheapest Playwright call there is so queued events are dispatched, and
+`settle(predicate, bound_s, page)` pumps before every poll.
+
 Playwright is imported inside `start()`, so importing this module does nothing.
 """
 
@@ -24,14 +30,14 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 from . import paths
-from .verdict import Blocked
+from .verdict import Blocked, observe
 
 if TYPE_CHECKING:
     from playwright.sync_api import (
@@ -48,6 +54,12 @@ if TYPE_CHECKING:
     )
 
 MASTER_SEND_GLOB = "**/api/master/send"
+
+#: A harness liveness bound for a UI change caused by one user input
+#: (not a product SLO — test-plan §0 rule 1).
+UI_BOUND_S = 10.0
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -210,6 +222,38 @@ def running_loop_in_main_thread() -> bool:
     except RuntimeError:
         return False
     return True
+
+
+# ----- waiting on a page (sync Playwright dispatches events only inside its calls) -----------
+
+
+def pump(page: Page) -> None:
+    """Let Playwright deliver queued page events (request, response, console, websocket…).
+
+    The sync API dispatches event callbacks only while a Playwright call is in
+    progress, so a predicate that reads the `PageLog` alone would poll a list
+    that never grows. Measured (STAGE B, wave 6): a fetch the page made 0.6 s
+    after an SSE frame was not in the log 30 s later while the loop only slept.
+    """
+    page.wait_for_timeout(1)
+
+
+def settle(predicate: Callable[[], T | None], bound_s: float = UI_BOUND_S, page: Page | None = None) -> tuple[T | None, float]:
+    """Poll a UI predicate (`verdict.observe`); the caller classifies a blown bound.
+
+    Pass `page` whenever the predicate reads the `PageLog`: every poll then
+    pumps first (see `pump`). A predicate that queries the DOM through a
+    locator is itself a Playwright call and needs no `page`.
+    """
+    if page is None:
+        return observe(predicate, bound_s)
+    target = page
+
+    def pumped() -> T | None:
+        pump(target)
+        return predicate()
+
+    return observe(pumped, bound_s)
 
 
 # ----- user-like input only -----------------------------------------------------

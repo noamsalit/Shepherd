@@ -96,24 +96,44 @@ def _registered() -> dict[str, ScenarioMutation]:
 SCENARIO_MUTATIONS: dict[str, ScenarioMutation] = _registered()
 
 
+S0_NODE = "tests/qa6/live/test_wave1_s0_auth_probe.py::test_s0_bind_live_auth_mode"
+LIVE_WAVE = 8
+
+
 def run_scenario_mutation(name: str, report_dir: Path) -> int:
-    """Mint a run, run the one node with the mutation live, and record the outcome."""
-    from . import bootstrap, teardown
+    """Mint a run, run the one node with the mutation live, and record the outcome.
+
+    A wave-8 node needs the `LIVE_AUTH_MODE` S0 binds in the same run (SI-3):
+    S0 runs first, in its own pytest process **without** the mutation, and the
+    mode it wrote to `<run_dir>/live_auth_mode.json` is handed to the mutated
+    node's process as `QA6_LIVE_AUTH_MODE` — exactly what the runner does.
+    """
+    from . import bootstrap, realclaude, teardown
     from .report import load_records
-    from .sandbox import pytest_process_env
+    from .sandbox import ENV_LIVE_AUTH_MODE, pytest_process_env
 
     mutation = SCENARIO_MUTATIONS[name]
     run_id = time.strftime(f"qa6-mutation-{name}-%Y%m%dT%H%M%SZ", time.gmtime())
     run_dir = report_dir / "mutations" / run_id
     run = bootstrap.mint(os.getpid(), run_id, run_dir)
-    env = pytest_process_env(os.environ, {
-        "QA6_RUN_PID": str(run.pid), "QA6_RUN_ID": run_id, "QA6_RUN_DIR": str(run_dir), "QA6_LANE": "mutation",
-        "QA6_WAVE": "m", ENV: name,
-    })
-    argv = [str(paths.PYTEST), "-p", "no:randomly", "-p", "no:cacheprovider", "-m", "qa6 or qa6live", "-q",
-            *prerequisites(mutation), mutation.node]
+    knobs = {"QA6_RUN_PID": str(run.pid), "QA6_RUN_ID": run_id, "QA6_RUN_DIR": str(run_dir), "QA6_LANE": "mutation",
+             "QA6_WAVE": "m"}
+    base = [str(paths.PYTEST), "-p", "no:randomly", "-p", "no:cacheprovider", "-m", "qa6 or qa6live", "-q"]
+    argv = [*base, mutation.node]
+    prerequisite: dict[str, object] = {}
     try:
-        done = subprocess.run(argv, env=env, cwd=str(paths.REPO), capture_output=True, text=True, timeout=900, check=False)
+        for node in prerequisite_nodes(mutation):
+            pre_argv = [*base, node]
+            pre = subprocess.run(pre_argv, env=pytest_process_env(os.environ, {**knobs, "QA6_LANE": "mutation-prereq",
+                                                                              "QA6_WAVE": "1"}),
+                                 cwd=str(paths.REPO), capture_output=True, text=True, timeout=900, check=False)
+            prerequisite[node] = {"command": " ".join(pre_argv), "exit": pre.returncode, "stdout_tail": pre.stdout[-800:]}
+        mode = bound_live_auth_mode(run_dir) if prerequisite else None
+        if mode is not None:
+            knobs[ENV_LIVE_AUTH_MODE] = mode
+        prerequisite["live_auth_mode"] = mode
+        done = subprocess.run(argv, env=pytest_process_env(os.environ, {**knobs, ENV: name}), cwd=str(paths.REPO),
+                              capture_output=True, text=True, timeout=1800, check=False)
     finally:
         bootstrap.remove_worktree(run)
         teardown.teardown_run(run)
@@ -127,22 +147,34 @@ def run_scenario_mutation(name: str, report_dir: Path) -> int:
     evidence = [e for e in (raw_evidence if isinstance(raw_evidence, list) else [])
                 if isinstance(e, str) and e.startswith(f"QA6 MUTATION {name}")]
     outcome = "assertion_falsified" if falsified and evidence else ("survived" if evidence else "blocked")
+    link_changed = realclaude.link_change(run_dir)
     result = {
         "name": name, "property": mutation.prop, "scenario": mutation.scenario, "targets": f"{mutation.scenario} {mutation.failing_clause}",
         "what": mutation.what, "command": " ".join(argv), "env": f"{ENV}={name}", "exit": done.returncode,
-        "applied_evidence": evidence, "failing_assertion": mutation.failing_clause,
-        "falsified_clause": falsified, "verdict": record.get("verdict"), "outcome": outcome,
-        "stdout_tail": done.stdout[-2000:],
+        "prerequisite": prerequisite, "applied_evidence": evidence, "failing_assertion": mutation.failing_clause,
+        "falsified_clause": falsified, "verdict": record.get("verdict"), "reason": record.get("reason"),
+        "outcome": outcome, "claude_link_changed": link_changed, "stdout_tail": done.stdout[-2000:],
     }
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "mutation-result.json").write_text(json.dumps(result, indent=1, default=str), encoding="utf-8")
-    return 0 if outcome == "assertion_falsified" else 1
+    return 0 if outcome == "assertion_falsified" and link_changed is None else 1
 
 
-def prerequisites(mutation: ScenarioMutation) -> list[str]:
-    """Node ids that must run first in the same process (none of these three need any)."""
-    _ = mutation
-    return []
+def prerequisite_nodes(mutation: ScenarioMutation) -> list[str]:
+    """Nodes run first, each in its own process, without the mutation: S0 for a wave-8 scenario."""
+    from .catalog import BY_ID
+
+    return [S0_NODE] if BY_ID[mutation.scenario].wave == LIVE_WAVE else []
+
+
+def bound_live_auth_mode(run_dir: Path) -> str | None:
+    """The `LIVE_AUTH_MODE` S0 wrote for this run, if it wrote one."""
+    source = run_dir / "live_auth_mode.json"
+    if not source.exists():
+        return None
+    decoded: object = json.loads(source.read_text(encoding="utf-8"))
+    mode = decoded.get("LIVE_AUTH_MODE") if isinstance(decoded, dict) else None
+    return mode if isinstance(mode, str) else None
 
 
 # ----- module mutations (the copied qa5 helpers) --------------------------------------

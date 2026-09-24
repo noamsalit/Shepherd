@@ -15,7 +15,14 @@ The runner runs this file before any wave and stops the run if it fails:
 * each of the five helpers copied from `tests/qa5` is re-proved: its proof
   passes on the copy, and fails naming the expected assertion when the inert
   mutation fixture `fixtures/mutations/<module>.json` is applied to a temp copy
-  of the package (never to this tree, never imported here).
+  of the package (never to this tree, never imported here);
+* **host safety (SI-1, INC-1)**: every env the harness builds for a child that
+  carries the real HOME has no `XDG_*`, and every env carries
+  `DISABLE_AUTOUPDATER=1` (`test_proof_host_safe_envs`, re-proved by three
+  planted mutations of `sandbox.py`); no module builds such an env or execs the
+  real engine outside the shared builders (`test_guard_no_ad_hoc_real_home_env`);
+  the real-engine resolution order and the run-start link comparison hold
+  (`test_proof_real_claude_resolution`).
 """
 
 from __future__ import annotations
@@ -31,13 +38,26 @@ import tempfile
 import threading
 import time
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
+from typing import get_args
 
 import pytest
 
 from . import paths
 from .catalog import BY_ID, SCENARIOS, wave_ids
+from .sandbox import (
+    HOST_SAFETY_ENV,
+    REAL_HOME_SAFETY_ENV,
+    TMP_CANONICAL,
+    InstanceRoot,
+    PathMode,
+    RunContext,
+    host_safety_problems,
+    pytest_process_env,
+    real_home_env,
+    sandbox_env,
+)
 from .report import LaneExit, decide_status
 from .verdict import Blocked, ProductFail, Recorder, Sourced, await_env, classify_blown_bound
 
@@ -251,6 +271,158 @@ def test_guard_randomly_is_refused_for_qa6_items() -> None:
     assert done.returncode != 0 and "no:randomly" in (done.stdout + done.stderr), (done.returncode, done.stdout[-400:])
 
 
+# ----- host safety (SI-1 / INC-1) --------------------------------------------------------------
+
+
+def _guard_run() -> tuple[RunContext, InstanceRoot]:
+    """A RunContext/InstanceRoot pair for pure env building: nothing is created on disk."""
+    run = RunContext(pid=424242, run_id="qa6-guard", run0=TMP_CANONICAL / "shq6-424242-0",
+                     run_dir=Path("/nonexistent-qa6-guard-run-dir"))
+    return run, InstanceRoot(k=1, root=run.instance_root(1))
+
+
+def host_env_builders() -> dict[str, tuple[bool, Callable[[], Mapping[str, str]]]]:
+    """name -> (carries the real HOME?, builder) for every env the harness gives a child."""
+    from .instance import launcher_env
+    from .live.test_wave1_s0_auth_probe import probe_envs
+    from .live.test_wave8_1_live import real_home_engine_env
+    from .preflight import claude_probe_env
+
+    run, root = _guard_run()
+    builders: dict[str, tuple[bool, Callable[[], Mapping[str, str]]]] = {}
+    def sandboxed(mode: PathMode) -> Callable[[], Mapping[str, str]]:
+        return lambda: sandbox_env(run, root, path_mode=mode)
+
+    for mode in get_args(PathMode):
+        builders[f"sandbox_env[{mode}]"] = (False, sandboxed(mode))
+    builders["sandbox.real_home_env"] = (True, lambda: real_home_env(run, root))
+    builders["sandbox_env(home=REAL_HOME)"] = (True, lambda: sandbox_env(run, root, path_mode="live", home=paths.REAL_HOME,
+                                                                         config_dir="unset"))
+    builders["instance.launcher_env"] = (True, lambda: launcher_env(run, root))
+    builders["S0 probe_envs[sandboxed]"] = (False, lambda: probe_envs(run, root)[0])
+    builders["S0 probe_envs[real]"] = (True, lambda: probe_envs(run, root)[1])
+    builders["wave8 real_home_engine_env"] = (True, lambda: real_home_engine_env(run, root))
+    builders["preflight.claude_probe_env"] = (True, claude_probe_env)
+    builders["sandbox.pytest_process_env (a real-HOME base carrying XDG_*)"] = (
+        True, lambda: pytest_process_env({"HOME": str(paths.REAL_HOME), "PATH": "/usr/bin:/bin",
+                                          "XDG_DATA_HOME": "/planted/xdg/data", "XDG_CONFIG_HOME": "/planted/xdg/cfg"}, {}))
+    return builders
+
+
+def test_proof_host_safe_envs() -> None:
+    """SI-1: no real-HOME child env carries XDG_*; every child env carries DISABLE_AUTOUPDATER=1.
+
+    Every sub-check is collected and named, so each planted mutation of
+    `sandbox.py` (fixtures/mutations/sandbox_*.json) is seen to falsify the
+    specific one it targets.
+    """
+    real = str(paths.REAL_HOME)
+    problems: list[str] = []
+    # The checker itself, on planted inputs (dicts only: nothing is executed).
+    if not host_safety_problems({"HOME": real, "XDG_DATA_HOME": "/planted", **HOST_SAFETY_ENV, **REAL_HOME_SAFETY_ENV}):
+        problems.append("proof_host_safe_envs.checker_flags_planted_xdg: a real-HOME env with XDG_DATA_HOME passed")
+    if not host_safety_problems({"HOME": real + "/", "XDG_STATE_HOME": "/planted", **HOST_SAFETY_ENV, **REAL_HOME_SAFETY_ENV}):
+        problems.append("proof_host_safe_envs.checker_flags_planted_xdg: the real HOME spelled with a trailing / passed")
+    if not host_safety_problems({"HOME": "/private/tmp/shq6-1-1/home"}):
+        problems.append("proof_host_safe_envs.checker_flags_missing_autoupdater: an env without DISABLE_AUTOUPDATER passed")
+    if host_safety_problems({"HOME": "/private/tmp/shq6-1-1/home", "XDG_DATA_HOME": "/x", **HOST_SAFETY_ENV}):
+        problems.append("proof_host_safe_envs.checker_allows_sandboxed_xdg: a sandboxed HOME with its own XDG was refused")
+    # Every builder, checked independently of the checker.
+    for name, (carries_real_home, build) in host_env_builders().items():
+        try:
+            env = dict(build())
+        except ValueError as refused:
+            problems.append(f"proof_host_safe_envs.builder_refused_its_own_env: {name}: {refused}")
+            continue
+        is_real = os.path.realpath(env.get("HOME", "")) == os.path.realpath(real)
+        if is_real != carries_real_home:
+            problems.append(f"proof_host_safe_envs.builder_home: {name}: HOME={env.get('HOME')!r}")
+        if env.get("DISABLE_AUTOUPDATER") != "1":
+            problems.append(f"proof_host_safe_envs.every_env_disables_autoupdater: {name}: "
+                            f"DISABLE_AUTOUPDATER={env.get('DISABLE_AUTOUPDATER')!r}")
+        xdg = sorted(key for key in env if key.startswith("XDG_"))
+        if is_real and xdg:
+            problems.append(f"proof_host_safe_envs.real_home_env_has_no_xdg: {name}: {xdg}")
+        if is_real and env.get("DISABLE_INSTALLATION_CHECKS") != "1":
+            problems.append(f"proof_host_safe_envs.real_home_env_disables_installation_checks: {name}")
+    assert not problems, f"host-unsafe envs: {problems}"
+
+
+def test_guard_no_ad_hoc_real_home_env() -> None:
+    """Only sandbox.py spells XDG_* or passes home=REAL_HOME; nothing execs the user's claude link."""
+    offenders: list[str] = []
+    for path in package_files():
+        if path.name == "test_harness_guards.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+        where = str(path.relative_to(PACKAGE))
+        for node in ast.walk(tree):
+            if (where != "sandbox.py" and isinstance(node, ast.Constant) and isinstance(node.value, str)
+                    and re.fullmatch(r"XDG_[A-Z_]+", node.value)):
+                offenders.append(f"{where}:{node.lineno} spells {node.value!r} (build envs with sandbox.py)")
+            if (where != "sandbox.py" and isinstance(node, ast.keyword) and node.arg == "home"
+                    and isinstance(node.value, ast.Attribute) and node.value.attr == "REAL_HOME"):
+                offenders.append(f"{where}:{node.value.lineno} passes home=REAL_HOME (use sandbox.real_home_env)")
+            if isinstance(node, ast.Attribute) and node.attr == "REAL_CLAUDE_BIN" and where not in ("paths.py", "realclaude.py"):
+                if not _only_described(node, parents):
+                    offenders.append(f"{where}:{node.lineno} uses REAL_CLAUDE_BIN outside a message (exec run.real_claude)")
+    assert not offenders, f"ad-hoc real-HOME env or real-engine exec: {offenders}"
+
+
+def _only_described(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> bool:
+    """True when the node is only formatted into a message: an f-string or a logging call argument."""
+    current = parents.get(node)
+    while current is not None:
+        if isinstance(current, (ast.JoinedStr, ast.FormattedValue)):
+            return True
+        if (isinstance(current, ast.Call) and isinstance(current.func, ast.Attribute)
+                and current.func.attr in ("debug", "info", "warning", "error")):
+            return True
+        if isinstance(current, (ast.stmt, ast.Call)):
+            return False
+        current = parents.get(current)
+    return False
+
+
+def test_proof_real_claude_resolution() -> None:
+    """QA6_REAL_CLAUDE -> which -> newest versions/*; run-root targets refused; link compare vs START."""
+    from . import realclaude
+
+    with tempfile.TemporaryDirectory(prefix="qa6rc-", dir="/tmp") as scratch:
+        base = Path(scratch)
+        versions = base / "versions"
+        versions.mkdir()
+        for name in ("2.1.9", "2.1.281", "2.1.30", "notaversion"):
+            engine = versions / name
+            engine.write_text("#!/bin/sh\n", encoding="utf-8")
+            engine.chmod(0o755)
+        bindir = base / "bin"
+        bindir.mkdir()
+        empty = base / "empty"
+        empty.mkdir()
+        dangling = bindir / "claude"
+        dangling.symlink_to(base / "gone" / "claude")
+        fallback = realclaude.resolve({"PATH": str(bindir)}, versions)
+        assert (fallback.source, fallback.path, fallback.inc1_fallback) == (
+            "versions_fallback", os.path.realpath(versions / "2.1.281"), True), (
+            f"proof_real_claude.newest_by_version_when_which_finds_nothing: {fallback}")
+        dangling.unlink()
+        dangling.symlink_to(versions / "2.1.9")
+        which = realclaude.resolve({"PATH": f"{empty}:{bindir}"}, versions)
+        assert (which.source, which.path) == ("which", os.path.realpath(versions / "2.1.9")), f"proof_real_claude.which_first: {which}"
+        explicit = realclaude.resolve({"PATH": str(bindir), realclaude.ENV_REAL_CLAUDE: str(versions / "2.1.30")}, versions)
+        assert (explicit.source, explicit.path) == (realclaude.ENV_REAL_CLAUDE, os.path.realpath(versions / "2.1.30")), (
+            f"proof_real_claude.explicit_first: {explicit}")
+        bad = realclaude.resolve({"PATH": str(bindir), realclaude.ENV_REAL_CLAUDE: str(base / "missing")}, versions)
+        assert bad.path is None, f"proof_real_claude.explicit_never_guessed_past: {bad}"
+    start = {"is_symlink": True, "target": "/private/tmp/shq6-9314-1/x", "resolved": "/private/tmp/shq6-9314-1/x", "exists": False}
+    assert realclaude.compare(start, dict(start)) is None, "proof_real_claude.unchanged_dangling_link_is_not_a_change"
+    moved = {**start, "target": "/elsewhere", "resolved": "/elsewhere", "exists": True}
+    changed = realclaude.compare(start, moved)
+    assert changed is not None and "ln -sfn" in changed, f"proof_real_claude.a_repair_or_repoint_is_a_change: {changed}"
+
+
 # ----- the proofs of the five copied qa5 helpers -----------------------------------------------
 
 
@@ -377,7 +549,8 @@ def mutation_results() -> Iterator[list[dict[str, object]]]:
             handle.write(json.dumps(result, sort_keys=True) + "\n")
 
 
-@pytest.mark.parametrize("module", ["sse_rig", "auditprobe", "wsclient", "constants", "tmuxctl"])
+@pytest.mark.parametrize("module", ["sse_rig", "auditprobe", "wsclient", "constants", "tmuxctl",
+                                    "sandbox_xdg", "sandbox_checker", "sandbox_autoupdater"])
 def test_mutation_reproves_copied_module(module: str, mutation_results: list[dict[str, object]]) -> None:
     from .mutations import load_module_mutation, run_module_mutation
 
@@ -389,6 +562,7 @@ def test_mutation_reproves_copied_module(module: str, mutation_results: list[dic
         "module": module, "targets": f"{mutation.proof} ({mutation.expect})", "file": mutation.file,
         "old": mutation.old, "new": mutation.new, "clean_rc": clean_rc, "mutated_rc": mutated_rc,
         "applied_evidence": mutated_out[-1200:], "failing_assertion": mutation.expect,
+        "failing_lines": [line[:600] for line in mutated_out.splitlines() if mutation.expect in line][:3],
         "stale_pycache": clean_cache + mutated_cache,
         "outcome": "assertion_falsified" if clean_rc == 0 and mutated_rc not in (0, -1) and live else (
             "survived" if mutated_rc == 0 else "blocked"),

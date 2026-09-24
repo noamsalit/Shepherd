@@ -16,6 +16,12 @@ S0's FAIL and the runner stops the run. U1 pre-authorises real `claude`.
 
 Writes `<run_dir>/live_auth_mode.json` and puts `LIVE_AUTH_MODE=<v>` first in
 the evidence, which the runner's wave-8 stop-if reads.
+
+The engine is the run's `<run0>/bin/claude` (realclaude.py: `QA6_REAL_CLAUDE`
+→ `which claude` → the newest `~/.local/share/claude/versions/*`; INC-1), never
+the user's `~/.local/bin/claude`. Both probe envs come from `probe_envs`: the
+real-HOME one carries no `XDG_*` and `DISABLE_AUTOUPDATER=1` (SI-1), which
+`test_harness_guards.py::test_proof_host_safe_envs` checks.
 """
 
 from __future__ import annotations
@@ -25,11 +31,13 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from .. import hostprobe, paths
+from pathlib import Path
+
+from .. import hostprobe, paths, realclaude
 from ..httpclient import Client, as_dict
 from ..instance import Controld, app_state, seed_db, start_launcher
 from ..pool import InstancePool
-from ..sandbox import RunContext, mint_instance, sandbox_env
+from ..sandbox import InstanceRoot, RunContext, mint_instance, real_home_env, sandbox_env
 from ..scenario import live_scenario
 from ..sse_rig import Frame, Subscriber, subscribe
 from ..verdict import Blocked, Recorder
@@ -57,8 +65,13 @@ def classify_cli(rc: int, stdout: str, stderr: str) -> str:
     return "error"
 
 
-def cli_probe(name: str, env: dict[str, str], cwd: str, settings: str) -> Probe:
-    argv = [str(paths.REAL_CLAUDE_BIN), "-p", PROMPT, "--model", "haiku", "--settings", settings,
+def probe_envs(run: RunContext, root: InstanceRoot) -> tuple[dict[str, str], dict[str, str]]:
+    """(sandboxed, real-HOME) envs for the CLI probes (a) and (b)."""
+    return sandbox_env(run, root, path_mode="bare"), real_home_env(run, root, path_mode="bare")
+
+
+def cli_probe(name: str, engine: Path, env: dict[str, str], cwd: str, settings: str) -> Probe:
+    argv = [str(engine), "-p", PROMPT, "--model", "haiku", "--settings", settings,
             "--no-session-persistence"]
     probe = Probe(name)
     for attempt in (1, 2):
@@ -177,21 +190,23 @@ def delta(before: dict[str, object], after: dict[str, object]) -> dict[str, obje
 
 @live_scenario("S0")
 def test_s0_bind_live_auth_mode(qa6_run: RunContext, pool: InstancePool, rec: Recorder) -> None:
-    if not paths.REAL_CLAUDE_BIN.exists():
-        raise Blocked(f"claude cannot be executed at all: {paths.REAL_CLAUDE_BIN} is absent")
+    engine = realclaude.require(qa6_run)
+    resolution = realclaude.load(qa6_run)
+    rec.record("given.real_claude", {**resolution.as_json(), "exposed_as": str(engine)})
+    if resolution.inc1_fallback:
+        rec.note(f"INC-1: the user's claude link is unusable; the engine is the fallback {resolution.path} ({resolution.why})")
     watch = ShaWatch(rec)
     watch.after("start")
     root = mint_instance(qa6_run)
     settings = root.root / "settings.json"
     settings.write_text("{}\n", encoding="utf-8")
-    sandbox = sandbox_env(qa6_run, root, path_mode="bare")
-    real = sandbox_env(qa6_run, root, path_mode="bare", home=paths.REAL_HOME, config_dir="unset")
+    sandbox, real = probe_envs(qa6_run, root)
     probes = {name: Probe(name) for name in "abcd"}
     deltas: dict[str, object] = {}
 
     def run_b() -> None:
         before = real_claude_snapshot()
-        probes["b"] = cli_probe("b", real, str(root.cwd), str(settings))
+        probes["b"] = cli_probe("b", engine, real, str(root.cwd), str(settings))
         deltas["b"] = delta(before, real_claude_snapshot())
         watch.after("b")
 
@@ -207,7 +222,7 @@ def test_s0_bind_live_auth_mode(qa6_run: RunContext, pool: InstancePool, rec: Re
         deltas["d"] = delta(before, real_claude_snapshot())
         watch.after("d")
 
-    probes["a"] = cli_probe("a", sandbox, str(root.cwd), str(settings))
+    probes["a"] = cli_probe("a", engine, sandbox, str(root.cwd), str(settings))
     watch.after("a")
     if probes["a"].result != "ok":
         run_b()
