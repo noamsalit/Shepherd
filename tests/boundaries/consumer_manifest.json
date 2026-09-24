@@ -47,20 +47,20 @@
     "cli/main.py": "230b0a63816cef83915ad529d38d0e9bd2c64d95c1c30c1ea09262e4adfa4dfd",
     "cli/replay.py": "549e6338516437491f9cf219d7691122cdc8e0ea381569367f9685e7b49b2165",
     "web/__init__.py": "36cfe6af65288827e42513d33d10a35bfba014c36146f1eaa7edf22e7b006d08",
-    "web/routes.py": "badf670c3199f261c1b0c1b90a8d469595a343e4d1cee82716f10e5bdb0b69e2",
+    "web/routes.py": "fa79abf6b427802482b4e00b783daa0d17f68b7c126711cc5d86671d610ee64c",
     "web/server.py": "215b223bda4aacdebd39a2dec2eff4b3e62649924aeb8ab2bd741cecd6b60bb7",
-    "web/sse.py": "61167aff1de03df951d5b4a5ca909920547e135bca431c475c150583fc9f6876",
-    "web/static/app.css": "552f230427f51a6328467036ae42fde2ae5b71e4b7617f6164c5c4f9b9387ce6",
-    "web/static/app.js": "26bb3508a7852a865f03a306fafe07a21da596172c2dab14cb492f2e972c63ff",
-    "web/static/chat.js": "2bceca9a928c62d670dfdaf33a41424926e0246b06a1c8561b59aa57850131ee",
+    "web/sse.py": "a668a322d43e6ffb27c92061ac05ee13c894bbcdb8ce44d27d50f33ec71d9241",
+    "web/static/app.css": "73c15c350ddff566470a7760dda6d0cb1756e41c9c007b309a36d37e3bd77eb4",
+    "web/static/app.js": "4ba27719d0424551f496c8bfb57ffd0a841b2c697d81775d6886e533e2d49da8",
+    "web/static/chat.js": "fefbf293002f4bc23562810730c5cad1616595e7254f265ab7ce40b62986df90",
     "web/static/escape.js": "f3b7dcaf51f21bef4e57c29611ccfd238da9f43e32191c30abc8cf4ea14d3ef0",
-    "web/static/flock.js": "ab30606b7d5143d9f75eccd57fffa65367ea66afd991a1d4b419715fa0a9f3b7",
-    "web/static/index.html": "2fcbda41d6a16611932480a546bf344bc4507bf8b448b690ece2241e4adcb503",
-    "web/static/projects.js": "627b680afe21e06591c9f114332359a0936ddac6cf8af53ad0baa4a320a12a52",
-    "web/static/session.js": "393b7f6bb50303074c9c63bd72bbf7b12e3eeda340bca5042691409791838d26",
-    "web/static/settings.js": "0f57db4d51805368369daa07f616cabf8805460dc6f90f108e86baa077b5c44d",
-    "web/static/sse.js": "ec71624a04f061a1f73bdfaf7c402a7f0ad80996dac1adee18cb16eb9545e22d",
-    "web/static/terminal.js": "781bed86a4092e0f8df0f1811ed754d7c2fdcf2b39020c35d05501d880942017",
+    "web/static/flock.js": "6dee1e60164a47f515730dfe31388875065b3a69135a47dd156da8d80ecde6b3",
+    "web/static/index.html": "0ed6a12fe8e64a9711563ba78128c26d143f71b7fafa49f839cbf484170a6d90",
+    "web/static/projects.js": "5f837b7ff38785869fcaa788089f2f1131c1cff2d0adebacccf9551d2aa37e3c",
+    "web/static/session.js": "9a234b0b5ee9eccb68c53f7aa26739c7ce2d25d018a16a718b67b8066b705642",
+    "web/static/settings.js": "8a4a1e214be6bfc505be774bd9038663fbcb8aae10711a8c138aa5f7e30343dc",
+    "web/static/sse.js": "0baf357967c90e6f5a1b8a197d36fa0471153ab92e72c87dbb84e949df87fd49",
+    "web/static/terminal.js": "5c68d4d66ed5386b064bc4bb4dce72f411316d1543b59d88f4e0ec6f1336c720",
     "web/static/vendor/LICENSE": "b569f629d00f2626a8100df2a1798210535621e42164dfd426a6fe5aac7b0ccd",
     "web/static/vendor/VERSION.txt": "dfb265b144056ce4e444d6cc84dd362fbc93a0461122f5e0213156d845f31e9e",
     "web/static/vendor/xterm.css": "854a7c0fb70e8b1a083c16797ab827299fb18744f5ad34f227b48337e33293c6",
@@ -71,6 +71,12 @@
     "rule": "Edits made AFTER M4 closed, which D38 does not govern. D38's sentence is \"if M4 changes a file in web/ or cli/, the placeholder had the wrong shape\" \u2014 it is a claim about completing L4, and that milestone is closed and verified. This block is NOT a second re-base: `rebase` stays T24's, spent exactly once, and `baseline` is still never rewritten. Every entry names a path, a date, an agent and a reason; the paths here must be DISJOINT from rebase.regenerated_paths, so this block can never be used to relaunder a path T24 already moved; and moved_paths(baseline, files) must equal regenerated_paths + these paths exactly, so an unrelated change still cannot ride along in silence.",
     "edits": [
       {
+        "path": "web/sse.py",
+        "at": "2026-09-24T00:00:00Z",
+        "by": "qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Changed.** qa6 BC-33 (plan P10): `stream()` served the next subscription's frames straight after an ended one, so a client whose cursor had just been answered saw no keep-alive until the following event and could read a live stream as stalled. It now yields `KEEPALIVE` after every subscription that ends; cursor handling, the envelope and the route are unchanged. Proved at tests/web/test_sse_keepalive_after_event.py (two tests, RED `[OPENED, frame(seq1), frame(seq2)] != [OPENED, frame(seq1), KEEPALIVE]`). A baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based. Ledger: docs/plans/qa6-bugfix-blockers/P10.md."
+      },
+      {
         "path": "web/static/fleet.js",
         "at": "2026-09-22T00:00:00Z",
         "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
@@ -78,15 +84,15 @@
       },
       {
         "path": "web/static/flock.js",
-        "at": "2026-09-22T00:00:00Z",
-        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Added.** T6.1's Flock page \u2014 the legend, the three panes and D67's session column \u2014 and the other half of the `fleet.js` rename above."
+        "at": "2026-09-24T00:00:00Z",
+        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Added, then changed once.** T6.1's Flock page \u2014 the legend, the three panes and D67's session column \u2014 and the other half of the `fleet.js` rename above. Then changed by the qa6 bugfix plan (2026-09-24), BC-11 and BC-18's Flock half (plan P11): with no workspaces and a fleet read that did not answer, the page drew the empty state and its `registry: 0 sessions` line, so a dead daemon read as an empty fleet; it now shows the new `FLEET_UNKNOWN` sentence in `#fleet-unknown` instead. `renderCards` no longer rebuilds with `replaceChildren()`: cards are reconciled by `data-session-id`, an unchanged node is kept, and focus returns to the card carrying the previously focused key, so an event no longer drops keyboard focus. Proved in a real browser by tests/web/test_shell_flock_qa6_live.py. Ledger: docs/plans/qa6-bugfix-blockers/P11.md."
       },
       {
         "path": "web/static/projects.js",
-        "at": "2026-09-22T00:00:00Z",
-        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then QA round 5 remediation (BC-1)",
-        "why": "**Added, then changed once.** T9.1's Projects page \u2014 the first consumer of the seven project verbs, which is what made five gaps in them findable. Changed by QA round 5's BC-1: `loadDetail` wrote `view.detail` and painted from whichever read RESOLVED last rather than from the project the page had last been ASKED to open, so with two reads in flight \u2014 `projectRow` starts one and does not await it, `submitProject`'s create branch issues its own afterwards \u2014 the pane could settle on a project the user had left, taking `#proj-edit`'s render-time closure with it. `view.openId` is now the intent, written synchronously at the click and at the create, and a read whose project no longer matches it is dropped whole. No route, no envelope field and no node id moved: this is render ORDERING only. Proved at tests/web/test_projects_page.py by two held-fetch tests, one per interleaving."
+        "at": "2026-09-24T00:00:00Z",
+        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then QA round 5 remediation (BC-1); then qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Added, then changed twice.** T9.1's Projects page \u2014 the first consumer of the seven project verbs, which is what made five gaps in them findable. Changed by QA round 5's BC-1: `loadDetail` wrote `view.detail` and painted from whichever read RESOLVED last rather than from the project the page had last been ASKED to open, so with two reads in flight \u2014 `projectRow` starts one and does not await it, `submitProject`'s create branch issues its own afterwards \u2014 the pane could settle on a project the user had left, taking `#proj-edit`'s render-time closure with it. `view.openId` is now the intent, written synchronously at the click and at the create, and a read whose project no longer matches it is dropped whole. No route, no envelope field and no node id moved: this is render ORDERING only. Proved at tests/web/test_projects_page.py by two held-fetch tests, one per interleaving. Then changed by the qa6 bugfix plan (2026-09-24), BC-12 R4/R5, BC-18's Projects half and BC-24 (plan P13): `loadDraftPaths` drops a path read whose dialog project has since changed (R4); list rows are keyed by project id and kept while their signature is unchanged, `aria-current` is updated in place and focus is restored by key, and `renderDetail` returns early when it would redraw what it last drew, so a rebuild neither swallows an Edit click (R5) nor drops row focus (BC-18); a refused remove is shown with its correlation id in `#p-refusal`, and a retried save moves the dialog's baseline after each successful step so the retry resends only the steps not yet done (BC-24). No route, no envelope field and no node id moved. Proved in a real browser by tests/web/test_projects_settings_qa6_live.py. Ledger: docs/plans/qa6-bugfix-blockers/P13.md."
       },
       {
         "path": "web/static/rail.js",
@@ -96,21 +102,27 @@
       },
       {
         "path": "web/static/session.js",
-        "at": "2026-09-22T00:00:00Z",
-        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Edited.** D67 moves \u00a712's page 3 from a fourth page into the Flock's third pane (T6.3). Its fourteen slots and its contracts are unchanged; it imports `element` and `showLevel` from `flock.js` and walks the drill-down to `detail` when a session opens. It is a baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based."
+        "at": "2026-09-24T00:00:00Z",
+        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Edited, then changed once.** D67 moves \u00a712's page 3 from a fourth page into the Flock's third pane (T6.3). Its fourteen slots and its contracts are unchanged; it imports `element` and `showLevel` from `flock.js` and walks the drill-down to `detail` when a session opens. It is a baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based. Then changed by the qa6 bugfix plan (2026-09-24), BC-13, BC-36, BC-25's rename half and BC-12 R3 (plan P12): the new export `refreshSessionHeader(row)` repaints the open session's title, chip, state, why and actions on each fleet pass without touching the terminal, the decision card or an open rename (BC-13); an owned session whose `stop_reason` is `killed` takes the no-terminal branch with the new `KILLED_BANNER` and opens no socket (BC-36, keyed on `stop_reason`, never `ended_at`); the header's last-painted title is held in `shownTitle`, which Escape repaints and the rename input pre-fills, and a rename in flight for a session ignores a second Enter (BC-25); a rename reply paints nothing unless its session is still the one shown (R3). `#session-why` reads `needs_you_reason` before `why`, the Flock card's rule. Proved in a real browser by tests/web/test_session_pane_qa6_live.py; `tests/web/test_session_wiring.py` REQUIRED_ASSIGNMENTS declares the new assignments (plan rev 4). Ledger: docs/plans/qa6-bugfix-blockers/P12.md."
       },
       {
         "path": "web/static/settings.js",
-        "at": "2026-09-22T00:00:00Z",
-        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9)",
-        "why": "**Added.** T7.2's Settings page: ten sections, D65's autonomy control, and D25's audit tail rendered from four fields of a record and never its `args`."
+        "at": "2026-09-24T00:00:00Z",
+        "by": "integration pass (projects-and-ui plan, the join of Phases 6, 7 and 9); then qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Added, then changed once.** T7.2's Settings page: ten sections, D65's autonomy control, and D25's audit tail rendered from four fields of a record and never its `args`. Then changed by the qa6 bugfix plan (2026-09-24), BC-12 R2 and BC-24 (plan P13): the autonomy control records the clicked level as `autonomy.intent` synchronously, keeps one write in flight, and sends the intent again when a reply confirms a superseded click, so the last click wins; `state.level` is still written only from a confirmed reply (D8's two write sites). A refused or unreachable level change fills `#settings-note` with `the change was not made: <error> (<correlation_id>)`, cleared by a later success. `tests/web/test_settings_page.py` REQUIRED_SETTINGS_ASSIGNMENTS declares the three new assignments (plan rev 4). Proved in a real browser by tests/web/test_projects_settings_qa6_live.py. Ledger: docs/plans/qa6-bugfix-blockers/P13.md."
+      },
+      {
+        "path": "web/static/sse.js",
+        "at": "2026-09-24T00:00:00Z",
+        "by": "qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Changed.** qa6 BC-35 (plan P15): the `error` listener always reported `reconnecting`, so a stream the server refused (403, 404, wrong content type \u2014 `EventSource` gives up and reports `CLOSED`) was drawn as a transient drop forever. It now reports `unreadable` when `source.readyState === EventSource.CLOSED` and `reconnecting` otherwise. No route, no envelope field and no node id moved. Proved in a real browser by tests/web/test_terminal_sse_qa6_live.py::test_a_forbidden_stream_reads_unreadable. A baseline path outside `rebase.regenerated_paths`, so it is declared here rather than re-based. Ledger: docs/plans/qa6-bugfix-blockers/P15.md."
       },
       {
         "path": "web/static/terminal.js",
-        "at": "2026-09-22T00:00:00Z",
-        "by": "QA run 4 remediation, lane B (D6)",
-        "why": "**Changed.** D6: the emulator was constructed with no `cols` and no `rows`, so it drew at xterm's default 80x24 at every viewport from 390 to 2560 for a 160x45 pane, inside a container that is `overflow: hidden` on both axes \u2014 366px of pane unreachable at 390, and a rendered right edge of 1517 in a 1440 window. It is now fitted to its container at open and on every resize, and the one residual the fit cannot close (the pane keeps its own geometry, so a window narrower than it re-wraps) is declared on the page beside T19-c's sentence. Measured in a real browser by `tests/web/test_terminal_fit_live.py`."
+        "at": "2026-09-24T00:00:00Z",
+        "by": "QA run 4 remediation, lane B (D6); then qa6 bugfix integration (P16 of docs/plans/2026-09-24-qa6-bugfix-plan.md)",
+        "why": "**Changed twice.** D6: the emulator was constructed with no `cols` and no `rows`, so it drew at xterm's default 80x24 at every viewport from 390 to 2560 for a 160x45 pane, inside a container that is `overflow: hidden` on both axes \u2014 366px of pane unreachable at 390, and a rendered right edge of 1517 in a 1440 window. It is now fitted to its container at open and on every resize, and the one residual the fit cannot close (the pane keeps its own geometry, so a window narrower than it re-wraps) is declared on the page beside T19-c's sentence. Measured in a real browser by `tests/web/test_terminal_fit_live.py`. Then changed by the qa6 bugfix plan (2026-09-24), BC-10 (plan P15): the first frame, the pane snapshot, was written as captured \u2014 text rows followed by the pane's trailing blank lines \u2014 so an emulator with fewer rows than the pane scrolled the text out and opened on blank rows. Frame 1 now goes through the new pure export `snapshotForEmulator(capture)`, which trims the trailing run of LF/CR/space and ends a non-empty snapshot with one CR LF so the next live chunk starts at column 0; live chunks (frames 2+) are unchanged. Proved in a real browser by tests/web/test_terminal_sse_qa6_live.py::test_the_snapshot_text_is_visible_on_open. Ledger: docs/plans/qa6-bugfix-blockers/P15.md."
       }
     ]
   }

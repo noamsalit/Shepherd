@@ -1104,3 +1104,12 @@ Every finding was re-checked against the code before it was accepted; all ten we
 | 2 | P2 test 2 gate must block only the first `attached_clients()` caller | Stated in P2's second regression test |
 | 3 | P9 claim-to-bind window prints a misleading refusal | Edge case E16, accepted residual, recorded in P16 README |
 | 4 | Line drift in P4 / Triage (BC-04, BC-17, BC-27, BC-34) | Line numbers corrected; BC-17/BC-27 cite the call by function |
+
+## Revision 4 change log (router amendment during build)
+
+| # | Trigger | Change |
+|---|---|---|
+| 1 | P8 builder: `AuthzOutcome.autonomy_level` (plan-required) breaks 4 undeclared pins | Declared, additive-only: `tests/toolsurface/test_policy.py::test_the_caller_context_field_is_defaulted` field set gains `autonomy_level`; `tests/toolsurface/test_approvals.py` ×3 (`test_an_unanswered_approval_times_out_and_counts`, `test_a_withdrawal_denies_the_blocked_call_and_counts`, `test_a_click_is_the_only_thing_that_produces_user_and_the_declared_denial`) expected outcomes gain `autonomy_level=int(AutonomyLevel.LEVEL_2)`. Strengthens, never weakens. P16 README lists them with the other changed assertions. |
+| 2 | P13 builder: new state writes in `settings.js` must be declared | `tests/web/test_settings_page.py` REQUIRED_SETTINGS_ASSIGNMENTS gains `autonomy.intent = level`, `autonomy.sending = true`, `autonomy.sending = false` (additive). |
+| 3 | P10: BC-32 needs `web/server.py`, digest-pinned under ADR-M4-7 | BC-32 moved to owner decisions; ready on `fix/qa6-P10-bc32-owner`; not merged. |
+| 4 | P12 builder: session.js assignments pinned whole-set | `tests/web/test_session_wiring.py` REQUIRED_ASSIGNMENTS: +`shownTitle = title`, +`banner.textContent = KILLED_BANNER`, `input.value` entry now reads `shownTitle` (the old one encodes BC-25's stale pre-fill). |
