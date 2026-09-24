@@ -28,6 +28,7 @@ from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from shepherd.core.clock import epoch_millis
 from shepherd.core.stream import StreamEvent
 
 #: ADR-7. At the fold's observed rates this is many minutes of history, which is
@@ -39,6 +40,13 @@ STREAM_RING_SIZE: int = 4096
 GAP_EVENT_KIND = "stream.gap"
 
 _UNKNOWN_TIME = "unknown"
+
+#: BC-03: how many seqs one process may issue per millisecond of wall time
+#: before it could reach the next process's first. A restart seeds the ring at
+#: `epoch_millis() * SEQ_BASE_PER_MS`, so a client still holding an id from the
+#: previous process is *behind* the new ring and is told about the gap. At
+#: today's clock that is ~1.8e15 — below 2^53, exact in JSON and in JavaScript.
+SEQ_BASE_PER_MS: int = 1000
 
 
 @dataclass(frozen=True)
@@ -67,12 +75,20 @@ def publish(event: StreamEvent) -> int:
         return _SEQ
 
 
-def reset_stream() -> None:
-    """Empty the ring and restart the sequence. Startup, and every test."""
+def stream_seq_base() -> int:
+    """The first sequence value a process starting now should issue after."""
+    return epoch_millis() * SEQ_BASE_PER_MS
+
+
+def reset_stream(seq_base: int = 0) -> None:
+    """Empty the ring and restart the sequence at `seq_base`.
+
+    Startup passes `stream_seq_base()` (BC-03); every test keeps the default 0.
+    """
     global _SEQ
     with _CONDITION:
         _RING.clear()
-        _SEQ = 0
+        _SEQ = seq_base
         _CONDITION.notify_all()
 
 
@@ -114,9 +130,15 @@ def subscribe(
     backlog is drained (the replay case); with a timeout it waits that long
     between events before ending, which is how a live stream is held open
     without a poll.
+
+    A cursor *ahead* of the head is not from this ring — the wall clock stepped
+    back between two starts (BC-03, E5) — so it is served as `0`: the client
+    gets the ring, with the gap marker when the ring does not start at 1.
     """
     with _CONDITION:
         cursor = _SEQ if since_seq is None else since_seq
+        if cursor > _SEQ:
+            cursor = 0
     while True:
         with _CONDITION:
             pending = _drain_locked(cursor)
