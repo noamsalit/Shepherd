@@ -9,7 +9,9 @@ here has a capture behind it in data-schemas §"Unix domain socket at mode 0600
   chmod window to close afterwards, so the mode is set the only way it can be.
 * **unlink before bind, and unlink on exit** (E20, F15). A stale socket file
   gives clients `ECONNREFUSED` and the next bind `EADDRINUSE`. A `sessiond`
-  that cannot rebind after a crash is a `sessiond` that cannot restart.
+  that cannot rebind after a crash is a `sessiond` that cannot restart. Only a
+  *stale* file is unlinked: `claim_socket` refuses a path a live listener still
+  accepts on (qa6 BC-16), so a second start is a refusal, not a theft.
 * **read to EOF** (§"Hook runtime contract"). The dispatcher writes and closes
   and never waits for a reply; a listener that stops at the first short read
   truncates a 40 KB frame that the probe verified arrives complete.
@@ -54,6 +56,17 @@ SHUTDOWN_DRAIN_S = 2.0
 RECV_CHUNK = 65_536
 LISTEN_BACKLOG = 64
 
+#: How long `claim_socket` waits for a live owner to accept its probe (BC-16).
+CLAIM_PROBE_TIMEOUT_S = 0.25
+
+
+class SocketInUse(RuntimeError):
+    """The socket path is held by a listener that is still accepting (BC-16).
+
+    Not an `OSError`: a caller that reads every `OSError` as "the port is
+    taken" must not report a held socket as a held port.
+    """
+
 
 @contextmanager
 def _umask(mode: int) -> Iterator[None]:
@@ -80,12 +93,34 @@ def unlink_socket(path: Path) -> None:
             raise
 
 
+def _is_live(path: Path) -> bool:
+    """Whether a listener accepts on `path` — connect, then close unread."""
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    probe.settimeout(CLAIM_PROBE_TIMEOUT_S)
+    try:
+        probe.connect(str(path))
+    except OSError:  # refused, absent, or not a socket: nobody is serving it
+        return False
+    finally:
+        probe.close()
+    return True
+
+
+def claim_socket(plan: SocketPlan) -> SocketPlan:
+    """`plan`, if its path is free or stale; `SocketInUse` if a live process
+    holds it. Unlinking a stale file is safe; unlinking a live one is theft."""
+    if plan.path.exists() and _is_live(plan.path):
+        raise SocketInUse(f"{plan.path} is held by a running process")
+    return plan
+
+
 def bind_listener(plan: SocketPlan, backlog: int = LISTEN_BACKLOG) -> socket.socket:
     """A listening socket at `plan.path`, at `plan.sock_mode`, in a directory at
     `plan.dir_mode`. Shared by both listeners so the two sockets in M1 cannot
     drift apart in the one property an attacker cares about."""
     plan.path.parent.mkdir(parents=True, exist_ok=True)
     os.chmod(plan.path.parent, plan.dir_mode)
+    claim_socket(plan)
     unlink_socket(plan.path)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:

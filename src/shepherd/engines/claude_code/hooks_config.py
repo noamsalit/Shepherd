@@ -101,6 +101,8 @@ def _load(path: Path) -> tuple[dict[str, object] | None, str | None]:
         raw = path.read_bytes()
     except (FileNotFoundError, NotADirectoryError):
         return {}, None
+    except PermissionError as error:
+        return None, f"settings file cannot be read ({error.strerror}), so it is left untouched"
     if raw.strip() == b"":
         return {}, None
     try:
