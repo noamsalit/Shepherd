@@ -1,10 +1,12 @@
 // §12's page 3: the pane's real bytes, in a real terminal emulator.
 //
-// One socket, one emulator, and nothing in between that looks at the bytes.
+// One socket, one emulator, and nothing in between that re-renders the bytes.
 // The first frame the server sends is the snapshot `capture-pane -e -p -S -2000`
 // returned and every frame after it is `pipe-pane`'s output in order, so this
-// file's whole job is to hand each frame to `term.write` unchanged. §9: "the
-// real terminal bytes — not a re-render of a transcript".
+// file's whole job is to hand each frame to `term.write` — every live frame
+// unchanged, and the snapshot with its line endings made ones an emulator reads
+// (`snapshotForEmulator`, BC-10). §9: "the real terminal bytes — not a
+// re-render of a transcript".
 //
 // §13, and it is the reason there is not a single HTML sink below: terminal
 // output is untrusted text. It reaches `term.write` or a `textContent` slot and
@@ -199,7 +201,9 @@ export async function openTerminal(sessionId, el) {
   socket.onmessage = (event) => {
     const payload = new Uint8Array(event.data);
     frames += 1;
-    term.write(payload);
+    // Frame 1 is the snapshot and only it is re-terminated (BC-10); every later
+    // frame is `pipe-pane`'s bytes and reaches the emulator unchanged.
+    term.write(frames === 1 ? snapshotForEmulator(payload) : payload);
   };
   socket.onerror = () => {
     notice(el, STREAM_LOST);
@@ -327,6 +331,48 @@ function applyFit(term, el, top) {
 
 // The degrade's own three outcomes (review finding 5). The old code had one —
 // `""` — for all three, and an unhandled rejection for the first.
+// ---------------------------------------------------------------------------
+// BC-10 (QA run 6, U10): the snapshot opened as a blank screen.
+//
+// `capture-pane -p` ends every line with a bare LF, and pads a mostly empty
+// pane with a run of empty lines — the macOS prompt-ready capture is 14 lines
+// of text and 31 empty ones. The emulator is built with `convertEol: false`
+// (live chunks come from a pty and already carry CR LF), so a bare LF moved
+// down without returning to column 0, and the run of LFs scrolled every line
+// of text off an emulator shorter than the pane: the visible rows were the
+// blank tail, and the first live line landed at the column the last text line
+// ended on. So the snapshot, and only the snapshot, gets CR LF line endings,
+// loses its trailing run of LF / CR / space, and ends on one CR LF, which puts
+// the next live chunk at column 0 of the row below the pane's last text.
+// ---------------------------------------------------------------------------
+
+const LF = 0x0a;
+const CR = 0x0d;
+const SPACE = 0x20;
+
+// The parameter is `capture`, not `bytes`: `test_session_page.py`'s pty scan
+// treats handing pane bytes to a function as an allowed shape and does not
+// follow into the callee, and this function has no sink — it returns a new
+// `Uint8Array` whose one caller hands it to `term.write`, which the scan reads.
+export function snapshotForEmulator(capture) {
+  let end = capture.length;
+  while (end > 0 && (capture[end - 1] === LF || capture[end - 1] === CR || capture[end - 1] === SPACE)) {
+    end -= 1;
+  }
+  if (end === 0) {
+    return new Uint8Array(0);
+  }
+  const out = [];
+  for (let i = 0; i < end; i += 1) {
+    if (capture[i] === LF && (i === 0 || capture[i - 1] !== CR)) {
+      out.push(CR);
+    }
+    out.push(capture[i]);
+  }
+  out.push(CR, LF);
+  return Uint8Array.from(out);
+}
+
 const SCREEN_READING = "reading the pane…";
 const SCREEN_UNREADABLE = "the pane's text could not be read";
 const SCREEN_ABSENT = "no screen: this session has no pane we can read from";
