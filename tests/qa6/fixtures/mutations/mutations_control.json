@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "mutations.py",
+ "old": "    if control_clause != \"pass\":\n        return \"blocked\"",
+ "new": "    if control_clause is None:\n        return \"blocked\"",
+ "proof": "test_proof_scenario_mutation_outcome",
+ "expect": "proof_mutation_outcome.needs_a_passing_control",
+ "why": "hunter M7: a mutation is scored falsified although the clause already fails without it"
+}

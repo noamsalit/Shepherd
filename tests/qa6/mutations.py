@@ -100,13 +100,47 @@ S0_NODE = "tests/qa6/live/test_wave1_s0_auth_probe.py::test_s0_bind_live_auth_mo
 LIVE_WAVE = 8
 
 
+def mutation_outcome(control_clause: str | None, mutated_clause: str | None, applied: bool,
+                     teardown_problems: list[str]) -> tuple[str, str | None]:
+    """`(outcome, blocked_reason)` for one scenario mutation. Pure (hunter M7).
+
+    `assertion_falsified` needs all four: the UNmutated control run of the same
+    node evaluated the clause `pass` in this minted run, the mutated run noted
+    `APPLIED`, the mutated run evaluated the clause `fail`, and teardown was
+    clean. A clause that already fails (or is blocked) without the mutation
+    proves nothing about the mutation: `blocked`, never `falsified`.
+    """
+    if not applied:
+        return "blocked", "the mutated run never noted `QA6 MUTATION … APPLIED` (the sabotage was not live)"
+    if teardown_problems:
+        return "blocked", f"teardown problems: {teardown_problems[:5]}"
+    if control_clause != "pass":
+        return "blocked", f"the unmutated control run's clause was {control_clause!r}, not 'pass'"
+    if mutated_clause == "fail":
+        return "assertion_falsified", None
+    return "survived", None
+
+
+def _clause_result(records: list[dict[str, object]], lane: str, scenario: str, clause: str) -> tuple[
+        str | None, dict[str, object]]:
+    chosen = [r for r in records if r.get("id") == scenario and str(r.get("lane_process", "")).startswith(lane)]
+    record = chosen[-1] if chosen else {}
+    raw = record.get("clauses")
+    for entry in raw if isinstance(raw, list) else []:
+        if isinstance(entry, dict) and entry.get("name") == clause:
+            result = entry.get("result")
+            return (str(result) if result is not None else None), record
+    return None, record
+
+
 def run_scenario_mutation(name: str, report_dir: Path) -> int:
-    """Mint a run, run the one node with the mutation live, and record the outcome.
+    """Mint a run, run the node UNmutated (the control) and then mutated, and record the outcome.
 
     A wave-8 node needs the `LIVE_AUTH_MODE` S0 binds in the same run (SI-3):
     S0 runs first, in its own pytest process **without** the mutation, and the
-    mode it wrote to `<run_dir>/live_auth_mode.json` is handed to the mutated
-    node's process as `QA6_LIVE_AUTH_MODE` — exactly what the runner does.
+    mode it wrote to `<run_dir>/live_auth_mode.json` is handed to both runs of
+    the node as `QA6_LIVE_AUTH_MODE` — exactly what the runner does. Teardown's
+    own result is part of the outcome (M7).
     """
     from . import bootstrap, realclaude, teardown
     from .report import load_records
@@ -121,6 +155,11 @@ def run_scenario_mutation(name: str, report_dir: Path) -> int:
     base = [str(paths.PYTEST), "-p", "no:randomly", "-p", "no:cacheprovider", "-m", "qa6 or qa6live", "-q"]
     argv = [*base, mutation.node]
     prerequisite: dict[str, object] = {}
+    teardown_problems: list[str] = []
+    control_exit: int | None = None
+    control_tail = ""
+    mutated_exit: int | None = None
+    mutated_tail = ""
     try:
         for node in prerequisite_nodes(mutation):
             pre_argv = [*base, node]
@@ -132,32 +171,39 @@ def run_scenario_mutation(name: str, report_dir: Path) -> int:
         if mode is not None:
             knobs[ENV_LIVE_AUTH_MODE] = mode
         prerequisite["live_auth_mode"] = mode
+        control = subprocess.run(argv, env=pytest_process_env(os.environ, {**knobs, "QA6_LANE": "mutation-control"}),
+                                 cwd=str(paths.REPO), capture_output=True, text=True, timeout=1800, check=False)
+        control_exit, control_tail = control.returncode, control.stdout[-1200:]
         done = subprocess.run(argv, env=pytest_process_env(os.environ, {**knobs, ENV: name}), cwd=str(paths.REPO),
                               capture_output=True, text=True, timeout=1800, check=False)
+        mutated_exit, mutated_tail = done.returncode, done.stdout[-2000:]
     finally:
-        bootstrap.remove_worktree(run)
-        teardown.teardown_run(run)
-    records = [r for r in load_records(run_dir) if r.get("id") == mutation.scenario]
-    record = records[-1] if records else {}
-    raw_clauses = record.get("clauses")
-    clauses: list[object] = list(raw_clauses) if isinstance(raw_clauses, list) else []
-    falsified = [c for c in clauses if isinstance(c, dict) and c.get("name") == mutation.failing_clause
-                 and c.get("result") == "fail"]
+        teardown_problems.extend(bootstrap.remove_worktree(run))
+        report = teardown.teardown_run(run)
+        teardown_problems.extend(report.problems)
+    records = load_records(run_dir)
+    control_clause, control_record = _clause_result(records, "mutation-control", mutation.scenario, mutation.failing_clause)
+    mutated_clause, record = _clause_result(records, "mutation-w", mutation.scenario, mutation.failing_clause)
     raw_evidence = record.get("evidence")
     evidence = [e for e in (raw_evidence if isinstance(raw_evidence, list) else [])
-                if isinstance(e, str) and e.startswith(f"QA6 MUTATION {name}")]
-    outcome = "assertion_falsified" if falsified and evidence else ("survived" if evidence else "blocked")
+                if isinstance(e, str) and e.startswith(f"QA6 MUTATION {name} APPLIED")]
     link_changed = realclaude.link_change(run_dir)
+    if link_changed is not None:
+        teardown_problems.append(link_changed)
+    outcome, blocked_reason = mutation_outcome(control_clause, mutated_clause, bool(evidence), teardown_problems)
     result = {
         "name": name, "property": mutation.prop, "scenario": mutation.scenario, "targets": f"{mutation.scenario} {mutation.failing_clause}",
-        "what": mutation.what, "command": " ".join(argv), "env": f"{ENV}={name}", "exit": done.returncode,
+        "what": mutation.what, "command": " ".join(argv), "env": f"{ENV}={name}", "exit": mutated_exit,
         "prerequisite": prerequisite, "applied_evidence": evidence, "failing_assertion": mutation.failing_clause,
-        "falsified_clause": falsified, "verdict": record.get("verdict"), "reason": record.get("reason"),
-        "outcome": outcome, "claude_link_changed": link_changed, "stdout_tail": done.stdout[-2000:],
+        "control": {"exit": control_exit, "clause": control_clause, "verdict": control_record.get("verdict"),
+                    "stdout_tail": control_tail},
+        "mutated_clause": mutated_clause, "verdict": record.get("verdict"), "reason": record.get("reason"),
+        "outcome": outcome, "blocked_reason": blocked_reason, "teardown_problems": teardown_problems,
+        "claude_link_changed": link_changed, "stdout_tail": mutated_tail,
     }
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "mutation-result.json").write_text(json.dumps(result, indent=1, default=str), encoding="utf-8")
-    return 0 if outcome == "assertion_falsified" and link_changed is None else 1
+    return 0 if outcome == "assertion_falsified" else 1
 
 
 def prerequisite_nodes(mutation: ScenarioMutation) -> list[str]:

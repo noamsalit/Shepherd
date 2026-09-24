@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "    raise Blocked(f\"unknown tmux server state",
+ "new": "    return False\n    raise Blocked(f\"unknown tmux server state",
+ "proof": "test_proof_probes_fail_closed",
+ "expect": "proof_probes.tmux_unknown_is_not_not_running",
+ "why": "hunter M3: any tmux failure reads as 'not running', after which the socket file is unlinked (proved with a stubbed tmuxctl.run: no tmux is run)"
+}

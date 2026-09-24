@@ -31,8 +31,11 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from collections.abc import Mapping
 from pathlib import Path
+
+from shepherd.runner.tmux_cmd import is_server_teardown
 
 from .. import hostprobe, paths, realclaude, tmuxctl
 from ..mutations import active
@@ -156,17 +159,46 @@ def settings_checks(run: RunContext, rec: Recorder) -> dict[str, str]:
     return checks
 
 
+#: A sidecar being rewritten is re-read this many times, SIDECAR_RETRY_S apart, before it is unknown (M4).
+SIDECAR_READS = 5
+SIDECAR_RETRY_S = 0.2
+
+
+def read_sidecar(path: Path) -> dict[str, object] | None:
+    """The sidecar whole, re-read while a live writer is mid-rewrite; `None` = still unreadable."""
+    for attempt in range(SIDECAR_READS):
+        try:
+            decoded: object = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, json.JSONDecodeError):
+            if attempt + 1 < SIDECAR_READS:
+                time.sleep(SIDECAR_RETRY_S)  # a bounded re-read, not readiness
+            continue
+        return {str(k): v for k, v in decoded.items()} if isinstance(decoded, dict) else {}
+    return None
+
+
+def unreadable_run_sidecars(run: RunContext, pids: Mapping[int, str]) -> list[str]:
+    """Sidecars (`<pid>.json`) still unreadable after the re-reads whose pid is one of this run's engines."""
+    directory = paths.REAL_CLAUDE_DIR / "sessions"
+    unknown: list[str] = []
+    for path in sorted(directory.glob("*.json")) if directory.exists() else []:
+        stem = path.stem
+        engine = stem.isdigit() and any(word in pids.get(int(stem), "") for word in ("pane", "claude", "master_cli"))
+        if engine and read_sidecar(path) is None:
+            unknown.append(path.name)
+    return unknown
+
+
 def run_sidecars(run: RunContext, pids: Mapping[int, str]) -> list[dict[str, object]]:
     """Sidecars in the real ~/.claude/sessions that belong to this run (by pid or by cwd)."""
     found: list[dict[str, object]] = []
     directory = paths.REAL_CLAUDE_DIR / "sessions"
     for path in sorted(directory.glob("*.json")) if directory.exists() else []:
-        try:
-            decoded: object = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue  # a sidecar being rewritten by a live engine; the next read sees it whole
-        if not isinstance(decoded, dict):
-            continue
+        decoded = read_sidecar(path)
+        if not decoded:
+            continue  # gone, or still unreadable: `unreadable_run_sidecars` counts this run's as unknown
         pid = decoded.get("pid")
         cwd = str(decoded.get("cwd") or "")
         # A recorded pid counts only if it was recorded as an engine (pane, claude -p, master CLI):
@@ -178,6 +210,74 @@ def run_sidecars(run: RunContext, pids: Mapping[int, str]) -> list[dict[str, obj
             found.append({"file": path.name, "pid": pid, "cwd": cwd, "alive": alive,
                           "recorded_as": pids.get(pid) if isinstance(pid, int) else None})
     return found
+
+
+def engine_version(run: RunContext) -> str | None:
+    resolution = read_json(run.run_dir / realclaude.RESOLUTION_FILE)
+    path = resolution.get("path") if resolution else None
+    return os.path.basename(path) if isinstance(path, str) else None
+
+
+def local_tree_clause(run: RunContext, rec: Recorder, baseline: Mapping[str, object] | None) -> None:
+    """Review finding 3: ~/.local/{bin, share/claude, state/claude} as at run START, after every lane and now.
+
+    Names, kinds, mtimes and link targets (lstat/readlink only). The dangling
+    `~/.local/bin/claude` is part of the START state, not a change. A lock file
+    for a version other than this run's engine, added or removed, is the user's
+    own session and is attributed, not counted (`hostprobe.local_tree_changes`).
+    """
+    start = baseline.get("local_tree") if baseline else None
+    if not isinstance(start, dict):
+        rec.block("files.local_tree_unchanged", "no local_tree in baseline.json (not a runner run of this build)")
+        return
+    version = engine_version(run)
+    checked: dict[str, object] = {}
+    attributed: dict[str, object] = {}
+    unknown: list[str] = []
+    snapshots = {f"after:{path.stem}": read_json(path) for path in sorted((run.run_dir / "host-after").glob("*.json"))}
+    snapshots["now"] = {"local_tree": hostprobe.local_tree()}
+    for label, snapshot in snapshots.items():
+        tree = snapshot.get("local_tree") if snapshot else None
+        if not isinstance(tree, dict):
+            unknown.append(label)
+            continue
+        changes, seen = hostprobe.local_tree_changes(start, tree, version)
+        if changes:
+            checked[label] = changes
+        attributed.update(seen)
+    rec.record("files.local_tree_attributed_to_the_users_sessions", attributed)
+    if unknown:
+        rec.block("files.local_tree_snapshots_readable", f"snapshots with no local_tree (unknown is not clean): {unknown}")
+    rec.check("files.local_tree_unchanged", not checked,
+              "~/.local/{bin, share/claude, state/claude} as at run start in every snapshot and now "
+              f"({len(start)} entries; the run-start ~/.local/bin/claude link included as it was)",
+              {"changed": checked, "snapshots": len(snapshots)})
+
+
+def daemons_alive_at_baseline(baseline: Mapping[str, object] | None) -> list[int]:
+    raw = baseline.get("shepherd_daemons") if baseline else None
+    pids = [entry[0] for entry in raw if isinstance(entry, list) and entry and isinstance(entry[0], int)] if isinstance(raw, list) else []
+    return [pid for pid in pids if pid_alive(pid)]
+
+
+def listing_clause(rec: Recorder, clause: str, key: str, baseline: Mapping[str, object] | None,
+                   after: Mapping[str, object] | None) -> None:
+    """H7: the user's real Shepherd dirs, baseline vs after-teardown: same names and, unless the
+    user's own Shepherd daemon (alive at baseline and still) explains it, the same mtimes."""
+    before_listing = baseline.get(key) if baseline else None
+    after_listing = after.get(key) if after else None
+    if not isinstance(before_listing, dict) or not isinstance(after_listing, dict):
+        rec.block(clause, f"{key} missing from baseline.json or after-teardown.json (unknown is not clean)")
+        return
+    delta = hostprobe.listing_delta(before_listing, after_listing)
+    users = daemons_alive_at_baseline(baseline)
+    names_same = not delta["added"] and not delta["removed"]
+    mtimes_ok = not delta["mtime_moved"] or bool(users)
+    rec.check(clause, names_same and mtimes_ok,
+              f"{key}: the same names" + (" (mtimes may move: the user's Shepherd daemon(s) "
+                                          f"{users} were running at baseline and still are)" if users else
+                                          " and mtimes as at baseline"),
+              {**delta, "user_daemons_alive": users})
 
 
 @scenario("Z1")
@@ -218,6 +318,10 @@ def test_z1_user_claude_settings_and_projects_as_they_were(qa6_run: RunContext, 
                                           "problems": closing.get("problems")})
     alive = [entry for entry in sidecars if entry.get("alive")]
     rec.check("files.no_live_run_sidecar", not alive, "no ~/.claude/sessions file names a run pid still alive", alive)
+    unknown = unreadable_run_sidecars(run, pids)
+    if unknown:
+        rec.block("files.run_sidecars_readable", f"sidecars of this run's engine pids unreadable after "
+                  f"{SIDECAR_READS} reads (unknown is not clean): {unknown}")
     # Not in the plan's Z1 row; added after INC-1 (a real-HOME engine re-pointed the user's
     # `~/.local/bin/claude` into a run root). Derived oracle: the run leaves the link exactly as it
     # found it at run START — never "healthy", because it may already have been damaged before
@@ -230,6 +334,11 @@ def test_z1_user_claude_settings_and_projects_as_they_were(qa6_run: RunContext, 
         rec.check("files.claude_bin_link_unchanged", realclaude.compare(link_start, link_now) is None,
                   f"{paths.REAL_CLAUDE_BIN} is as it was at run start: {link_start}", link_now)
     rec.record("files.real_claude_resolution", read_json(run.run_dir / realclaude.RESOLUTION_FILE))
+    local_tree_clause(run, rec, baseline)
+    after = read_json(run.run_dir / "host-after" / "after-teardown.json")
+    for key, clause in (("shepherd_data", "files.real_shepherd_data_unchanged"),
+                        ("real_tmpdir_shepherd", "files.real_tmpdir_shepherd_unchanged")):
+        listing_clause(rec, clause, key, baseline, after)
     if mode == "sandbox_ok":
         rec.equal("files.no_run_sidecar_in_real_dir", [], sidecars)
     rec.finish()
@@ -264,9 +373,13 @@ def pane_tmux_log(run: RunContext) -> tuple[list[dict[str, object]], str]:
 
 
 def socket_violations(lines: list[list[str]], run: RunContext) -> list[list[str]]:
-    pattern = paths.runner_socket_pattern(run.pid)
-    return [argv for argv in lines if argv != ["tmux", "-V"]
-            and not (len(argv) >= 3 and argv[1] == "-L" and pattern.fullmatch(argv[2]))]
+    """Every product argv whose effective socket (tmux's own getopt rules) is not this run's."""
+    return tmuxctl.product_argv_violations(lines, run.pid)
+
+
+def named_user_socket(argv: list[str]) -> bool:
+    """The argv's effective socket (not its spelling at a fixed position) is the user's."""
+    return tmuxctl.effective_socket(argv, None) in paths.USER_TMUX_SOCKETS
 
 
 def shim_spawns(run: RunContext) -> int:
@@ -337,13 +450,12 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
             rec.note(f"QA6 MUTATION w9_PP7_Z2_planted_argv APPLIED: one planted argv {PLANTED_ARGV} appended to the "
                      "evaluated list (held in memory, never executed)")
         violations = socket_violations(evaluated, run)
-        rec.check("tmux.argv", not violations, "every argv but `tmux -V` names -L shepherd-m3-q6<pid>-<k>",
+        rec.check("tmux.argv", not violations, "every argv but `tmux -V` has effective socket shepherd-m3-q6<pid>-<k>",
                   {"violations": violations[:10], "lines": len(evaluated)})
-        user = [argv for argv in evaluated if len(argv) >= 3 and argv[1] == "-L" and argv[2] in paths.USER_TMUX_SOCKETS]
+        user = [argv for argv in evaluated if named_user_socket(argv)]
         rec.equal("tmux.no_user_socket_named", [], user[:10])
-        pattern = paths.runner_socket_pattern(run.pid)
-        kill_servers = [argv for argv in evaluated if any(w.startswith("kill-ser") for w in argv)
-                        and not (len(argv) >= 3 and pattern.fullmatch(argv[2]))]
+        kill_servers = [argv for argv in evaluated if any(is_server_teardown(w) for w in argv)
+                        and not tmuxctl.socket_allowed(str(tmuxctl.effective_socket(argv, None)), run.pid)]
         rec.equal("tmux.kill_server_ours_only", [], kill_servers)
     pane_entries, pane_source = pane_tmux_log(run)
     rec.record("files.pane_log_source", {"source": pane_source, "entries": len(pane_entries)})
@@ -352,8 +464,9 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
               "every tmux call made inside a pane (the real engine's; $TMUX set) resolves -S, -L, else $TMUX to "
               "shepherd-m3-q6<pid>-<k>", {"violations": pane_bad[:10], "entries": len(pane_entries)})
     unseeded = argv_lines(run.run_dir / "ledgers" / "unseeded-tmux-argv.log")
-    rec.record("tmux.unseeded_log", {"lines": len(unseeded), "sockets": sorted({a[2] for a in unseeded if len(a) >= 3})})
-    rec.equal("tmux.unseeded_no_user_socket", [], [a for a in unseeded if len(a) >= 3 and a[2] in paths.USER_TMUX_SOCKETS])
+    rec.record("tmux.unseeded_log", {"lines": len(unseeded),
+                                     "sockets": sorted({str(tmuxctl.effective_socket(a, None)) for a in unseeded})})
+    rec.equal("tmux.unseeded_no_user_socket", [], [a for a in unseeded if named_user_socket(a)])
     rec.finish()
 
 
@@ -406,4 +519,41 @@ def test_z3_forbidden_port_untouched_nothing_left_running(qa6_run: RunContext, r
     others = sorted({int(m.group(1)) for p in TMP_CANONICAL.glob(f"{paths.RUN_ROOT_PREFIX}*")
                      if (m := re.match(rf"^{re.escape(paths.RUN_ROOT_PREFIX)}(\d+)-", p.name)) and int(m.group(1)) != run.pid})
     rec.record("files.roots_of_other_qa6_runs", {str(pid): pid_alive(pid) for pid in others})
+    after = read_json(run.run_dir / "host-after" / "after-teardown.json")
+    process_clauses(run, rec, baseline, after)
     rec.finish()
+
+
+def attribution(pid: int, run: RunContext) -> str:
+    """Whose a pid is, from its argv and cwd now: `ours`, `other qa6 run <pid>`, `gone`, or `unattributed`."""
+    command = hostprobe.process_args(pid)
+    if command is None:
+        return "gone"
+    cwd = hostprobe.process_cwd(pid) or ""
+    if f"shepherd-m3-q6{run.pid}-" in command or under_run_root(command, run) or under_run_root(cwd, run):
+        return "ours"
+    if (m := re.search(r"shepherd-m3-q6(\d+)-|shq6-(\d+)-", f"{command} {cwd}")) and int(m.group(1) or m.group(2)) != run.pid:
+        return f"other qa6 run {m.group(1) or m.group(2)}"
+    return f"unattributed: {command[:160]}"
+
+
+def process_clauses(run: RunContext, rec: Recorder, baseline: Mapping[str, object] | None,
+                    after: Mapping[str, object] | None) -> None:
+    """H7: the user's Shepherd daemons and tmux servers, baseline vs after-teardown.
+
+    A baseline pid gone after teardown is a failure (the run may have signalled
+    the user's own process); a pid new after teardown fails unless it is
+    attributable to another live qa6 run.
+    """
+    for key, clause in (("shepherd_daemons", "proc.shepherd_daemons_unchanged"), ("tmux_pids", "proc.tmux_pids_unchanged")):
+        before = baseline.get(key) if baseline else None
+        now = after.get(key) if after else None
+        if not isinstance(before, list) or not isinstance(now, list):
+            rec.block(clause, f"{key} missing from baseline.json or after-teardown.json (unknown is not clean)")
+            continue
+        delta = hostprobe.pid_delta(before, now)
+        new = {str(pid): attribution(pid, run) for pid in delta["new"]}
+        bad_new = {pid: who for pid, who in new.items() if not who.startswith(("other qa6 run", "gone"))}
+        rec.check(clause, not delta["gone"] and not bad_new,
+                  f"every baseline {key} pid still running and no new one (except another qa6 run's)",
+                  {"gone": delta["gone"], "new": new})

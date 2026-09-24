@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sse_rig.py",
+ "old": "                if self.green_control is not None:\n                    raise AssertionError",
+ "new": "                if self.green_control is not None and False:\n                    raise AssertionError",
+ "proof": "test_proof_sse_rig_fails_closed",
+ "expect": "proof_sse_rig.eof_after_a_green_control_is_fail",
+ "why": "hunter H5: a stream the product closes after a green control is BLOCKED instead of FAIL"
+}

@@ -13,7 +13,9 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,8 +24,23 @@ from . import paths
 TIMEOUT_S = 15.0
 
 
+class ProbeUnknown(RuntimeError):
+    """A probe that could not answer. Never read as "nothing found" (hunter M3)."""
+
+
 def run(argv: list[str], timeout_s: float = TIMEOUT_S) -> subprocess.CompletedProcess[str]:
     return subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s, check=False)
+
+
+def run_listing(argv: list[str]) -> str:
+    """stdout of a `pgrep`/`lsof` listing. Exit 0 = found; exit 1 with an empty stderr = none
+    (both tools' measured "no match" answer on this host); anything else is `ProbeUnknown`."""
+    done = run(argv)
+    if done.returncode == 0:
+        return done.stdout
+    if done.returncode == 1 and not done.stderr.strip() and not done.stdout.strip():
+        return ""
+    raise ProbeUnknown(f"{argv!r} exited {done.returncode}: stdout={done.stdout[:200]!r} stderr={done.stderr[:300]!r}")
 
 
 def sha256(path: Path) -> str:
@@ -52,9 +69,8 @@ def mtime(path: Path) -> float | None:
 
 def pgrep(pattern: str) -> list[tuple[int, str]]:
     """`pgrep -fl <pattern>` → (pid, command line), excluding this process."""
-    done = run([str(paths.PGREP_BIN), "-fl", pattern])
     found: list[tuple[int, str]] = []
-    for line in done.stdout.splitlines():
+    for line in run_listing([str(paths.PGREP_BIN), "-fl", pattern]).splitlines():
         head, _, rest = line.partition(" ")
         if head.isdigit() and int(head) != os.getpid():
             found.append((int(head), rest))
@@ -62,20 +78,19 @@ def pgrep(pattern: str) -> list[tuple[int, str]]:
 
 
 def pgrep_exact(name: str) -> list[int]:
-    done = run([str(paths.PGREP_BIN), "-x", name])
-    return [int(line) for line in done.stdout.split() if line.isdigit()]
+    return [int(line) for line in run_listing([str(paths.PGREP_BIN), "-x", name]).split() if line.isdigit()]
 
 
 def port_listener_pids(port: int) -> list[int]:
     """Pids listening on TCP `port`, read with `lsof` (no connect)."""
-    done = run([str(paths.LSOF_BIN), "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"])
-    return sorted({int(line) for line in done.stdout.split() if line.isdigit()})
+    listed = run_listing([str(paths.LSOF_BIN), "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"])
+    return sorted({int(line) for line in listed.split() if line.isdigit()})
 
 
 def listen_addresses(pid: int) -> list[str]:
     """`lsof -nP -a -p <pid> -iTCP -sTCP:LISTEN` → the NAME column values."""
-    done = run([str(paths.LSOF_BIN), "-nP", "-a", "-p", str(pid), "-iTCP", "-sTCP:LISTEN", "-Fn"])
-    return [line[1:] for line in done.stdout.splitlines() if line.startswith("n")]
+    listed = run_listing([str(paths.LSOF_BIN), "-nP", "-a", "-p", str(pid), "-iTCP", "-sTCP:LISTEN", "-Fn"])
+    return [line[1:] for line in listed.splitlines() if line.startswith("n")]
 
 
 def open_files(pid: int) -> list[str]:
@@ -132,6 +147,7 @@ class Baseline:
     tmux_pids: list[int]
     port_owner_pids: list[int]
     shepherd_daemons: list[tuple[int, str]]
+    local_tree: dict[str, list[object]]
 
     def as_json(self) -> dict[str, object]:
         return {
@@ -146,7 +162,75 @@ class Baseline:
             "tmux_pids": self.tmux_pids,
             "port_owner_pids": self.port_owner_pids,
             "shepherd_daemons": [[pid, cmd] for pid, cmd in self.shepherd_daemons],
+            "local_tree": self.local_tree,
         }
+
+
+#: INC-1 (review finding 3): the trees a real-HOME engine's installer and updater write. Read
+#: with lstat/readlink only; their state at run START is the baseline (the dangling
+#: `~/.local/bin/claude` is that state, not a change).
+LOCAL_TREES: tuple[Path, ...] = (
+    paths.REAL_HOME / ".local" / "bin",
+    paths.REAL_HOME / ".local" / "share" / "claude",
+    paths.REAL_HOME / ".local" / "state" / "claude",
+)
+LOCAL_TREE_CAP = 20000
+#: Lock files the user's OWN running `claude` sessions create and remove under
+#: `~/.local/state/claude/locks/<version>.lock` (measured: one per running version).
+LOCK_DIR = ".local/state/claude/locks/"
+
+
+def local_tree(roots: tuple[Path, ...] = LOCAL_TREES) -> dict[str, list[object]]:
+    """`path relative to the real HOME` -> `[kind, mtime, link target]`, never following a link.
+
+    A directory's own mtime is not recorded (the user's own sessions bump the
+    lock directory's by creating and removing lock files); its entries are. A
+    root that is absent is recorded as `["absent", None, None]`.
+    """
+    found: dict[str, list[object]] = {}
+    pending = [root for root in roots]
+    home = str(paths.REAL_HOME) + "/"
+    while pending:
+        current = pending.pop()
+        name = str(current)[len(home):] if str(current).startswith(home) else str(current)
+        try:
+            info = current.lstat()
+        except FileNotFoundError:
+            found[name] = ["absent", None, None]
+            continue
+        if stat.S_ISLNK(info.st_mode):
+            found[name] = ["link", info.st_mtime, os.readlink(current)]
+        elif stat.S_ISDIR(info.st_mode):
+            found[name] = ["dir", None, None]
+            pending.extend(sorted(current.iterdir()))
+        else:
+            found[name] = ["file", info.st_mtime, None]
+        if len(found) > LOCAL_TREE_CAP:
+            raise ProbeUnknown(f"more than {LOCAL_TREE_CAP} entries under {roots}")
+    return found
+
+
+def local_tree_changes(start: Mapping[str, object], now: Mapping[str, object],
+                       engine_version: str | None) -> tuple[dict[str, object], dict[str, object]]:
+    """(changes, attributed) between two `local_tree` snapshots.
+
+    A lock file `locks/<v>.lock` added or removed for a version other than this
+    run's engine (`engine_version`) is the user's own running session and is
+    `attributed`, not a change; every other difference (a name added or
+    removed, a kind, an mtime, a link target) is a change.
+    """
+    changes: dict[str, object] = {}
+    attributed: dict[str, object] = {}
+    for name in sorted(set(start) | set(now)):
+        before, after = start.get(name), now.get(name)
+        if before == after:
+            continue
+        lock_version = name[len(LOCK_DIR):-len(".lock")] if name.startswith(LOCK_DIR) and name.endswith(".lock") else None
+        if lock_version is not None and lock_version != engine_version and (before is None or after is None):
+            attributed[name] = {"before": before, "after": after, "why": "the user's own session's lock"}
+            continue
+        changes[name] = {"before": before, "after": after}
+    return changes, attributed
 
 
 def real_tmpdir() -> Path:
@@ -169,6 +253,7 @@ def snapshot() -> Baseline:
         tmux_pids=pgrep_exact("tmux"),
         port_owner_pids=port_listener_pids(paths.FORBIDDEN_PORT),
         shepherd_daemons=pgrep("shepherd-controld|shepherd-sessiond"),
+        local_tree=local_tree(),
     )
 
 
@@ -181,3 +266,28 @@ def read_baseline(path: Path) -> dict[str, object]:
     if not isinstance(decoded, dict):
         raise ValueError(f"{path} is not a JSON object")
     return {str(key): value for key, value in decoded.items()}
+
+
+# ----- pure comparisons Z1/Z3 make between the baseline and the after-teardown snapshot (H7) ---------
+
+
+def listing_delta(before: Mapping[str, object], after: Mapping[str, object]) -> dict[str, object]:
+    """Names added, names removed, and names whose mtime moved, between two `listing`s."""
+    added = sorted(set(after) - set(before))
+    removed = sorted(set(before) - set(after))
+    moved = {name: [before[name], after[name]] for name in sorted(set(before) & set(after)) if before[name] != after[name]}
+    return {"added": added, "removed": removed, "mtime_moved": moved}
+
+
+def pid_delta(before: list[object], after: list[object]) -> dict[str, list[int]]:
+    """Pids present at baseline and gone after, and pids new after (from `[pid, …]` or `[[pid, cmd], …]`)."""
+    def pids(values: list[object]) -> set[int]:
+        found: set[int] = set()
+        for value in values:
+            head = value[0] if isinstance(value, list) and value else value
+            if isinstance(head, int):
+                found.add(head)
+        return found
+
+    was, now = pids(before), pids(after)
+    return {"gone": sorted(was - now), "new": sorted(now - was)}

@@ -9,8 +9,9 @@ Everything here reads or drives the product through its own front doors:
 
 * spawns go through `POST /api/sessions` (the HUMAN web layer), with the plan's
   75 s hang guard (O1: the product's own bound is `SPAWN_TIMEOUT_S` = 60 s, after
-  which it answers `needs_you`; the harness bound only turns a hang into
-  BLOCKED);
+  which it answers `needs_you`); a blown guard is FAIL(bound) when a
+  same-client control (`GET /api/fleet`) answers in under a tenth of it, else
+  BLOCKED (`Client.post_guarded`);
 * the harness's own tmux reads (`list-sessions`, `capture-pane`, `send-keys`)
   go through `tmuxctl`, which refuses any socket but this run's and never
   passes through the logging shim, so the shim log stays "what the product ran";
@@ -93,13 +94,14 @@ def open_owned(pool: InstancePool, run: RunContext, name: str, *, controld: Cont
 
 
 def post_json(client: Client, path: str, body: Mapping[str, object], timeout_s: float = CALL_TIMEOUT_S) -> Response:
-    """`Client.post` with an explicit timeout (spawn can legitimately take up to 60 s)."""
+    """`Client.post` with an explicit timeout (spawn can legitimately take up to 60 s).
+
+    A blown timeout is FAIL(bound) when a same-client control qualifies it,
+    else BLOCKED (`Client.post_guarded`, hunter H3) — never BLOCKED by default.
+    """
     payload = json.dumps(dict(body)).encode("utf-8")
     headers = {"Host": client.host, "Origin": client.origin, "Content-Type": "application/json"}
-    try:
-        return client.request("POST", path, body=payload, headers=headers, timeout_s=timeout_s)
-    except TimeoutError as error:
-        raise Blocked(f"POST {path} did not answer within {timeout_s}s (a hang guard): {error}") from error
+    return client.post_guarded(path, payload, headers, timeout_s)  # a blown guard is qualified (H3)
 
 
 @dataclass(frozen=True)
@@ -213,7 +215,7 @@ def bounded(rec: Recorder, name: str, seen: bool, what: str, bound_s: float, con
     if seen:
         rec.check(name, True, f"{what} within {bound_s}s", actual)
     elif control_s is not None and bound_s >= CONTROL_MULTIPLE * control_s:
-        rec.fail_bound(name, what, bound_s, f"{control_what} took {control_s:.3f}s on the same channel")
+        rec.fail_bound(name, what, bound_s, f"{control_what} took {control_s:.3f}s on the same channel", actual=actual)
     else:
         rec.block(name, f"{what} not observed within {bound_s}s and no same-channel control qualifies the bound "
                         f"({control_what}: {control_s!r}); Difference 1 makes this BLOCKED; last seen: {actual!r}"[:600])
@@ -260,8 +262,10 @@ def argvs_naming(argvs: Sequence[Sequence[str]], *words: str) -> list[list[str]]
 
 
 def socket_ok(argv: Sequence[str], socket_name: str) -> bool:
-    """argv[1..2] == `-L <this instance's runner socket>` (PP-7)."""
-    return len(argv) >= 3 and argv[0] == "tmux" and argv[1] == "-L" and argv[2] == socket_name
+    """The argv's effective socket (tmux's own getopt rules, `tmuxctl.effective_socket`) is
+    this instance's runner socket (PP-7), and the product spelled it `-L <socket>` up front."""
+    return (len(argv) >= 3 and argv[0] == "tmux" and argv[1] == "-L" and argv[2] == socket_name
+            and tmuxctl.effective_socket(argv, None) == socket_name)
 
 
 # ----- an attached (sidecar-registered) session ---------------------------------------

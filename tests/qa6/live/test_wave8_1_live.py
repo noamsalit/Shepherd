@@ -77,16 +77,16 @@ from .. import hostprobe, paths, realclaude, tmuxctl, wsclient
 from ..auditprobe import AuditProbe, shape_problems
 from ..browser import BrowserSession, click, press, type_text
 from ..hookrig import captured, start_ready_sessiond
-from ..httpclient import Client, Response, as_dict, as_list
+from ..httpclient import Client, Response, as_dict, as_list, hang_verdict
 from ..instance import Controld, app_state, db_rows, last_scan_at, ready_instance, seed_db, start_launcher
 from ..mutations import active
 from ..pool import InstancePool
-from ..sandbox import ENV_LIVE_AUTH_MODE, InstanceRoot, RunContext, mint_instance, real_home_env, sandbox_env
+from ..sandbox import ENV_LIVE_AUTH_MODE, InstanceRoot, RunContext, checked_env, mint_instance, real_home_env, sandbox_env
 from ..scenario import live_scenario
 from ..sessions import fleet_sessions, session_row
 from ..sessions import sidecar as synthetic_sidecar
 from ..sse_rig import Frame, Subscriber, subscribe
-from ..verdict import Blocked, Recorder, await_env, observe
+from ..verdict import Blocked, ProductFail, Recorder, await_env, observe
 
 LOG = logging.getLogger("qa6.wave8")
 
@@ -578,6 +578,28 @@ def anomalies(client: Client) -> dict[str, int]:
 # ----- spawning owned sessions ------------------------------------------------------------------------
 
 
+class SpawnFailed(Blocked):
+    """A live `POST /api/sessions` that did not spawn (hunter H4).
+
+    L5 owns the live spawn verdict: it records `kind` as its clause — `fail` (a
+    500 envelope, a reset, a refusal), `bound` (a hang a same-client control
+    qualifies) or `blocked` (a hang nothing qualifies). Everywhere else it stays
+    `Blocked`, and once L5 has recorded a spawn failure the other spawning
+    L-scenarios are BLOCKED by `require_live_spawn` (the in-wave stop-if).
+    """
+
+    def __init__(self, reason: str, kind: str) -> None:
+        super().__init__(reason)
+        self.kind = kind
+
+
+def require_live_spawn(notes: Mapping[str, object], who: str) -> None:
+    """The wave-8 stop-if on L5's spawn verdict (`live.notes`): a later spawner never re-litigates it."""
+    failure = notes.get("L5_spawn_failure")
+    if failure is not None:
+        raise Blocked(f"stop-if: L5's live spawn failed ({failure}); {who} is BLOCKED, L5 carries the verdict")
+
+
 def spawn_owned(live: Live, instance: Instance, *, title: str, brief: str | None, by: str) -> tuple[Spawned, dict[str, object]]:
     """`POST /api/sessions` (haiku), recorded in `live.spawned` before anything else can raise."""
     body: dict[str, object] = {"workspace_id": live.project_id, "cwd": str(live.alpha), "title": title, "model": MODEL}
@@ -585,11 +607,16 @@ def spawn_owned(live: Live, instance: Instance, *, title: str, brief: str | None
         body["brief"] = brief
     try:
         data = post_long(instance.client, "/api/sessions", body, SPAWN_HTTP_TIMEOUT_S).data()
+    except TimeoutError as error:
+        adopt_orphans(live, instance, title, by)
+        verdict = hang_verdict(instance.client, "POST /api/sessions answers", SPAWN_HTTP_TIMEOUT_S)
+        kind = "bound" if isinstance(verdict, ProductFail) else "blocked"
+        raise SpawnFailed(f"{by}: the spawn call hung: {verdict}", kind) from error
     except (OSError, AssertionError) as error:
         adopt_orphans(live, instance, title, by)
-        raise Blocked(f"{by}: the spawn call did not answer cleanly: {error}") from error
+        raise SpawnFailed(f"{by}: the spawn call did not answer cleanly: {error}", "fail") from error
     if data.get("spawned") is not True or not isinstance(data.get("session_id"), str):
-        raise Blocked(f"{by}: spawn refused: {data!r}")
+        raise SpawnFailed(f"{by}: spawn refused: {data!r}", "fail")
     session_id = str(data["session_id"])
     spawned = Spawned(session_id=session_id, title=title, instance=instance.name, socket_name=instance.socket_name,
                       engine_session_id=None, pane_pid=None, spawned_by=by)
@@ -998,7 +1025,20 @@ def sidecar_for(live: Live, spawned: Spawned) -> tuple[Path | None, dict[str, ob
 def test_l5_real_owned_session_trust_ready_idle_sidecar(live: Live, rec: Recorder) -> None:
     run, a = live.run, live.a
     before = real_claude_state()
-    spawned, data = spawn_owned(live, a, title="QA6-TARGET", brief=L5_BRIEF, by="L5")
+    try:
+        spawned, data = spawn_owned(live, a, title="QA6-TARGET", brief=L5_BRIEF, by="L5")
+    except SpawnFailed as failed:  # L5's subject IS the live spawn: its failure is L5's verdict (H4)
+        live.notes["L5_spawn_failure"] = failed.reason[:600]
+        if failed.kind == "fail":
+            rec.check("api.spawn_accepted", False, "spawned true with a session id", failed.reason)
+        elif failed.kind == "bound":
+            rec.fail_bound("api.spawn_accepted", "POST /api/sessions answers", SPAWN_HTTP_TIMEOUT_S, failed.reason,
+                           actual=failed.reason)
+        else:
+            rec.block("api.spawn_accepted", failed.reason)
+        rec.finish()
+        return
+    rec.check("api.spawn_accepted", True, "spawned true with a session id", data.get("session_id"))
     live.target = spawned
     rec.record("api.spawn", data)
     frame = spawn_frame(a, spawned.session_id)
@@ -1284,6 +1324,7 @@ def test_l6_real_permission_dialog_as_decision_card(live: Live, browser_session:
     command, created, facts = pick_permission_command(live)
     rec.record("given.permission_command", {"command": command, **facts})
     brief = f"Use the Bash tool to run exactly this shell command and nothing else: {command}"
+    require_live_spawn(live.notes, "L6")
     spawned, data = spawn_owned(live, a, title="QA6-L6-PERM", brief=brief, by="L6")
     rec.record("api.spawn", {k: data.get(k) for k in ("state", "detail")})
     frame = spawn_frame(a, spawned.session_id)
@@ -1436,7 +1477,7 @@ def test_l4_real_claude_fires_installed_hooks(live: Live, rec: Recorder) -> None
     env = (real_home_engine_env(run, root) if live.mode == "needs_real_home"
            else sandbox_env(run, root, path_mode="live"))
     before = real_claude_state()
-    process = subprocess.Popen(argv, env=env, cwd=str(live.alpha), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+    process = subprocess.Popen(argv, env=checked_env(env, "L4 claude -p"), cwd=str(live.alpha), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, text=True)
     run.record_pid(process.pid, "live-claude-p", argv)
     live.run_pids["claude_p"].append(process.pid)
@@ -1554,6 +1595,7 @@ def test_l2_approve_destructive_call_through_ui(live: Live, browser_session: Bro
     level = a.client.get("/api/autonomy").data().get("level")
     if level != 2:
         raise Blocked(f"L2 needs autonomy level 2; the instance is at {level!r}")
+    require_live_spawn(live.notes, "L2")
     target, data = spawn_owned(live, a, title="QA6-L2-TARGET", brief=None, by="L2")
     rec.record("given.target", {"session_id": target.session_id, "state": data.get("state"), "pane_pid": target.pane_pid})
     pane_pid = target.pane_pid

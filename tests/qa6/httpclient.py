@@ -19,13 +19,14 @@ import http.client
 import json
 import re
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from shepherd.toolsurface.registry import GENERIC_ERROR
 
 from . import paths
+from .verdict import classify_blown_bound
 
 #: `correlation_id` has no injection point, so it is matched as a pattern.
 CORRELATION_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -133,6 +134,21 @@ class Client:
         finally:
             connection.close()
 
+    def post_guarded(self, path: str, body: bytes, headers: Mapping[str, str], timeout_s: float) -> Response:
+        """A POST under a hang guard whose blown bound is QUALIFIED (hunter H3).
+
+        A timeout is not BLOCKED by default: right after it, a same-client
+        control (`GET /api/fleet` on this port, `same_client_control`) is
+        timed, and `classify_blown_bound` decides — FAIL(bound) when the guard
+        is at least 10x the control's latency (the daemon answers, this call
+        did not), else BLOCKED (no control: nothing distinguishes a hang from
+        a dead channel).
+        """
+        try:
+            return self.request("POST", path, body=body, headers=headers, timeout_s=timeout_s)
+        except TimeoutError as error:
+            raise hang_verdict(self, f"POST {path} answers", timeout_s) from error
+
     # ----- the projects verbs, spelled once --------------------------------
     def create_project(self, name: str, description: str | None = None) -> dict[str, object]:
         body: dict[str, object] = {"name": name}
@@ -208,3 +224,25 @@ def generic_error_problems(response: Response, status: int) -> list[str]:
     if not (isinstance(correlation, str) and CORRELATION_ID.match(correlation)):
         problems.append(f"correlation_id={correlation!r}")
     return problems
+
+
+#: The same-client control's own bound: well under any hang guard it qualifies.
+CONTROL_TIMEOUT_S = 5.0
+
+
+def same_client_control(client: Client, timeout_s: float = CONTROL_TIMEOUT_S) -> float | None:
+    """Latency of `GET /api/fleet` answering 200 on this client's port, or `None` (no control)."""
+    started = time.monotonic()
+    try:
+        response = client.request("GET", "/api/fleet", timeout_s=timeout_s)
+    except OSError:
+        return None
+    return max(time.monotonic() - started, 1e-3) if response.status == 200 else None
+
+
+def hang_verdict(client: Client, what: str, timeout_s: float,
+                 control: Callable[[Client], float | None] = same_client_control) -> Exception:
+    """The exception a blown hang guard becomes: `ProductFail` or `Blocked` (Difference 1)."""
+    latency = control(client)
+    return classify_blown_bound(f"{what} within the {timeout_s}s hang guard (same-client control: "
+                                f"GET /api/fleet {latency!r}s)", timeout_s, latency)

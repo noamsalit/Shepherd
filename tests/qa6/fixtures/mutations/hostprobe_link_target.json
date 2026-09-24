@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "        changes[name] = {\"before\": before, \"after\": after}\n    return changes, attributed",
+ "new": "        if name.endswith(\"/claude\"):\n            continue\n        changes[name] = {\"before\": before, \"after\": after}\n    return changes, attributed",
+ "proof": "test_proof_local_tree_guard",
+ "expect": "proof_local_tree.link_target_change_is_a_change",
+ "why": "review 3 / INC-1: a re-pointed ~/.local/bin/claude is not reported (planted snapshots)"
+}

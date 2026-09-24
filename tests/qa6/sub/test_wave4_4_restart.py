@@ -16,7 +16,7 @@ import pytest
 
 from ..auditprobe import AuditProbe
 from ..httpclient import as_dict
-from ..instance import Controld
+from ..instance import Controld, RestartFailed, wait_restart_ready
 from ..pool import InstancePool
 from ..sandbox import RunContext
 from ..scenario import scenario
@@ -63,10 +63,13 @@ def restarted(first: Owned) -> Owned:
     old: Controld = first.controld
     second = first.pool.start(old.root, port=old.port, name="controld-restart")
     try:
-        second.wait_ready()
-    except Blocked as blocked:
+        wait_restart_ready(second)
+    except Blocked as blocked:  # EADDRINUSE only (H2)
         second.stop()
-        raise Blocked(f"O11: the restart on port {old.port} did not come up: {blocked.reason}") from blocked
+        raise Blocked(f"O11: the OS would not re-bind port {old.port}: {blocked.reason}") from blocked
+    except RestartFailed:
+        second.stop()
+        raise
     return Owned(controld=second, run=first.run, pool=first.pool, stream=subscribe("O11-after", second.port),
                  audit=AuditProbe.for_instance(second.root), project_id=first.project_id, alpha=first.alpha)
 
@@ -82,7 +85,12 @@ def test_o11_owned_panes_survive_a_controld_restart_and_stay_killable(restart: R
     rec.check("tmux.both_panes_after_stop", pane_alive(env, one) and pane_alive(env, two),
               "both panes present while controld is down", owned_panes(env))
     tmark = len(tmux_argvs(env.run))
-    second = restarted(env)
+    try:
+        second = restarted(env)
+    except RestartFailed as failed:  # the product did not come back on its own root: FAIL, not BLOCKED (H2)
+        rec.check("proc.restart_ready", False, "the restarted controld is ready on the same root and port", str(failed))
+        rec.finish()
+        return
     restart.second = second
     rec.check("tmux.both_panes_after_restart", pane_alive(second, one) and pane_alive(second, two),
               "both panes present after the restart", owned_panes(second))

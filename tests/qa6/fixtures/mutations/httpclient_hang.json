@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "httpclient.py",
+ "old": "    latency = control(client)\n",
+ "new": "    latency = None\n",
+ "proof": "test_proof_hang_guard_is_qualified",
+ "expect": "proof_hang_guard.fast_control_is_fail_bound",
+ "why": "hunter H3: a hang guard never consults a same-client control, so a product hang is always BLOCKED"
+}

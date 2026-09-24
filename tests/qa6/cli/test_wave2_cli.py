@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from .. import hostprobe, paths
-from ..sandbox import InstanceRoot, RunContext, mint_instance, sandbox_env
+from ..sandbox import InstanceRoot, RunContext, checked_env, mint_instance, sandbox_env
 from ..scenario import scenario
 from ..verdict import Recorder
 
@@ -48,7 +48,7 @@ def cli_env(qa6_run: RunContext) -> Iterator[CliEnv]:
 
 def shepherd(cli: CliEnv, *args: str) -> Ran:
     argv = (str(paths.SHEPHERD_BIN), *args)
-    done = subprocess.run(list(argv), env=cli.env, cwd=str(cli.root.cwd), capture_output=True, text=True,
+    done = subprocess.run(list(argv), env=checked_env(cli.env, "a CLI child"), cwd=str(cli.root.cwd), capture_output=True, text=True,
                           timeout=CLI_TIMEOUT_S, check=False)
     return Ran(argv, done.returncode, done.stdout, done.stderr)
 

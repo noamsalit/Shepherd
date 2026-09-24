@@ -182,7 +182,16 @@ class RunContext:
             os.close(fd)
 
     def record_pid(self, pid: int, kind: str, argv: list[str]) -> None:
-        self.ledger(self.pid_ledger, {"pid": pid, "kind": kind, "argv": argv, "at": time.time()})
+        """Ledger a pid with the product's own start token for it (`MacHost.process_liveness`).
+
+        Teardown and the pre-run sweep signal a recorded pid only when its
+        current token equals this one (review finding 4): a reused pid, or one
+        whose token could not be read, is never signalled.
+        """
+        from shepherd.host.mac import MacHost
+
+        token = MacHost().process_liveness(pid, None).start_token
+        self.ledger(self.pid_ledger, {"pid": pid, "kind": kind, "argv": argv, "start_token": token, "at": time.time()})
 
     def teardown_problem(self, where: str, problem: str) -> None:
         self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -323,6 +332,19 @@ def refuse_unsafe(env: Mapping[str, str], what: str) -> None:
     problems = host_safety_problems(env)
     if problems:
         raise ValueError(f"refusing {what}: host-unsafe (SI-1): {problems}")
+
+
+def checked_env(env: Mapping[str, str], what: str) -> dict[str, str]:
+    """The env a child is spawned with, re-checked AT the spawn site (review finding 5).
+
+    A builder's check covers the dict it returned; a dict is mutable after that
+    (`child_env["PATH"] = …`, `{**env, …}`). Every harness `Popen`/`run` of a
+    product or engine child passes its env through here, so the check sits at
+    the chokepoint, not only in the builders.
+    """
+    copied = dict(env)
+    refuse_unsafe(copied, what)
+    return copied
 
 
 def sandbox_env(

@@ -34,6 +34,7 @@ from shepherd.host.mac import MacHost
 
 from . import paths
 from .instance import Controld, SessiondManager, SessiondRun
+from .sandbox import checked_env
 from .sessions import session_row
 from .verdict import Blocked, await_env
 
@@ -116,7 +117,7 @@ def send(argv: list[str], env: Mapping[str, str], payload: Mapping[str, object] 
     data = payload if isinstance(payload, bytes) else json.dumps(dict(payload)).encode("utf-8")
     started = time.monotonic()
     try:
-        done = subprocess.run(argv, input=data, env=dict(env), capture_output=True, timeout=timeout_s, check=False)
+        done = subprocess.run(argv, input=data, env=checked_env(env, "the hook dispatch"), capture_output=True, timeout=timeout_s, check=False)
     except subprocess.TimeoutExpired:
         return Sent(rc=None, elapsed_s=time.monotonic() - started, stderr=b"(timed out)", signalled=None)
     elapsed = time.monotonic() - started

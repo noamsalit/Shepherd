@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "instance.py",
+ "old": "    return RestartFailed(f\"the restart on the same root did not come up",
+ "new": "    return Blocked(f\"the restart on the same root did not come up",
+ "proof": "test_proof_restart_failure_is_blocked_only_for_eaddrinuse",
+ "expect": "proof_restart.traceback_is_fail",
+ "why": "hunter H2: every non-ready restart is BLOCKED again, a product crash on restart included"
+}

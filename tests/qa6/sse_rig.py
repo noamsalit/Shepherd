@@ -11,6 +11,10 @@ env-plan §4 step 1a) with three repairs the existing-harness audit asked for:
   (`: keep-alive` must not arrive in the first 13 s and must by 17 s).
 * **A refused stream is a value**: `open_stream` returns the status and headers
   of a non-200 answer instead of raising, for A5's 403 cases.
+* **A frame that does not parse is a FAIL, not a dropped line** (hunter H5):
+  `snapshot`/`since`/`mark` raise `AssertionError` once the product has sent
+  one; and a stream the server closes after a green control on that
+  subscriber is FAIL too (before any control it is `Blocked`).
 
 Kept from qa5, because each was measured: a *blocking* read woken by
 `shutdown()` on a socket handle captured before `getresponse()` (a timeout used
@@ -79,6 +83,7 @@ class Subscriber:
         self.parse_failures: list[str] = []
         self.first_bytes: bytes = b""
         self.reader_fault: str | None = None
+        self.green_control: str | None = None
         self.opened_at = time.monotonic()
         self._closing = False
         self._lock = threading.Lock()
@@ -156,10 +161,32 @@ class Subscriber:
 
     # ----- reading the tape ---------------------------------------------------
     def snapshot(self) -> list[Frame]:
+        """The tape so far — or the reason it cannot be trusted (hunter H5).
+
+        * a frame the product sent that does not parse (bad JSON, no `type`, a
+          non-integer `id`) is a product fault the tape would otherwise drop
+          silently, so every "no frame of kind X" clause would pass against it:
+          `AssertionError` (FAIL);
+        * the server closing the stream mid-run AFTER a green control on this
+          subscriber (the channel was proven to work): `AssertionError` (FAIL);
+        * a reader fault with no green control yet: `Blocked`.
+        """
         with self._lock:
+            if self.parse_failures:
+                raise AssertionError(f"{self.name}: {len(self.parse_failures)} product frame(s) did not parse: "
+                                     f"{self.parse_failures[:3]}")
             if self.reader_fault is not None:
+                if self.green_control is not None:
+                    raise AssertionError(f"{self.name}: {self.reader_fault} (after a green control on this stream: "
+                                         f"{self.green_control})")
                 raise Blocked(f"{self.name}: {self.reader_fault}")
             return list(self.frames)
+
+    def mark_green(self, what: str) -> None:
+        """Record that a positive control succeeded on this subscriber (a later EOF is the product's)."""
+        with self._lock:
+            if self.green_control is None:
+                self.green_control = what
 
     def comment_snapshot(self) -> list[Comment]:
         with self._lock:
@@ -181,6 +208,7 @@ class Subscriber:
     ) -> list[Frame]:
         """A **product** wait on this stream (FAIL(bound) when a control qualifies it)."""
         await_product(lambda: predicate(self.since(mark)), bound_s, f"{self.name}: {what}", control_latency_s)
+        self.mark_green(f"await_frames: {what}")
         return self.since(mark)
 
     def close(self) -> None:
@@ -285,6 +313,7 @@ def run_control(sub: Subscriber, client: _ProjectVerbs, name: str, mark: int, bo
         return frames if [f.kind for f in frames] == ["project.created", "project.deleted"] else None
 
     control = await_env(both, bound_s, f"control {name}: project.created then project.deleted on {sub.name}")
+    sub.mark_green(f"control {name}")
     latency = control[0].received_at - started
     frames = sub.since(mark)
     first = frames.index(control[0])
@@ -313,6 +342,7 @@ def run_control_on(subs: list[tuple[Subscriber, int]], client: _ProjectVerbs, na
             return frames if [f.kind for f in frames] == ["project.created", "project.deleted"] else None
 
         control = await_env(both, bound_s, f"control {name}: both frames on {sub.name}")
+        sub.mark_green(f"control {name}")
         frames = sub.since(mark)
         results.append(ControlResult(interior=frames[: frames.index(control[0])], control_frames=control,
                                      latency_s=max(control[0].received_at - started, 1e-3)))

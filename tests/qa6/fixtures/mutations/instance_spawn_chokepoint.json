@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "instance.py",
+ "old": "        env=checked_env(env, f\"spawning {kind} {argv[:1]}\"),",
+ "new": "        env=dict(env),",
+ "proof": "test_proof_spawn_chokepoint_refuses_unsafe_env",
+ "expect": "proof_spawn_chokepoint: Popen was reached",
+ "why": "review 5: spawn_drained stops re-checking the env, so a dict edited after its builder reaches Popen (Popen is a raising stub in the proof: nothing starts)"
+}

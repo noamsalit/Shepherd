@@ -16,7 +16,8 @@ from pathlib import Path
 from . import paths
 from .sandbox import RunContext
 
-TEMPLATES = paths.QA6_DIR / "shims"
+#: Beside this file (not `paths.QA6_DIR`): a mutation proof renders the templates of its temp copy.
+TEMPLATES = Path(__file__).resolve().parent / "shims"
 SELFTEST_MARKERS = {
     "claude": "QA6-FAKE-CLAUDE-SELFTEST",
     "claude-d9": "QA6-D9-CLAUDE-SELFTEST",
@@ -42,14 +43,18 @@ def forks_log(run: RunContext) -> Path:
     return run.shims_d9 / "forks.log"
 
 
+def tmux_shim_text(run_pid: int, product_log: Path, pane_log: Path, real_tmux: Path) -> str:
+    """The logging-and-refusing tmux shim for run `run_pid` (shims/tmux.sh.in)."""
+    return _render("tmux.sh.in", {"TMUX_LOG": str(product_log), "PANE_LOG": str(pane_log), "TMUX": str(real_tmux),
+                                  "RUN_PID": str(run_pid), "SOCKET_DIR": str(paths.TMUX_SOCKET_DIR)})
+
+
 def write_shims(run: RunContext) -> None:
-    pane_log = str(run.pane_tmux_argv_log)
-    tmux_text = _render("tmux.sh.in", {"TMUX_LOG": str(run.tmux_argv_log), "PANE_LOG": pane_log, "TMUX": str(paths.TMUX_BIN)})
+    tmux_text = tmux_shim_text(run.pid, run.tmux_argv_log, run.pane_tmux_argv_log, paths.TMUX_BIN)
     for directory in (run.shims, run.shims_live, run.shims_d9):
         _write(directory / "tmux", tmux_text)
     _write(run.shims_unseeded / "tmux",
-           _render("tmux.sh.in", {"TMUX_LOG": str(run.unseeded_tmux_argv_log), "PANE_LOG": pane_log,
-                                  "TMUX": str(paths.TMUX_BIN)}))
+           tmux_shim_text(run.pid, run.unseeded_tmux_argv_log, run.pane_tmux_argv_log, paths.TMUX_BIN))
     _write(
         run.shims / "claude",
         _render(
@@ -80,13 +85,51 @@ def selftest(run: RunContext) -> dict[str, str]:
             raise AssertionError(f"shim {shim} self-test failed: rc={done.returncode} out={done.stdout!r} err={done.stderr!r}")
     forks_log(run).write_text("", encoding="utf-8")
     done = subprocess.run(
-        [str(run.shims / "tmux"), "-V"], capture_output=True, text=True, timeout=10, check=False
+        [str(run.shims / "tmux"), "-V"], capture_output=True, text=True, timeout=10, check=False,
+        env={"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"},
     )
     if done.returncode != 0 or not done.stdout.startswith("tmux "):
         raise AssertionError(f"tmux shim self-test failed: {done.returncode} {done.stdout!r} {done.stderr!r}")
     seen["tmux"] = done.stdout.strip()
+    seen["tmux-refusal"] = selftest_refusal(run)
     # The claude self-test wrote one argv line; clear it so O1/O10/O12 count
     # only the product's invocations. The tmux `-V` line stays: it is exactly
     # the argv Z2's `-V` exception covers.
     run.claude_argv_log.write_text("", encoding="utf-8")
     return seen
+
+
+#: A socket name no user server has: if the refusal were broken, real tmux would only answer
+#: "no server running" (a client never creates a socket for `list-sessions`).
+SELFTEST_FOREIGN_SOCKET = "qa6-shim-selftest-refusal"
+
+
+def selftest_refusal(run: RunContext) -> str:
+    """The production-rendered shim (real tmux behind it) refuses a foreign socket, and fails closed.
+
+    Rendered into `<run0>/shims-selftest/` with its own logs, so nothing it writes reaches the
+    product log Z2 reads. (1) `-L qa6-shim-selftest-refusal list-sessions` must exit 97 with the
+    refusal on stderr and be logged. (2) `-V` with an unwritable log must exit 98 and print no
+    version: the call never reached tmux unrecorded. `test_proof_tmux_shim_refuses` proves the full
+    battery against a fake binary; this proves the file the product actually runs.
+    """
+    directory = run.run0 / "shims-selftest"
+    directory.mkdir(mode=0o700, exist_ok=True)
+    product_log, pane_log = directory / "tmux-argv.log", directory / "pane-tmux-argv.log"
+    shim = directory / "tmux"
+    _write(shim, tmux_shim_text(run.pid, product_log, pane_log, paths.TMUX_BIN))
+    env = {"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"}
+    refused = subprocess.run([str(shim), "-L", SELFTEST_FOREIGN_SOCKET, "list-sessions"], capture_output=True,
+                             text=True, timeout=10, check=False, env=env)
+    logged = product_log.read_text(encoding="utf-8") if product_log.exists() else ""
+    if refused.returncode != 97 or "refused" not in refused.stderr or SELFTEST_FOREIGN_SOCKET not in logged:
+        raise AssertionError(f"tmux shim refusal self-test failed: rc={refused.returncode} err={refused.stderr!r} "
+                             f"logged={logged!r}")
+    blind = directory / "unwritable"
+    blind.mkdir(mode=0o700, exist_ok=True)
+    _write(shim, tmux_shim_text(run.pid, blind, pane_log, paths.TMUX_BIN))
+    closed = subprocess.run([str(shim), "-V"], capture_output=True, text=True, timeout=10, check=False, env=env)
+    if closed.returncode != 98 or closed.stdout:
+        raise AssertionError(f"tmux shim fail-closed self-test failed: rc={closed.returncode} out={closed.stdout!r} "
+                             f"err={closed.stderr!r}")
+    return f"refused rc=97 ({refused.stderr.strip()[:120]}); unloggable rc=98"

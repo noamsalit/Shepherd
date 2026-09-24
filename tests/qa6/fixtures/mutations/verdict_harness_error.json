@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "verdict.py",
+ "old": "    return \"FAIL\", \"harness_error\", f\"harness error:",
+ "new": "    return \"FAIL\", \"assert\", f\"harness error:",
+ "proof": "test_proof_outcome_classification",
+ "expect": "proof_outcome.harness_crash_is_harness_error",
+ "why": "review 7 / hunter M9: a harness crash is counted as a product FAIL(assert) again"
+}

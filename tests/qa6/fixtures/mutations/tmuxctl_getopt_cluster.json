@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "            if letter in _VALUED:\n",
+ "new": "            if letter in _VALUED and position == 1:\n",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.reviewer_clustered_uL",
+ "why": "review finding 1: a valued option inside a cluster (`-uL default`) is not read as -L (predicate only)"
+}

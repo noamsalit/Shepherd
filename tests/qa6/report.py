@@ -10,10 +10,12 @@ run 2 overwrote run 1's red. Here:
 * **GREEN** only if every lane's pytest exit status is 0, the teardown problem
   list is empty, there is exactly one record per planned id (161), and there is
   no FAIL and no BLOCKED;
-* **RED** if any FAIL (any incompleteness is listed beside it, never hidden);
+* **RED** if any FAIL about the product (any incompleteness is listed beside
+  it, never hidden);
 * **INCOMPLETE** otherwise: a missing or duplicate record, a crashed lane (exit
   not 0/1, or exit 1 with no FAIL/BLOCKED record from that lane), a teardown
-  problem, or any BLOCKED;
+  problem, a harness problem (a failed self-check, a runner crash), a
+  `FAIL(harness_error)` record, or any BLOCKED;
 * every run writes an **immutable** `runs/<run_id>.json` (refused if it exists)
   and `runs/<run_id>/report.md`; `qa6-latest.json` is a copy carrying its own
   status and the list of every run so far, so a later green cannot hide an
@@ -110,13 +112,35 @@ class Decision:
     counts: dict[str, int]
 
 
+def product_fails(records: Sequence[Mapping[str, object]]) -> list[str]:
+    """Ids of FAIL records that are about the product (every fail_kind but `harness_error`)."""
+    return [str(r.get("id")) for r in records if r.get("verdict") == "FAIL" and r.get("fail_kind") != "harness_error"]
+
+
+def harness_errors(records: Sequence[Mapping[str, object]]) -> list[str]:
+    return [str(r.get("id")) for r in records if r.get("verdict") == "FAIL" and r.get("fail_kind") == "harness_error"]
+
+
 def decide_status(
     records: Sequence[Mapping[str, object]],
     lane_exits: Sequence[LaneExit],
     teardown_problems: Sequence[str],
     planned_ids: Iterable[str],
+    harness_problems: Sequence[str] = (),
+    runner_crash: str | None = None,
 ) -> Decision:
-    """The publish gate. Pure."""
+    """The publish gate. Pure.
+
+    A runner that crashed (`runner_crash`) publishes INCOMPLETE whatever it
+    recorded before the crash, with the exception first and any FAIL count
+    beside it: its run did not finish, so it cannot say RED or GREEN about
+    the plan (hunter H6).
+
+    RED needs a FAIL about the product. A `FAIL(harness_error)` record, a
+    harness problem (a failed self-check, a runner crash) or any incompleteness
+    is listed and makes the run INCOMPLETE, never GREEN — and never RED by
+    itself: a harness crash is not a product verdict (review finding 7).
+    """
     planned = list(planned_ids)
     reasons: list[str] = []
     ids = [str(record.get("id")) for record in records]
@@ -147,10 +171,21 @@ def decide_status(
         reasons.append(f"lane {key} crashed: exit {lane_exit.exit_code} with verdicts {sorted(verdicts)}")
     if teardown_problems:
         reasons.append(f"{len(teardown_problems)} teardown problem(s): {list(teardown_problems)[:10]}")
+    if harness_problems:
+        reasons.append(f"{len(harness_problems)} harness problem(s): {list(harness_problems)[:10]}")
+    crashed = harness_errors(records)
+    if crashed:
+        reasons.append(f"{len(crashed)} FAIL(harness_error) record(s) (a harness crash, not a product verdict): {crashed[:20]}")
     if counts.get("BLOCKED", 0):
         reasons.append(f"{counts['BLOCKED']} BLOCKED scenario(s)")
-    if counts.get("FAIL", 0):
-        return Decision("RED", (f"{counts['FAIL']} FAIL scenario(s)", *reasons), dict(counts))
+    failing = product_fails(records)
+    if runner_crash is not None:
+        crashed_reasons = [f"the runner crashed: {runner_crash.splitlines()[0][:600] if runner_crash else ''}"]
+        if failing:
+            crashed_reasons.append(f"{len(failing)} FAIL scenario(s) were recorded before the crash: {failing[:20]}")
+        return Decision("INCOMPLETE", (*crashed_reasons, *reasons), dict(counts))
+    if failing:
+        return Decision("RED", (f"{len(failing)} FAIL scenario(s)", *reasons), dict(counts))
     clean = (
         not reasons
         and all(lane.exit_code == 0 for lane in lane_exits)
@@ -169,10 +204,13 @@ def write_report(
     lane_exits: Sequence[LaneExit],
     teardown_problems: Sequence[str],
     extra: Mapping[str, object] | None = None,
+    harness_problems: Sequence[str] = (),
+    runner_crash: str | None = None,
 ) -> Decision:
     """Write the immutable run file, the markdown, and the latest copy."""
     records = load_records(run_dir)
-    decision = decide_status(records, lane_exits, teardown_problems, [s.id for s in SCENARIOS])
+    decision = decide_status(records, lane_exits, teardown_problems, [s.id for s in SCENARIOS], harness_problems,
+                             runner_crash)
     run_file = report_dir / f"{run_id}.json"
     if run_file.exists():
         raise FileExistsError(f"{run_file} exists; a run's report is immutable")
@@ -187,6 +225,7 @@ def write_report(
             for lane in lane_exits
         ],
         "teardown_problems": list(teardown_problems),
+        "harness_problems": list(harness_problems),
         "records": sorted(records, key=lambda record: _order(str(record.get("id")))),
         **(dict(extra) if extra else {}),
     }
@@ -194,10 +233,7 @@ def write_report(
     run_file.write_text(json.dumps(payload, indent=1, sort_keys=True), encoding="utf-8")
     run_file.chmod(0o444)
     (run_dir / "report.md").write_text(render_markdown(payload), encoding="utf-8")
-    history_line = {"run_id": run_id, "status": decision.status, "counts": decision.counts,
-                    "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
-    with open(report_dir / HISTORY, "a", encoding="utf-8") as handle:
-        handle.write(json.dumps(history_line, sort_keys=True) + "\n")
+    append_history(report_dir, {"run_id": run_id, "status": decision.status, "counts": decision.counts})
     history = [json.loads(line) for line in (report_dir / HISTORY).read_text(encoding="utf-8").splitlines() if line]
     latest = dict(payload)
     latest["history"] = history
@@ -206,6 +242,14 @@ def write_report(
         latest_path.chmod(0o644)
     latest_path.write_text(json.dumps(latest, indent=1, sort_keys=True), encoding="utf-8")
     return decision
+
+
+def append_history(report_dir: Path, line: Mapping[str, object]) -> None:
+    """One line per run in `qa6-history.jsonl`, including a run that never got past preflight (H6)."""
+    report_dir.mkdir(parents=True, exist_ok=True)
+    stamped = {**dict(line), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    with open(report_dir / HISTORY, "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(stamped, sort_keys=True) + "\n")
 
 
 def _order(scenario_id: str) -> tuple[int, int]:
@@ -236,6 +280,12 @@ def render_markdown(payload: Mapping[str, object]) -> str:
                 f"| {record.get('id')} | {record.get('wave')} | {record.get('verdict')} | "
                 f"{record.get('fail_kind') or ''} | {predicted} | {reason} |"
             )
+    lines += ["", "## Harness problems", ""]
+    harness = payload.get("harness_problems")
+    if isinstance(harness, list) and harness:
+        lines += [f"- {problem}" for problem in harness]
+    else:
+        lines.append("none")
     lines += ["", "## Teardown problems", ""]
     problems = payload.get("teardown_problems")
     if isinstance(problems, list) and problems:

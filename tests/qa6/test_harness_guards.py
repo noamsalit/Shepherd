@@ -64,7 +64,6 @@ from .verdict import Blocked, ProductFail, Recorder, Sourced, await_env, classif
 pytestmark = pytest.mark.qa6
 
 PACKAGE = paths.QA6_DIR
-PLAN_WAVES = {1: 6, 2: 27, 3: 23, 4: 18, 5: 20, 6: 34, 7: 19, 8: 11, 9: 3}
 PLAN_TIERS = {"integration": 8, "e2e_backend": 96, "ui": 57}
 
 
@@ -141,10 +140,64 @@ def test_guard_report_gate_green_only_when_everything_holds() -> None:
 # ----- the catalog and the id set ---------------------------------------------------------
 
 
+TEST_PLAN = paths.DEFAULT_REPORT_DIR.parent / "test-plan.md"
+HEADING = re.compile(r"^### ([A-Z]\d+) — (.+)$")
+TIER_LINE = re.compile(r"^\*\*Tier:\*\* (\S+) ·")
+WAVE_ROW = re.compile(r"^\| (\d) \| (.+?) — \*\*(\d+)\*\*")
+
+
+def _expand(cell: str) -> list[str]:
+    """`C1–C3, C5` → [C1, C2, C3, C5] (the §3 table's own range spelling)."""
+    found: list[str] = []
+    for token in (t.strip() for t in cell.split(",")):
+        match = re.fullmatch(r"([A-Z])(\d+)–([A-Z])(\d+)", token)
+        if match and match.group(1) == match.group(3):
+            found.extend(f"{match.group(1)}{i}" for i in range(int(match.group(2)), int(match.group(4)) + 1))
+        elif re.fullmatch(r"[A-Z]\d+", token):
+            found.append(token)
+        else:
+            raise AssertionError(f"unreadable §3 scenario token {token!r} in {cell!r}")
+    return found
+
+
+def parse_plan(text: str) -> tuple[list[str], dict[str, str], dict[str, int], dict[int, int]]:
+    """(§4 heading ids in order, id → tier, id → wave from §3, wave → the §3 bold total)."""
+    section4 = text[text.index("\n## 4. Scenarios"):text.index("\n## 5. ")]
+    ids: list[str] = []
+    tiers: dict[str, str] = {}
+    current: str | None = None
+    for line in section4.splitlines():
+        heading = HEADING.match(line)
+        if heading:
+            current = heading.group(1)
+            ids.append(current)
+            continue
+        tier = TIER_LINE.match(line)
+        if tier and current is not None and current not in tiers:
+            tiers[current] = tier.group(1)
+    section3 = text[text.index("\n## 3. Build order"):text.index("\n## 4. Scenarios")]
+    waves: dict[str, int] = {}
+    totals: dict[int, int] = {}
+    for line in section3.splitlines():
+        row = WAVE_ROW.match(line)
+        if row:
+            wave = int(row.group(1))
+            totals[wave] = int(row.group(3))
+            for sid in _expand(row.group(2)):
+                waves[sid] = wave
+    return ids, tiers, waves, totals
+
+
 def test_guard_catalog_reconciles_with_the_plan() -> None:
-    assert len(SCENARIOS) == 161 and len(BY_ID) == 161
-    assert {wave: len(wave_ids(wave)) for wave in PLAN_WAVES} == PLAN_WAVES
-    assert dict(Counter(s.tier for s in SCENARIOS)) == PLAN_TIERS
+    """The catalog is pinned against the plan DOCUMENT, parsed (review 8), not constants typed in here."""
+    assert TEST_PLAN.exists(), f"{TEST_PLAN} is missing: the catalog cannot be reconciled with its plan"
+    ids, tiers, waves, totals = parse_plan(TEST_PLAN.read_text(encoding="utf-8"))
+    assert len(ids) == len(set(ids)) == 161 == len(SCENARIOS), f"§4 headings: {len(ids)} ({len(set(ids))} distinct)"
+    assert sorted(s.id for s in SCENARIOS) == sorted(ids), "catalog ids != the §4 headings"
+    assert {s.id: s.tier for s in SCENARIOS} == tiers, "catalog tiers != the §4 Tier lines"
+    assert {s.id: s.wave for s in SCENARIOS} == waves, "catalog waves != the §3 build-order table"
+    assert {wave: len(wave_ids(wave)) for wave in totals} == totals, f"wave sizes != the §3 totals {totals}"
+    assert sum(totals.values()) == 161 and dict(Counter(s.tier for s in SCENARIOS)) == PLAN_TIERS
 
 
 def implemented() -> list[tuple[str, str]]:
@@ -209,23 +262,102 @@ def test_guard_forbidden_port_named_only_in_the_refusal_constant() -> None:
     assert not offenders, f"8787 spelled outside the refusal constant: {offenders}"
 
 
-JS_USER_ACTION = re.compile(r"\.click\(|\.close\(|dispatchEvent|\.submit\(|\.focus\(")
+JS_USER_ACTION = re.compile(
+    r"\.click\(|\.close\(|dispatchEvent|\.submit\(|\.requestSubmit\(|\.focus\(|"
+    r"\.open\s*=\s*(false|true)|removeAttribute\(\s*['\"]open|setAttribute\(\s*['\"]open"
+)
+EVAL_ATTRS = ("evaluate", "evaluate_handle", "eval_on_selector", "eval_on_selector_all", "add_init_script")
+#: Playwright calls that synthesise an event without real input.
+SYNTHETIC_EVENT_ATTRS = ("dispatch_event",)
+
+
+def _string_parts(node: ast.AST) -> list[str]:
+    """The literal text of a string expression: a constant, an f-string's constant parts, a concatenation."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    if isinstance(node, ast.JoinedStr):
+        return ["".join(v.value for v in node.values if isinstance(v, ast.Constant) and isinstance(v.value, str))]
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return _string_parts(node.left) + _string_parts(node.right)
+    return []
+
+
+def _assigned_strings(scope: ast.AST, name: str) -> list[str]:
+    """Every string literal assigned to `name` anywhere in `scope` (a function or the module)."""
+    found: list[str] = []
+    for node in ast.walk(scope):
+        targets: list[ast.expr] = []
+        value: ast.expr | None = None
+        if isinstance(node, ast.Assign):
+            targets, value = list(node.targets), node.value
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets, value = [node.target], node.value
+        if value is not None and any(isinstance(t, ast.Name) and t.id == name for t in targets):
+            found.extend(_string_parts(value))
+    return found
+
+
+def _enclosing_function(node: ast.AST, parents: Mapping[ast.AST, ast.AST]) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    current = parents.get(node)
+    while current is not None:
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return current
+        current = parents.get(current)
+    return None
+
+
+def js_action_offenders(tree: ast.Module, where: str) -> list[str]:
+    """Review finding 8: JS-synthesised user actions anywhere in a module (module level, async
+    def, lambdas), whether the script is a literal, an f-string, a concatenation or a name
+    bound to one; plus Playwright's `dispatch_event`. Only a `js_*` function may hold one."""
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        function = _enclosing_function(node, parents)
+        if function is not None and function.name.startswith("js_"):
+            continue
+        label = f"{where}:{node.lineno} in {function.name if function else '<module>'}"
+        if node.func.attr in SYNTHETIC_EVENT_ATTRS:
+            offenders.append(f"{label}: {node.func.attr}()")
+            continue
+        if node.func.attr not in EVAL_ATTRS:
+            continue
+        for arg in [*node.args, *(k.value for k in node.keywords)]:
+            texts = _string_parts(arg)
+            if isinstance(arg, ast.Name):
+                texts = _assigned_strings(function, arg.id) if function is not None else []
+                texts += _assigned_strings(tree, arg.id)
+            if any(JS_USER_ACTION.search(text) for text in texts):
+                offenders.append(label)
+    return offenders
 
 
 def test_guard_no_js_synthesised_user_action_outside_js_functions() -> None:
     offenders: list[str] = []
     for path in package_files():
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for function in ast.walk(tree):
-            if not isinstance(function, ast.FunctionDef) or function.name.startswith("js_"):
-                continue
-            for node in ast.walk(function):
-                if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                        and node.func.attr in ("evaluate", "eval_on_selector", "eval_on_selector_all", "add_init_script")):
-                    for arg in node.args:
-                        if isinstance(arg, ast.Constant) and isinstance(arg.value, str) and JS_USER_ACTION.search(arg.value):
-                            offenders.append(f"{path.relative_to(PACKAGE)}:{node.lineno} in {function.name}")
+        if path.name == "test_harness_guards.py":
+            continue
+        offenders.extend(js_action_offenders(ast.parse(path.read_text(encoding="utf-8")), str(path.relative_to(PACKAGE))))
     assert not offenders, f"JS user actions outside js_* functions: {offenders}"
+
+
+def test_proof_js_action_guard_sees_every_spelling() -> None:
+    """The guard itself, on planted sources (parsed, never run): each spelling review 8 named is caught."""
+    planted = {
+        "variable": "def f(page):\n    script = 'el => el.click()'\n    page.evaluate(script)\n",
+        "fstring": "def f(page, x):\n    page.evaluate(f'document.querySelector({x}).click()')\n",
+        "async": "async def f(page):\n    await page.evaluate('d => d.requestSubmit()')\n",
+        "module_level": "page.evaluate(\"d => d.removeAttribute('open')\")\n",
+        "lambda": "g = lambda page: page.evaluate('d => d.open = false')\n",
+        "dispatch_event": "def f(locator):\n    locator.dispatch_event('click')\n",
+        "module_constant": "SCRIPT = 'el => el.focus()'\ndef f(page):\n    page.evaluate(SCRIPT)\n",
+    }
+    missed = [name for name, source in planted.items() if not js_action_offenders(ast.parse(source), name)]
+    allowed = "def js_open(page):\n    page.evaluate('d => d.click()')\ndef f(page):\n    page.evaluate('d => d.open === true')\n"
+    assert not missed, f"proof_js_guard.catches_every_spelling: missed {missed}"
+    assert not js_action_offenders(ast.parse(allowed), "allowed"), "proof_js_guard.allows_js_functions_and_reads"
 
 
 def test_guard_shims_carry_no_signal_or_teardown_verb() -> None:
@@ -424,28 +556,434 @@ def test_proof_real_claude_resolution() -> None:
 
 
 def test_proof_pane_argv_effective_socket() -> None:
-    """In-pane tmux calls are judged by the socket tmux would actually contact (-S, -L, else $TMUX)."""
-    from .tmuxctl import effective_socket, pane_argv_violations
+    """tmux argv are judged by the socket tmux would actually contact (tmux 3.6a's getopt rules).
+
+    Pure: every argv below is data handed to a predicate; nothing is executed.
+    The four `reviewer_*` rows are the harness review's finding 1, each of which
+    the first-`-L`-wins parser scored clean while real tmux reaches `default` or
+    `shepherd` (confirmed against tmux 3.6a with made-up socket names).
+    """
+    from .tmuxctl import effective_socket, pane_argv_violations, product_argv_violations
 
     pid = 424242
-    ours = f"{paths.TMUX_SOCKET_DIR}/shepherd-m3-q6{pid}-3,12345,0"
+    ours = f"shepherd-m3-q6{pid}-3"
+    ours_env = f"{paths.TMUX_SOCKET_DIR}/{ours},12345,0"
+    default_path = f"{paths.TMUX_SOCKET_DIR}/default"
     planted: list[dict[str, object]] = [
-        {"argv": ["tmux", "display-message", "-p", "#{client_termtype}"], "tmux": ours},
-        {"argv": ["tmux", "-L", "shepherd", "list-sessions"], "tmux": ours},
+        {"argv": ["tmux", "display-message", "-p", "#{client_termtype}"], "tmux": ours_env},
+        {"argv": ["tmux", "-L", "shepherd", "list-sessions"], "tmux": ours_env},
         {"argv": ["tmux", "show", "-gv", "focus-events"], "tmux": f"{paths.TMUX_SOCKET_DIR}/default,1,0"},
-        {"argv": ["tmux", "-S", "/elsewhere/shepherd-m3-q6424242-3", "ls"], "tmux": ours},
-        {"argv": ["tmux", "-V"], "tmux": ours},
+        {"argv": ["tmux", "-S", "/elsewhere/shepherd-m3-q6424242-3", "ls"], "tmux": ours_env},
+        {"argv": ["tmux", "-V"], "tmux": ours_env},
     ]
     flagged = [entry["argv"] for entry in pane_argv_violations(planted, pid)]
     problems: list[str] = []
-    if planted[0]["argv"] in flagged:
+    if planted[0]["argv"] in flagged or planted[4]["argv"] in flagged:
         problems.append("proof_pane_argv.allows_our_socket_via_TMUX")
     for index, label in ((1, "flags_user_socket_in_pane"), (2, "flags_default_via_TMUX"), (3, "flags_foreign_S_path")):
         if planted[index]["argv"] not in flagged:
             problems.append(f"proof_pane_argv.{label}")
     if effective_socket(["tmux", "-V"], None) is not None or effective_socket(["tmux", "ls"], None) != "default":
         problems.append("proof_pane_argv.version_contacts_nothing_and_bare_is_default")
-    assert not problems, f"pane argv judgement: {problems}"
+    reviewer = {
+        "reviewer_S_beats_L": (["tmux", "-L", ours, "-S", default_path, "kill-server"], "default"),
+        "reviewer_last_L_wins": (["tmux", "-L", ours, "-L", "default", "kill-server"], "default"),
+        "reviewer_clustered_uL": (["tmux", "-uL", "default", "kill-server"], "default"),
+        "reviewer_clustered_2uL": (["tmux", "-2uL", "shepherd", "ls"], "shepherd"),
+    }
+    for label, (argv, reached) in reviewer.items():
+        if effective_socket(argv, ours_env) != reached:
+            problems.append(f"proof_pane_argv.{label}: reaches {effective_socket(argv, ours_env)!r}, tmux reaches {reached!r}")
+        if argv not in [entry["argv"] for entry in pane_argv_violations([{"argv": argv, "tmux": ours_env}], pid)]:
+            problems.append(f"proof_pane_argv.{label}_flagged_in_pane")
+        if product_argv_violations([argv], pid) != [argv]:
+            problems.append(f"proof_pane_argv.{label}_flagged_as_product_argv")
+    allowed = {
+        "ours_plain": ["tmux", "-L", ours, "ls"],
+        "ours_clustered": ["tmux", "-uL", ours, "ls"],
+        "ours_fused": ["tmux", f"-L{ours}", "ls"],
+        "ours_after_a_foreign_L": ["tmux", "-L", "default", "-L", ours, "ls"],
+        "ours_S_beats_a_foreign_L": ["tmux", "-L", "shepherd", "-S", f"{paths.TMUX_SOCKET_DIR}/{ours}", "ls"],
+        "ours_after_a_valued_global": ["tmux", "-f", "/dev/null", "-L", ours, "ls"],
+    }
+    for label, argv in allowed.items():
+        if product_argv_violations([argv], pid):
+            problems.append(f"proof_pane_argv.allows_{label}")
+    refused = {
+        "valued_global_eats_L": ["tmux", "-f", "-L", ours, "ls"],
+        "double_dash_stops_options": ["tmux", "--", "-L", ours],
+        "missing_value": ["tmux", "-L"],
+        "unknown_option": ["tmux", "-Z", "-L", ours, "ls"],
+        "no_server_but_not_plain_V": ["tmux", "-uV"],
+    }
+    for label, argv in refused.items():
+        if product_argv_violations([argv], pid) != [argv]:
+            problems.append(f"proof_pane_argv.refuses_{label}")
+    assert not problems, f"tmux argv judgement: {problems}"
+
+
+#: Fake `tmux` for the shim proof: records that it was exec'd and its argv, and does nothing else.
+_FAKE_TMUX = """#!/bin/sh
+printf 'EXEC' >> "$(dirname "$0")/exec.log"
+for word in "$@"; do printf ' %s' "$word" >> "$(dirname "$0")/exec.log"; done
+printf '\n' >> "$(dirname "$0")/exec.log"
+"""
+
+
+def test_proof_tmux_shim_refuses() -> None:
+    """The rendered logging shim agrees with `tmuxctl.argv_violation`, refuses (97, no exec), logs
+    every call, and fails CLOSED (98, no exec) when it cannot log.
+
+    Run against a FAKE binary rendered into the shim's `@TMUX@`: nothing here can
+    reach a tmux server, and the argv use only `ls` / `display-message` (no
+    teardown verb is ever executed, CLAUDE.md mutation rule 3 — the kill-server
+    shapes are proved by predicate in `test_proof_pane_argv_effective_socket`).
+    """
+    from .shims import tmux_shim_text
+    from .tmuxctl import argv_violation
+
+    pid = 424242
+    ours = f"shepherd-m3-q6{pid}-3"
+    ours_env = f"{paths.TMUX_SOCKET_DIR}/{ours},12345,0"
+    battery: list[tuple[str, list[str], str | None]] = [
+        ("plain_ours", ["-L", ours, "ls"], None),
+        ("clustered_ours", ["-uL", ours, "ls"], None),
+        ("fused_ours", [f"-L{ours}", "ls"], None),
+        ("last_L_ours", ["-L", "default", "-L", ours, "ls"], None),
+        ("S_beats_L_ours", ["-L", "shepherd", "-S", f"{paths.TMUX_SOCKET_DIR}/{ours}", "ls"], None),
+        ("version", ["-V"], None),
+        ("pane_ours_via_TMUX", ["display-message", "-p", "x"], ours_env),
+        ("S_beats_L_default", ["-L", ours, "-S", f"{paths.TMUX_SOCKET_DIR}/default", "ls"], None),
+        ("last_L_default", ["-L", ours, "-L", "default", "ls"], None),
+        ("clustered_uL_default", ["-uL", "default", "ls"], None),
+        ("clustered_2uL_shepherd", ["-2uL", "shepherd", "ls"], None),
+        ("bare_default", ["ls"], None),
+        ("pane_default_via_TMUX", ["display-message", "-p", "x"], f"{paths.TMUX_SOCKET_DIR}/default,1,0"),
+        ("pane_user_socket_by_L", ["-L", "shepherd", "ls"], ours_env),
+        ("valued_global_eats_L", ["-f", "-L", ours, "ls"], None),
+        ("double_dash", ["--", "-L", ours], None),
+        ("missing_value", ["-L"], None),
+        ("unknown_option", ["-Z", "-L", ours, "ls"], None),
+        ("no_server_not_plain_V", ["-uV"], None),
+        ("foreign_S_path", ["-S", f"/elsewhere/{ours}", "ls"], None),
+    ]
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="qa6shim-", dir="/tmp") as scratch:
+        base = Path(scratch)
+        fake = base / "fake-tmux"
+        fake.write_text(_FAKE_TMUX, encoding="utf-8")
+        fake.chmod(0o755)
+        product_log, pane_log, exec_log = base / "tmux-argv.log", base / "pane-tmux-argv.log", base / "exec.log"
+        text = tmux_shim_text(pid, product_log, pane_log, fake)
+        assert str(paths.TMUX_BIN) not in text, "the proof shim must exec the fake binary, never the real tmux"
+        shim = base / "tmux"
+        shim.write_text(text, encoding="utf-8")
+        shim.chmod(0o755)
+        for label, words, tmux_env in battery:
+            env = {"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8", **({"TMUX": tmux_env} if tmux_env else {})}
+            before = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
+            logs_before = sum(len(p.read_text(encoding="utf-8").splitlines()) for p in (product_log, pane_log) if p.exists())
+            done = subprocess.run([str(shim), *words], env=env, capture_output=True, text=True, timeout=15, check=False)
+            after = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
+            logs_after = sum(len(p.read_text(encoding="utf-8").splitlines()) for p in (product_log, pane_log) if p.exists())
+            execed = after != before
+            python_allows = argv_violation(["tmux", *words], tmux_env, pid) is None
+            if logs_after != logs_before + 1:
+                problems.append(f"proof_tmux_shim.logs_every_call: {label} added {logs_after - logs_before} line(s)")
+            if python_allows and not (done.returncode == 0 and execed and after.endswith(" ".join(["EXEC", *words]) + "\n")):
+                problems.append(f"proof_tmux_shim.execs_allowed_unchanged: {label}: rc={done.returncode} err={done.stderr!r}")
+            if not python_allows and (done.returncode != 97 or execed or "refused" not in done.stderr):
+                problems.append(f"proof_tmux_shim.refuses_without_exec: {label}: rc={done.returncode} execed={execed} "
+                                f"err={done.stderr!r}")
+        pane_lines = pane_log.read_text(encoding="utf-8").splitlines() if pane_log.exists() else []
+        if not any(json.loads(line).get("tmux") == ours_env for line in pane_lines):
+            problems.append("proof_tmux_shim.pane_calls_go_to_the_pane_log_with_TMUX")
+        blind_dir = base / "a-directory-not-a-file"
+        blind_dir.mkdir()
+        blind = base / "tmux-blind"
+        blind.write_text(tmux_shim_text(pid, blind_dir, pane_log, fake), encoding="utf-8")
+        blind.chmod(0o755)
+        before = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
+        done = subprocess.run([str(blind), "-L", ours, "ls"], env={"PATH": "/usr/bin:/bin"}, capture_output=True,
+                              text=True, timeout=15, check=False)
+        after = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
+        if done.returncode != 98 or after != before:
+            problems.append(f"proof_tmux_shim.fails_closed_when_it_cannot_log: rc={done.returncode} "
+                            f"execed={after != before} err={done.stderr!r}")
+    assert not problems, f"tmux shim: {problems}"
+
+
+# ----- remfix 2: the verdict path (hunter H1-H6, review 4-7) -----------------------------------------
+
+
+def test_proof_outcome_classification() -> None:
+    """`verdict.classify_outcome`: a failed clause outranks a later Blocked/skip/crash (H1); a crash with
+    no failed clause is FAIL(harness_error) (review 7, M9); a scenario without `rec` is BLOCKED (review 6)."""
+    from .verdict import classify_outcome
+
+    problems: list[str] = []
+    failed = Recorder("X")
+    failed.check("tmux.both_panes_after_stop", False, "both", "one")
+    verdict, kind, _reason = classify_outcome(Blocked("the restart did not come up"), "call", failed, is_scenario=True)
+    if (verdict, kind) != ("FAIL", "assert"):
+        problems.append(f"proof_outcome.failed_clause_outranks_a_later_blocked: {(verdict, kind)}")
+    verdict, kind, _reason = classify_outcome(KeyError("x"), "call", failed, is_scenario=True)
+    if (verdict, kind) != ("FAIL", "assert"):
+        problems.append(f"proof_outcome.failed_clause_outranks_a_harness_crash: {(verdict, kind)}")
+    unfinished = Recorder("U")
+    unfinished.check("c", False, 1, 2)
+    if classify_outcome(None, "call", unfinished, is_scenario=True)[0] != "FAIL":
+        problems.append("proof_outcome.failed_clause_outranks_a_missing_finish")
+    bound = Recorder("B")
+    bound.fail_bound("c", "a frame", 10.0, "control 0.1 s")
+    if classify_outcome(Blocked("later"), "call", bound, is_scenario=True)[:2] != ("FAIL", "bound"):
+        problems.append("proof_outcome.bound_clause_keeps_its_kind")
+    clean = Recorder("C")
+    clean.check("c", True, 1, 1)
+    if classify_outcome(Blocked("env"), "call", clean, is_scenario=True)[0] != "BLOCKED":
+        problems.append("proof_outcome.blocked_without_a_failed_clause_stays_blocked")
+    verdict, kind, _reason = classify_outcome(KeyError("x"), "call", clean, is_scenario=True)
+    if (verdict, kind) != ("FAIL", "harness_error"):
+        problems.append(f"proof_outcome.harness_crash_is_harness_error: {(verdict, kind)}")
+    if classify_outcome(None, "call", None, is_scenario=True)[0] != "BLOCKED":
+        problems.append("proof_outcome.no_rec_is_blocked")
+    if classify_outcome(RuntimeError("x"), "setup", failed, is_scenario=True)[0] != "BLOCKED":
+        problems.append("proof_outcome.setup_error_is_blocked")
+    if classify_outcome(ProductFail("w", 1.0, 0.01, "s"), "call", clean, is_scenario=True)[:2] != ("FAIL", "bound"):
+        problems.append("proof_outcome.product_fail_is_bound")
+    assert not problems, f"outcome classification: {problems}"
+
+
+def test_guard_every_scenario_takes_rec() -> None:
+    """Review finding 6: a scenario function without a `rec` parameter could record nothing."""
+    offenders: list[str] = []
+    for path in package_files():
+        if not path.name.startswith("test_"):
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            decorated = any(isinstance(d, ast.Call) and isinstance(d.func, ast.Name)
+                            and d.func.id in ("scenario", "live_scenario") for d in node.decorator_list)
+            if decorated and "rec" not in [arg.arg for arg in node.args.args]:
+                offenders.append(f"{path.relative_to(PACKAGE)}::{node.name}")
+    assert not offenders, f"scenarios that do not take rec: {offenders}"
+
+
+def test_proof_gate_harness_error_and_crash() -> None:
+    """A FAIL(harness_error) or a runner crash makes the gate INCOMPLETE, never RED or GREEN (review 7, H6)."""
+    planned = [s.id for s in SCENARIOS]
+    ok_exit = [LaneExit("sub", "1", 0, ())]
+    crashed: list[dict[str, object]] = [{"id": sid, "verdict": "PASS", "lane_process": "sub-w1"} for sid in planned]
+    crashed[0] = {"id": planned[0], "verdict": "FAIL", "fail_kind": "harness_error", "lane_process": "sub-w1"}
+    problems: list[str] = []
+    if decide_status(crashed, ok_exit, [], planned).status != "INCOMPLETE":
+        problems.append("proof_gate.harness_error_is_incomplete")
+    real = [dict(r) for r in crashed]
+    real[1] = {"id": planned[1], "verdict": "FAIL", "fail_kind": "assert", "lane_process": "sub-w1"}
+    if decide_status(real, ok_exit, [], planned).status != "RED":
+        problems.append("proof_gate.a_product_fail_beside_a_harness_error_is_red")
+    clean = [{"id": sid, "verdict": "PASS", "lane_process": "sub-w1"} for sid in planned]
+    if decide_status(clean, ok_exit, [], planned, harness_problems=["selfcheck failed"]).status != "INCOMPLETE":
+        problems.append("proof_gate.harness_problem_is_incomplete")
+    if decide_status(real, ok_exit, [], planned, runner_crash="RuntimeError: x").status != "INCOMPLETE":
+        problems.append("proof_gate.runner_crash_is_incomplete")
+    assert not problems, f"gate: {problems}"
+
+
+def test_proof_runner_always_finishes() -> None:
+    """H6: a crash in the waves still runs the finalizer, which receives the crash."""
+    from . import run as runner
+
+    seen: list[str | None] = []
+
+    def body() -> None:
+        raise KeyError("planted crash in the waves (a pure raise: nothing is started)")
+
+    def finish(crash: str | None) -> int:
+        seen.append(crash)
+        return 7
+
+    try:
+        code = runner.guarded(body, finish)
+    except Exception as escaped:  # noqa: BLE001 - the named assertion below says what went wrong
+        raise AssertionError(f"proof_runner.finish_runs_with_the_crash: guarded() raised {escaped!r}") from escaped
+    assert code == 7 and len(seen) == 1 and seen[0] is not None and "KeyError" in seen[0], (
+        f"proof_runner.finish_runs_with_the_crash: code={code} seen={seen}")
+    seen.clear()
+    assert runner.guarded(lambda: None, finish) == 7 and seen == [None], f"proof_runner.finish_runs_clean: {seen}"
+
+
+def test_proof_restart_failure_is_blocked_only_for_eaddrinuse() -> None:
+    """H2: a restart that did not come up is FAIL unless the product printed an EADDRINUSE port refusal."""
+    from .instance import RestartFailed, restart_failure
+
+    refused = ["controld refuses to start: port 51234 is not available ([Errno 48] Address already in use)"]
+    other = ["controld refuses to start: port 51234 is not available ([Errno 13] Permission denied)"]
+    problems: list[str] = []
+    if not isinstance(restart_failure(refused, "no start line"), Blocked):
+        problems.append("proof_restart.eaddrinuse_is_blocked")
+    for label, lines in (("traceback", ["Traceback (most recent call last):"]), ("other_oserror", other), ("silent", [])):
+        if not isinstance(restart_failure(lines, "no start line"), RestartFailed):
+            problems.append(f"proof_restart.{label}_is_fail")
+    assert not problems, f"restart classification: {problems}"
+
+
+def test_proof_hang_guard_is_qualified() -> None:
+    """H3: a blown hang guard is FAIL(bound) when a same-client control answers fast, else BLOCKED."""
+    from .httpclient import Client, hang_verdict
+
+    client = Client(1)  # never contacted: the control is injected
+    fast = hang_verdict(client, "POST /x answers", 20.0, control=lambda _c: 0.01)
+    slow = hang_verdict(client, "POST /x answers", 20.0, control=lambda _c: 5.0)
+    none = hang_verdict(client, "POST /x answers", 20.0, control=lambda _c: None)
+    assert isinstance(fast, ProductFail), f"proof_hang_guard.fast_control_is_fail_bound: {fast!r}"
+    assert isinstance(slow, Blocked) and isinstance(none, Blocked), f"proof_hang_guard.unqualified_is_blocked: {slow!r} {none!r}"
+
+
+def test_proof_live_spawn_stop_if() -> None:
+    """H4: once L5 records a spawn failure, the other spawning L-scenarios are BLOCKED by the stop-if."""
+    from .live.test_wave8_1_live import require_live_spawn
+
+    require_live_spawn({}, "L6")
+    with pytest.raises(Blocked):
+        require_live_spawn({"L5_spawn_failure": "L5: spawn refused: {}"}, "L6")
+        raise AssertionError("proof_live_spawn.stop_if_blocks_after_L5_failed")
+
+
+def test_proof_teardown_signals_only_token_matches() -> None:
+    """Review finding 4: a recorded pid is signalled only when its start token matches exactly. Pure."""
+    from .teardown import signal_decision
+
+    entry: dict[str, object] = {"pid": 4242, "kind": "controld", "argv": ["python"], "start_token": "Thu Sep 24 04:00:00 2026"}
+    problems: list[str] = []
+    if signal_decision(entry, "Thu Sep 24 04:00:00 2026") is not None:
+        problems.append("proof_teardown.matching_token_is_signalled")
+    if signal_decision(entry, "Thu Sep 24 05:11:11 2026") is None:
+        problems.append("proof_teardown.reused_pid_not_signalled")
+    if signal_decision(entry, None) is None:
+        problems.append("proof_teardown.dead_pid_not_signalled")
+    if signal_decision({**entry, "start_token": None}, "Thu Sep 24 04:00:00 2026") is None:
+        problems.append("proof_teardown.no_recorded_token_not_signalled")
+    if signal_decision({**entry, "pid": 1}, "x") is None:
+        problems.append("proof_teardown.never_pid_1")
+    assert not problems, f"teardown signal decision: {problems}"
+
+
+def test_proof_local_tree_guard() -> None:
+    """Review finding 3: names, kinds, mtimes and link targets under ~/.local are compared; only a
+    foreign version's lock file is attributed to the user's sessions. Pure (planted snapshots)."""
+    from .hostprobe import local_tree_changes
+
+    start: dict[str, object] = {
+        ".local/bin/claude": ["link", 1.0, "/private/tmp/shq6-9314-1/xdg/data/claude/versions/2.1.281"],
+        ".local/share/claude/versions/2.1.281": ["file", 2.0, None],
+        ".local/state/claude/locks/2.1.280.lock": ["file", 3.0, None],
+    }
+    problems: list[str] = []
+    if local_tree_changes(start, dict(start), "2.1.281")[0]:
+        problems.append("proof_local_tree.unchanged_dangling_link_is_not_a_change")
+    relinked = {**start, ".local/bin/claude": ["link", 9.0, "/Users/x/.local/share/claude/versions/2.1.281"]}
+    if ".local/bin/claude" not in local_tree_changes(start, relinked, "2.1.281")[0]:
+        problems.append("proof_local_tree.link_target_change_is_a_change")
+    pruned = {k: v for k, v in start.items() if not k.endswith("2.1.281")}
+    if ".local/share/claude/versions/2.1.281" not in local_tree_changes(start, pruned, "2.1.281")[0]:
+        problems.append("proof_local_tree.removed_version_is_a_change")
+    touched = {**start, ".local/share/claude/versions/2.1.281": ["file", 5.0, None]}
+    if not local_tree_changes(start, touched, "2.1.281")[0]:
+        problems.append("proof_local_tree.mtime_change_is_a_change")
+    user_lock = {**start, ".local/state/claude/locks/2.1.278.lock": ["file", 4.0, None]}
+    changes, attributed = local_tree_changes(start, user_lock, "2.1.281")
+    if changes or ".local/state/claude/locks/2.1.278.lock" not in attributed:
+        problems.append("proof_local_tree.foreign_version_lock_is_attributed")
+    own_lock = {**start, ".local/state/claude/locks/2.1.281.lock": ["file", 4.0, None]}
+    if ".local/state/claude/locks/2.1.281.lock" not in local_tree_changes(start, own_lock, "2.1.281")[0]:
+        problems.append("proof_local_tree.run_engine_lock_is_a_change")
+    assert not problems, f"local tree guard: {problems}"
+
+
+def test_proof_host_field_deltas() -> None:
+    """H7: the baseline vs after-teardown comparators Z1/Z3 use see an added name, a moved mtime and a gone pid."""
+    from .hostprobe import listing_delta, pid_delta
+
+    before: dict[str, object] = {"shepherd.db": 1.0, "logs": 2.0}
+    problems: list[str] = []
+    delta = listing_delta(before, {**before, "extra.db": 3.0})
+    if delta["added"] != ["extra.db"]:
+        problems.append("proof_host_deltas.added_name_seen")
+    if not listing_delta(before, {**before, "shepherd.db": 9.0})["mtime_moved"]:
+        problems.append("proof_host_deltas.moved_mtime_seen")
+    if pid_delta([[11, "shepherd-controld"], [12, "x"]], [[12, "x"]])["gone"] != [11]:
+        problems.append("proof_host_deltas.gone_pid_seen")
+    if pid_delta([5], [5, 6])["new"] != [6]:
+        problems.append("proof_host_deltas.new_pid_seen")
+    assert not problems, f"host deltas: {problems}"
+
+
+def test_proof_spawn_chokepoint_refuses_unsafe_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review finding 5: `spawn_drained` re-checks the env AT the spawn; an unsafe env never reaches Popen.
+
+    `Popen` is replaced by a recorder that raises: nothing is started either way.
+    """
+    from . import instance
+
+    started: list[object] = []
+
+    def refuse_to_start(*args: object, **kwargs: object) -> None:
+        started.append(args)
+        raise RuntimeError("proof_spawn_chokepoint: Popen was reached")
+
+    monkeypatch.setattr(subprocess, "Popen", refuse_to_start)  # the module instance.py calls through
+    run, root = _guard_run()
+    unsafe = {"HOME": str(paths.REAL_HOME), "XDG_DATA_HOME": "/planted", "PATH": "/usr/bin:/bin"}
+    with pytest.raises(ValueError):
+        instance.spawn_drained(run, ["/usr/bin/true"], unsafe, Path("/"), Path("/nonexistent-qa6-logs"), "x", "proof")
+    assert not started, "proof_spawn_chokepoint.refused_before_popen"
+
+
+def test_proof_probes_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """M3: a probe that exits with an error is `ProbeUnknown`, never an empty (clean) listing."""
+    from . import hostprobe
+
+    answers = {"error": subprocess.CompletedProcess(["x"], 2, "", "pgrep: bad option"),
+               "none": subprocess.CompletedProcess(["x"], 1, "", ""),
+               "found": subprocess.CompletedProcess(["x"], 0, "123 cmd\n", "")}
+    chosen: list[str] = ["none"]
+    monkeypatch.setattr(hostprobe, "run", lambda argv, timeout_s=15.0: answers[chosen[0]])
+    assert hostprobe.pgrep("x") == [], "proof_probes.no_match_is_empty"
+    chosen[0] = "found"
+    assert hostprobe.pgrep("x") == [(123, "cmd")], "proof_probes.match_parsed"
+    chosen[0] = "error"
+    with pytest.raises(hostprobe.ProbeUnknown):
+        hostprobe.pgrep("x")
+        raise AssertionError("proof_probes.error_is_unknown_not_clean")
+    from . import tmuxctl
+
+    ours = "shepherd-m3-q6424242-3"
+    monkeypatch.setattr(tmuxctl, "run", lambda *a, **k: tmuxctl.TmuxResult((), 1, "", "error connecting to x (No such file)"))
+    assert tmuxctl.server_running(ours, 424242) is False, "proof_probes.tmux_no_server_is_not_running"
+    monkeypatch.setattr(tmuxctl, "run", lambda *a, **k: tmuxctl.TmuxResult((), 1, "", "lost server"))
+    with pytest.raises(Blocked):
+        tmuxctl.server_running(ours, 424242)
+        raise AssertionError("proof_probes.tmux_unknown_is_not_not_running")
+
+
+def test_proof_scenario_mutation_outcome() -> None:
+    """M7: `assertion_falsified` needs a passing unmutated control, APPLIED, a failed clause and a clean teardown."""
+    from .mutations import mutation_outcome
+
+    problems: list[str] = []
+    if mutation_outcome("pass", "fail", True, [])[0] != "assertion_falsified":
+        problems.append("proof_mutation_outcome.falsified")
+    if mutation_outcome("fail", "fail", True, [])[0] != "blocked":
+        problems.append("proof_mutation_outcome.needs_a_passing_control")
+    if mutation_outcome("pass", "fail", True, ["leak"])[0] != "blocked":
+        problems.append("proof_mutation_outcome.needs_a_clean_teardown")
+    if mutation_outcome("pass", "fail", False, [])[0] != "blocked":
+        problems.append("proof_mutation_outcome.needs_applied")
+    if mutation_outcome("pass", "pass", True, [])[0] != "survived":
+        problems.append("proof_mutation_outcome.survivor")
+    assert not problems, f"mutation outcome: {problems}"
 
 
 # ----- the proofs of the five copied qa5 helpers -----------------------------------------------
@@ -454,7 +992,9 @@ def test_proof_pane_argv_effective_socket() -> None:
 class _EventServer:
     """A one-connection SSE server: `: open`, one frame, one keep-alive, then holds."""
 
-    def __init__(self) -> None:
+    def __init__(self, stream: bytes | None = None, close_after: bool = False) -> None:
+        self.stream = stream
+        self.close_after = close_after
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener.bind(("127.0.0.1", 0))
         self.listener.listen(1)
@@ -468,10 +1008,14 @@ class _EventServer:
             connection.recv(65536)
             body = json.dumps({"seq": 7, "at": "t", "type": "project.created", "session_id": None,
                                "project_id": "P7", "data": {"x": 1}})
+            events = self.stream if self.stream is not None else (
+                f"id: 7\ndata: {body}\n\n".encode() + b": keep-alive\n\n")
             connection.sendall(
                 b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n"
-                + b": open\n\n" + f"id: 7\ndata: {body}\n\n".encode() + b": keep-alive\n\n"
+                + b": open\n\n" + events
             )
+            if self.close_after:
+                return
             while connection.recv(65536):
                 pass
 
@@ -490,7 +1034,9 @@ def test_proof_sse_rig() -> None:
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and (not sub.frames or len(sub.comments) < 2):
             time.sleep(0.02)
-        frames, comments = sub.snapshot(), [c.text for c in sub.comment_snapshot()]
+        # The raw tape (not `snapshot()`, which now refuses a tape with parse failures): each
+        # named assertion below must be able to fire on its own.
+        frames, comments = list(sub.frames), [c.text for c in sub.comment_snapshot()]
         sub.close()
     finally:
         server.close()
@@ -498,6 +1044,53 @@ def test_proof_sse_rig() -> None:
     assert sorted(frames[0].raw_fields) == ["data", "id"], "proof_sse_rig.fields_id_and_data"
     assert comments == [": open", ": keep-alive"], f"proof_sse_rig.comments_recorded: {comments}"
     assert sub.parse_failures == [], "proof_sse_rig.no_parse_failures"
+
+
+def test_proof_sse_rig_fails_closed() -> None:
+    """H5: a product frame that does not parse is FAIL; an EOF after a green control is FAIL; before one, BLOCKED."""
+    from .sse_rig import Refusal, open_stream
+
+    def settle(sub: object, done: Callable[[], bool]) -> None:
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not done():
+            time.sleep(0.02)
+
+    problems: list[str] = []
+    bad = _EventServer(stream=b"id: x\ndata: not json\n\n")
+    try:
+        opened = open_stream("proof-bad", bad.port)
+        assert not isinstance(opened, Refusal)
+        sub = opened
+        settle(sub, lambda: bool(opened.parse_failures))
+        try:
+            sub.snapshot()
+            problems.append("proof_sse_rig.unparseable_frame_is_fail: snapshot returned")
+        except AssertionError:
+            pass
+        sub.close()
+    finally:
+        bad.close()
+    for green in (True, False):
+        server = _EventServer(close_after=True)
+        try:
+            eof = open_stream("proof-eof", server.port)
+            assert not isinstance(eof, Refusal)
+            if green:
+                eof.mark_green("planted control")
+            settle(eof, lambda: eof.reader_fault is not None)
+            try:
+                eof.snapshot()
+                problems.append(f"proof_sse_rig.eof_is_reported (green={green}): snapshot returned")
+            except AssertionError:
+                if not green:
+                    problems.append("proof_sse_rig.eof_before_a_control_is_blocked: got FAIL")
+            except Blocked:
+                if green:
+                    problems.append("proof_sse_rig.eof_after_a_green_control_is_fail: got BLOCKED")
+            eof.close()
+        finally:
+            server.close()
+    assert not problems, f"sse rig: {problems}"
 
 
 def test_proof_auditprobe() -> None:
@@ -518,6 +1111,11 @@ def test_proof_auditprobe() -> None:
             f"proof_auditprobe.since_mark_counts_new_records: {probe.tools_since(mark)}"
         )
         assert [r.get("tool") for r in probe.mutations_since(mark)] == ["rename_project"], "proof_auditprobe.mutations_only"
+        absent = AuditProbe(root=Path(scratch) / "no-such-logs" / "audit")
+        assert absent.mark() == 0, "proof_auditprobe.mark_before_the_first_request_is_zero"
+        with pytest.raises(Blocked):
+            absent.since(0)
+            raise AssertionError("proof_auditprobe.absent_dir_is_not_an_empty_audit")
 
 
 def test_proof_wsclient() -> None:
@@ -574,8 +1172,25 @@ def mutation_results() -> Iterator[list[dict[str, object]]]:
             handle.write(json.dumps(result, sort_keys=True) + "\n")
 
 
-@pytest.mark.parametrize("module", ["sse_rig", "auditprobe", "wsclient", "constants", "tmuxctl",
-                                    "sandbox_xdg", "sandbox_checker", "sandbox_autoupdater", "tmuxctl_pane"])
+#: Every inert module-mutation fixture is proved: adding one is enough to add its proof run.
+MODULE_MUTATIONS: list[str] = sorted(path.stem for path in (PACKAGE / "fixtures" / "mutations").glob("*.json"))
+
+
+def test_guard_module_mutation_floor_is_present() -> None:
+    """The copied-helper floor and the remfix-2 guard/verdict-path floor are all registered."""
+    required = {"sse_rig", "auditprobe", "wsclient", "constants", "tmuxctl", "sandbox_xdg", "sandbox_checker",
+                "sandbox_autoupdater", "tmuxctl_pane", "tmuxctl_getopt_last_L", "tmuxctl_getopt_S_over_L",
+                "tmuxctl_getopt_cluster", "shim_refusal", "shim_fail_open", "verdict_h1_rank", "verdict_harness_error",
+                "verdict_no_rec", "report_harness_error", "report_runner_crash", "report_harness_problem", "run_guarded",
+                "instance_restart", "httpclient_hang", "live_spawn_stop_if", "teardown_token",
+                "hostprobe_lock_attribution", "hostprobe_link_target", "hostprobe_listing_delta",
+                "hostprobe_probe_unknown", "tmuxctl_server_unknown", "instance_spawn_chokepoint",
+                "sse_rig_parse_failure", "sse_rig_eof_after_control", "mutations_control", "auditprobe_absent"}
+    missing = sorted(required - set(MODULE_MUTATIONS))
+    assert not missing, f"module mutations not registered: {missing}"
+
+
+@pytest.mark.parametrize("module", MODULE_MUTATIONS)
 def test_mutation_reproves_copied_module(module: str, mutation_results: list[dict[str, object]]) -> None:
     from .mutations import load_module_mutation, run_module_mutation
 

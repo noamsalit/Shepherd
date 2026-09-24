@@ -94,8 +94,15 @@ def start_composition(run: RunContext) -> tuple[Inp, dict[str, str]]:
     host = MacHost(environ={"HOME": str(root.home), "TMPDIR": str(root.tmpdir)})
     try:
         running = controld_module.start(host, 0)
-    except OSError as error:
-        raise Blocked(f"INP controld.start failed: {error}") from error
+    except BaseException as error:
+        # Restore before raising (hunter L3): a sandboxed os.environ or a patched build_master left
+        # behind would make the root settings guard compare the wrong path.
+        setattr(controld_module, PATCH_POINT, _REAL_BUILD_MASTER)
+        os.environ.clear()
+        os.environ.update(saved)
+        if isinstance(error, OSError):
+            raise Blocked(f"INP controld.start failed: {error}") from error
+        raise
     inp = Inp(run=run, root=root, running=running, book=BOOK, port=running.port)
     return inp, saved
 

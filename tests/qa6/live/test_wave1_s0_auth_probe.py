@@ -37,7 +37,7 @@ from .. import hostprobe, paths, realclaude
 from ..httpclient import Client, as_dict
 from ..instance import Controld, app_state, seed_db, start_launcher
 from ..pool import InstancePool
-from ..sandbox import InstanceRoot, RunContext, mint_instance, real_home_env, sandbox_env
+from ..sandbox import InstanceRoot, RunContext, checked_env, mint_instance, real_home_env, sandbox_env
 from ..scenario import live_scenario
 from ..sse_rig import Frame, Subscriber, subscribe
 from ..verdict import Blocked, Recorder
@@ -76,7 +76,7 @@ def cli_probe(name: str, engine: Path, env: dict[str, str], cwd: str, settings: 
     probe = Probe(name)
     for attempt in (1, 2):
         try:
-            done = subprocess.run(argv, env=env, cwd=cwd, capture_output=True, text=True,
+            done = subprocess.run(argv, env=checked_env(env, f"S0 {name}"), cwd=cwd, capture_output=True, text=True,
                                   timeout=CLI_TIMEOUT_S, check=False)
         except subprocess.TimeoutExpired:
             probe.detail[f"attempt{attempt}"] = f"timeout after {CLI_TIMEOUT_S}s"

@@ -433,7 +433,8 @@ def test_r7_a_slow_project_read_never_paints_over_the_newer_one(races: Races, br
             return
         settle(lambda: 200 in log.status_of(f"/api/projects/{a}") or None, 3.0, page)
         if active(MUTATION_R7):
-            rec.note(f"QA6 MUTATION {MUTATION_R7} APPLIED: B's read answered in the page with A's project ({len(stale)} hit(s))")
+            applied = "APPLIED" if stale else "NOT APPLIED (the stale answer was never served)"  # hunter L2
+            rec.note(f"QA6 MUTATION {MUTATION_R7} {applied}: B's read answered in the page with A's project ({len(stale)} hit(s))")
         rec.equal("ui.detail_shows_b", "QA6 R project B", text_of(page.locator("#proj-detail .proj-title")))
         order = [str(e.get("url")).rsplit("/", 1)[1] for e in log.responses if str(e.get("url")).rsplit("/", 1)[-1] in (a, b)]
         rec.check("api.a_answered_after_b", order[-2:] == [b, a], "B's read answered, then A's (control)", order)

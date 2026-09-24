@@ -23,6 +23,7 @@ from shepherd.toolsurface.audit import AUDIT_PREFIX
 from shepherd.toolsurface.compose import log_root
 
 from .sandbox import InstanceRoot
+from .verdict import Blocked
 
 #: The verbs that change something. Reads are gated invokes too and append a
 #: `local_read` row each, so counting is done over mutations wherever the
@@ -57,16 +58,23 @@ class AuditProbe:
         host = MacHost(environ={"HOME": str(instance.home), "TMPDIR": str(instance.tmpdir)})
         return cls(root=log_root(host) / AUDIT_PREFIX)
 
-    def records(self) -> list[Mapping[str, object]]:
+    def records(self, *, absent_ok: bool = False) -> list[Mapping[str, object]]:
+        """Every audit record. An absent log dir is `[]` only for a `mark()` taken before the
+        first request (`absent_ok`); anywhere else it is `Blocked` — every GET is audited, so a
+        missing dir means the harness is reading the wrong path, and a "no row" clause over it
+        would be vacuous (hunter M8)."""
         if not self.root.parent.exists():
-            return []
+            if absent_ok:
+                return []
+            raise Blocked(f"the audit log dir {self.root.parent} does not exist: the harness cannot read "
+                          "the product's audit (a path mismatch), so no audit clause can be evaluated")
         found, stats = scan_records(self.root.parent, AUDIT_PREFIX)
         assert stats.skipped_malformed == 0, f"malformed audit records: {stats}"
         assert stats.unreadable_files == 0, f"unreadable audit files: {stats}"
         return [record for record, _line in found]
 
     def mark(self) -> int:
-        return len(self.records())
+        return len(self.records(absent_ok=True))
 
     def since(self, mark: int) -> list[Mapping[str, object]]:
         return self.records()[mark:]

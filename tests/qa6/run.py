@@ -36,7 +36,11 @@ import signal
 import subprocess
 import sys
 import time
+import traceback
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import BinaryIO
 
 if __package__ in (None, ""):
     # Run as a script: import this directory as the `qa6` package, and drop the
@@ -45,8 +49,9 @@ if __package__ in (None, ""):
     sys.path[:] = [entry for entry in sys.path if os.path.realpath(entry or ".") != _here]
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, teardown, tmuxctl  # noqa: E402
+from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, report, teardown, tmuxctl  # noqa: E402
 from qa6.catalog import SCENARIOS  # noqa: E402
+from shepherd.runner.tmux_cmd import DEFAULT_SOCKET  # noqa: E402
 from qa6.report import LaneExit, append_record, build_record, load_records, record_path, write_report  # noqa: E402
 from qa6.sandbox import (  # noqa: E402
     ENV_BLOCKED_FILE,
@@ -62,6 +67,10 @@ from qa6.sandbox import (  # noqa: E402
 from qa6.stopifs import BACKGROUND_LANES, STOP_IFS, WAVE_LANES  # noqa: E402
 
 LOG = logging.getLogger("qa6.run")
+#: An instance started WITHOUT the seeded DB names the product's default socket in its reconcile
+#: (C7; sandbox.RunContext.shims_unseeded). The shim refuses it like any other foreign socket (it
+#: never reaches tmux), and it is recorded; it does not stop the run. Any other socket in that log does.
+UNSEEDED_EXCUSED: frozenset[str] = frozenset({DEFAULT_SOCKET})
 HOST_WAVE = 9
 LANE_TIMEOUT_S = 3600.0
 GUARDS = paths.QA6_DIR / "test_harness_guards.py"
@@ -139,32 +148,44 @@ def write_blocked(run: RunContext, blocked: dict[str, str]) -> None:
 
 
 def z2_violations(run: RunContext) -> list[str]:
-    """Any product tmux argv that is not exactly `tmux -V` and not `-L <our socket>`, and any
-    in-pane (engine) tmux call whose effective socket (`-S`, `-L`, else `$TMUX`) is not ours."""
+    """Every logged tmux argv whose effective socket (tmux's own rules: `tmuxctl.effective_socket`)
+    is not this run's, product and in-pane alike; `tmux -V` alone is allowed. A line that is not
+    a JSON argv is itself a violation: an unreadable log proves nothing clean."""
     violations: list[str] = []
-    log = run.tmux_argv_log
-    pattern = paths.runner_socket_pattern(run.pid)
-    for line in (log.read_text(encoding="utf-8").splitlines() if log.exists() else []):
-        if not line.strip():
-            continue
-        argv = json.loads(line)
-        if argv == ["tmux", "-V"]:
-            continue
-        if not (isinstance(argv, list) and len(argv) >= 3 and argv[1] == "-L" and pattern.fullmatch(str(argv[2]))):
-            violations.append(line[:300])
+    for log, excused in ((run.tmux_argv_log, frozenset[str]()), (run.unseeded_tmux_argv_log, UNSEEDED_EXCUSED)):
+        for line in (log.read_text(encoding="utf-8").splitlines() if log.exists() else []):
+            if not line.strip():
+                continue
+            try:
+                decoded: object = json.loads(line)
+            except json.JSONDecodeError:
+                violations.append(f"unparseable line in {log}: {line[:300]}")
+                continue
+            argv = [str(word) for word in decoded] if isinstance(decoded, list) else None
+            why = tmuxctl.argv_violation(argv, None, run.pid) if argv is not None else "not a JSON argv"
+            if why is not None and not (argv is not None and tmuxctl.effective_socket(argv, None) in excused):
+                violations.append(f"{log}: {why}: {line[:300]}")
     pane_log = run.pane_tmux_argv_log
     entries: list[dict[str, object]] = []
     for line in (pane_log.read_text(encoding="utf-8").splitlines() if pane_log.exists() else []):
-        if line.strip():
-            decoded: object = json.loads(line)
-            entries.append({str(k): v for k, v in decoded.items()} if isinstance(decoded, dict) else {"argv": decoded})
+        if not line.strip():
+            continue
+        try:
+            decoded_entry: object = json.loads(line)
+        except json.JSONDecodeError:
+            violations.append(f"unparseable line in {pane_log.name}: {line[:300]}")
+            continue
+        entries.append({str(k): v for k, v in decoded_entry.items()} if isinstance(decoded_entry, dict)
+                       else {"argv": decoded_entry})
     violations.extend(f"in-pane: {json.dumps(v)[:300]}" for v in tmuxctl.pane_argv_violations(entries, run.pid))
     return violations
 
 
-def fill_missing(run: RunContext, selected_waves: set[int], blocked: dict[str, str], implemented: set[str]) -> None:
+def fill_missing(run: RunContext, selected_waves: set[int], blocked: dict[str, str], implemented: set[str],
+                 lane_exits: list[LaneExit] | None = None, crash: str | None = None) -> None:
     have = records_by_id(run)
     path = record_path(run.run_dir, "runner", "all")
+    exits = {int(lane.wave): lane for lane in (lane_exits or []) if lane.wave.isdigit() and lane.exit_code not in (0, 1)}
     for scenario in SCENARIOS:
         if scenario.id in have:
             continue
@@ -174,6 +195,13 @@ def fill_missing(run: RunContext, selected_waves: set[int], blocked: dict[str, s
             reason = "not implemented in this build of tests/qa6 (no test carries this id)"
         elif scenario.wave not in selected_waves:
             reason = "its wave was not selected for this run"
+        elif scenario.wave in exits:
+            lane = exits[scenario.wave]
+            reason = (f"its wave's {lane.lane} lane process "
+                      f"{'timed out (exit 124)' if lane.exit_code == 124 else f'crashed (exit {lane.exit_code})'} "
+                      "before writing this record")
+        elif crash is not None:
+            reason = f"the runner crashed before this scenario ran: {crash.splitlines()[0][:300]}"
         else:
             reason = "no record was written (its lane process crashed or was deselected)"
         append_record(path, build_record(scenario.id, verdict="BLOCKED", fail_kind=None, reason=reason,
@@ -182,17 +210,31 @@ def fill_missing(run: RunContext, selected_waves: set[int], blocked: dict[str, s
 
 
 def implemented_ids() -> set[str]:
+    """The ids a collection finds. A collection that fails is a runner error, never "0 implemented" (L1)."""
     rc, out = preflight._run([str(paths.PYTEST), "--collect-only", "-m", "qa6 or qa6live", "tests/qa6",
                               "-p", "no:randomly", "-p", "no:cacheprovider"], 120, cwd=paths.REPO)
+    if rc != 0:
+        raise RuntimeError(f"pytest --collect-only exited {rc}: {out[-1500:]}")
     _unknown, _dups, found = preflight.collected_ids(out)
     return set(found)
 
 
-def snapshot_host(run: RunContext, label: str) -> None:
-    """A read-only host snapshot after each lane process, for Z1 (test-plan Z1 When)."""
+def snapshot_host(run: RunContext, label: str) -> hostprobe.Baseline | None:
+    """A read-only host snapshot after each lane process, for Z1 (test-plan Z1 When).
+
+    A probe that cannot answer (`ProbeUnknown`) is a teardown problem and writes
+    `{"unknown": …}`: an unknown host state is never recorded as a clean one.
+    """
     target = run.run_dir / "host-after"
     target.mkdir(parents=True, exist_ok=True)
-    hostprobe.write_baseline(target / f"{label}.json", hostprobe.snapshot())
+    try:
+        snapshot = hostprobe.snapshot()
+    except hostprobe.ProbeUnknown as error:
+        run.teardown_problem("runner", f"host snapshot {label} unknown: {error}")
+        (target / f"{label}.json").write_text(json.dumps({"unknown": str(error)}), encoding="utf-8")
+        return None
+    hostprobe.write_baseline(target / f"{label}.json", snapshot)
+    return snapshot
 
 
 def settings_ok() -> bool:
@@ -237,6 +279,41 @@ def main(argv: list[str] | None = None) -> int:
             awake.wait(timeout=5)
 
 
+@dataclass
+class Background:
+    lane: str
+    wave: str
+    process: subprocess.Popen[bytes]
+    argv: list[str]
+    handle: BinaryIO
+
+
+@dataclass
+class RunState:
+    """Everything the waves learn that the finalizer must still publish if they crash (H6)."""
+
+    args: argparse.Namespace
+    run: RunContext
+    baseline: hostprobe.Baseline
+    reached: str
+    selected: set[int]
+    lane_exits: list[LaneExit] = field(default_factory=list)
+    blocked: dict[str, str] = field(default_factory=dict)
+    implemented: set[str] = field(default_factory=set)
+    background: list[Background] = field(default_factory=list)
+    stopped: str | None = None
+    leak_notes: list[str] = field(default_factory=list)
+    runner_errors: list[str] = field(default_factory=list)
+
+
+def preflight_blocked(report_dir: Path, run_id: str, reasons: list[str]) -> int:
+    """A run that never minted still leaves a history line (H6): nothing is invisible."""
+    report.append_history(report_dir, {"run_id": run_id, "status": "INCOMPLETE", "stage": "preflight",
+                                       "counts": {}, "reasons": reasons[:20]})
+    LOG.error("the run is BLOCKED before any wave: %s", "; ".join(reasons)[:1500])
+    return 3
+
+
 def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
     report_dir: Path = args.report_dir
     checks, reached = preflight.run_tiers(include_t4=not args.skip_t4)
@@ -249,38 +326,68 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
         LOG.info("preflight reached %s with %d failure(s)", reached, len(failed))
         return 0 if not failed else 3
     if failed:
-        LOG.error("preflight failed: the run is BLOCKED and no wave starts")
-        return 3
-
-    sweep = teardown.sweep_dead_runs()
-    if sweep.live_owners:
-        LOG.error("live owners hold qa6 state: %s — BLOCKED (another run?)", sweep.live_owners)
-        return 3
-    baseline = hostprobe.snapshot()
-    hostprobe.write_baseline(run_dir / "baseline.json", baseline)
-    run = bootstrap.mint(os.getpid(), run_id, run_dir)
+        return preflight_blocked(report_dir, run_id, [f"preflight {c.tier} {c.name}: {c.actual[:200]}" for c in failed])
+    try:
+        sweep = teardown.sweep_dead_runs()
+        if sweep.live_owners:
+            return preflight_blocked(report_dir, run_id, [f"live owners hold qa6 state (another run?): {sweep.live_owners}"])
+        for line in sweep.orphans_stopped:
+            LOG.warning("pre-run sweep: %s", line)
+        baseline = hostprobe.snapshot()
+        hostprobe.write_baseline(run_dir / "baseline.json", baseline)
+        run = bootstrap.mint(os.getpid(), run_id, run_dir)
+    except Exception as error:  # noqa: BLE001 - recorded, never swallowed: the history says why
+        return preflight_blocked(report_dir, run_id, [f"before mint: {type(error).__name__}: {error}",
+                                                      traceback.format_exc()[-1500:]])
     LOG.info("run %s minted at %s", run_id, run.run0)
+    state = RunState(args=args, run=run, baseline=baseline, reached=reached,
+                     selected=set(args.wave) if args.wave else set(WAVE_LANES))
+    if sweep.orphans_stopped:
+        for line in sweep.orphans_stopped:
+            run.teardown_problem("pre-run sweep", line)
+    return guarded(lambda: _waves(state), lambda crash: _finish(state, run_id, crash))
 
-    lane_exits: list[LaneExit] = []
-    guard_rc = run_pytest(pytest_argv([GUARDS]), lane_env(run, report_dir, "guards", "guards"), run_dir / "logs" / "guards.log", 900)
-    lane_exits.append(LaneExit("guards", "0", guard_rc, tuple(pytest_argv([GUARDS]))))
-    implemented = implemented_ids()
-    blocked: dict[str, str] = {}
-    selected = set(args.wave) if args.wave else set(WAVE_LANES)
-    stopped: str | None = None
+
+def guarded(body: Callable[[], None], finish: Callable[[str | None], int]) -> int:
+    """Run the waves; ALWAYS finish (teardown, wave 9, publish), with the crash if there was one.
+
+    H6: a runner exception used to skip teardown and publication, leaving
+    `qa6-latest.json` on the previous run and the run's processes orphaned.
+    `KeyboardInterrupt` is published too, then re-raised.
+    """
+    crash: str | None = None
+    interrupted: BaseException | None = None
+    try:
+        body()
+    except Exception as error:  # noqa: BLE001 - published as the run's INCOMPLETE reason
+        crash = f"{type(error).__name__}: {error}\n{traceback.format_exc()[-3000:]}"
+    except KeyboardInterrupt as error:
+        crash = "KeyboardInterrupt"
+        interrupted = error
+    code = finish(crash)
+    if interrupted is not None:
+        raise interrupted
+    return code
+
+
+def _waves(state: RunState) -> None:
+    run, args = state.run, state.args
+    report_dir: Path = args.report_dir
+    guard_rc = run_pytest(pytest_argv([GUARDS]), lane_env(run, report_dir, "guards", "guards"),
+                          run.run_dir / "logs" / "guards.log", 900)
+    state.lane_exits.append(LaneExit("guards", "0", guard_rc, tuple(pytest_argv([GUARDS]))))
+    state.implemented = implemented_ids()
     if guard_rc != 0:
-        stopped = f"harness guards failed (exit {guard_rc}); see logs/guards.log"
-        LOG.error(stopped)
-    background: list[tuple[str, str, subprocess.Popen[bytes], list[str]]] = []
-
+        state.stopped = f"harness guards failed (exit {guard_rc}); see logs/guards.log"
+        LOG.error(state.stopped)
     for wave in sorted(w for w in WAVE_LANES if w != HOST_WAVE):
-        if stopped is not None:
+        if state.stopped is not None:
             for sid in (s.id for s in SCENARIOS if s.wave == wave):
-                blocked.setdefault(sid, stopped)
+                state.blocked.setdefault(sid, state.stopped)
             continue
-        if wave not in selected:
+        if wave not in state.selected:
             continue
-        write_blocked(run, blocked)
+        write_blocked(run, state.blocked)
         for lane in WAVE_LANES[wave]:
             if args.lane and lane not in args.lane:
                 continue
@@ -289,32 +396,22 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
                 continue
             argv = pytest_argv(files)
             env = lane_env(run, report_dir, wave, lane)
-            log = run_dir / "logs" / f"{lane}-w{wave}.log"
+            log = run.run_dir / "logs" / f"{lane}-w{wave}.log"
             if lane in BACKGROUND_LANES:
+                log.parent.mkdir(parents=True, exist_ok=True)
                 handle = open(log, "wb")
                 process = subprocess.Popen(argv, env=env, cwd=str(paths.REPO), stdout=handle, stderr=subprocess.STDOUT,
                                            start_new_session=True)
-                background.append((lane, str(wave), process, argv))
+                state.background.append(Background(lane, str(wave), process, argv, handle))
                 LOG.info("wave %d lane %s started in the background (pid %d)", wave, lane, process.pid)
                 continue
             LOG.info("wave %d lane %s: %d module(s)", wave, lane, len(files))
             code = run_pytest(argv, env, log)
-            lane_exits.append(LaneExit(lane, str(wave), code, tuple(argv)))
+            state.lane_exits.append(LaneExit(lane, str(wave), code, tuple(argv)))
             LOG.info("wave %d lane %s exited %d", wave, lane, code)
-            snapshot_host(run, f"{lane}-w{wave}")
-            if not settings_ok():
-                stopped = f"the real settings sha changed during wave {wave} lane {lane} (U2): the run is stopped"
-                LOG.error(stopped)
-                break
-            link_changed = realclaude.link_change(run_dir)
-            if link_changed is not None:
-                stopped = f"after wave {wave} lane {lane}: {link_changed}"
-                LOG.error(stopped)
-                break
-            violations = z2_violations(run)
-            if violations:
-                stopped = f"Z2-class tmux argv after wave {wave} lane {lane}: {violations[:3]}"
-                LOG.error(stopped)
+            state.stopped = after_lane_stop(state, wave, lane)
+            if state.stopped is not None:
+                LOG.error(state.stopped)
                 break
         records = records_by_id(run)
         for rule in STOP_IFS:
@@ -323,55 +420,136 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
             LOG.warning("stop-if after wave %d: %s", wave, rule.description)
             for sid in rule.blocks(records):
                 if sid not in records:
-                    blocked.setdefault(sid, rule.description)
+                    state.blocked.setdefault(sid, rule.description)
             if rule.stops_run:
-                stopped = rule.description
-        write_blocked(run, blocked)
+                state.stopped = rule.description
+        write_blocked(run, state.blocked)
         if wave == 1:
             _publish_auth_mode(run, records)
 
-    _join_background(background, lane_exits)
 
-    # Teardown (env-plan §9) BEFORE wave 9: Z1-Z3 observe the host the run left
-    # behind (Z3 asserts the run root is removed). The ledgers the Z-scenarios
-    # read are copied out of the run root first.
-    ledgers = run_dir / "ledgers"
+def after_lane_stop(state: RunState, wave: int, lane: str) -> str | None:
+    """The host checks after every lane process; any one of them stops the run."""
+    run = state.run
+    snapshot = snapshot_host(run, f"{lane}-w{wave}")
+    where = f"after wave {wave} lane {lane}"
+    if not settings_ok():
+        return f"the real settings sha changed during wave {wave} lane {lane} (U2): the run is stopped"
+    link_changed = realclaude.link_change(run.run_dir)
+    if link_changed is not None:
+        return f"{where}: {link_changed}"
+    tree = local_tree_problem(run, state.baseline, snapshot)
+    if tree is not None:
+        return f"{where}: {tree}"
+    violations = z2_violations(run)
+    if violations:
+        return f"Z2-class tmux argv {where}: {violations[:3]}"
+    return None
+
+
+def engine_version(run: RunContext) -> str | None:
+    """The version name of this run's real engine (`…/versions/<v>`), for lock attribution."""
+    resolved = realclaude.load(run).path
+    return os.path.basename(resolved) if resolved else None
+
+
+def local_tree_problem(run: RunContext, baseline: hostprobe.Baseline, snapshot: hostprobe.Baseline | None) -> str | None:
+    """Review finding 3: any change under ~/.local/{bin, share/claude, state/claude} since run start."""
+    if snapshot is None:
+        return "the host snapshot could not be taken, so ~/.local could not be compared (unknown is not clean)"
+    changes, attributed = hostprobe.local_tree_changes(baseline.local_tree, snapshot.local_tree, engine_version(run))
+    if attributed:
+        LOG.info("~/.local changes attributed to the user's own sessions: %s", attributed)
+    if changes:
+        return (f"~/.local changed since run start (INC-1 guard; the harness never writes there and no live "
+                f"scenario may run until a human has looked): {json.dumps(changes)[:1200]}")
+    return None
+
+
+def _finish(state: RunState, run_id: str, crash: str | None) -> int:
+    """Teardown → wave 9 → publish. Each step's own failure is recorded and the next still runs."""
+    run, args = state.run, state.args
+    errors = state.runner_errors
+    if crash is not None:
+        errors.append(f"runner crashed: {crash}")
+        LOG.error("runner crashed; tearing down and publishing INCOMPLETE: %s", crash[:600])
+
+    def step(name: str, action: Callable[[], None]) -> None:
+        try:
+            action()
+        except Exception as error:  # noqa: BLE001 - every finalizer step's failure is published
+            errors.append(f"finalizer step {name!r} failed: {type(error).__name__}: {error}")
+            LOG.error("finalizer step %s failed: %s", name, error)
+
+    step("join background lanes", lambda: _join_background(state.background, state.lane_exits))
+    step("copy ledgers", lambda: _copy_ledgers(run))
+    step("remove worktree", lambda: _remove_worktree(run))
+    step("teardown run", lambda: _teardown(state))
+    step("post-teardown host checks", lambda: _post_teardown_checks(state))
+    if HOST_WAVE in state.selected:
+        step("wave 9", lambda: _host_wave(state))
+    step("fill missing records", lambda: fill_missing(run, state.selected, state.blocked, state.implemented,
+                                                      state.lane_exits, crash))
+    teardown_problems = _read_teardown_problems(run)
+    harness_problems = [*_read_problem_file(run.run_dir / "harness-problems.jsonl"), *errors]
+    decision = write_report(args.report_dir, run_id, run.run_dir, state.lane_exits, teardown_problems,
+                            extra={"preflight_reached": state.reached, "leak_notes": state.leak_notes,
+                                   "runner_crash": crash,
+                                   "real_claude": read_json(run.run_dir / realclaude.RESOLUTION_FILE),
+                                   "claude_link": {"start": realclaude.start_link_state(run.run_dir),
+                                                   "end": realclaude.link_state()}},
+                            harness_problems=harness_problems, runner_crash=crash)
+    LOG.info("report %s: %s — %s", run_id, decision.status, "; ".join(decision.reasons)[:1500])
+    return 0 if decision.status == "GREEN" else 1
+
+
+def _copy_ledgers(run: RunContext) -> None:
+    """The ledgers the Z-scenarios read, copied out of the run root before teardown removes it."""
+    ledgers = run.run_dir / "ledgers"
     ledgers.mkdir(exist_ok=True)
     for source, name in ledger_copies(run):
         if source.exists():
             (ledgers / name).write_bytes(source.read_bytes())
-    problems = bootstrap.remove_worktree(run)
-    leak = teardown.teardown_run(run)
-    problems.extend(leak.problems)
-    for problem in problems:
+
+
+def _remove_worktree(run: RunContext) -> None:
+    for problem in bootstrap.remove_worktree(run):
         run.teardown_problem("runner", problem)
+
+
+def _teardown(state: RunState) -> None:
+    leak = teardown.teardown_run(state.run)
+    state.leak_notes.extend(leak.notes)
+    for problem in leak.problems:
+        state.run.teardown_problem("runner", problem)
+
+
+def _post_teardown_checks(state: RunState) -> None:
+    run = state.run
     if not settings_ok():
         run.teardown_problem("runner", "the real ~/.claude/settings.json sha changed (U2)")
-    link_changed = realclaude.link_change(run_dir)
+    link_changed = realclaude.link_change(run.run_dir)
     if link_changed is not None:
         run.teardown_problem("runner", link_changed)
-    snapshot_host(run, "after-teardown")
+    snapshot = snapshot_host(run, "after-teardown")
+    tree = local_tree_problem(run, state.baseline, snapshot)
+    if tree is not None:
+        run.teardown_problem("runner", tree)
 
-    # Wave 9 runs even when earlier waves stopped (test-plan §3): it is the host check.
-    if HOST_WAVE in selected:
-        write_blocked(run, {})
-        for lane in WAVE_LANES[HOST_WAVE]:
-            files = lane_files(HOST_WAVE, lane)
-            if not files or (args.lane and lane not in args.lane):
-                continue
-            argv = pytest_argv(files)
-            code = run_pytest(argv, lane_env(run, report_dir, HOST_WAVE, lane), run_dir / "logs" / f"{lane}-w{HOST_WAVE}.log")
-            lane_exits.append(LaneExit(lane, str(HOST_WAVE), code, tuple(argv)))
-            LOG.info("wave %d lane %s exited %d", HOST_WAVE, lane, code)
-    fill_missing(run, selected, blocked, implemented)
-    teardown_problems = _read_teardown_problems(run)
-    decision = write_report(report_dir, run_id, run_dir, lane_exits, teardown_problems,
-                            extra={"preflight_reached": "T4", "leak_notes": leak.notes,
-                                   "real_claude": read_json(run_dir / realclaude.RESOLUTION_FILE),
-                                   "claude_link": {"start": realclaude.start_link_state(run_dir),
-                                                   "end": realclaude.link_state()}})
-    LOG.info("report %s: %s — %s", run_id, decision.status, "; ".join(decision.reasons)[:1500])
-    return 0 if decision.status == "GREEN" else 1
+
+def _host_wave(state: RunState) -> None:
+    """Wave 9 runs even when earlier waves stopped or crashed (test-plan §3): it is the host check."""
+    run, args = state.run, state.args
+    write_blocked(run, {})
+    for lane in WAVE_LANES[HOST_WAVE]:
+        files = lane_files(HOST_WAVE, lane)
+        if not files or (args.lane and lane not in args.lane):
+            continue
+        argv = pytest_argv(files)
+        code = run_pytest(argv, lane_env(run, args.report_dir, HOST_WAVE, lane),
+                          run.run_dir / "logs" / f"{lane}-w{HOST_WAVE}.log")
+        state.lane_exits.append(LaneExit(lane, str(HOST_WAVE), code, tuple(argv)))
+        LOG.info("wave %d lane %s exited %d", HOST_WAVE, lane, code)
 
 
 def _publish_auth_mode(run: RunContext, records: dict[str, dict[str, object]]) -> None:
@@ -388,15 +566,35 @@ def _publish_auth_mode(run: RunContext, records: dict[str, dict[str, object]]) -
         target.write_text(json.dumps({"LIVE_AUTH_MODE": mode, "source": "S0 record"}), encoding="utf-8")
 
 
-def _join_background(background: list[tuple[str, str, subprocess.Popen[bytes], list[str]]], lane_exits: list[LaneExit]) -> None:
+def _join_background(background: list[Background], lane_exits: list[LaneExit]) -> None:
+    """Join every background lane: wait, else SIGTERM its group and WAIT, else SIGKILL (L5)."""
     while background:
-        lane, wave, process, argv = background.pop()
+        lane = background.pop()
         try:
-            code = process.wait(timeout=900)
+            code = lane.process.wait(timeout=900)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGTERM)
+            os.killpg(lane.process.pid, signal.SIGTERM)
+            try:
+                lane.process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                os.killpg(lane.process.pid, signal.SIGKILL)
+                lane.process.wait(timeout=30)
             code = 124
-        lane_exits.append(LaneExit(lane, wave, code, tuple(argv)))
+        finally:
+            lane.handle.close()
+        lane_exits.append(LaneExit(lane.lane, lane.wave, code, tuple(lane.argv)))
+
+
+def _read_problem_file(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    problems: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            decoded: object = json.loads(line)
+            if isinstance(decoded, dict):
+                problems.append(f"{decoded.get('where')}: {decoded.get('problem')}")
+    return problems
 
 
 def _read_teardown_problems(run: RunContext) -> list[str]:

@@ -24,7 +24,7 @@ import pytest
 from ..auditprobe import AuditProbe, MUTATION_TOOLS
 from ..httpclient import Client, as_dict
 from ..mutations import active
-from ..instance import Controld
+from ..instance import Controld, RestartFailed, wait_restart_ready
 from ..pool import InstancePool
 from ..sandbox import RunContext
 from ..scenario import scenario
@@ -267,9 +267,13 @@ def test_e5_last_event_id_across_a_daemon_restart(pool: InstancePool, qa6_run: R
     rec.equal("given.first_stopped_cleanly", 0, code)
     second = pool.start(first.root, port=port, name="controld-restart")
     try:
-        second.wait_ready()
-    except Blocked as error:  # the OS would not re-bind the port: BLOCKED, never FAIL (env-plan §1)
+        wait_restart_ready(second)
+    except Blocked as error:  # the OS would not re-bind the port (EADDRINUSE only): BLOCKED (env-plan §1)
         rec.block("given.restart_on_same_port", f"{type(error).__name__}: {error}")
+        rec.finish()
+        return
+    except RestartFailed as error:  # any other non-ready restart is the product's (H2)
+        rec.check("proc.restart_on_same_port_ready", False, "the restart on the same root and port is ready", str(error))
         rec.finish()
         return
     rec.equal("given.same_port", port, second.port)

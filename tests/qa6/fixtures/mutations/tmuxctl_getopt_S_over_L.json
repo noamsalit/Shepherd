@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "    if path is not None:\n        return _socket_name(path)\n    if label is not None:\n        return label\n",
+ "new": "    if label is not None:\n        return label\n    if path is not None:\n        return _socket_name(path)\n",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.reviewer_S_beats_L",
+ "why": "review finding 1: -L is preferred over -S (tmux prefers -S), so `-L <ours> -S .../default kill-server` is scored as ours (predicate only)"
+}

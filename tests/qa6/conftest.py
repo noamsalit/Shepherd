@@ -8,10 +8,16 @@ for items carrying the `qa6`/`qa6live` markers.
 What it does for a qa6 run:
 
 * refuses to run qa6 items when `pytest-randomly` is active (waves are ordered);
-* turns each scenario test's outcome into exactly one record (`report.py`):
-  PASS; `FAIL(assert)` for an AssertionError; `FAIL(bound)` for a
-  `ProductFail`; `BLOCKED` for `Blocked`, a skip, or any setup error — a
-  harness that could not set up has proven nothing about the product;
+* turns each scenario test's outcome into exactly one record (`report.py`)
+  through `verdict.classify_outcome`: PASS; `FAIL(assert)` for an
+  AssertionError; `FAIL(bound)` for a `ProductFail`; `BLOCKED` for `Blocked`,
+  a skip, or any setup error — a harness that could not set up has proven
+  nothing about the product; a failed clause outranks a later `Blocked`, skip
+  or harness exception (FAIL); an unexpected exception with no failed clause
+  is `FAIL(harness_error)`, which the gate reads as INCOMPLETE; a scenario
+  that never took `rec` is BLOCKED;
+* a failing non-scenario qa6 test (the INP self-check) is a harness problem
+  (`harness-problems.jsonl`) and BLOCKs the rest of its process;
 * applies the runner's stop-ifs: an id listed in `$QA6_BLOCKED_FILE` is
   BLOCKED at setup with the listed reason, and never runs;
 * records every teardown error as a teardown problem (which blocks GREEN).
@@ -34,7 +40,7 @@ import pytest
 
 from typing import TYPE_CHECKING
 
-from .verdict import Blocked, ProductFail, Recorder
+from .verdict import Blocked, Recorder, classify_outcome
 
 if TYPE_CHECKING:
     from .browser import BrowserSession
@@ -145,27 +151,11 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     reason = _blocked_by_runner(sid)
     if reason is not None:
         raise Blocked(f"stop-if: {reason}")
+    if _SELFCHECK_FAILED:
+        raise Blocked(f"stop-if: this process's self-check failed: {_SELFCHECK_FAILED[0]}")
 
 
 # ----- outcome → record ----------------------------------------------------------
-
-
-def _classify(excinfo: pytest.ExceptionInfo[BaseException] | None, when: str) -> tuple[str, str | None, str]:
-    if excinfo is None:
-        return "PASS", None, ""
-    error = excinfo.value
-    text = str(error)[:2000]
-    if isinstance(error, Blocked):
-        return "BLOCKED", None, error.reason[:2000]
-    if excinfo.errisinstance(pytest.skip.Exception):
-        return "BLOCKED", None, f"skipped: {text}"
-    if when == "setup":
-        return "BLOCKED", None, f"setup failed ({type(error).__name__}): {text}"
-    if isinstance(error, ProductFail):
-        return "FAIL", "bound", text
-    if isinstance(error, AssertionError):
-        return "FAIL", "assert", text
-    return "FAIL", "assert", f"unexpected {type(error).__name__} in the scenario body: {text}"
 
 
 @pytest.hookimpl(wrapper=True)
@@ -181,23 +171,44 @@ def _account(item: pytest.Item, call: pytest.CallInfo[None], report: pytest.Test
     state = _OUTCOMES.setdefault(item.nodeid, {"verdict": None, "started": time.monotonic()})
     if call.when in ("setup", "call"):
         if state.get("verdict") is None or call.when == "call":
-            if report.skipped and call.excinfo is not None and call.excinfo.errisinstance(pytest.skip.Exception):
-                verdict, kind, reason = "BLOCKED", None, f"skipped: {call.excinfo.value}"
-            else:
-                verdict, kind, reason = _classify(call.excinfo, call.when)
+            error = call.excinfo.value if call.excinfo is not None else None
+            skipped = bool(report.skipped and call.excinfo is not None
+                           and call.excinfo.errisinstance(pytest.skip.Exception))
+            verdict, kind, reason = classify_outcome(error, call.when, _RECORDERS.get(item.nodeid),
+                                                     is_scenario=sid is not None, skipped=skipped)
             if call.when == "setup" and verdict == "PASS":
                 return
             state.update(verdict=verdict, fail_kind=kind, reason=reason)
-            recorder = _RECORDERS.get(item.nodeid)
-            if verdict == "PASS" and recorder is not None and not recorder.finished and sid is not None:
-                state.update(verdict="BLOCKED", fail_kind=None,
-                             reason="harness: the scenario returned without calling rec.finish()")
+            if sid is None and verdict != "PASS":
+                _harness_problem(item, reason)
     if call.when == "teardown":
         run_dir = os.environ.get("QA6_RUN_DIR")
         if call.excinfo is not None and run_dir:
             _teardown_problem(Path(run_dir), item.nodeid, str(call.excinfo.value)[:1000])
         if sid is not None and state.get("verdict") is not None:
             _write(item, sid, state)
+
+
+#: Set when a non-scenario self-check in this process failed: every later scenario is BLOCKED (M1).
+_SELFCHECK_FAILED: list[str] = []
+
+
+def _harness_problem(item: pytest.Item, reason: str) -> None:
+    """A non-scenario qa6 test (the INP self-check) failed: a harness problem, never a hidden one.
+
+    It writes no scenario record, so the gate would otherwise explain the lane's
+    exit 1 by any FAIL/BLOCKED record in the lane (hunter M1). The line lands in
+    `<run_dir>/harness-problems.jsonl`, which the report reads (INCOMPLETE); a
+    failed self-check also BLOCKs every later scenario of this process.
+    """
+    if "selfcheck" in item.nodeid:
+        _SELFCHECK_FAILED.append(f"{item.nodeid}: {reason[:600]}")
+    run_dir = os.environ.get("QA6_RUN_DIR")
+    if not run_dir:
+        return
+    Path(run_dir).mkdir(parents=True, exist_ok=True)
+    with open(Path(run_dir) / "harness-problems.jsonl", "a", encoding="utf-8") as handle:
+        handle.write(json.dumps({"where": item.nodeid, "problem": reason[:2000], "at": time.time()}) + "\n")
 
 
 def _teardown_problem(run_dir: Path, where: str, problem: str) -> None:

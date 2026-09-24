@@ -23,7 +23,7 @@ from .. import paths
 from ..httpclient import as_dict
 from ..instance import Controld
 from ..pool import InstancePool
-from ..sandbox import RunContext
+from ..sandbox import RunContext, checked_env
 from ..scenario import scenario
 from ..sessions import await_session, sidecar, write_sidecar
 from ..verdict import Blocked, Recorder, observe
@@ -64,7 +64,7 @@ def fleet(pool: InstancePool, qa6_run: RunContext) -> Iterator[Fleet]:
 
 
 def cli(controld: Controld, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([str(paths.SHEPHERD_BIN), *args], env=controld.env, cwd=str(controld.root.cwd),
+    return subprocess.run([str(paths.SHEPHERD_BIN), *args], env=checked_env(controld.env, "a CLI child"), cwd=str(controld.root.cwd),
                           capture_output=True, text=True, timeout=30, check=False)
 
 

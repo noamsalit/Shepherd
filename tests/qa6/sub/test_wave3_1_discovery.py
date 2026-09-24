@@ -31,7 +31,7 @@ from .. import shims
 from ..auditprobe import AuditProbe
 from ..mutations import active
 from ..httpclient import Client, as_dict, as_list
-from ..instance import Controld, Helper, db_rows, last_scan_at
+from ..instance import Controld, Helper, RestartFailed, app_state, db_rows, last_scan_at, wait_restart_ready
 from ..pool import InstancePool
 from ..sandbox import RunContext
 from ..scenario import scenario
@@ -373,18 +373,35 @@ def test_d4_process_exit_is_stopped_with_end_time(disc: Disc, rec: Recorder) -> 
 # ----- D5 ----------------------------------------------------------------------------
 
 
+def registry_sessions(controld: Controld) -> int | None:
+    """The last pass's `registry_sessions` (sidecars read as CLI sessions), from app_state."""
+    status = app_state(controld.db, "discovery_status")
+    value = status.get("registry_sessions") if isinstance(status, dict) else None
+    return value if isinstance(value, int) else None
+
+
 @scenario("D5")
 def test_d5_live_pid_wrong_start_token_is_not_that_session(disc: Disc, rec: Recorder) -> None:
     mark = disc.stream.mark()
     helper = disc.pool.helper()
     body = sidecar(pid=helper.pid, proc_start="Mon Jan  1 00:00:00 2001", cwd=str(disc.run.repos / "loose"), name="QA6 D5")
+    seen_before = registry_sessions(disc.controld)
     write_sidecar(disc.controld.root.sessions, body)
     engine = str(body["sessionId"])
     registered, _ = observe(lambda: session_row(disc.controld, engine), TWO_PASSES.seconds)
+    # The positive control for an absent row (hunter M8): discovery READ this sidecar — the pass's
+    # `registry_sessions` count (discovery_loop.py `DiscoveryStatus`) rose — so "no row" is a claim
+    # about what it decided, not about a file it never saw.
+    read_it, _ = observe(lambda: (registry_sessions(disc.controld) or 0) > (seen_before or 0) or None, TWO_PASSES.seconds)
+    rec.record("given.registered_within_two_passes", registered is not None)
     time.sleep(2.5)  # one more scan pass: "never running" must hold across passes (an observation window)
     row = session_row(disc.controld, engine)
-    if row is None:
-        rec.check("db.never_running", True, "stopped, or never running", "no row")
+    if row is None and not read_it:
+        rec.block("db.never_running", f"no row, but discovery's registry_sessions never rose above {seen_before!r}: "
+                  "nothing shows the sidecar was read, so the absence is vacuous")
+    elif row is None:
+        rec.check("db.never_running", True, "stopped, or never running (the sidecar was read: registry_sessions rose)",
+                  "no row")
     else:
         rec.equal("db.stopped", "stopped", row.get("state"))
         rec.check("db.ended_at", bool(row.get("ended_at")), "ended_at set", row.get("ended_at"))
@@ -505,7 +522,12 @@ def test_d10_liveness_survives_a_controld_restart(pool: InstancePool, qa6_run: R
     rec.equal("logs.first_stop_line", "controld stopped: 3 threads exited · store closed", first.stop_line)
     helper.end()
     second = pool.start(first.root, name="controld-restart")
-    second.wait_ready()
+    try:
+        wait_restart_ready(second)
+    except RestartFailed as failed:  # the product did not come back on its own root: FAIL, not BLOCKED (H2)
+        rec.check("proc.restart_ready", False, "the restarted controld is ready on the same root", str(failed))
+        rec.finish()
+        return
     stream = subscribe("D10", second.port, last_event_id="0")
     try:
         stopped = await_state(second, engine, "stopped")

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "shims/tmux.sh.in",
+ "old": "if (defined $why) {\n",
+ "new": "if (defined $why && 0) {\n",
+ "proof": "test_proof_tmux_shim_refuses",
+ "expect": "proof_tmux_shim.refuses_without_exec",
+ "why": "review finding 2: the shim logs a foreign-socket argv and then execs it anyway (proved against a FAKE tmux binary only)"
+}

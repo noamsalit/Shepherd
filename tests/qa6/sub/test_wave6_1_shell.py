@@ -156,7 +156,9 @@ def test_u1_every_root_by_mouse_exactly_one_visible(shell: Shell, browser_sessio
             install_root_mutation(context, hits)
         page = open_app(context, shell.port)
         if active(MUTATION_U1):
-            rec.note(f"QA6 MUTATION {MUTATION_U1} APPLIED: app.css served {len(hits)} time(s) with "
+            # APPLIED only when the sabotage was actually served (hunter L2): the driver keys on the word.
+            applied = "APPLIED" if hits else "NOT APPLIED (app.css was never served through the route)"
+            rec.note(f"QA6 MUTATION {MUTATION_U1} {applied}: app.css served {len(hits)} time(s) with "
                      f"{MUTATION_RULE.strip()!r} appended ({hits[:2]})")
         load_calls = api_since(log, 0)
         rec.record("api.control_listener_saw_first_paint_reads", load_calls[:8])

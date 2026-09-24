@@ -59,6 +59,15 @@ implemented twice, in the wrong wave's file, or a module is outside a lane dir.
 * `rec.record(name, value)` → a measurement the plan says to record.
 * FAIL outranks BLOCKED; a scenario with no clause is BLOCKED; a test that
   returns without `rec.finish()` is recorded BLOCKED.
+* **A failed clause outranks whatever interrupts the body afterwards** — a
+  helper's `Blocked`, a skip, a harness exception, a missing `finish()`
+  (`verdict.classify_outcome`, remfix 2 / H1): the record is FAIL.
+* An unexpected exception with no failed clause is **FAIL(harness_error)**;
+  the gate reads it as INCOMPLETE, never RED. A scenario that does not take
+  `rec` is BLOCKED (and a guard fails the build).
+* `rec.fail_bound(name, what, bound_s, control, actual=…)`: pass what WAS
+  observed instead, so the record tells "closed with the wrong code" from
+  "never closed".
 * Waits: `await_env(pred, s, what)` (liveness → Blocked), `await_product(pred,
   bound, what, control_latency_s)` / `observe(pred, s)` (a product wait you
   classify), `Sourced(seconds, source)` for a cited product constant (the 2.0 s
@@ -99,7 +108,10 @@ sessiond children), `.client` (`httpclient.Client`), `.db`, `.wait_ready()`,
 `.child.lines("stdout"|"stderr")`, `.child.alive()`.
 
 Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
-`.wait_ready()`; a failed re-bind is BLOCKED (E5 shows the shape).
+`instance.wait_restart_ready(second)`: `Blocked` **only** when the child printed
+the product's port refusal with EADDRINUSE; any other non-ready restart raises
+`RestartFailed` (an AssertionError: record it as a failed clause — E5, O11,
+D10 and U39 show the shape; remfix 2 / H2).
 
 ## 4. Helpers you should reuse
 
@@ -130,9 +142,15 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   `open_stream(...)` (a refusal comes back as `Refusal`), `Subscriber.mark()` /
   `.since(mark)` / `.await_frames(pred, bound, what, control_latency, mark)`,
   `Frame(seq, kind, project_id, session_id, data, body_keys, raw_fields,
-  received_at)`. **Every "no frame" clause needs `run_control(sub, client,
+  received_at)`. A product frame that does not parse makes `snapshot()`/
+  `since()` raise AssertionError (FAIL); a server EOF after a green control on
+  that subscriber is FAIL, before one it is `Blocked` (remfix 2 / H5). **Every "no frame" clause needs `run_control(sub, client,
   name, mark)`** (or `run_control_on([(sub, mark), …], client, name)` for
   several clients — two sequential controls pollute each other's windows).
+* **Hang guards** — `Client.post_guarded(path, body, headers, timeout_s)`: a
+  blown timeout is FAIL(bound) when a same-client control (`GET /api/fleet`)
+  answers in under a tenth of the guard, else BLOCKED (remfix 2 / H3). Never
+  turn a `TimeoutError` into `Blocked` by hand.
 * **httpclient.py** — `Client(port, refusals_log=, allow_master_send=False)`:
   refuses the forbidden port and, unless allowed, `POST /api/master/send`
   (only INP and LIVE may). `.get/.post/.request(method, path, body=,
@@ -153,9 +171,13 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   array per line). A tmux call made **inside a pane** (`$TMUX` set — the real
   engine queries its own pane with `display-message -p` / `show -gv …` and no
   `-L`) goes to `run.pane_tmux_argv_log` as `{"argv", "tmux": $TMUX}` instead;
-  `effective_socket(argv, tmux_env)` / `pane_argv_violations(entries, pid)`
-  judge it by the socket tmux would contact (`-S`, `-L`, else `$TMUX`), and the
-  runner's Z2 scan and Z2's `tmux.pane_argv_effective_socket` both apply it.
+  `effective_socket(argv, tmux_env)` is the ONE judge of the socket tmux would
+  contact, by tmux 3.6a's getopt (`2c:CDdf:hlL:NqS:T:uUvV`): clustered flags,
+  the last `-L`, `-S` over `-L`, `$TMUX` only when neither; `argv_violation`,
+  `product_argv_violations` and `pane_argv_violations` apply it for this run,
+  in the runner's post-lane scan, Z2 (`tmux.argv`, `tmux.kill_server_ours_only`,
+  `tmux.pane_argv_effective_socket`) and the wave-4 `socket_ok`. Never read a
+  socket from a fixed argv position.
 * **browser.py waits** — `pump(page)` and `settle(predicate, bound_s=UI_BOUND_S,
   page=None) -> (value | None, elapsed)`. **Sync Playwright dispatches page
   events (request, response, console, websocket) only while a Playwright call
@@ -234,6 +256,14 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
   `parse_fork_result` reads it; O10's STAGE B wrapper is gone). Argv logged as
   JSON objects to `run.claude_argv_log`.
 * D9's counting `claude`: `shims-d9/`, log `shims.forks_log(run)`.
+* **The tmux shim REFUSES** (`shims/tmux.sh.in`, perl; env-plan §0 item 3, r3
+  post-review harness amendment): it logs the argv first and fails CLOSED
+  (exit 98, no exec) if it cannot, then exits 97 without exec for any argv that
+  is not exactly `tmux -V` and whose effective socket is not this run's
+  `shepherd-m3-q6<pid>-<k>` — the user's `default`/`shepherd` servers are never
+  reached, whatever the product or engine emits. `test_proof_tmux_shim_refuses`
+  proves it agrees with `tmuxctl.argv_violation` against a fake binary;
+  `shims.selftest_refusal` proves the production-rendered file at mint.
 * `path_mode="live"`: logging tmux + `<run0>/bin/claude`, a run-scoped symlink to
   the real engine (never the user's `~/.local/bin/claude`; §9). Any direct exec
   of the real engine uses `run.real_claude` / `realclaude.require(run)` (BLOCKED
@@ -269,6 +299,12 @@ Restarts on the same HOME/TMPDIR: `pool.start(first.root, port=first.port)` then
 * Never run a tmux client command on `default` or `shepherd`; never `kill-server`
   outside `tmuxctl.kill_server`.
 * Signals only to pids you spawned and recorded (`Popen`); never by name.
+  Teardown and the pre-run sweep signal a ledgered pid only when its current
+  start token (the product's `MacHost.process_liveness`) equals the one
+  `record_pid` stored at spawn (`teardown.signal_decision`).
+* Every `Popen`/`run` of a product or engine child passes its env through
+  `sandbox.checked_env(env, what)` at the spawn site (`spawn_drained` does it
+  for you): a dict edited after its builder is re-checked where it is used.
 * Mutations are inert fixtures or a single `active()` input switch; never plant
   a signal, kill, or teardown verb into code that runs (CLAUDE.md).
 * One sessiond per controld instance at a time (`SessiondManager` enforces it).
@@ -323,3 +359,16 @@ dangles. Nothing in this package may modify anything under `~/.local`,
   problem at the end; `live/conftest.py` makes every live module and every live
   scenario BLOCKED (`realclaude.REPAIR_MESSAGE`) if it changed; Z1's
   `files.claude_bin_link_unchanged` asserts the run left it as it found it.
+* **The ~/.local tree guard** (remfix 2, review finding 3). `hostprobe.local_tree`
+  records names, kinds, mtimes and link targets under `~/.local/bin`,
+  `~/.local/share/claude` and `~/.local/state/claude` (lstat/readlink only) in
+  the baseline and after every lane; the runner stops on any change
+  (`local_tree_changes`; a lock file of a version other than this run's engine
+  is the user's own session and is attributed, not counted), and Z1's
+  `files.local_tree_unchanged` asserts it. Z1 also compares the user's real
+  Shepherd data dir and real `$TMPDIR/Shepherd`, and Z3 the user's Shepherd
+  daemons and tmux pids, baseline vs `after-teardown.json` (H7).
+* **The runner always finishes** (H6): a crash in the waves still tears down,
+  runs wave 9 and publishes INCOMPLETE with the exception; a preflight-blocked
+  run leaves a history line; the pre-run sweep stops a dead run's ledgered
+  children whose start token still matches.

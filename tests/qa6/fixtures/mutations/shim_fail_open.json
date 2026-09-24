@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "shims/tmux.sh.in",
+ "old": "open(my $handle, '>>', $log) or fail_closed(\"cannot open $log: $!\");\nbinmode($handle, ':encoding(UTF-8)') or fail_closed(\"cannot set UTF-8 on $log: $!\");\nprint {$handle} \"$line\\n\" or fail_closed(\"cannot write $log: $!\");\nclose($handle) or fail_closed(\"cannot close $log: $!\");\n",
+ "new": "if (open(my $handle, '>>', $log)) { binmode($handle, ':encoding(UTF-8)'); print {$handle} \"$line\\n\"; close($handle); }\n",
+ "proof": "test_proof_tmux_shim_refuses",
+ "expect": "proof_tmux_shim.fails_closed_when_it_cannot_log",
+ "why": "hunter M5: the old `or exit 0` shape - a call that could not be logged still reaches tmux, invisible to Z2 (proved against a FAKE tmux binary only)"
+}

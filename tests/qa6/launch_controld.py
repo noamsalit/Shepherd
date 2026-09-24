@@ -21,6 +21,7 @@ as for a SUB instance. The console script itself is covered by every SUB run.
 from __future__ import annotations
 
 import argparse
+import errno
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -49,7 +50,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         sys.stdout.write(f"controld refuses to start: {refused}\n")
         return controld.EXIT_REFUSED
     except OSError as refused:
-        sys.stdout.write(f"controld refuses to start: port {args.port} is not available ({refused})\n")
+        # Only EADDRINUSE is a port that "is not available" (hunter L4); any other OSError is named as itself.
+        if refused.errno == errno.EADDRINUSE:
+            sys.stdout.write(f"controld refuses to start: port {args.port} is not available ({refused})\n")
+        else:
+            sys.stdout.write(f"controld refuses to start: {type(refused).__name__}: {refused}\n")
         return controld.EXIT_REFUSED
     sys.stdout.write(f"controld: http://{LOOPBACK_HOST}:{running.port} · {running.control_socket_path}\n")
     sys.stdout.flush()

@@ -21,6 +21,7 @@ import pytest
 from .. import fetchshim
 from ..browser import BrowserSession
 from ..constants import DESKTOP, VIEWPORTS
+from ..instance import RestartFailed, wait_restart_ready
 from ..pool import InstancePool
 from ..sandbox import RunContext
 from ..scenario import scenario
@@ -161,9 +162,13 @@ def test_u39_a_page_open_across_a_daemon_restart_keeps_up(pool: InstancePool, qa
         restarted = pool.start(first.root, port=port)
         request.addfinalizer(restarted.stop)
         try:
-            restarted.wait_ready()
-        except Blocked as blocked:
-            raise Blocked(f"the same-port restart did not come up: {blocked.reason}") from blocked
+            wait_restart_ready(restarted)
+        except Blocked as blocked:  # EADDRINUSE only (H2)
+            raise Blocked(f"the OS would not re-bind the port for the restart: {blocked.reason}") from blocked
+        except RestartFailed as failed:  # the product did not come back on its own root: FAIL (H2)
+            rec.check("proc.restart_ready", False, "the same-port restart is ready", str(failed))
+            rec.finish()
+            return
         if restarted.port != port:
             raise Blocked(f"the restart bound {restarted.port}, not {port}")
         relive, relive_s = settle(lambda: text_of(tab_a.locator("#stream-status")) == "live" or None, RELIVE_BOUND_S)

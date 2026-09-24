@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "verdict.py",
+ "old": "    if failed and recorder is not None:\n        interrupt =",
+ "new": "    if False and failed and recorder is not None:\n        interrupt =",
+ "proof": "test_proof_outcome_classification",
+ "expect": "proof_outcome.failed_clause_outranks_a_later_blocked",
+ "why": "hunter H1: a Blocked raised after a failed clause is published BLOCKED again (pure classification on planted recorders)"
+}

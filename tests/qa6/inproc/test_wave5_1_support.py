@@ -82,11 +82,8 @@ def open_master(inp: Inp, run: RunContext, name: str) -> Master:
 def post(m: Master, path: str, body: Mapping[str, object], timeout_s: float = 20.0) -> Response:
     client = m.client
     headers = {"Host": client.host, "Origin": client.origin, "Content-Type": "application/json"}
-    try:
-        return client.request("POST", path, body=json.dumps(dict(body)).encode("utf-8"), headers=headers,
-                              timeout_s=timeout_s)
-    except TimeoutError as error:
-        raise Blocked(f"POST {path} did not answer within {timeout_s}s (hang guard)") from error
+    # A blown hang guard is qualified by a same-client control: FAIL(bound) or BLOCKED (hunter H3).
+    return client.post_guarded(path, json.dumps(dict(body)).encode("utf-8"), headers, timeout_s)
 
 
 def data_of(response: Response) -> dict[str, object]:

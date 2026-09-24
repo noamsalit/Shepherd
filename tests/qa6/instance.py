@@ -43,7 +43,7 @@ from shepherd.store.db import open_store
 
 from . import paths
 from .httpclient import Client
-from .sandbox import InstanceRoot, PathMode, RunContext, mint_instance, real_home_env, sandbox_env
+from .sandbox import InstanceRoot, PathMode, RunContext, checked_env, mint_instance, real_home_env, sandbox_env
 from .verdict import Blocked, await_env
 
 START_LINE = re.compile(r"^controld: http://127\.0\.0\.1:(\d+) · (\S+)$")
@@ -213,7 +213,7 @@ def spawn_drained(
 ) -> Drained:
     popen = subprocess.Popen(
         argv,
-        env=dict(env),
+        env=checked_env(env, f"spawning {kind} {argv[:1]}"),
         cwd=str(cwd),
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
@@ -348,6 +348,43 @@ class Controld:
         for line in self.child.lines("stdout"):
             if STOP_LINE.match(line):
                 self.stop_line = line
+
+
+#: The product's port refusal (controld.py `main`: "controld refuses to start: port N is not
+#: available (<OSError>)"). It labels EVERY OSError that way, so the errno text decides (H2).
+PORT_REFUSAL = re.compile(r"^controld refuses to start: port \d+ is not available \((.*)\)$")
+EADDRINUSE_TEXT = ("[Errno 48]", "Address already in use")
+
+
+class RestartFailed(AssertionError):
+    """A restart on the same root did not come up, and the OS did not refuse the port: the product's."""
+
+
+def restart_failure(stdout_lines: Sequence[str], readiness: str) -> Blocked | RestartFailed:
+    """How a failed restart readiness is classified (hunter H2). Pure.
+
+    BLOCKED only when the child printed the product's port refusal with an
+    `EADDRINUSE` error (the OS would not re-bind the port: an environment
+    fact). Any other non-ready state — no start line, an exit, a scan that
+    does not advance, a traceback — is the product failing to restart on a
+    root it just ran on, which the first start's readiness controls: FAIL.
+    """
+    for line in stdout_lines:
+        match = PORT_REFUSAL.match(line)
+        if match and any(text in match.group(1) for text in EADDRINUSE_TEXT):
+            return Blocked(f"the OS would not re-bind the port (EADDRINUSE): {line!r}; readiness: {readiness}")
+    return RestartFailed(f"the restart on the same root did not come up, and it was not an EADDRINUSE refusal "
+                         f"(the first start on this root was ready): {readiness}")
+
+
+def wait_restart_ready(controld: Controld) -> None:
+    """`wait_ready` for a restart: `Blocked` only for EADDRINUSE, else `RestartFailed` (FAIL)."""
+    try:
+        controld.wait_ready()
+    except Blocked as blocked:
+        if not controld.child.alive():
+            controld.child.join_drains(2.0)
+        raise restart_failure(controld.child.lines("stdout"), blocked.reason) from blocked
 
 
 def start_controld(

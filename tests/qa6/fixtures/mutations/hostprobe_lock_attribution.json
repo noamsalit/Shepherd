@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "        if lock_version is not None and lock_version != engine_version and (before is None or after is None):",
+ "new": "        if lock_version is not None and (before is None or after is None):",
+ "proof": "test_proof_local_tree_guard",
+ "expect": "proof_local_tree.run_engine_lock_is_a_change",
+ "why": "review 3: a lock the run's own engine took under the real HOME is excused as the user's (planted snapshots)"
+}

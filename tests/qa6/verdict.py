@@ -28,7 +28,12 @@ from typing import Literal, TypeVar
 T = TypeVar("T")
 
 Verdict = Literal["PASS", "FAIL", "BLOCKED"]
-FailKind = Literal["assert", "bound"]
+#: `harness_error`: the scenario body raised something that is neither a product
+#: assertion nor `Blocked` (a harness KeyError, a refused env, a Playwright
+#: timeout) with no failed clause before it. It is recorded as FAIL so it is
+#: never lost, but the publish gate reads it as INCOMPLETE, never RED: a harness
+#: crash has proven nothing about the product (review finding 7, hunter M9).
+FailKind = Literal["assert", "bound", "harness_error"]
 
 #: How often a wait re-reads its predicate. Not a readiness signal: the
 #: predicate is.
@@ -187,10 +192,16 @@ class Recorder:
     def equal(self, name: str, expected: object, actual: object) -> bool:
         return self.check(name, expected == actual, expected, actual)
 
-    def fail_bound(self, name: str, what: str, bound_s: float, control: str) -> None:
-        """A FAIL(bound) clause (Difference 1): the caller established the control."""
+    def fail_bound(self, name: str, what: str, bound_s: float, control: str, actual: object = None) -> None:
+        """A FAIL(bound) clause (Difference 1): the caller established the control.
+
+        `actual` is what WAS observed instead (hunter M2): a stream that closed
+        promptly with the wrong code and one that never closed are different
+        failures, and the record must say which.
+        """
+        observed = "" if actual is None else f"; observed instead: {_short(actual, 400)}"
         self.clauses.append(
-            Clause(name, "fail", f"{what} within {bound_s}s", f"not observed; control: {control}", bound=True)
+            Clause(name, "fail", f"{what} within {bound_s}s", f"not observed; control: {control}{observed}", bound=True)
         )
 
     def block(self, name: str, reason: str) -> None:
@@ -253,3 +264,64 @@ class Recorder:
 def _short(value: object, limit: int = 600) -> str:
     text = value if isinstance(value, str) else repr(value)
     return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+# ----- one scenario's outcome, from its phase, its exception and its recorder --------------
+
+
+Outcome = tuple[str, str | None, str]
+
+
+def _failed_kind(recorder: Recorder) -> str:
+    return "bound" if recorder.failed and all(clause.bound for clause in recorder.failed) else "assert"
+
+
+def _failed_names(recorder: Recorder) -> str:
+    return ", ".join(f"{c.name} (expected {c.expected}; actual {c.actual})" for c in recorder.failed)[:1500]
+
+
+def classify_outcome(error: BaseException | None, when: str, recorder: Recorder | None, *,
+                     is_scenario: bool, skipped: bool = False) -> Outcome:
+    """`(verdict, fail_kind, reason)` for one phase of one test. Pure (the guards drive it).
+
+    * setup: an error is always BLOCKED (a harness that could not set up proved nothing);
+    * a failed clause **outranks** whatever interrupted the body afterwards — a
+      helper's `Blocked`, a skip, a harness exception, or a return without
+      `finish()` — so a proven FAIL is never published as BLOCKED (hunter H1);
+    * a scenario that never requested `rec` is BLOCKED, never PASS (review 6);
+    * an unexpected exception with no failed clause is FAIL(harness_error)
+      (review 7 / hunter M9), which the gate reads as INCOMPLETE.
+    """
+    if when == "setup":
+        if error is None:
+            return "PASS", None, ""
+        if isinstance(error, Blocked):
+            return "BLOCKED", None, error.reason[:2000]
+        if skipped:
+            return "BLOCKED", None, f"skipped: {str(error)[:2000]}"
+        return "BLOCKED", None, f"setup failed ({type(error).__name__}): {str(error)[:2000]}"
+    failed = recorder is not None and bool(recorder.failed)
+    if error is None:
+        if is_scenario and recorder is None:
+            return "BLOCKED", None, "harness: the scenario never requested `rec`, so nothing it checked was recorded"
+        if recorder is not None and not recorder.finished and is_scenario:
+            if failed and recorder is not None:
+                return "FAIL", _failed_kind(recorder), (f"{len(recorder.failed)} clause(s) failed, then the scenario "
+                                                        f"returned without rec.finish(): {_failed_names(recorder)}")
+            return "BLOCKED", None, "harness: the scenario returned without calling rec.finish()"
+        return "PASS", None, ""
+    text = str(error)[:2000]
+    if isinstance(error, ProductFail):
+        return "FAIL", "bound", text
+    if isinstance(error, AssertionError):
+        return "FAIL", "assert", text
+    if failed and recorder is not None:
+        interrupt = (f"Blocked: {error.reason}" if isinstance(error, Blocked)
+                     else f"{'skip' if skipped else type(error).__name__}: {text}")[:600]
+        return "FAIL", _failed_kind(recorder), (f"{len(recorder.failed)} clause(s) failed before the body was "
+                                                f"interrupted ({interrupt}): {_failed_names(recorder)}")
+    if isinstance(error, Blocked):
+        return "BLOCKED", None, error.reason[:2000]
+    if skipped:
+        return "BLOCKED", None, f"skipped: {text}"
+    return "FAIL", "harness_error", f"harness error: unexpected {type(error).__name__} in the scenario body: {text}"

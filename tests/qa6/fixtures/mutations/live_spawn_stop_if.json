@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "live/test_wave8_1_live.py",
+ "old": "    if failure is not None:\n        raise Blocked(f\"stop-if: L5's",
+ "new": "    if failure is not None and False:\n        raise Blocked(f\"stop-if: L5's",
+ "proof": "test_proof_live_spawn_stop_if",
+ "expect": "proof_live_spawn.stop_if_blocks_after_L5_failed",
+ "why": "hunter H4: after L5's spawn failed, L6/L2 re-litigate it instead of being BLOCKED by the stop-if (pure)"
+}

@@ -34,7 +34,7 @@ from ..httpclient import Client, as_dict
 from ..mutations import active
 from ..instance import Controld, Helper, SessiondManager
 from ..pool import InstancePool
-from ..sandbox import RunContext
+from ..sandbox import RunContext, checked_env
 from ..scenario import scenario
 from ..sessions import await_session, session_row, sidecar, write_sidecar
 from ..sse_rig import Subscriber, run_control, subscribe
@@ -269,7 +269,7 @@ def test_h6_dispatch_delivers_and_cannot_hang_an_agent(hooks: Hooks, rec: Record
 @scenario("C6")
 def test_c6_sessiond_required_flag_relay_schema_mismatch_stop_line(hooks: Hooks, rec: Recorder) -> None:
     controld = hooks.controld
-    bare = subprocess.run([str(paths.SESSIOND_BIN)], env=controld.env, capture_output=True, text=True, timeout=15, check=False)
+    bare = subprocess.run([str(paths.SESSIOND_BIN)], env=checked_env(controld.env, "a bare sessiond"), capture_output=True, text=True, timeout=15, check=False)
     rec.equal("proc.a_exit_2", 2, bare.returncode)
     rec.check("logs.a_names_the_flag", "--expected-schema-version" in bare.stderr, "stderr names --expected-schema-version",
               bare.stderr[-200:])
@@ -325,7 +325,7 @@ def test_c4_uninstall_replay_recompute_from_the_cli(hooks: Hooks, rec: Recorder)
     target.write_bytes(artifact.read_bytes())
 
     def cli(*args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run([str(paths.SHEPHERD_BIN), *args], env=controld.env, cwd=str(controld.root.cwd),
+        return subprocess.run([str(paths.SHEPHERD_BIN), *args], env=checked_env(controld.env, "a CLI child"), cwd=str(controld.root.cwd),
                               capture_output=True, text=True, timeout=60, check=False)
 
     dry = cli("uninstall-hooks", "--settings", str(target))
