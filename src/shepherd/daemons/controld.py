@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from shepherd.daemons.control_ingest import serve_control_ingest
+from shepherd.daemons.control_ingest import SocketInUse, claim_socket, serve_control_ingest
 from shepherd.daemons.plane import ShutdownOutcome, audit_sink, build_master, shut_down
 from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME, INGEST_SOCKET_NAME, install_shutdown_handlers
 from shepherd.host.base import HostPlatform, SocketPathTooLong
@@ -37,7 +37,7 @@ from shepherd.logs.stops import STOP_PREFIX, StopLog
 from shepherd.signals.discovery_loop import run_discovery_loop
 from shepherd.signals.hook_lane import HookLane
 from shepherd.store.db import Store, open_store
-from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION, MigrationRefused
 from shepherd.toolsurface.compose import compose_tool_surface, log_root, publish_result, transcript_root
 from shepherd.toolsurface.stream import publish
 from shepherd.web import static_root
@@ -68,7 +68,7 @@ def start(host: HostPlatform, port: int, engine_config_dir: Path | None = None) 
     The socket plan is validated **first**: `open_store` migrates a database in
     and starts a thread, and a refusal that wrote `shepherd.db` is no refusal.
     """
-    plan = host.control_socket(CONTROL_SOCKET_NAME)
+    plan = claim_socket(host.control_socket(CONTROL_SOCKET_NAME))
     ingest = host.control_socket(INGEST_SOCKET_NAME)
     db_path = host.dirs().data_dir / DB_NAME
     store = open_store(db_path)
@@ -119,7 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         running = start(detect_host(), args.port, args.engine_config_dir)
-    except SocketPathTooLong as refused:
+    except (SocketPathTooLong, SocketInUse, MigrationRefused) as refused:
         print(f"controld refuses to start: {refused}")
         return EXIT_REFUSED
     except OSError as refused:  # a held port is a refusal, like an over-long path

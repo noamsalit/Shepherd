@@ -16,8 +16,10 @@ from collections.abc import Callable
 
 from shepherd.core.frames import Frame
 from shepherd.engines.claude_code.ingest_socket import (
+    SocketInUse,
     accept_next,
     bind_listener,
+    claim_socket,
     read_lines,
     unlink_socket,
 )
@@ -29,7 +31,7 @@ from shepherd.engines.claude_code.relay_wire import (
 )
 from shepherd.host.base import SocketPlan
 
-__all__ = ["serve_control_ingest"]
+__all__ = ["SocketInUse", "claim_socket", "serve_control_ingest"]
 
 
 def serve_control_ingest(
@@ -53,7 +55,12 @@ def serve_control_ingest(
             if conn is None:
                 continue
             with conn:
-                conn.sendall(encode_hello(Hello(schema_version=schema_version, pid=os.getpid())))
+                try:
+                    conn.sendall(encode_hello(Hello(schema_version=schema_version, pid=os.getpid())))
+                except OSError:
+                    # A peer that closed before the greeting (a liveness probe,
+                    # qa6 BC-16) loses its connection, never the daemon.
+                    continue
                 try:
                     for line in read_lines(conn, shutdown):
                         on_frame(decode_frame(line))

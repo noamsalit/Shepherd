@@ -27,7 +27,7 @@ import threading
 from collections.abc import Sequence
 from types import FrameType
 
-from shepherd.engines.claude_code.ingest_socket import SHUTDOWN_DRAIN_S, serve_ingest
+from shepherd.engines.claude_code.ingest_socket import SHUTDOWN_DRAIN_S, SocketInUse, claim_socket, serve_ingest
 from shepherd.engines.claude_code.relay import RELAY_BUFFER_MAX, Relay
 from shepherd.host.base import SocketPathTooLong
 from shepherd.host.detect import detect_host, detect_peercred
@@ -68,9 +68,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     host = detect_host()
     try:
-        ingest = host.control_socket(INGEST_SOCKET_NAME)
+        ingest = claim_socket(host.control_socket(INGEST_SOCKET_NAME))
         control = host.control_socket(CONTROL_SOCKET_NAME)
-    except SocketPathTooLong as error:
+    except (SocketPathTooLong, SocketInUse) as error:
         print(f"sessiond refuses to start: {error}", file=sys.stderr)
         return EXIT_REFUSED
 
