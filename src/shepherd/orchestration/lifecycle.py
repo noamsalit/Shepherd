@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.runner import ProcState, RunnerHandle, RunnerRefusal, RunnerRefusal
+from shepherd.core.states import SessionState
 from shepherd.core.stops import DecidedBy, StopReason, Verdict
 from shepherd.core.stream import StreamEvent
 from shepherd.runner.base import PaneRef, Runner
@@ -117,15 +118,14 @@ def record_and_terminate(
     observed = observe_exit(runner=runner, handle=handle)
     recorded_at = now()
     record: dict[str, object] = {
-        "session_id": session_id,
-        "session_name": handle.session_name,
-        "recorded_at": recorded_at,
-        "exit_code": observed.exit_code,
-        "exit_signal": observed.exit_signal,
+        "session_id": session_id, "session_name": handle.session_name, "recorded_at": recorded_at,
+        "exit_code": observed.exit_code, "exit_signal": observed.exit_signal,
     }
     store.set_app_state(f"{KILL_RECORD_PREFIX}{session_id}", record)
 
     runner.terminate(handle)
+    stopped = FoldDelta(state=SessionState.STOPPED, last_event_at=recorded_at)
+    store.apply_fold_delta(session_id, stopped)
 
     row = store.get_owned_session(session_id)
     if row is None or row.ended_at is None:

@@ -235,10 +235,14 @@ def kill(
     session_id: str,
 ) -> dict[str, object]:
     """Records before killing — and that order is `lifecycle.py`'s, not repeated
-    here. A failed kill propagates its refusal rather than answering "killed"."""
+    here. A failed kill propagates its refusal rather than answering "killed"; a
+    pane the runner no longer lists is a refusal value, and `ended_at` is not that."""
     handle = handle_for(store, session_id)
     if handle is None:
         return no_pane(session_id)
+    if handle.session_name not in {pane.session_name for pane in runner.list_owned_panes()}:
+        reason = f"{session_id}: its pane is gone — nothing to kill"
+        return {"session_id": session_id, "ok": False, "killed": False, "reason": reason}
     observed = record_and_terminate(
         store=store, runner=runner, handle=handle, session_id=session_id, now=now, publish=publish
     )
