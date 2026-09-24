@@ -31,8 +31,13 @@ export function connect(onEnvelope, onStatus) {
   });
 
   // The browser retries by itself. Saying "reconnecting" is honest; retrying
-  // here in parallel would be the poll §12 forbids.
-  source.addEventListener("error", () => onStatus("reconnecting"));
+  // here in parallel would be the poll §12 forbids. But a refused stream (a
+  // 403, a wrong content type) is not retried: the source is `CLOSED` and no
+  // event will ever arrive, so saying "reconnecting" would be a promise nothing
+  // keeps (BC-35). `unreadable` is the vocabulary's word for it.
+  source.addEventListener("error", () =>
+    onStatus(source.readyState === EventSource.CLOSED ? "unreadable" : "reconnecting"),
+  );
 
   return source;
 }
