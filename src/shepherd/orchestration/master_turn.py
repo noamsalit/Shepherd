@@ -63,7 +63,9 @@ from shepherd.store.db import Store
 
 __all__ = [
     "MASTER_SESSION_KEY",
+    "OPEN_FAILED_REASON",
     "STREAM_KIND_PREFIX",
+    "TURN_FAILED_TEXT",
     "TurnDriver",
     "TurnRefused",
     "TurnStarted",
@@ -85,6 +87,14 @@ STREAM_KIND_PREFIX = "master."
 #: shutdown that blocks forever on a wedged runtime is worse than one that says
 #: the thread outlived it; the thread is a daemon, so it never holds the process.
 CLOSE_TIMEOUT_S = 30.0
+
+#: The two failure sentences a person is shown (qa6 BC-08, S8). Fixed text, never
+#: the exception: a class name and its message are internals, and the page that
+#: renders them is showing a stack's vocabulary to someone who cannot act on it.
+OPEN_FAILED_REASON = (
+    "the turn {turn_id} could not be opened — the master runtime failed to start"
+)
+TURN_FAILED_TEXT = "the turn failed inside Shepherd before it could finish"
 
 
 @dataclass(frozen=True)
@@ -178,9 +188,13 @@ class TurnDriver:
     def send_turn(self, text: str) -> TurnStarted | TurnRefused:
         """Open one turn, or say readably why not.
 
-        The slot is claimed **before** anything slow happens — the drain, the
-        runtime, the thread — so two callers racing here cannot both open a
+        The slot is claimed **before** anything slow happens — the runtime, the
+        drain, the thread — so two callers racing here cannot both open a
         turn, and a failure in any of the three releases it again.
+
+        **The runtime is built before the drain** (qa6 BC-08): the drain
+        consumes the wake set and moves the stamp, so a runtime that fails to
+        start after it would lose §12's summary to a turn that never ran.
         """
         with self._lock:
             if self._turn is not None:
@@ -195,8 +209,8 @@ class TurnDriver:
             self._turn = turn
 
         try:
-            prompt = self._opening_text(text)
             turn.runtime = self._build_master(turn.turn_id)
+            prompt = self._opening_text(text)
             turn.thread = threading.Thread(
                 target=self._run_turn,
                 args=(turn, turn.runtime, prompt),
@@ -204,11 +218,11 @@ class TurnDriver:
                 daemon=True,
             )
             turn.thread.start()
-        except Exception as error:
+        except Exception:
+            if turn.runtime is not None:
+                turn.runtime.close()
             self._release(turn)
-            return TurnRefused(
-                reason=f"the turn {turn.turn_id} could not be opened: {error!r}"
-            )
+            return TurnRefused(reason=OPEN_FAILED_REASON.format(turn_id=turn.turn_id))
         return TurnStarted(turn_id=turn.turn_id, started_at=turn.started_at)
 
     def interrupt_master(self) -> bool:
@@ -278,12 +292,12 @@ class TurnDriver:
         """
         try:
             asyncio.run(self._stream(turn, runtime, prompt))
-        except Exception as error:
+        except Exception:
             self._publish(
                 project_to_stream(
                     MasterEvent(
                         kind="error",
-                        text=repr(error),
+                        text=TURN_FAILED_TEXT,
                         tool_name=None,
                         payload={"turn_id": turn.turn_id},
                         occurred_at=self._now(),
