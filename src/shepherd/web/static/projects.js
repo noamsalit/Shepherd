@@ -57,6 +57,9 @@ const NEEDS_NAME = "A project needs a name — this one is only whitespace.";
 const NO_DESCRIPTION = "No description.";
 const NO_PATHS = "No paths yet — no session can be started here.";
 const UNTITLED = "untitled";
+//: `remove_repo` answers `{removed: false}` with no sentence of its own when
+//: the path is not registered to this project any more.
+const NOT_REMOVED = "That path was not removed — it is no longer registered to this project.";
 
 const view = {
   projects: [],
@@ -257,7 +260,6 @@ function projectRow(project) {
     row.dataset.reserved = "true";
   }
   row.dataset.projectId = project.project_id;
-  row.setAttribute("aria-current", project.project_id === view.openId ? "true" : "false");
   row.appendChild(titled("span", "proj-name", project.name));
   const meta = element("div", "proj-meta");
   // Defect 6. `create_project` is deliberately never keyed by name (E1), so two
@@ -288,14 +290,66 @@ function projectRow(project) {
   return row;
 }
 
+//: BC-18 and BC-12 (R5). The list used to be rebuilt from nothing on every
+//: event: every row was a new node, so a keyboard user's focus fell to
+//: `<body>` and a press that began on a row ended on a node that no longer
+//: existed. A row is now **kept** while what it shows is unchanged — keyed by
+//: project id, compared by the text it was drawn from — and only rows that
+//: changed are redrawn. A kept row is not detached unless the server's order
+//: moved it, because detaching a node blurs it; and when the focused row had
+//: to be redrawn or moved, focus follows its key to where it now is.
+const drawn = new WeakMap();
+
+function rowSignature(project) {
+  return JSON.stringify([project, unique(project)]);
+}
+
+function keptRow(existing, project) {
+  const signature = rowSignature(project);
+  if (existing !== undefined && drawn.get(existing) === signature) {
+    return existing;
+  }
+  const row = projectRow(project);
+  drawn.set(row, signature);
+  return row;
+}
+
+function focusedKey(host) {
+  const active = document.activeElement;
+  if (active === null || !host.contains(active)) {
+    return null;
+  }
+  const row = active.closest(".proj-row");
+  return row === null ? null : row.dataset.projectId;
+}
+
 function renderList() {
   const host = document.getElementById("proj-list");
   if (host === null) {
     return;
   }
-  host.replaceChildren();
-  for (const project of ordered(view.projects)) {
-    host.appendChild(projectRow(project));
+  const focused = focusedKey(host);
+  const existing = new Map();
+  for (const node of host.children) {
+    existing.set(node.dataset.projectId, node);
+  }
+  const rows = ordered(view.projects).map((project) =>
+    keptRow(existing.get(project.project_id), project)
+  );
+  for (const node of [...host.children]) {
+    if (!rows.includes(node)) {
+      node.remove();
+    }
+  }
+  rows.forEach((row, index) => {
+    row.setAttribute("aria-current", row.dataset.projectId === view.openId ? "true" : "false");
+    if (host.children[index] !== row) {
+      host.insertBefore(row, host.children[index] || null);
+    }
+  });
+  const target = rows.find((row) => row.dataset.projectId === focused);
+  if (target !== undefined && document.activeElement !== target) {
+    target.focus();
   }
 }
 
@@ -346,11 +400,21 @@ function pathRow(repo) {
   return row;
 }
 
+//: R5's other half. `reload()` paints the detail twice — once with the detail
+//: already held, once with the fresh read — and each pass used to replace
+//: `#proj-edit`, so a press on Edit during an event-driven re-read was released
+//: on a node that was gone and the click never happened. The pane is left
+//: alone when what it would show is what it already shows.
 function renderDetail() {
   const host = document.getElementById("proj-detail");
   if (host === null) {
     return;
   }
+  const signature = JSON.stringify([view.detail, view.status]);
+  if (drawn.get(host) === signature) {
+    return;
+  }
+  drawn.set(host, signature);
   host.replaceChildren();
   const project = view.detail;
   if (project === null) {
@@ -589,8 +653,16 @@ async function openProjectDialog(project) {
 // detail it was opened from: add and remove act one at a time against the
 // store, and a list that was a copy would disagree with the allowlist the
 // moment either of them refused.
+//
+// BC-12 (R4). The read names the project it was issued for, and its answer is
+// dropped if the dialog has since been opened on another one: A's slow read
+// used to land in B's dialog and list A's paths under B's name.
 async function loadDraftPaths() {
+  const projectId = draft.project.project_id;
   const data = await read(`${API}/${idOf(draft.project)}/repos`);
+  if (draft.project === null || draft.project.project_id !== projectId) {
+    return;
+  }
   draft.repos = data ? data.repos : [];
   renderDraftPaths();
 }
@@ -637,8 +709,24 @@ async function addDraftPath() {
   await reload();
 }
 
+//: BC-24. A refused removal was silent — the list was re-read and nothing was
+//: said. It is shown the way a refused add is.
 async function removeDraftPath(repo) {
-  await write(`${API}/${idOf(draft.project)}/repos/remove`, { repo_id: repo.repo_id });
+  const answer = await write(`${API}/${idOf(draft.project)}/repos/remove`, {
+    repo_id: repo.repo_id,
+  });
+  if (answer === null) {
+    showRefusal("p-refusal", view.status);
+    return;
+  }
+  if (!answer.removed) {
+    // The list on screen is out of date by exactly this path: say so, then
+    // re-read it so the row that was not there any more goes.
+    showRefusal("p-refusal", NOT_REMOVED);
+    await loadDraftPaths();
+    return;
+  }
+  showRefusal("p-refusal", null);
   await loadDraftPaths();
   await reload();
 }
@@ -723,12 +811,16 @@ async function submitProject() {
     // redundant pass rebuilds every row under whatever click is in flight.
     return;
   }
+  // BC-24. Each step that lands moves the dialog's baseline, so a save retried
+  // after a later step was refused sends only what has not happened yet: the
+  // rename is an audited write, and a second one records nothing that is true.
   if (name !== editing.name) {
     const answer = await write(`${API}/${idOf(editing)}/rename`, { name });
     if (answer === null || !answer.renamed) {
       showRefusal("p-refusal", answer === null ? view.status : answer.refused);
       return;
     }
+    draft.project = { ...draft.project, name };
   }
   if (description !== (editing.description || "")) {
     // Absent **clears** it, exactly as it does at creation — so an emptied box
@@ -742,6 +834,7 @@ async function submitProject() {
       showRefusal("p-refusal", answer === null ? view.status : answer.refused);
       return;
     }
+    draft.project = { ...draft.project, description: description || null };
   }
   document.getElementById("dlg-project").close();
   await reload();

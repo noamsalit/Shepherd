@@ -329,6 +329,14 @@ REQUIRED_SETTINGS_ASSIGNMENTS = {
     "state.level = autonomy.level",
     "state.level = data.level",
     "pick.onclick = () => choose(option.level)",
+    # qa6 BC-12 (R2): the last click is the intent, recorded synchronously at
+    # the click, and one write is in flight at a time — so an older click's
+    # reply can never be the level the daemon is left holding. These three are
+    # bookkeeping, not renders: `state.level` above is still written only from
+    # a confirmed reply.
+    "autonomy.intent = level",
+    "autonomy.sending = true",
+    "autonomy.sending = false",
     # What the other two reads brought back, held so a re-render does not
     # re-ask — which is the polling §12 forbids, arriving by the back door.
     "state.audit = audit.records",
