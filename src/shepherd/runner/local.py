@@ -125,10 +125,11 @@ CLIENT_FORMAT = "#{client_tty}"
 #: confined to characters no shell re-reads.
 SINK_PATH_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
 
-#: How long a stopped `attach` stream waits before looking for more bytes. Not a
-#: clock: it spells no instant and `tests/boundaries/test_one_clock.py` is about
-#: who may write a stamp.
+#: How long an idle `attach` stream waits before looking for more bytes, and how
+#: often, at most, it asks whether its pane is still there (BC-09). Not clocks: they
+#: spell no instant and `tests/boundaries/test_one_clock.py` is about who may write a stamp.
 STREAM_POLL_S = 0.05
+STREAM_LIVENESS_S = 0.5
 
 
 @dataclass(frozen=True)
@@ -219,18 +220,23 @@ class _PipeStream:
     """The tail of the file `pipe-pane` is appending to, and the way to stop it."""
 
     path: Path
-    stop: Callable[[], None]
+    stop: Callable[[], object]
+    alive: Callable[[], bool]
     closed: bool = False
 
     def chunks(self) -> Iterator[bytes]:
+        """Until closed, or until the pane is gone and its tail has been read (BC-09)."""
+        gone, idle = False, 0
         with self.path.open("rb") as handle:
             while True:
                 data = handle.read()
                 if data:
                     yield data
                     continue
-                if self.closed:
+                if self.closed or gone:
                     return
+                idle += 1
+                gone = idle % round(STREAM_LIVENESS_S / STREAM_POLL_S) == 0 and not self.alive()
                 time.sleep(STREAM_POLL_S)
 
     def close(self) -> None:
@@ -363,11 +369,9 @@ class LocalRunner:
         sink.touch()
         spot = target(handle.session_name)
         self._checked("pipe-pane", "-o", "-t", spot, f"cat >> {sink}")
-
-        def stop() -> None:
-            self._checked("pipe-pane", "-t", spot)
-
-        return _PipeStream(path=sink, stop=stop)
+        # `_run`, not `_checked`: unpiping a pane tmux already removed is the normal end.
+        return _PipeStream(path=sink, stop=lambda: self._run("pipe-pane", "-t", spot),
+                           alive=lambda: self.probe(handle).alive)
 
     def snapshot(self, handle: RunnerHandle, scrollback: int) -> bytes:
         """That much scrollback **plus the visible pane**, ANSI intact (T9-1).
