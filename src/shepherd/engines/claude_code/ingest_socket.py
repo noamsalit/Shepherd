@@ -93,14 +93,42 @@ def unlink_socket(path: Path) -> None:
             raise
 
 
+def owned_inode(path: Path) -> int:
+    """The inode an owner bound at `path`, read right after its bind."""
+    return os.stat(path).st_ino
+
+
+def unlink_owned_socket(path: Path, inode: int) -> None:
+    """Unlink `path` only if it is still the socket this owner bound.
+
+    A newer owner may have replaced the path since the bind (a stale-reclaim
+    after this owner stopped accepting); its socket is not ours to remove.
+    """
+    try:
+        current = os.stat(path).st_ino
+    except FileNotFoundError:
+        return
+    if current == inode:
+        unlink_socket(path)
+
+
 def _is_live(path: Path) -> bool:
-    """Whether a listener accepts on `path` — connect, then close unread."""
+    """Whether a listener accepts on `path` — connect, then close unread.
+
+    Only a refusal or an absence proves nobody is serving it. Any other error
+    (a probe that timed out, would block, …) met a listener that may be busy,
+    so the path is treated as held: a false refusal is a retry, a false
+    "stale" is the theft BC-16 refuses. Limit: a macOS listener whose backlog
+    is full also answers `ECONNREFUSED`, which no probe can tell apart.
+    """
     probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     probe.settimeout(CLAIM_PROBE_TIMEOUT_S)
     try:
         probe.connect(str(path))
-    except OSError:  # refused, absent, or not a socket: nobody is serving it
+    except (ConnectionRefusedError, FileNotFoundError):
         return False
+    except OSError:
+        return True
     finally:
         probe.close()
     return True
@@ -210,6 +238,7 @@ def serve_ingest(
     start binds instead of failing with `EADDRINUSE`.
     """
     listener = bind_listener(plan)
+    inode = owned_inode(plan.path)
     try:
         while not shutdown.is_set():
             conn = accept_next(listener)
@@ -223,4 +252,4 @@ def serve_ingest(
     finally:
         listener.close()
         on_shutdown()
-        unlink_socket(plan.path)
+        unlink_owned_socket(plan.path, inode)

@@ -358,12 +358,29 @@ function facts(pairs) {
 //: is out costs one more audited write, not one per click.
 const autonomy = { intent: null, sending: false };
 
+//:
+//: REMFIX-1 (hunter H4, M4): every confirmed reply is kept in `state.level`
+//: before the next write goes out, and the panel is repainted whether the
+//: last write landed or not — a write that lands and is then superseded by
+//: one that fails leaves the daemon on the landed level, and the panel must
+//: say so beside the refusal. A later success clears either failure note.
 async function sendIntent() {
   const data = await write(AUTONOMY, { level: autonomy.intent });
-  if (data !== null && data.level !== autonomy.intent) {
+  if (data === null) {
+    return null;
+  }
+  state.level = data.level;
+  if (data.level !== autonomy.intent) {
     return sendIntent();
   }
   return data;
+}
+
+function clearFailureNote() {
+  const note = slot("settings-note");
+  if (note.textContent.startsWith(NOT_MADE) || note.textContent === UNREACHABLE) {
+    note.replaceChildren();
+  }
 }
 
 async function choose(level) {
@@ -374,13 +391,9 @@ async function choose(level) {
   autonomy.sending = true;
   try {
     const data = await sendIntent();
-    if (data === null) {
-      return;
+    if (data !== null) {
+      clearFailureNote();
     }
-    if (slot("settings-note").textContent.startsWith(NOT_MADE)) {
-      slot("settings-note").replaceChildren();
-    }
-    state.level = data.level;
     renderPanel();
   } finally {
     autonomy.sending = false;

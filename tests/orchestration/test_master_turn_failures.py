@@ -145,3 +145,54 @@ def test_a_runtime_built_for_a_turn_that_fails_to_open_is_closed(
     assert not driver.is_running()
     assert built.sent == [], "a turn that failed to open still reached the runtime"
     assert built.closed == 1, "the runtime built for a refused turn was never closed"
+
+
+class CloseRaises(RecordingMaster):
+    """A runtime whose `close()` itself fails — the second failure in a row."""
+
+    def close(self) -> None:
+        super().close()
+        raise RuntimeError("QA6-REMFIX-1-CLOSE-FAILED")
+
+
+def test_a_close_that_raises_on_a_failed_open_still_releases_the_slot(
+    store: Store, recorder: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """REMFIX-1 #2 (hunter H2): the drain fails, then the runtime's `close()` fails.
+
+    The open-failure path closed the runtime and *then* released the slot, so a
+    raising `close()` skipped the release and every later turn was refused with
+    "a turn is already running" for the life of the daemon. The release is now in
+    a `finally`, `_run_turn`'s shape; the close's own error still surfaces.
+    """
+    built = CloseRaises(events=(an_event("turn_ended"),))
+    after = RecordingMaster(events=(an_event("turn_ended"),))
+    queue: list[RecordingMaster] = [built, after]
+    real_set_app_state = store.set_app_state
+    failing = {"on": True}
+
+    def the_store_fails_once(key: str, value: str) -> None:
+        if failing["on"]:
+            failing["on"] = False
+            raise OSError("disk I/O error")
+        real_set_app_state(key, value)
+
+    monkeypatch.setattr(store, "set_app_state", the_store_fails_once)
+    driver = TurnDriver(
+        store=store,
+        build_master=lambda _turn_id: queue.pop(0),
+        publish=recorder.publish,
+        withdraw_turn_approvals=recorder.withdraw,
+        now=lambda: TURN_OPENED,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="QA6-REMFIX-1-CLOSE-FAILED"):
+            driver.send_turn("the turn that cannot open")
+        assert built.closed == 1
+        assert not driver.is_running(), "a raising close kept the slot"
+
+        second = driver.send_turn("the next turn")
+        assert isinstance(second, TurnStarted), second
+        assert driver.wait_for_turn(ARRIVAL_TIMEOUT_S)
+    finally:
+        finish(driver)

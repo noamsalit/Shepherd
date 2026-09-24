@@ -219,9 +219,13 @@ class TurnDriver:
             )
             turn.thread.start()
         except Exception:
-            if turn.runtime is not None:
-                turn.runtime.close()
-            self._release(turn)
+            # `_run_turn`'s shape: a `close()` that raises must not skip the
+            # release, or every later turn is refused as "already running".
+            try:
+                if turn.runtime is not None:
+                    turn.runtime.close()
+            finally:
+                self._release(turn)
             return TurnRefused(reason=OPEN_FAILED_REASON.format(turn_id=turn.turn_id))
         return TurnStarted(turn_id=turn.turn_id, started_at=turn.started_at)
 

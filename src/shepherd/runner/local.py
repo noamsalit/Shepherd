@@ -65,6 +65,7 @@ from __future__ import annotations
 import re
 import subprocess
 import time
+from subprocess import TimeoutExpired
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,6 +131,10 @@ SINK_PATH_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
 #: spell no instant and `tests/boundaries/test_one_clock.py` is about who may write a stamp.
 STREAM_POLL_S = 0.05
 STREAM_LIVENESS_S = 0.5
+
+#: How long one multiplexer call may run. `DELIVERY_LOCK` is held across runner calls, so
+#: one wedged call would otherwise hold every delivery; `_run` refuses it (REMFIX-1).
+TMUX_CALL_TIMEOUT_S = 10.0
 
 
 @dataclass(frozen=True)
@@ -207,7 +212,8 @@ def make_run_argv(permitted: frozenset[str], commands: frozenset[str]) -> RunArg
         check_tmux_argv(argv, permitted=permitted, commands=commands)
         check_tmux_argv(_tmux_tail(argv), permitted=permitted, commands=commands)
         _names_the_binary(argv)
-        completed = subprocess.run(argv, capture_output=True, check=False)
+        completed = subprocess.run(argv, capture_output=True, check=False,
+                                   timeout=TMUX_CALL_TIMEOUT_S)
         return CommandResult(
             rc=completed.returncode, stdout=completed.stdout, stderr=completed.stderr
         )
@@ -275,6 +281,8 @@ class LocalRunner:
         except FileNotFoundError as error:
             self._count(AnomalyKind.TMUX_UNAVAILABLE, f"the tmux binary is not on PATH: {error}")
             raise RunnerRefusal(f"tmux is not available on this host: {argv!r}") from error
+        except TimeoutExpired as error:
+            raise RunnerRefusal(f"tmux timed out after {TMUX_CALL_TIMEOUT_S}s: {argv!r}") from error
 
     def _checked(self, *words: str, prefix: tuple[str, ...] = ()) -> CommandResult:
         """`_run`, refusing a non-zero rc rather than reading a half answer."""
@@ -330,9 +338,7 @@ class LocalRunner:
         bootstrap = session_name(BOOTSTRAP_SESSION_ID)
         if self._run("has-session", "-t", target(bootstrap)).rc == 0:
             return
-        self._checked(
-            "new-session", "-d", "-s", bootstrap, prefix=self.launch.prefix
-        )
+        self._checked("new-session", "-d", "-s", bootstrap, prefix=self.launch.prefix)
         self._checked("set-option", "-g", "status", "off")
 
     def start(self, spec: SessionSpec) -> RunnerHandle:
@@ -392,13 +398,8 @@ class LocalRunner:
         A2: writing to `#{pane_tty}` delivers **zero** bytes to the program and
         prints the text on the screen instead.
         """
-        self._checked(
-            "send-keys",
-            "-H",
-            "-t",
-            target(handle.session_name),
-            *[f"{byte:02x}" for byte in data],
-        )
+        spot = target(handle.session_name)
+        self._checked("send-keys", "-H", "-t", spot, *[f"{byte:02x}" for byte in data])
 
     def attached_clients(self, handle: RunnerHandle) -> int:
         """`list-clients` for this one session: one line per client, counted.
@@ -431,9 +432,8 @@ class LocalRunner:
 
     def resize(self, handle: RunnerHandle, cols: int, rows: int) -> None:
         """E-M3-22: this forces `window-size=manual`, so a later human attach is clipped."""
-        self._checked(
-            "resize-window", "-t", target(handle.session_name), "-x", str(cols), "-y", str(rows)
-        )
+        spot = target(handle.session_name)
+        self._checked("resize-window", "-t", spot, "-x", str(cols), "-y", str(rows))
 
     def interrupt(self, handle: RunnerHandle) -> None:
         """Escape — never a signal to a pid (D43, N14)."""

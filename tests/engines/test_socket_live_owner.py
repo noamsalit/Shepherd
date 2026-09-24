@@ -20,6 +20,8 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import pytest
+
 from shepherd.core.frames import Frame
 from shepherd.daemons.control_ingest import serve_control_ingest
 from shepherd.engines.claude_code import ingest_socket
@@ -209,3 +211,137 @@ def test_an_absent_socket_is_claimed(tmp_path: Path) -> None:
 def test_socket_in_use_is_not_an_oserror() -> None:
     """`controld.main` reads any `OSError` as a held port; this refusal is not one."""
     assert not issubclass(ingest_socket.SocketInUse, OSError)
+
+
+# ----- REMFIX-1 #4: only a refusal or an absence is stale; an owner unlinks only its own
+
+
+class _ProbeFails:
+    """A probe socket whose `connect` fails with one chosen error."""
+
+    error: OSError = OSError()
+
+    def __init__(self, *_args: object) -> None:
+        pass
+
+    def settimeout(self, _value: float) -> None:
+        pass
+
+    def connect(self, _address: str) -> None:
+        raise self.error
+
+    def close(self) -> None:
+        pass
+
+
+def _stale_file(plan: SocketPlan) -> None:
+    plan.path.parent.mkdir(parents=True, exist_ok=True)
+    left = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    left.bind(str(plan.path))
+    left.close()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [TimeoutError("timed out"), BlockingIOError(11, "would block"), OSError(5, "EIO")],
+    ids=["timeout", "would-block", "other-oserror"],
+)
+def test_a_probe_that_cannot_prove_the_path_stale_is_a_refusal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: OSError
+) -> None:
+    """Reviewer #3 / hunter H1: a probe that timed out met a listener too busy to
+    accept, not an absent one — reading it as stale unlinked a live socket."""
+    plan = plan_for(tmp_path)
+    _stale_file(plan)
+    fails = type("Fails", (_ProbeFails,), {"error": error})
+    monkeypatch.setattr(ingest_socket.socket, "socket", fails)
+    refusal = claim_refusal(plan)
+    assert isinstance(refusal, ingest_socket.SocketInUse), refusal
+
+
+@pytest.mark.parametrize(
+    "error",
+    [ConnectionRefusedError(61, "refused"), FileNotFoundError(2, "absent")],
+    ids=["refused", "absent"],
+)
+def test_a_refused_or_absent_probe_is_stale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: OSError
+) -> None:
+    """The control: the two errors that do prove nobody is serving the path."""
+    plan = plan_for(tmp_path)
+    _stale_file(plan)
+    fails = type("Fails", (_ProbeFails,), {"error": error})
+    monkeypatch.setattr(ingest_socket.socket, "socket", fails)
+    assert claim_refusal(plan) is None
+
+
+def _replace_with_another_owner(path: Path) -> tuple[socket.socket, int]:
+    path.unlink()
+    other = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    other.bind(str(path))
+    other.listen(1)
+    return other, os.stat(path).st_ino
+
+
+def test_an_ingest_owner_whose_path_was_replaced_leaves_it(tmp_path: Path) -> None:
+    """Hunter H1: the shutdown unlink removed whatever was at the path, including
+    a newer owner's socket. It now removes only the inode it bound."""
+    plan = plan_for(tmp_path, "sessiond")
+    shutdown = threading.Event()
+    owner = threading.Thread(
+        target=serve_ingest,
+        kwargs={"plan": plan, "on_frame": lambda _frame: None, "on_shutdown": lambda: None,
+                "shutdown": shutdown},
+        daemon=True,
+    )
+    owner.start()
+    await_true(plan.path.exists, "the ingest listener never bound")
+    other, inode = _replace_with_another_owner(plan.path)
+    try:
+        shutdown.set()
+        owner.join(CEILING_S)
+        assert not owner.is_alive()
+        assert plan.path.exists(), "the old owner unlinked the newer owner's socket"
+        assert os.stat(plan.path).st_ino == inode
+    finally:
+        other.close()
+
+
+def test_a_control_owner_whose_path_was_replaced_leaves_it(tmp_path: Path) -> None:
+    plan = plan_for(tmp_path)
+    shutdown, bound = threading.Event(), threading.Event()
+    owner = threading.Thread(
+        target=serve_control_ingest,
+        kwargs={"plan": plan, "schema_version": EXPECTED_SCHEMA_VERSION,
+                "on_frame": lambda _frame: None, "shutdown": shutdown, "bound": bound},
+        daemon=True,
+    )
+    owner.start()
+    assert bound.wait(CEILING_S), "the owner never bound"
+    other, inode = _replace_with_another_owner(plan.path)
+    try:
+        shutdown.set()
+        owner.join(CEILING_S)
+        assert not owner.is_alive()
+        assert plan.path.exists(), "the old owner unlinked the newer owner's socket"
+        assert os.stat(plan.path).st_ino == inode
+    finally:
+        other.close()
+
+
+def test_an_owner_still_unlinks_its_own_socket(tmp_path: Path) -> None:
+    """The control: with nothing replaced, shutdown leaves no file behind (F15)."""
+    plan = plan_for(tmp_path)
+    shutdown, bound = threading.Event(), threading.Event()
+    owner = threading.Thread(
+        target=serve_control_ingest,
+        kwargs={"plan": plan, "schema_version": EXPECTED_SCHEMA_VERSION,
+                "on_frame": lambda _frame: None, "shutdown": shutdown, "bound": bound},
+        daemon=True,
+    )
+    owner.start()
+    assert bound.wait(CEILING_S), "the owner never bound"
+    shutdown.set()
+    owner.join(CEILING_S)
+    assert not owner.is_alive()
+    assert not plan.path.exists()

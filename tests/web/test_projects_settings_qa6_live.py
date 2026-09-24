@@ -478,3 +478,82 @@ def test_a_retried_save_does_not_resend_the_rename(
     assert isinstance(stored, dict)
     assert (stored["name"], stored["description"]) == ("alpha2", "new")
     assert shipped.page_errors == []
+
+
+# ----- REMFIX-1 #3: a landed write is painted even when the next one fails ---------
+
+
+def test_a_landed_level_is_shown_when_the_superseding_write_fails(
+    shipped: Shipped, client: Client
+) -> None:
+    """Hunter H4: level 2, click 3 (lands), click 2 while 3 is out (refused).
+
+    The reply for 3 was not the intent, so the page recursed without keeping
+    it, and the refusal path painted nothing — the panel went on pressing 2
+    while the daemon held 3. The page must show what the daemon holds (3), and
+    say the change to 2 was not made.
+    """
+    page = shipped.page
+    assert client.request("/api/autonomy").json()["data"] == {"level": 2}
+    open_autonomy(page)
+    seen = {"posts": 0}
+
+    def second_post_refused(route: Route) -> None:
+        if route.request.method != "POST":
+            route.continue_()
+            return
+        seen["posts"] += 1
+        if seen["posts"] == 1:
+            route.continue_()
+        else:
+            route.fulfill(
+                status=400, content_type="application/json", body=refused("remfix-h4")
+            )
+
+    page.route("**/api/autonomy", second_post_refused)
+    install_shim(page, r"/api/autonomy$", hold=1)
+
+    page.locator("#settings-panel button.opt", has_text=AUTO).click()
+    page.wait_for_function("() => window.__shim.held.length === 1")
+    page.locator("#settings-panel button.opt", has_text=ASK).click()
+    assert page.evaluate("() => window.__releaseHeld()") == 1
+    page.wait_for_function("() => window.__shim.consumed >= 2")
+
+    assert client.request("/api/autonomy").json()["data"] == {"level": 3}
+    note = page.locator("#settings-note").text_content() or ""
+    assert "remfix-h4" in note, note
+    assert (pressed(page, AUTO), pressed(page, ASK)) == ("true", "false")
+    assert seen["posts"] == 2
+    page.unroute("**/api/autonomy", second_post_refused)
+    assert shipped.page_errors == []
+
+
+def test_a_later_success_clears_the_unreachable_note(shipped: Shipped, client: Client) -> None:
+    """Hunter M4: a success cleared a refusal's note but left "did not reach"."""
+    page = shipped.page
+    open_autonomy(page)
+
+    def abort(route: Route) -> None:
+        if route.request.method == "POST":
+            route.abort()
+        else:
+            route.continue_()
+
+    page.route("**/api/autonomy", abort)
+    page.locator("#settings-panel button.opt", has_text=AUTO).click()
+    assert eventually(
+        page,
+        "(want) => document.getElementById('settings-note').textContent === want",
+        SETTINGS_UNREACHABLE,
+    ), page.locator("#settings-note").text_content()
+    page.unroute("**/api/autonomy", abort)
+
+    page.locator("#settings-panel button.opt", has_text=AUTO).click()
+    assert eventually(
+        page,
+        "() => document.querySelector('#settings-panel button.opt[aria-pressed=\"true\"]')"
+        "?.textContent.includes('Approve automatically') === true",
+    )
+    assert client.request("/api/autonomy").json()["data"] == {"level": 3}
+    assert page.locator("#settings-note").text_content() == ""
+    assert shipped.page_errors == []

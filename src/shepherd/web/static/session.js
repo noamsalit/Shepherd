@@ -251,6 +251,29 @@ function whyNote(row) {
   return note;
 }
 
+// REMFIX-1 (BC-13's refresh): the actions slot is redrawn only when what it
+// was drawn from changed — the session, its `next_actions[]` and the two
+// fields `whyNote` reads. Every refresh used to rebuild it, so any event, for
+// any session, closed an open `why?` and dropped the focus of a reader on an
+// action. Keyed by the slot, compared by signature, as `projects.js`'s `drawn`
+// does for its rows. Opening a session (`force`) always draws afresh.
+const actionsDrawn = new WeakMap();
+
+function paintActions(row, force) {
+  const host = slot("session-actions");
+  const signature = JSON.stringify([
+    row.session_id,
+    row.next_actions,
+    row.decided_by,
+    row.confidence,
+  ]);
+  if (!force && actionsDrawn.get(host) === signature) {
+    return;
+  }
+  actionsDrawn.set(host, signature);
+  host.replaceChildren(actionList(row), whyNote(row));
+}
+
 // D29's marker, after a rename that has been answered. `local_only` is the
 // server's own verdict (`toolsurface/tools_rename.py::project_rename`), not a
 // re-derivation: the page renders the answer it was given.
@@ -363,7 +386,7 @@ export function refreshSessionHeader(row) {
   fill("session-chip", row.bucket);
   fill("session-state", row.state);
   fill("session-why", askOf(row));
-  slot("session-actions").replaceChildren(actionList(row), whyNote(row));
+  paintActions(row, false);
 }
 
 function closeAttached() {
@@ -409,7 +432,7 @@ export function renderSession(row) {
   // the em dash `fill` uses everywhere — an unknown shown, not hidden
   // (principle 5) — with the honest `[why?]` disclosure beside it.
   fill("session-why", askOf(row));
-  slot("session-actions").replaceChildren(actionList(row), whyNote(row));
+  paintActions(row, true);
 
   // U17's card. Not awaited: the terminal below is what this function returns,
   // and a card that waited on the network would hold the pane's whole render

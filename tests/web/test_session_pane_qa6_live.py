@@ -497,3 +497,76 @@ def test_a_slow_rename_reply_does_not_paint_another_session(
     assert text(page, "#session-title") == "QA6 R session B"
     assert text(page, "#session-rename-status") == ""
     assert desktop.errors == [], desktop.errors
+
+
+# ----- REMFIX-1 #1: a header refresh keeps an open `why?` and the focus -------------
+
+
+def test_a_header_refresh_keeps_an_open_why_and_the_focus(
+    store: Store, project: str, desktop: Browser
+) -> None:
+    """BC-13's refresh redrew the actions slot on every event, for any session.
+
+    A reader who had opened `why?` and tabbed to an action lost both the moment
+    **another** session's event arrived: `replaceChildren` built a new, closed
+    disclosure and the focused link was detached, so focus fell to `<body>`.
+    The actions and the evidence did not change, so nothing in the slot may.
+    The positive signal that the refresh ran is A's title, changed in the store
+    before B's event and painted by the same header pass.
+    """
+    from shepherd.core.stops import ActionSource, NextAction, NextActionKind
+
+    reading = attached_session(store, project, "eng-why-a")
+    other = attached_session(store, project, "eng-why-b")
+    store.apply_stop_verdict(
+        session_id=reading.id,
+        verdict=Verdict(
+            stop_reason=StopReason.COMPLETED,
+            bucket=Bucket.FINISHED,
+            why="qa6 remfix why",
+            confidence=0.5,
+            decided_by=DecidedBy.DECLARED,
+            next_actions=(
+                NextAction(
+                    text="open the docs",
+                    kind=NextActionKind.EXTERNAL,
+                    target="https://example.invalid/docs",
+                    source=ActionSource.DECLARED,
+                ),
+            ),
+            waiting_on=None,
+            missing=(),
+        ),
+        ended_at="2026-09-16T10:00:20.000Z",
+        exit_code=None,
+    )
+    store.apply_fold_delta(reading.id, FoldDelta(state=SessionState.STOPPED, last_event_at=NOW))
+    page = desktop.page
+    page.reload()
+    page.wait_for_selector("#page-shepherd:not([hidden])", state="attached")
+    open_session(page, reading)
+
+    page.locator("#session-actions .why-summary").click()
+    assert page.locator("#session-actions details.why-note").get_attribute("open") is not None
+    page.locator("#session-actions a.action-link").focus()
+    assert page.evaluate(
+        "() => document.activeElement?.classList.contains('action-link') === true"
+    )
+
+    store.apply_title(reading.id, "QA6 refreshed", "user")
+    publish_state(other)
+    page.wait_for_function(
+        '() => document.getElementById("session-title").textContent === "QA6 refreshed"',
+        timeout=FOLLOW_MS,
+    )
+
+    kept = page.evaluate(
+        """() => ({
+             open: document.querySelector("#session-actions details.why-note")?.open === true,
+             focused: document.activeElement?.classList.contains("action-link") === true,
+             inside: document.getElementById("session-actions")
+                       .contains(document.activeElement),
+           })"""
+    )
+    assert kept == {"open": True, "focused": True, "inside": True}, kept
+    assert desktop.errors == [], desktop.errors

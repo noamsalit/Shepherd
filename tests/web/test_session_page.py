@@ -302,6 +302,10 @@ def test_pty_bytes_never_reach_innerHTML() -> None:
     inspected = pty_lines(text)
     assert any("term.write(" in line for line in inspected), inspected
     assert any("data.text" in line for line in inspected), inspected
+    # REMFIX-1: the snapshot's re-termination is on the frame path too. Its body
+    # is outside this scan (its parameter is `capture`), so it has a scan of its
+    # own below — and this line proves the frame path still reaches it.
+    assert any("snapshotForEmulator(" in line for line in inspected), inspected
 
     assert html_sink_findings(text) == []
     assert pty_path_findings(text) == []
@@ -914,3 +918,61 @@ def test_the_stylesheet_owns_every_class_the_session_pane_wears() -> None:
     assert "session-view" in worn and "choice" in worn, sorted(worn)
     assert "bucket-needs_you" in styled, "the stylesheet scan found no rules"
     assert sorted(worn - styled) == [], sorted(worn - styled)
+
+
+#: What `snapshotForEmulator`'s body may never name (REMFIX-1, P15's blind spot):
+#: a DOM reach, a node write, or any HTML parser — the function is a pure
+#: bytes-in/bytes-out transform, and its one caller is `term.write`.
+SNAPSHOT_FORBIDDEN = (
+    "document",
+    "window",
+    ".append",
+    "textContent",
+    "HTML",
+    "DOMParser",
+    "createContextualFragment",
+    "Element",
+)
+
+_RETURN = re.compile(r"\breturn\b([^;]*);")
+_UINT8_RETURN = re.compile(r"^\s*(?:new\s+Uint8Array\(|Uint8Array\.from\()")
+
+
+def snapshot_findings(text: str) -> list[str]:
+    """Every way `snapshotForEmulator`'s body leaves the pure-transform shape.
+
+    The pty scan above does not reach this body: the parameter is `capture`,
+    not a `PTY_TOKENS` word, and a declaration header is no allowed shape. So
+    the body is read here — a forbidden name is a finding, and so is any
+    `return` whose value is not a fresh `Uint8Array`.
+    """
+    body = block_after(text, "function snapshotForEmulator")
+    assert body is not None, "arrival: snapshotForEmulator has no body to scan"
+    findings = [word for word in SNAPSHOT_FORBIDDEN if word in body]
+    returns = _RETURN.findall(body)
+    assert returns != [], "arrival: the body returns nothing the scan could read"
+    findings += [value.strip() for value in returns if not _UINT8_RETURN.match(value)]
+    return findings
+
+
+def test_the_snapshot_transform_has_no_sink_and_returns_bytes() -> None:
+    """REMFIX-1 (reviewer #4): close P15's scan blind spot.
+
+    A negative fixture first, so a scan that finds nothing is known to be a scan
+    that could find something: each forbidden shape, planted into an inert
+    string, is reported.
+    """
+    violating = """
+export function snapshotForEmulator(capture) {
+  const node = document.createElement("pre");
+  node.textContent = String(capture);
+  window.last = node;
+  return node.outerHTML;
+}
+"""
+    planted = snapshot_findings(violating)
+    for word in ("document", "window", "textContent", "HTML", "Element"):
+        assert word in planted, (word, planted)
+    assert "node.outerHTML" in planted, planted
+
+    assert snapshot_findings(source("terminal.js")) == []

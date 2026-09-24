@@ -20,8 +20,9 @@ from shepherd.engines.claude_code.ingest_socket import (
     accept_next,
     bind_listener,
     claim_socket,
+    owned_inode,
     read_lines,
-    unlink_socket,
+    unlink_owned_socket,
 )
 from shepherd.engines.claude_code.relay_wire import (
     Hello,
@@ -47,6 +48,7 @@ def serve_control_ingest(
     readiness loop of its own). Defaulted, so every existing call site is
     unchanged."""
     listener = bind_listener(plan)
+    inode = owned_inode(plan.path)
     if bound is not None:
         bound.set()
     try:
@@ -70,4 +72,4 @@ def serve_control_ingest(
                     continue
     finally:
         listener.close()
-        unlink_socket(plan.path)
+        unlink_owned_socket(plan.path, inode)

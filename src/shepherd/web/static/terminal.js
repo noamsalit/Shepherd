@@ -329,8 +329,6 @@ function applyFit(term, el, top) {
   el.dataset.terminalRows = String(term.rows);
 }
 
-// The degrade's own three outcomes (review finding 5). The old code had one —
-// `""` — for all three, and an unhandled rejection for the first.
 // ---------------------------------------------------------------------------
 // BC-10 (QA run 6, U10): the snapshot opened as a blank screen.
 //
@@ -350,10 +348,11 @@ const LF = 0x0a;
 const CR = 0x0d;
 const SPACE = 0x20;
 
-// The parameter is `capture`, not `bytes`: `test_session_page.py`'s pty scan
-// treats handing pane bytes to a function as an allowed shape and does not
-// follow into the callee, and this function has no sink — it returns a new
-// `Uint8Array` whose one caller hands it to `term.write`, which the scan reads.
+// The parameter is `capture`, not `bytes`, so `test_session_page.py`'s pty scan
+// does not read this body; its one caller, which hands the result to
+// `term.write`, is on that scan. The body has its own:
+// `test_the_snapshot_transform_has_no_sink_and_returns_bytes` refuses any DOM
+// reach or HTML parser in it and any return that is not a new `Uint8Array`.
 export function snapshotForEmulator(capture) {
   let end = capture.length;
   while (end > 0 && (capture[end - 1] === LF || capture[end - 1] === CR || capture[end - 1] === SPACE)) {
@@ -373,6 +372,8 @@ export function snapshotForEmulator(capture) {
   return Uint8Array.from(out);
 }
 
+// The degrade's own three outcomes (review finding 5). The old code had one —
+// `""` — for all three, and an unhandled rejection for the first.
 const SCREEN_READING = "reading the pane…";
 const SCREEN_UNREADABLE = "the pane's text could not be read";
 const SCREEN_ABSENT = "no screen: this session has no pane we can read from";

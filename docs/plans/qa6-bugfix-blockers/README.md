@@ -198,3 +198,39 @@ admit a declaration header would close the gap, but that is a test-file change o
   **base `6c70cd3` source** (`git archive 6c70cd3 src` into a scratch dir, with `PYTHONPATH` pointed
   there), so it is a host-timing characterisation pin independent of this plan, as P3 recorded. It
   is not a regression.
+
+## REMFIX-1 (merged code-reviewer + failure-hunter findings on `3c83037`)
+
+Seven router-scoped fixes. Each one had a failing test before the fix and passes after it. Ledger:
+[`REMFIX-1.md`](REMFIX-1.md).
+
+1. `session.js`: the header refresh no longer rebuilds the actions slot while what it was drawn from is unchanged. An
+   open `why?` stays open and a focused action keeps focus when another session's event arrives. This fixes a BC-13
+   regression.
+2. `master_turn.py`: if `close()` raises on a failed open, the slot is still released, because the release is now in a
+   `finally`.
+3. `settings.js`: every confirmed level is kept and the panel is repainted even when a later write fails. A success
+   clears the unreachable note as well as the not-made one.
+4. `ingest_socket.py` / `control_ingest.py`: only a refused or absent probe counts as stale. Each owner unlinks only
+   the inode it bound. Two items are still open. The **OWNER item**: macOS reports a full backlog as `ECONNREFUSED`,
+   and closing that needs a lock-file design. A non-socket file at the path is now refused (`ENOTSOCK`) instead of
+   unlinked.
+5. `local.py`: tmux calls are bounded by `TMUX_CALL_TIMEOUT_S = 10.0`, and a timeout becomes a `RunnerRefusal` in
+   `_run`. The file is exactly at its 500-line band, which was not edited.
+6. `test_session_page.py`: `test_the_snapshot_transform_has_no_sink_and_returns_bytes` closes the P15 review note
+   above. `snapshotForEmulator`'s body is now scanned.
+7. `terminal.js`: the orphaned three-outcomes comment is back above `SCREEN_READING`.
+
+The manifest's `files` digests are updated for `session.js`, `settings.js` and `terminal.js`. Each of those paths'
+`post_milestone.edits` `why` is extended. `baseline` and `rebase` are untouched.
+
+Checks:
+
+- `tests/web`: 370 passed.
+- orchestration/master/engines/daemons/runner: 722 passed, 6 skipped.
+- `tests/boundaries`: only the 3 baseline ERRORs.
+- `mypy --strict src`: only the 2 baseline errors.
+- `js_syntax_check`: 0 failures.
+- Default lane `--ignore=tests/qa5`: 5 failed, 2311 passed, 11 skipped, 3 errors. That is exactly
+  `BASELINE_DEFAULT_FAILS` plus the known pre-existing
+  `tests/qa/test_s7_shutdown_in_flight.py::test_clause_20_holds_on_every_run_and_the_branch_is_recorded`.
