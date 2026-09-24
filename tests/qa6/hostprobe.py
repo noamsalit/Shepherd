@@ -43,6 +43,24 @@ def run_listing(argv: list[str]) -> str:
     raise ProbeUnknown(f"{argv!r} exited {done.returncode}: stdout={done.stdout[:200]!r} stderr={done.stderr[:300]!r}")
 
 
+def run_pid_probe(argv: list[str]) -> str | None:
+    """stdout of a `ps -p <pid>` / `lsof -p <pid>` probe, `None` when the pid is gone (hunter N6).
+
+    Measured on this host: `ps -o args= -p <dead pid>` and `lsof … -p <dead pid>` both exit 1 with
+    empty stdout AND empty stderr. That, and only that, is "gone"; any other failure (an invalid
+    pid, a timeout, a tool error on stderr) is `ProbeUnknown`, never read as "gone" or as clean.
+    """
+    try:
+        done = run(argv)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ProbeUnknown(f"{argv!r} could not run: {type(error).__name__}: {error}") from error
+    if done.returncode == 0:
+        return done.stdout
+    if done.returncode == 1 and not done.stdout.strip() and not done.stderr.strip():
+        return None
+    raise ProbeUnknown(f"{argv!r} exited {done.returncode}: stdout={done.stdout[:200]!r} stderr={done.stderr[:300]!r}")
+
+
 def sha256(path: Path) -> str:
     """The file's sha256, or `"absent"`. Opens read-only."""
     try:
@@ -94,14 +112,16 @@ def listen_addresses(pid: int) -> list[str]:
 
 
 def open_files(pid: int) -> list[str]:
-    """Every NAME `lsof -p <pid> -Fn` reports (regular files, sockets, dirs)."""
-    done = run([str(paths.LSOF_BIN), "-nP", "-p", str(pid), "-Fn"])
-    return [line[1:] for line in done.stdout.splitlines() if line.startswith("n")]
+    """Every NAME `lsof -p <pid> -Fn` reports (regular files, sockets, dirs); `[]` = gone/unseen.
+    A probe error is `ProbeUnknown` (hunter N6)."""
+    listed = run_pid_probe([str(paths.LSOF_BIN), "-nP", "-p", str(pid), "-Fn"]) or ""
+    return [line[1:] for line in listed.splitlines() if line.startswith("n")]
 
 
 def process_cwd(pid: int) -> str | None:
-    done = run([str(paths.LSOF_BIN), "-a", "-d", "cwd", "-p", str(pid), "-Fn"])
-    for line in done.stdout.splitlines():
+    """The pid's cwd, `None` = gone/unseen. A probe error is `ProbeUnknown` (hunter N6)."""
+    listed = run_pid_probe([str(paths.LSOF_BIN), "-a", "-d", "cwd", "-p", str(pid), "-Fn"]) or ""
+    for line in listed.splitlines():
         if line.startswith("n"):
             return os.path.realpath(line[1:])
     return None
@@ -114,8 +134,7 @@ def process_env(pid: int) -> dict[str, str]:
     spaces are ambiguous, so the parse takes each `NAME=` token as the start of
     a variable and reads to the next such token.
     """
-    done = run([str(paths.PS_BIN), "eww", "-o", "command=", "-p", str(pid)])
-    line = done.stdout.strip()
+    line = (run_pid_probe([str(paths.PS_BIN), "eww", "-o", "command=", "-p", str(pid)]) or "").strip()
     found: dict[str, str] = {}
     for match in re.finditer(r"(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)=(.*?)(?=\s[A-Za-z_][A-Za-z0-9_]*=|$)", line):
         found[match.group(1)] = match.group(2)
@@ -123,9 +142,49 @@ def process_env(pid: int) -> dict[str, str]:
 
 
 def process_args(pid: int) -> str | None:
-    done = run([str(paths.PS_BIN), "-o", "args=", "-p", str(pid)])
-    text = done.stdout.strip()
+    """The pid's argv, `None` = gone (`ps` answered so). A probe error is `ProbeUnknown` (hunter N6),
+    never "gone": a Z3 attribution or a sweep's "dead owner" must not rest on a failed `ps`."""
+    text = (run_pid_probe([str(paths.PS_BIN), "-o", "args=", "-p", str(pid)]) or "").strip()
     return text or None
+
+
+def process_table() -> str:
+    """`ps -A -o pid=,ppid=,comm=` (comm LAST, so it is not truncated), through the checked runner."""
+    listed = run_pid_probe([str(paths.PS_BIN), "-A", "-o", "pid=,ppid=,comm="])
+    if listed is None:
+        raise ProbeUnknown("ps -A answered nothing")
+    return listed
+
+
+def tmux_servers_from_table(table: str) -> list[int]:
+    """Pids of tmux SERVERS in a `process_table` listing: a process named `tmux` whose parent is
+    launchd (pid 1). Measured on this host (3.6a, macOS): a server daemonises to ppid 1; a client
+    (`tmux attach`, `tmux ls`, the product's `new-session` call) has its caller as parent. Review N5:
+    Z3 compares servers, never every tmux client the user opens or closes during a run."""
+    servers: list[int] = []
+    for line in table.splitlines():
+        fields = line.split(None, 2)
+        if len(fields) != 3 or not fields[0].isdigit() or not fields[1].isdigit():
+            continue
+        if os.path.basename(fields[2].strip()) == "tmux" and int(fields[1]) == 1:
+            servers.append(int(fields[0]))
+    return sorted(servers)
+
+
+def tmux_server_pids() -> list[int]:
+    return tmux_servers_from_table(process_table())
+
+
+def signalled_baseline_pids(signalled: list[object], baseline: Mapping[str, object]) -> list[int]:
+    """Pids a teardown signalled that were alive at baseline — the user's processes (review N5). Pure."""
+    at_baseline: set[int] = set()
+    for key in ("tmux_pids", "tmux_server_pids", "shepherd_daemons", "port_owner_pids"):
+        values = baseline.get(key)
+        for value in values if isinstance(values, list) else []:
+            head = value[0] if isinstance(value, list) and value else value
+            if isinstance(head, int):
+                at_baseline.add(head)
+    return sorted(pid for pid in signalled if isinstance(pid, int) and pid in at_baseline)
 
 
 def tmux_socket_listing() -> dict[str, float]:
@@ -145,6 +204,7 @@ class Baseline:
     tmux_dir: dict[str, float]
     tmux_user_sockets_present: dict[str, bool]
     tmux_pids: list[int]
+    tmux_server_pids: list[int]
     port_owner_pids: list[int]
     shepherd_daemons: list[tuple[int, str]]
     local_tree: dict[str, list[object]]
@@ -160,6 +220,7 @@ class Baseline:
             "tmux_dir": self.tmux_dir,
             "tmux_user_sockets_present": self.tmux_user_sockets_present,
             "tmux_pids": self.tmux_pids,
+            "tmux_server_pids": self.tmux_server_pids,
             "port_owner_pids": self.port_owner_pids,
             "shepherd_daemons": [[pid, cmd] for pid, cmd in self.shepherd_daemons],
             "local_tree": self.local_tree,
@@ -251,6 +312,7 @@ def snapshot() -> Baseline:
             name: (paths.TMUX_SOCKET_DIR / name).exists() for name in paths.USER_TMUX_SOCKETS
         },
         tmux_pids=pgrep_exact("tmux"),
+        tmux_server_pids=tmux_server_pids(),
         port_owner_pids=port_listener_pids(paths.FORBIDDEN_PORT),
         shepherd_daemons=pgrep("shepherd-controld|shepherd-sessiond"),
         local_tree=local_tree(),

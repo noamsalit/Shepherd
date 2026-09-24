@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "    return sorted(pid for pid in signalled if isinstance(pid, int) and pid in at_baseline)",
+ "new": "    return []",
+ "proof": "test_proof_z3_servers_and_signalled",
+ "expect": "proof_z3.signalled_baseline_pid_is_seen",
+ "why": "review N5: Z3 never sees a signalled pid that was alive at baseline (planted lists)"
+}

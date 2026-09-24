@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "httpclient.py",
+ "old": "            if wrapped is None:\n                raise\n            raise wrapped from error\n",
+ "new": "            raise\n",
+ "proof": "test_proof_product_socket_failures",
+ "expect": "proof_product_socket.refused_is_product_side_and_keeps_its_type",
+ "why": "hunter N2: Client.request lets the raw socket error through, so a daemon crash is FAIL(harness_error) (loopback listeners in the proof's own process only)"
+}

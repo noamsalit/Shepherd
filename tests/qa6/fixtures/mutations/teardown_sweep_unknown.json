@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "teardown.py",
+ "old": "        return False, f\"owner {pid} unknown (treated as live): {unknown}\"",
+ "new": "        return True, f\"owner {pid} unknown (treated as live): {unknown}\"",
+ "proof": "test_proof_pid_probes_fail_closed",
+ "expect": "proof_pid_probes.sweep_unknown_owner_is_not_dead",
+ "why": "hunter N6: the sweep reads an unknown owner as dead, i.e. would rmtree a live run's root (proved on the pure owner_dead decision; sweep_dead_runs is never called)"
+}

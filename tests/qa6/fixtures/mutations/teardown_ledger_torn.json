@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "teardown.py",
+ "old": "    read = read_objects(pid_ledger)\n    problems.extend(",
+ "new": "    read = read_objects(pid_ledger)\n    if read.problems:\n        raise ValueError(read.problems[0])\n    problems.extend(",
+ "proof": "test_proof_teardown_keeps_what_it_found",
+ "expect": "proof_teardown.torn_ledger_line_is_reported",
+ "why": "hunter N5: one torn pid-ledger line raises before any child is stopped"
+}

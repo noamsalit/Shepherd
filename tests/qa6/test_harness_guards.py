@@ -58,6 +58,7 @@ from .sandbox import (
     real_home_env,
     sandbox_env,
 )
+from .hostprobe import Baseline
 from .report import LaneExit, decide_status
 from .verdict import Blocked, ProductFail, Recorder, Sourced, await_env, classify_blown_bound
 
@@ -615,6 +616,9 @@ def test_proof_pane_argv_effective_socket() -> None:
         "missing_value": ["tmux", "-L"],
         "unknown_option": ["tmux", "-Z", "-L", ours, "ls"],
         "no_server_but_not_plain_V": ["tmux", "-uV"],
+        "relative_S_dot": ["tmux", "-S", f"./{ours}", "ls"],
+        "relative_S_bare": ["tmux", "-S", ours, "ls"],
+        "unicode_digit_L": ["tmux", "-L", f"shepherd-m3-q6{pid}-\u0663", "ls"],
     }
     for label, argv in refused.items():
         if product_argv_violations([argv], pid) != [argv]:
@@ -666,7 +670,15 @@ def test_proof_tmux_shim_refuses() -> None:
         ("unknown_option", ["-Z", "-L", ours, "ls"], None),
         ("no_server_not_plain_V", ["-uV"], None),
         ("foreign_S_path", ["-S", f"/elsewhere/{ours}", "ls"], None),
+        # review N2: a relative -S resolves from the CLIENT's cwd (never ours), and only ASCII digits
+        ("relative_S_dot_in_socket_dir", ["-S", f"./{ours}", "ls"], None),
+        ("relative_S_bare", ["-S", ours, "ls"], None),
+        ("unicode_digit_L", ["-L", f"shepherd-m3-q6{pid}-\u0663", "ls"], None),
     ]
+    #: Independent of the Python judge: these shapes must be refused by BOTH (review N2).
+    must_refuse = {"relative_S_dot_in_socket_dir", "relative_S_bare", "unicode_digit_L"}
+    #: Run from the socket dir itself, where `./<ours>` would realpath to our socket.
+    cwd_for = {"relative_S_dot_in_socket_dir": str(paths.TMUX_SOCKET_DIR)}
     problems: list[str] = []
     with tempfile.TemporaryDirectory(prefix="qa6shim-", dir="/tmp") as scratch:
         base = Path(scratch)
@@ -683,11 +695,16 @@ def test_proof_tmux_shim_refuses() -> None:
             env = {"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8", **({"TMUX": tmux_env} if tmux_env else {})}
             before = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
             logs_before = sum(len(p.read_text(encoding="utf-8").splitlines()) for p in (product_log, pane_log) if p.exists())
-            done = subprocess.run([str(shim), *words], env=env, capture_output=True, text=True, timeout=15, check=False)
+            done = subprocess.run([str(shim), *words], env=env, capture_output=True, text=True, timeout=15, check=False,
+                                  cwd=cwd_for.get(label, str(base)))
             after = exec_log.read_text(encoding="utf-8") if exec_log.exists() else ""
             logs_after = sum(len(p.read_text(encoding="utf-8").splitlines()) for p in (product_log, pane_log) if p.exists())
             execed = after != before
             python_allows = argv_violation(["tmux", *words], tmux_env, pid) is None
+            if label in must_refuse and python_allows:
+                problems.append(f"proof_tmux_shim.judge_refuses_{label}")
+            if python_allows and done.stderr:
+                problems.append(f"proof_tmux_shim.allowed_calls_add_no_stderr: {label}: {done.stderr!r}")
             if logs_after != logs_before + 1:
                 problems.append(f"proof_tmux_shim.logs_every_call: {label} added {logs_after - logs_before} line(s)")
             if python_allows and not (done.returncode == 0 and execed and after.endswith(" ".join(["EXEC", *words]) + "\n")):
@@ -771,7 +788,8 @@ def test_guard_every_scenario_takes_rec() -> None:
 
 
 def test_proof_gate_harness_error_and_crash() -> None:
-    """A FAIL(harness_error) or a runner crash makes the gate INCOMPLETE, never RED or GREEN (review 7, H6)."""
+    """A FAIL(harness_error) makes the gate INCOMPLETE, never RED or GREEN (review 7); a runner crash is
+    INCOMPLETE with no product FAIL (H6) and RED, crash first, beside one (hunter N3)."""
     planned = [s.id for s in SCENARIOS]
     ok_exit = [LaneExit("sub", "1", 0, ())]
     crashed: list[dict[str, object]] = [{"id": sid, "verdict": "PASS", "lane_process": "sub-w1"} for sid in planned]
@@ -786,8 +804,11 @@ def test_proof_gate_harness_error_and_crash() -> None:
     clean = [{"id": sid, "verdict": "PASS", "lane_process": "sub-w1"} for sid in planned]
     if decide_status(clean, ok_exit, [], planned, harness_problems=["selfcheck failed"]).status != "INCOMPLETE":
         problems.append("proof_gate.harness_problem_is_incomplete")
-    if decide_status(real, ok_exit, [], planned, runner_crash="RuntimeError: x").status != "INCOMPLETE":
+    if decide_status(clean, ok_exit, [], planned, runner_crash="RuntimeError: x").status != "INCOMPLETE":
         problems.append("proof_gate.runner_crash_is_incomplete")
+    with_fail = decide_status(real, ok_exit, [], planned, runner_crash="RuntimeError: planted crash")
+    if with_fail.status != "RED" or not with_fail.reasons[0].startswith("the runner crashed: RuntimeError: planted crash"):
+        problems.append(f"proof_gate.crash_with_product_fail_is_red_crash_first: {with_fail.status} {with_fail.reasons[:2]}")
     assert not problems, f"gate: {problems}"
 
 
@@ -984,6 +1005,340 @@ def test_proof_scenario_mutation_outcome() -> None:
     if mutation_outcome("pass", "pass", True, [])[0] != "survived":
         problems.append("proof_mutation_outcome.survivor")
     assert not problems, f"mutation outcome: {problems}"
+
+
+# ----- remfix 3: publication, product sockets, teardown, probes (hunter N1-N6, review N1-N5) ------------
+
+
+def _dummy_baseline() -> Baseline:
+    return Baseline(
+        settings_sha="x", claude_projects={}, claude_sessions={}, shepherd_data={}, real_tmpdir_shepherd={},
+        claude_json_mtime=None, tmux_dir={}, tmux_user_sockets_present={}, tmux_pids=[], tmux_server_pids=[],
+        port_owner_pids=[], shepherd_daemons=[], local_tree={})
+
+
+def test_proof_publication_survives_torn_jsonl(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hunter N1 / review N4: the REAL `run._finish` publishes with a torn record line, a torn
+    harness-problem line and a torn teardown-problem line, counting each as a problem; and when
+    publication itself raises, the last resort writes an INCOMPLETE run file and a history line
+    carrying both exceptions.
+
+    Only the four finalizer steps that touch the host (ledger copy, worktree, teardown, host checks)
+    are replaced by recorders; everything from `fill_missing` to `write_report` is the real code,
+    writing into a temp report dir. Nothing is started, signalled or removed.
+    """
+    import argparse
+
+    from . import run as runner
+
+    touched: list[str] = []
+    for name in ("_copy_ledgers", "_remove_worktree", "_post_teardown_checks"):
+        monkeypatch.setattr(runner, name, lambda *_a, _n=name: touched.append(_n))
+    monkeypatch.setattr(runner, "_teardown", lambda _state: touched.append("_teardown"))
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="qa6torn-", dir="/tmp") as scratch:
+        report_dir = Path(scratch) / "runs"
+
+        def state_for(run_id: str) -> runner.RunState:
+            run = RunContext(pid=424242, run_id=run_id, run0=Path(scratch) / "run0-absent", run_dir=report_dir / run_id)
+            (run.run_dir / "records").mkdir(parents=True)
+            good = {"id": SCENARIOS[0].id, "verdict": "PASS", "lane_process": "sub-w1"}
+            (run.run_dir / "records" / "sub-w1.jsonl").write_text(json.dumps(good) + "\n" + '{"id": "A2", "verd',
+                                                                  encoding="utf-8")
+            (run.run_dir / "harness-problems.jsonl").write_text('{"where": "x", "prob', encoding="utf-8")
+            run.teardown_problems.write_text('{"where": "y"', encoding="utf-8")
+            return runner.RunState(args=argparse.Namespace(report_dir=report_dir, lane=[]), run=run,
+                                   baseline=_dummy_baseline(), reached="T4", selected={1})
+
+        code = -1
+        try:
+            code = runner._finish(state_for("qa6-guard-torn"), "qa6-guard-torn", None)
+        except Exception as escaped:  # noqa: BLE001 - the named assertion below says what went wrong
+            problems.append(f"proof_publication.torn_record_still_publishes: _finish raised {escaped!r}")
+        run_file = report_dir / "qa6-guard-torn.json"
+        payload = json.loads(run_file.read_text(encoding="utf-8")) if run_file.exists() else {}
+        if code != 1 or payload.get("status") != "INCOMPLETE":
+            problems.append(f"proof_publication.torn_record_still_publishes: code={code} status={payload.get('status')}")
+        harness = [str(p) for p in payload.get("harness_problems", [])]
+        if not any("malformed record line" in p and "sub-w1.jsonl" in p for p in harness):
+            problems.append(f"proof_publication.torn_record_line_is_a_problem: {harness[:5]}")
+        if not any("malformed problem line" in p and "harness-problems.jsonl" in p for p in harness):
+            problems.append(f"proof_publication.torn_problem_line_is_reported: {harness[:5]}")
+        teardown_listed = [str(p) for p in payload.get("teardown_problems", [])]
+        if not any("malformed problem line" in p and "teardown-problems.jsonl" in p for p in teardown_listed):
+            problems.append(f"proof_publication.torn_teardown_line_is_reported: {teardown_listed[:5]}")
+        if touched != ["_copy_ledgers", "_remove_worktree", "_teardown", "_post_teardown_checks"]:
+            problems.append(f"proof_publication.every_step_ran: {touched}")
+
+        def broken_publish(*_args: object, **_kwargs: object) -> object:
+            raise RuntimeError("planted publication failure (a pure raise)")
+
+        monkeypatch.setattr(runner, "write_report", broken_publish)
+        crash = "KeyError: 'planted crash in the waves'\nTraceback ..."
+        try:
+            code = runner._finish(state_for("qa6-guard-last"), "qa6-guard-last", crash)
+        except Exception as escaped:  # noqa: BLE001 - the named assertion below says what went wrong
+            problems.append(f"proof_publication.last_resort_writes_run_file: _finish raised {escaped!r}")
+        last = report_dir / "qa6-guard-last.json"
+        text = last.read_text(encoding="utf-8") if last.exists() else ""
+        if code != 1 or '"INCOMPLETE"' not in text or "planted publication failure" not in text or "planted crash" not in text:
+            problems.append(f"proof_publication.last_resort_writes_run_file: code={code} text={text[:300]!r}")
+        history = (report_dir / "qa6-history.jsonl").read_text(encoding="utf-8") if (report_dir / "qa6-history.jsonl").exists() else ""
+        lines = [json.loads(line) for line in history.splitlines() if line.strip()]
+        last_line = next((line for line in lines if line.get("run_id") == "qa6-guard-last"), None)
+        reasons = " ".join(str(r) for r in (last_line or {}).get("reasons", []))
+        if last_line is None or last_line.get("status") != "INCOMPLETE" or "planted publication failure" not in reasons \
+                or "planted crash" not in reasons:
+            problems.append(f"proof_publication.last_resort_history_carries_both_exceptions: {last_line}")
+    assert not problems, f"publication: {problems}"
+
+
+class _SocketFaults:
+    """One loopback listener that answers 200 once, then misbehaves in the chosen `mode`."""
+
+    def __init__(self, mode: str) -> None:
+        self.mode = mode
+        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listener.bind(("127.0.0.1", 0))
+        self.listener.listen(8)
+        self.port = int(self.listener.getsockname()[1])
+        self.served = 0
+        self.stop = threading.Event()
+        self.held: list[socket.socket] = []
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self.thread.start()
+
+    def _serve(self) -> None:
+        while not self.stop.is_set():
+            try:
+                conn, _addr = self.listener.accept()
+            except OSError:
+                return
+            conn.recv(65536)
+            self.served += 1
+            if self.served == 1:
+                if self.mode == "refused":
+                    self.listener.close()  # BEFORE the answer: the client's next connect is refused, never queued
+                conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+                conn.close()
+                if self.mode == "refused":
+                    return
+                continue
+            if self.mode == "reset":
+                conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, b"\x01\x00\x00\x00\x00\x00\x00\x00")
+                conn.close()
+            elif self.mode == "disconnect":
+                conn.close()
+            elif self.mode == "garbage":
+                conn.sendall(b"NOT-HTTP garbage\r\n\r\n")
+                conn.close()
+            else:  # "hang": hold the connection open, never answer
+                self.held.append(conn)
+
+    def close(self) -> None:
+        self.stop.set()
+        for conn in self.held:
+            conn.close()
+        self.listener.close()  # idempotent: the "refused" mode already closed it
+        self.thread.join(timeout=5)
+
+
+def test_proof_product_socket_failures() -> None:
+    """Hunter N2: a socket failure from `Client.request` on the product's port is product-side —
+    FAIL when this client answered earlier in the scenario, else BLOCKED — for a refused connection,
+    a reset, `RemoteDisconnected`, a garbled status line (`http.client.HTTPException`) and a timeout;
+    the original socket type is still catchable; a harness exception stays `harness_error`.
+
+    Loopback listeners in this process only; nothing else is contacted.
+    """
+    import http.client
+
+    from .httpclient import Client
+    from .verdict import ProductUnreachable, begin_scenario, classify_outcome
+
+    expected_type: dict[str, type[BaseException]] = {
+        "refused": ConnectionRefusedError, "reset": ConnectionResetError, "disconnect": ConnectionResetError,
+        "garbage": http.client.HTTPException, "hang": TimeoutError,
+    }
+    problems: list[str] = []
+    for mode, original in expected_type.items():
+        server = _SocketFaults(mode)
+        try:
+            begin_scenario()
+            client = Client(server.port)
+            first = client.request("GET", "/api/fleet", timeout_s=2.0)
+            if first.status != 200:
+                problems.append(f"proof_product_socket.{mode}_control_answered: {first.status}")
+            try:
+                client.request("GET", "/api/fleet", timeout_s=0.6)
+                problems.append(f"proof_product_socket.{mode}_raises: the second request answered")
+                continue
+            except BaseException as error:  # noqa: BLE001 - classified below; anything unexpected is named
+                caught: BaseException = error
+            if not isinstance(caught, ProductUnreachable) or not isinstance(caught, original):
+                problems.append(f"proof_product_socket.{mode}_is_product_side_and_keeps_its_type: {caught!r}")
+                continue
+            clean = Recorder("S")
+            clean.check("control", True, 1, 1)
+            verdict, kind, _reason = classify_outcome(caught, "call", clean, is_scenario=True)
+            want_kind = "bound" if mode == "hang" else "assert"
+            if (verdict, kind) != ("FAIL", want_kind):
+                problems.append(f"proof_product_socket.{mode}_after_answer_is_fail: {(verdict, kind)}")
+        finally:
+            server.close()
+    begin_scenario()
+    fresh = Client(1)  # port 1: nothing listens; no answer this scenario
+    try:
+        fresh.request("GET", "/api/fleet", timeout_s=1.0)
+        problems.append("proof_product_socket.refused_without_answer_raises")
+    except ConnectionRefusedError as error:
+        if classify_outcome(error, "call", Recorder("R"), is_scenario=True)[0] != "BLOCKED":
+            problems.append(f"proof_product_socket.refused_without_answer_is_blocked: {classify_outcome(error, 'call', Recorder('R'), is_scenario=True)}")
+    server = _SocketFaults("refused")
+    try:
+        begin_scenario()
+        client = Client(server.port)
+        client.request("GET", "/api/fleet", timeout_s=2.0)
+        begin_scenario()  # a NEW scenario: the earlier answer proves nothing about this one
+        try:
+            client.request("GET", "/api/fleet", timeout_s=1.0)
+        except ConnectionRefusedError as error:
+            if classify_outcome(error, "call", Recorder("E"), is_scenario=True)[0] != "BLOCKED":
+                problems.append("proof_product_socket.answer_in_an_earlier_scenario_does_not_count")
+    finally:
+        server.close()
+    if classify_outcome(KeyError("x"), "call", Recorder("K"), is_scenario=True)[1] != "harness_error":
+        problems.append("proof_product_socket.harness_exception_stays_harness_error")
+    assert not problems, f"product socket failures: {problems}"
+
+
+def test_proof_teardown_keeps_what_it_found() -> None:
+    """Hunter N5: a teardown step that raises keeps the problems earlier steps found, and the later
+    steps still run; a torn pid-ledger line is reported and the other entries are still read. Pure
+    (fake steps; a temp ledger file). No pid is signalled."""
+    from .teardown import LeakReport, ledger_entries, run_steps
+
+    ran: list[str] = []
+
+    def finds_a_leak(report: LeakReport) -> None:
+        ran.append("first")
+        report.problems.append("planted leak: pid 4242 still alive at teardown")
+
+    def raises_midway(report: LeakReport) -> None:
+        ran.append("second")
+        report.problems.append("planted leak found before the raise")
+        raise OSError("planted rmtree failure (a pure raise)")
+
+    problems: list[str] = []
+    try:
+        report = run_steps(LeakReport(), [("find", finds_a_leak), ("raise", raises_midway),
+                                          ("after", lambda r: ran.append("third"))])
+    except Exception as escaped:  # noqa: BLE001 - the named assertion below says what went wrong
+        raise AssertionError(f"proof_teardown.raising_step_keeps_found_problems: run_steps raised {escaped!r}") from escaped
+    joined = " | ".join(report.problems)
+    if "pid 4242" not in joined or "found before the raise" not in joined or "planted rmtree failure" not in joined:
+        problems.append(f"proof_teardown.raising_step_keeps_found_problems: {report.problems}")
+    if ran != ["first", "second", "third"]:
+        problems.append(f"proof_teardown.later_steps_still_run: {ran}")
+    with tempfile.TemporaryDirectory(prefix="qa6ledger-", dir="/tmp") as scratch:
+        ledger = Path(scratch) / "pids.jsonl"
+        ledger.write_text(json.dumps({"pid": 4242, "kind": "controld"}) + "\n" + '{"pid": 43', encoding="utf-8")
+        found: list[str] = []
+        try:
+            entries = ledger_entries(ledger, found)
+        except Exception as escaped:  # noqa: BLE001 - the named assertion below says what went wrong
+            raise AssertionError(f"proof_teardown.torn_ledger_line_is_reported: raised {escaped!r}") from escaped
+        if [entry.get("pid") for entry in entries] != [4242] or not any("line 2" in p for p in found):
+            problems.append(f"proof_teardown.torn_ledger_line_is_reported: entries={entries} problems={found}")
+    assert not problems, f"teardown: {problems}"
+
+
+def test_proof_pid_probes_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hunter N6: `ps -p` exit 1 with empty output is "gone"; any other failure is `ProbeUnknown`,
+    and the sweep reads an unknown owner as LIVE (it never removes on an unknown). Pure: `run` is
+    replaced; the sweep's decision is asked of `owner_dead`, never of `sweep_dead_runs`."""
+    from . import hostprobe, teardown
+
+    answers = {"gone": subprocess.CompletedProcess(["ps"], 1, "", ""),
+               "error": subprocess.CompletedProcess(["ps"], 1, "", "ps: Invalid process id: x"),
+               "crash": subprocess.CompletedProcess(["ps"], 2, "", ""),
+               "alive": subprocess.CompletedProcess(["ps"], 0, "/usr/bin/python3 x\n", "")}
+    chosen = ["gone"]
+    monkeypatch.setattr(hostprobe, "run", lambda argv, timeout_s=15.0: answers[chosen[0]])
+    problems: list[str] = []
+    if hostprobe.process_args(4242) is not None or hostprobe.process_cwd(4242) is not None or hostprobe.open_files(4242):
+        problems.append("proof_pid_probes.gone_is_none")
+    if teardown.owner_dead(4242)[0] is not True:
+        problems.append("proof_pid_probes.sweep_dead_owner_is_dead")
+    chosen[0] = "alive"
+    if hostprobe.process_args(4242) != "/usr/bin/python3 x" or teardown.owner_dead(4242)[0] is not False:
+        problems.append("proof_pid_probes.alive_is_alive")
+    for label in ("error", "crash"):
+        chosen[0] = label
+        for probe in (hostprobe.process_args, hostprobe.process_cwd, hostprobe.open_files):
+            try:
+                probe(4242)
+                problems.append(f"proof_pid_probes.{label}_is_unknown_not_gone: {probe.__name__} answered")
+            except hostprobe.ProbeUnknown:
+                pass
+        if teardown.owner_dead(4242)[0] is not False:
+            problems.append(f"proof_pid_probes.sweep_unknown_owner_is_not_dead: {label}")
+    assert not problems, f"pid probes: {problems}"
+
+
+def test_proof_unseeded_excuse_is_list_sessions_only() -> None:
+    """Review N3: the runner's post-lane Z2 scan excuses exactly `list-sessions` on the product's
+    default runner socket in the UNSEEDED log; `kill-session` / `kill-server` there are violations.
+    The argv are data in a temp log (nothing is executed)."""
+    from shepherd.runner.tmux_cmd import DEFAULT_SOCKET
+
+    from . import run as runner
+    from .tmuxctl import unseeded_excused
+
+    problems: list[str] = []
+    listed = ["tmux", "-L", DEFAULT_SOCKET, "list-sessions", "-F", "#{session_name}"]
+    for label, argv in (("kill_session_on_default_runner_is_flagged", ["tmux", "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]),
+                        ("kill_server_on_default_runner_is_flagged", ["tmux", "-uL", DEFAULT_SOCKET, "kill-server"]),
+                        ("list_sessions_on_user_socket_is_flagged", ["tmux", "-L", "shepherd", "list-sessions"])):
+        if unseeded_excused(argv, DEFAULT_SOCKET):
+            problems.append(f"proof_unseeded.{label}")
+    if not unseeded_excused(listed, DEFAULT_SOCKET):
+        problems.append("proof_unseeded.list_sessions_on_default_runner_is_excused")
+    with tempfile.TemporaryDirectory(prefix="qa6unseeded-", dir="/tmp") as scratch:
+        run = RunContext(pid=424242, run_id="qa6-guard", run0=Path(scratch), run_dir=Path(scratch) / "report")
+        run.unseeded_tmux_argv_log.parent.mkdir(parents=True)
+        run.unseeded_tmux_argv_log.write_text(json.dumps(listed) + "\n", encoding="utf-8")
+        if runner.z2_violations(run):
+            problems.append(f"proof_unseeded.runner_excuses_list_sessions: {runner.z2_violations(run)}")
+        kill = ["tmux", "-L", DEFAULT_SOCKET, "kill-session", "-t", "x"]
+        with open(run.unseeded_tmux_argv_log, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(kill) + "\n")
+        if len(runner.z2_violations(run)) != 1:
+            problems.append(f"proof_unseeded.runner_flags_kill_session_on_default_runner: {runner.z2_violations(run)}")
+    assert not problems, f"unseeded excuse: {problems}"
+
+
+def test_proof_z3_servers_and_signalled() -> None:
+    """Review N5: Z3 compares tmux SERVERS (a `tmux` whose parent is launchd), never every tmux
+    client, and fails when the teardown signalled a pid that was alive at baseline. Pure (planted
+    `ps` text and planted lists)."""
+    from .hostprobe import signalled_baseline_pids, tmux_servers_from_table
+
+    table = ("  1080     1 /opt/homebrew/bin/tmux\n"
+             "  2001   733 /opt/homebrew/bin/tmux\n"
+             "  2002     1 /usr/bin/python3\n"
+             "  2003     1 tmux\n")
+    problems: list[str] = []
+    servers = tmux_servers_from_table(table)
+    if servers != [1080, 2003]:
+        problems.append(f"proof_z3.clients_are_not_servers: {servers}")
+    baseline: dict[str, object] = {"tmux_pids": [1080, 2001], "tmux_server_pids": [1080],
+                                   "shepherd_daemons": [[3001, "shepherd-controld"]], "port_owner_pids": [4001]}
+    if signalled_baseline_pids([5001, 5002], baseline):
+        problems.append("proof_z3.run_pids_are_not_baseline_pids")
+    if signalled_baseline_pids([5001, 3001, 1080], baseline) != [1080, 3001]:
+        problems.append(f"proof_z3.signalled_baseline_pid_is_seen: {signalled_baseline_pids([5001, 3001, 1080], baseline)}")
+    assert not problems, f"z3: {problems}"
 
 
 # ----- the proofs of the five copied qa5 helpers -----------------------------------------------
@@ -1185,7 +1540,13 @@ def test_guard_module_mutation_floor_is_present() -> None:
                 "instance_restart", "httpclient_hang", "live_spawn_stop_if", "teardown_token",
                 "hostprobe_lock_attribution", "hostprobe_link_target", "hostprobe_listing_delta",
                 "hostprobe_probe_unknown", "tmuxctl_server_unknown", "instance_spawn_chokepoint",
-                "sse_rig_parse_failure", "sse_rig_eof_after_control", "mutations_control", "auditprobe_absent"}
+                "sse_rig_parse_failure", "sse_rig_eof_after_control", "mutations_control", "auditprobe_absent",
+                # remfix 3 (hunter N1-N6, review N1-N5)
+                "report_torn_records", "run_problem_reader_torn", "run_last_resort", "report_crash_red",
+                "httpclient_socket_wrap", "verdict_unreachable_after_answer", "httpclient_answer_epoch",
+                "teardown_incremental", "teardown_ledger_torn", "hostprobe_pid_probe_unknown", "teardown_sweep_unknown",
+                "shim_exec_warning", "shim_relative_S", "tmuxctl_relative_S", "paths_ascii_digits",
+                "tmuxctl_unseeded_verb", "hostprobe_tmux_servers", "hostprobe_signalled_baseline"}
     missing = sorted(required - set(MODULE_MUTATIONS))
     assert not missing, f"module mutations not registered: {missing}"
 

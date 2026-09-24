@@ -7,7 +7,8 @@
 #    -uLx), a valued option takes the rest of its word or else the next word,
 #    parsing stops at the first non-option word or after --, the LAST -L and the
 #    LAST -S win, -S beats -L whatever the order, $TMUX is read only when
-#    neither was given, else `default`. This is the same rule as
+#    neither was given, else `default`; a -S (or $TMUX) path that is not absolute is
+#    never ours. This is the same rule as
 #    tmuxctl.effective_socket; a guard (test_proof_tmux_shim_refuses) runs this
 #    file against a fake binary over a planted battery and proves they agree.
 # 2. It appends the argv it was given, unchanged, to its log: the product log
@@ -47,6 +48,9 @@ sub same_dir {
 
 sub socket_name {
     my ($path) = @_;
+    # A relative path is resolved by tmux from the CLIENT's cwd, which no post-hoc judge sees:
+    # never ours (review N2; tmuxctl._socket_name says the same).
+    return "<invalid: socket path '$path' is not absolute>" if substr($path, 0, 1) ne '/';
     if ($path =~ m{\A(.*)/([^/]*)\z}s) {
         my ($dir, $base) = ($1, $2);
         return $base if $dir ne '' && same_dir($dir, $SOCKET_DIR);
@@ -126,6 +130,9 @@ if (defined $why) {
     print STDERR "qa6 tmux shim refused: $why\n";
     exit 97;
 }
-exec { $REAL } $REAL, @ARGV;
-print STDERR "qa6 tmux shim: exec $REAL failed: $!\n";
-exit 99;
+# One statement (review N1): `exec` followed by a separate print makes `use warnings` print
+# "Statement unlikely to be reached" on EVERY call, which the product copies into its errors.
+exec { $REAL } $REAL, @ARGV or do {
+    print STDERR "qa6 tmux shim: exec $REAL failed: $!\n";
+    exit 99;
+};

@@ -11,19 +11,19 @@ any socket outside this run's pattern.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
 import signal
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from shepherd.host.mac import MacHost
 
 from . import hostprobe, paths, tmuxctl
+from .jsonl import read_objects
 from .pool import close_tmux_socket
 from .sandbox import TMP_CANONICAL, RunContext
 from .verdict import Blocked
@@ -34,24 +34,28 @@ Q6_SOCKET_RE = re.compile(r"^shepherd-m3-q6(\d+)-(\d+)$")
 
 @dataclass
 class LeakReport:
+    """Filled IN PLACE as teardown goes (hunter N5): a step that raises keeps what earlier steps found."""
+
     problems: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    #: Every pid this teardown sent a signal to (review N5: Z3 fails if one was a baseline pid).
+    signalled: list[int] = field(default_factory=list)
 
 
-def ledger_entries(pid_ledger: Path) -> list[dict[str, object]]:
-    if not pid_ledger.exists():
-        return []
-    entries: list[dict[str, object]] = []
-    for line in pid_ledger.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            decoded: object = json.loads(line)
-            if isinstance(decoded, dict):
-                entries.append({str(k): v for k, v in decoded.items()})
-    return entries
+#: `<run_dir>/teardown-signalled.json`: the runner's teardown writes every pid it signalled.
+SIGNALLED_FILE = "teardown-signalled.json"
 
 
-def recorded_pids(run: RunContext) -> list[dict[str, object]]:
-    return ledger_entries(run.pid_ledger)
+def ledger_entries(pid_ledger: Path, problems: list[str]) -> list[dict[str, object]]:
+    """The ledger's entries; a torn line (a child killed mid-append) goes to `problems`, never
+    raises (hunter N5): one bad line must not orphan every child the other lines name."""
+    read = read_objects(pid_ledger)
+    problems.extend(f"pid ledger: {problem}" for problem in read.problems)
+    return read.rows
+
+
+def recorded_pids(run: RunContext, problems: list[str]) -> list[dict[str, object]]:
+    return ledger_entries(run.pid_ledger, problems)
 
 
 def current_token(pid: int) -> str | None:
@@ -85,10 +89,9 @@ def _still_ours(entry: Mapping[str, object]) -> bool:
     return isinstance(pid, int) and signal_decision(entry, current_token(pid)) is None
 
 
-def stop_entries(entries: list[dict[str, object]], label: str) -> tuple[list[str], list[str]]:
-    """SIGTERM (then SIGKILL) every entry that is provably ours and alive. (problems, notes)."""
-    problems: list[str] = []
-    notes: list[str] = []
+def stop_entries(entries: list[dict[str, object]], label: str, sink: LeakReport) -> None:
+    """SIGTERM (then SIGKILL) every entry that is provably ours and alive, recording into `sink`
+    as it goes (each leak is appended BEFORE its signal, so nothing found is lost to a later raise)."""
     for entry in entries:
         pid = entry.get("pid")
         if not isinstance(pid, int):
@@ -97,31 +100,32 @@ def stop_entries(entries: list[dict[str, object]], label: str) -> tuple[list[str
         why_not = signal_decision(entry, token_now)
         if why_not is not None:
             if token_now is not None and why_not != "not alive":
-                notes.append(f"{label} pid {pid} ({entry.get('kind')}) alive but not signalled: {why_not}")
+                sink.notes.append(f"{label} pid {pid} ({entry.get('kind')}) alive but not signalled: {why_not}")
             continue
-        problems.append(f"{label} {entry.get('kind')} pid {pid} still alive at teardown (start token matched)")
-        _signal(pid, signal.SIGTERM)
+        sink.problems.append(f"{label} {entry.get('kind')} pid {pid} still alive at teardown (start token matched)")
+        _signal(pid, signal.SIGTERM, sink)
         deadline = time.monotonic() + 5.0
         while time.monotonic() < deadline and _still_ours(entry):
             time.sleep(0.1)
         if _still_ours(entry):
-            _signal(pid, signal.SIGKILL)
+            _signal(pid, signal.SIGKILL, sink)
             if _still_ours(entry):
-                problems.append(f"{label} {entry.get('kind')} pid {pid} survived SIGKILL")
-    return problems, notes
+                sink.problems.append(f"{label} {entry.get('kind')} pid {pid} survived SIGKILL")
 
 
-def _signal(pid: int, signum: signal.Signals) -> None:
+def _signal(pid: int, signum: signal.Signals, sink: LeakReport) -> None:
     """Signal a pid `signal_decision` just cleared; one that exited in between is not an error (H6)."""
+    if pid not in sink.signalled:
+        sink.signalled.append(pid)
     try:
         os.kill(pid, signum)
     except ProcessLookupError:
         return
 
 
-def stop_recorded(run: RunContext) -> tuple[list[str], list[str]]:
+def stop_recorded(run: RunContext, sink: LeakReport) -> None:
     """Every recorded child still alive and still ours (by start token). Each is a leak."""
-    return stop_entries(recorded_pids(run), "recorded")
+    stop_entries(recorded_pids(run, sink.problems), "recorded", sink)
 
 
 def our_tmux_sockets(run: RunContext) -> list[str]:
@@ -137,26 +141,47 @@ def run_roots(run: RunContext) -> list[Path]:
     return sorted(TMP_CANONICAL.glob(f"{paths.RUN_ROOT_PREFIX}{run.pid}-*"))
 
 
-def teardown_run(run: RunContext, *, remove_roots: bool = True) -> LeakReport:
-    """Stop leftovers, kill our tmux servers, remove the roots, then check for leaks."""
-    report = LeakReport()
-    stopped, notes = stop_recorded(run)
-    report.problems.extend(stopped)
-    report.notes.extend(notes)
+TeardownStep = tuple[str, Callable[[LeakReport], None]]
+
+
+def run_steps(report: LeakReport, steps: list[TeardownStep]) -> LeakReport:
+    """Run every step against the SAME report (hunter N5): a step that raises is recorded as a
+    problem, what it and earlier steps already appended stays, and the next step still runs."""
+    for name, action in steps:
+        try:
+            action(report)
+        except Exception as error:  # noqa: BLE001 - recorded as a teardown problem, never swallowed
+            report.problems.append(f"teardown step {name!r} raised {type(error).__name__}: {error}")
+    return report
+
+
+def _close_our_sockets(run: RunContext, report: LeakReport) -> None:
     for socket in our_tmux_sockets(run):
         report.notes.append(f"backstop: tmux server/socket {socket} present at run teardown")
         try:
             report.problems.extend(close_tmux_socket(run, socket))
         except Blocked as unknown:  # tmux could not say whether a server runs: a problem, and carry on
             report.problems.append(f"tmux socket {socket}: {unknown.reason}")
-    report.problems.extend(leak_check(run, check_roots=False))
+
+
+def _remove_roots(run: RunContext, report: LeakReport) -> None:
+    for root in run_roots(run):
+        shutil.rmtree(root)
+    left = run_roots(run)
+    if left:
+        report.problems.append(f"run roots not removed: {left}")
+
+
+def teardown_run(run: RunContext, *, remove_roots: bool = True) -> LeakReport:
+    """Stop leftovers, kill our tmux servers, check for leaks, remove the roots. Never raises."""
+    steps: list[TeardownStep] = [
+        ("stop recorded children", lambda report: stop_recorded(run, report)),
+        ("close our tmux sockets", lambda report: _close_our_sockets(run, report)),
+        ("leak check", lambda report: report.problems.extend(leak_check(run, check_roots=False))),
+    ]
     if remove_roots:
-        for root in run_roots(run):
-            shutil.rmtree(root)
-        left = run_roots(run)
-        if left:
-            report.problems.append(f"run roots not removed: {left}")
-    return report
+        steps.append(("remove run roots", lambda report: _remove_roots(run, report)))
+    return run_steps(LeakReport(), steps)
 
 
 def leak_check(run: RunContext, *, check_roots: bool = True) -> list[str]:
@@ -211,10 +236,24 @@ class SweepResult:
     live_owners: list[str] = field(default_factory=list)
     orphans_stopped: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    #: A torn ledger line of a dead run (the runner records these as teardown problems).
+    problems: list[str] = field(default_factory=list)
 
 
 def pid_alive(pid: int) -> bool:
+    """`ps` says alive. A `ps` that cannot answer raises `hostprobe.ProbeUnknown` (hunter N6)."""
     return hostprobe.process_args(pid) is not None
+
+
+def owner_dead(pid: int) -> tuple[bool, str]:
+    """(dead?, why) for a run root's or socket's owner. Only a `ps` that ANSWERED "no such pid" is
+    dead; a probe that could not answer is a live owner (hunter N6): the sweep never removes
+    state on an unknown."""
+    try:
+        alive = pid_alive(pid)
+    except hostprobe.ProbeUnknown as unknown:
+        return False, f"owner {pid} unknown (treated as live): {unknown}"
+    return (not alive), ("owner dead" if not alive else f"owner {pid} alive")
 
 
 def sweep_dead_runs() -> SweepResult:
@@ -232,15 +271,17 @@ def sweep_dead_runs() -> SweepResult:
         if not match:
             continue
         owner = int(match.group(1))
-        if pid_alive(owner):
-            result.live_owners.append(str(root))
+        dead, why = owner_dead(owner)
+        if not dead:
+            result.live_owners.append(f"{root} ({why})")
             continue
         if match.group(2) == "0":
             # A dead run's children can outlive it (a crashed runner, H6): stop exactly the ones
             # its own ledger recorded and whose start token still matches, before its root goes.
-            stopped, notes = stop_entries(ledger_entries(root / "pids.jsonl"), f"orphan of dead run {owner}:")
-            result.orphans_stopped.extend(stopped)
-            result.notes.extend(notes)
+            sink = LeakReport()
+            stop_entries(ledger_entries(root / "pids.jsonl", result.problems), f"orphan of dead run {owner}:", sink)
+            result.orphans_stopped.extend(sink.problems)
+            result.notes.extend(sink.notes)
         shutil.rmtree(root)
         result.removed_roots.append(str(root))
     for name in hostprobe.tmux_socket_listing():
@@ -248,8 +289,9 @@ def sweep_dead_runs() -> SweepResult:
         if not match:
             continue
         owner = int(match.group(1))
-        if pid_alive(owner):
-            result.live_owners.append(f"tmux:{name}")
+        dead, why = owner_dead(owner)
+        if not dead:
+            result.live_owners.append(f"tmux:{name} ({why})")
             continue
         if tmuxctl.server_running(name, owner):
             tmuxctl.kill_server(name, owner)

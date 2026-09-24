@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "    if not path.startswith(\"/\"):\n        return f\"{INVALID}: socket path {path!r} is not absolute>\"\n",
+ "new": "",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.refuses_relative_S_bare",
+ "why": "review N2: the Python judge accepts a relative -S whose name matches the run pattern (pure predicate)"
+}

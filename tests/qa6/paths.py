@@ -97,5 +97,9 @@ def runner_socket_name(pid: int, k: int) -> str:
 
 
 def runner_socket_pattern(pid: int) -> re.Pattern[str]:
-    """The backstop pattern teardown refuses anything outside of (env-plan §9 step 5)."""
-    return re.compile(rf"^shepherd-m3-q6{pid}-\d+$")
+    """The backstop pattern teardown refuses anything outside of (env-plan §9 step 5).
+
+    ASCII digits only (review N2): `\\d` matches any Unicode digit (`٣`), which the shim's
+    `[0-9]` refuses, so the two judges would disagree.
+    """
+    return re.compile(rf"^shepherd-m3-q6{pid}-[0-9]+$")

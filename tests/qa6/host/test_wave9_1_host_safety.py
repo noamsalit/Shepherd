@@ -35,9 +35,9 @@ import time
 from collections.abc import Mapping
 from pathlib import Path
 
-from shepherd.runner.tmux_cmd import is_server_teardown
+from shepherd.runner.tmux_cmd import DEFAULT_SOCKET, is_server_teardown
 
-from .. import hostprobe, paths, realclaude, tmuxctl
+from .. import hostprobe, paths, realclaude, teardown, tmuxctl
 from ..mutations import active
 from ..sandbox import TMP_CANONICAL, RunContext
 from ..scenario import scenario
@@ -467,6 +467,11 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
     rec.record("tmux.unseeded_log", {"lines": len(unseeded),
                                      "sockets": sorted({str(tmuxctl.effective_socket(a, None)) for a in unseeded})})
     rec.equal("tmux.unseeded_no_user_socket", [], [a for a in unseeded if named_user_socket(a)])
+    # Review N3: the unseeded reconcile is excused for exactly `list-sessions` on the product's
+    # default runner socket; any other verb there (or any other foreign socket) is a violation.
+    unexcused = [a for a in unseeded if tmuxctl.argv_violation(a, None, run.pid) is not None
+                 and not tmuxctl.unseeded_excused(a, DEFAULT_SOCKET)]
+    rec.equal("tmux.unseeded_only_list_sessions_on_the_default_runner", [], unexcused[:10])
     rec.finish()
 
 
@@ -474,9 +479,11 @@ def test_z2_tmux_only_our_sockets_touched_and_ours_gone(qa6_run: RunContext, rec
 
 
 def daemons_under_root(run: RunContext) -> list[dict[str, object]]:
-    done = hostprobe.run([str(paths.PS_BIN), "-A", "-o", "pid=,command="])
+    listed = hostprobe.run_pid_probe([str(paths.PS_BIN), "-A", "-o", "pid=,command="])
+    if listed is None:
+        raise hostprobe.ProbeUnknown("ps -A answered nothing (unknown is not clean)")
     found: list[dict[str, object]] = []
-    for line in done.stdout.splitlines():
+    for line in listed.splitlines():
         head, _, command = line.strip().partition(" ")
         if not head.isdigit() or int(head) == os.getpid():
             continue
@@ -525,11 +532,15 @@ def test_z3_forbidden_port_untouched_nothing_left_running(qa6_run: RunContext, r
 
 
 def attribution(pid: int, run: RunContext) -> str:
-    """Whose a pid is, from its argv and cwd now: `ours`, `other qa6 run <pid>`, `gone`, or `unattributed`."""
-    command = hostprobe.process_args(pid)
-    if command is None:
-        return "gone"
-    cwd = hostprobe.process_cwd(pid) or ""
+    """Whose a pid is, from its argv and cwd now: `ours`, `other qa6 run <pid>`, `gone`, `unknown: …`
+    (a `ps`/`lsof` that could not answer — never read as gone, hunter N6), or `unattributed`."""
+    try:
+        command = hostprobe.process_args(pid)
+        if command is None:
+            return "gone"
+        cwd = hostprobe.process_cwd(pid) or ""
+    except hostprobe.ProbeUnknown as unknown:
+        return f"unknown: {unknown}"
     if f"shepherd-m3-q6{run.pid}-" in command or under_run_root(command, run) or under_run_root(cwd, run):
         return "ours"
     if (m := re.search(r"shepherd-m3-q6(\d+)-|shq6-(\d+)-", f"{command} {cwd}")) and int(m.group(1) or m.group(2)) != run.pid:
@@ -539,13 +550,32 @@ def attribution(pid: int, run: RunContext) -> str:
 
 def process_clauses(run: RunContext, rec: Recorder, baseline: Mapping[str, object] | None,
                     after: Mapping[str, object] | None) -> None:
-    """H7: the user's Shepherd daemons and tmux servers, baseline vs after-teardown.
+    """H7 / review N5: the user's Shepherd daemons and tmux SERVERS, baseline vs after-teardown,
+    and the direct oracle — no pid the runner's teardown signalled was alive at baseline.
 
-    A baseline pid gone after teardown is a failure (the run may have signalled
-    the user's own process); a pid new after teardown fails unless it is
-    attributable to another live qa6 run.
+    A baseline daemon or tmux server gone after teardown is a failure (the run may have signalled
+    the user's own process); a new one fails unless it is attributable to another live qa6 run.
+    tmux CLIENT processes (`tmux attach`, `tmux ls` the user runs) come and go with the user's
+    own terminals: their delta is recorded, never failed (a server is a tmux with parent launchd).
     """
-    for key, clause in (("shepherd_daemons", "proc.shepherd_daemons_unchanged"), ("tmux_pids", "proc.tmux_pids_unchanged")):
+    signalled_file = run.run_dir / teardown.SIGNALLED_FILE
+    signalled = read_json(signalled_file)
+    raw = signalled.get("signalled") if signalled else None
+    if baseline is None or not isinstance(raw, list):
+        rec.block("proc.teardown_signalled_no_baseline_pid",
+                  f"no baseline.json or no {teardown.SIGNALLED_FILE} (the runner's teardown writes it; "
+                  "unknown is not clean)")
+    else:
+        hit = hostprobe.signalled_baseline_pids(list(raw), baseline)
+        rec.check("proc.teardown_signalled_no_baseline_pid", not hit,
+                  "no pid the teardown signalled was alive at baseline (the user's processes)",
+                  {"signalled": raw[:50], "at_baseline": hit})
+    before_clients = baseline.get("tmux_pids") if baseline else None
+    after_clients = after.get("tmux_pids") if after else None
+    if isinstance(before_clients, list) and isinstance(after_clients, list):
+        rec.record("proc.tmux_processes_delta_not_judged", hostprobe.pid_delta(before_clients, after_clients))
+    for key, clause in (("shepherd_daemons", "proc.shepherd_daemons_unchanged"),
+                        ("tmux_server_pids", "proc.tmux_servers_unchanged")):
         before = baseline.get(key) if baseline else None
         now = after.get(key) if after else None
         if not isinstance(before, list) or not isinstance(now, list):
@@ -553,7 +583,11 @@ def process_clauses(run: RunContext, rec: Recorder, baseline: Mapping[str, objec
             continue
         delta = hostprobe.pid_delta(before, now)
         new = {str(pid): attribution(pid, run) for pid in delta["new"]}
-        bad_new = {pid: who for pid, who in new.items() if not who.startswith(("other qa6 run", "gone"))}
+        unknown = {pid: who for pid, who in new.items() if who.startswith("unknown")}
+        bad_new = {pid: who for pid, who in new.items() if not who.startswith(("other qa6 run", "gone", "unknown"))}
+        if unknown and not delta["gone"] and not bad_new:
+            rec.block(clause, f"new {key} pid(s) whose owner could not be probed (unknown is not clean): {unknown}")
+            continue
         rec.check(clause, not delta["gone"] and not bad_new,
                   f"every baseline {key} pid still running and no new one (except another qa6 run's)",
                   {"gone": delta["gone"], "new": new})

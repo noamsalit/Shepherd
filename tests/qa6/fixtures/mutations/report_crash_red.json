@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "report.py",
+ "old": "    if failing:\n        return Decision(\"RED\", (*crashed_first,",
+ "new": "    if runner_crash is not None:\n        return Decision(\"INCOMPLETE\", (*crashed_first, *reasons), dict(counts))\n    if failing:\n        return Decision(\"RED\", (*crashed_first,",
+ "proof": "test_proof_gate_harness_error_and_crash",
+ "expect": "proof_gate.crash_with_product_fail_is_red_crash_first",
+ "why": "hunter N3: the crash rule is ordered before the FAIL rule again, so recorded product FAILs are rounded down to INCOMPLETE"
+}

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "            *(f\"malformed problem line: {problem}\" for problem in read.problems)]",
+ "new": "            ]",
+ "proof": "test_proof_publication_survives_torn_jsonl",
+ "expect": "proof_publication.torn_problem_line_is_reported",
+ "why": "hunter N1: a torn harness/teardown problem line is dropped silently instead of being published"
+}

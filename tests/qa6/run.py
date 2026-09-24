@@ -51,6 +51,7 @@ if __package__ in (None, ""):
 
 from qa6 import bootstrap, hostprobe, paths, preflight, realclaude, report, teardown, tmuxctl  # noqa: E402
 from qa6.catalog import SCENARIOS  # noqa: E402
+from qa6.jsonl import read_objects  # noqa: E402
 from shepherd.runner.tmux_cmd import DEFAULT_SOCKET  # noqa: E402
 from qa6.report import LaneExit, append_record, build_record, load_records, record_path, write_report  # noqa: E402
 from qa6.sandbox import (  # noqa: E402
@@ -67,10 +68,11 @@ from qa6.sandbox import (  # noqa: E402
 from qa6.stopifs import BACKGROUND_LANES, STOP_IFS, WAVE_LANES  # noqa: E402
 
 LOG = logging.getLogger("qa6.run")
-#: An instance started WITHOUT the seeded DB names the product's default socket in its reconcile
-#: (C7; sandbox.RunContext.shims_unseeded). The shim refuses it like any other foreign socket (it
-#: never reaches tmux), and it is recorded; it does not stop the run. Any other socket in that log does.
-UNSEEDED_EXCUSED: frozenset[str] = frozenset({DEFAULT_SOCKET})
+#: An instance started WITHOUT the seeded DB runs `list-sessions` on the product's default socket in
+#: its reconcile (C7; sandbox.RunContext.shims_unseeded). The shim refuses it like any other foreign
+#: socket (it never reaches tmux), and it is recorded; it does not stop the run. Any OTHER verb on that
+#: socket, and any other socket, does (review N3: excused by socket AND verb, `tmuxctl.unseeded_excused`).
+UNSEEDED_DEFAULT_SOCKET: str = DEFAULT_SOCKET
 HOST_WAVE = 9
 LANE_TIMEOUT_S = 3600.0
 GUARDS = paths.QA6_DIR / "test_harness_guards.py"
@@ -135,6 +137,27 @@ def ledger_copies(run: RunContext) -> list[tuple[Path, str]]:
     ]
 
 
+TREE_FILE = "tree.json"
+#: The paths a run executes: a change under any of them is a different tree.
+TREE_PATHS: tuple[str, ...] = ("tests/qa6", "src", "pyproject.toml")
+
+
+def tree_identity() -> dict[str, object]:
+    """`{"head", "dirty"}`: the commit this run executes and every uncommitted path under TREE_PATHS."""
+    head = subprocess.run([str(paths.GIT_BIN), "-C", str(paths.REPO), "rev-parse", "HEAD"], capture_output=True,
+                          text=True, timeout=30, check=False)
+    status = subprocess.run([str(paths.GIT_BIN), "-C", str(paths.REPO), "status", "--porcelain",
+                             "--untracked-files=all", "--", *TREE_PATHS], capture_output=True, text=True,
+                            timeout=30, check=False)
+    return {
+        "head": head.stdout.strip() if head.returncode == 0 else f"unknown (git exited {head.returncode}: "
+                                                                   f"{head.stderr.strip()[:200]})",
+        "dirty": ([line for line in status.stdout.splitlines() if line.strip() and "__pycache__" not in line]
+                  if status.returncode == 0 else [f"unknown (git status exited {status.returncode})"]),
+        "paths": list(TREE_PATHS),
+    }
+
+
 def read_json(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
@@ -152,7 +175,7 @@ def z2_violations(run: RunContext) -> list[str]:
     is not this run's, product and in-pane alike; `tmux -V` alone is allowed. A line that is not
     a JSON argv is itself a violation: an unreadable log proves nothing clean."""
     violations: list[str] = []
-    for log, excused in ((run.tmux_argv_log, frozenset[str]()), (run.unseeded_tmux_argv_log, UNSEEDED_EXCUSED)):
+    for log, excusable in ((run.tmux_argv_log, False), (run.unseeded_tmux_argv_log, True)):
         for line in (log.read_text(encoding="utf-8").splitlines() if log.exists() else []):
             if not line.strip():
                 continue
@@ -163,7 +186,8 @@ def z2_violations(run: RunContext) -> list[str]:
                 continue
             argv = [str(word) for word in decoded] if isinstance(decoded, list) else None
             why = tmuxctl.argv_violation(argv, None, run.pid) if argv is not None else "not a JSON argv"
-            if why is not None and not (argv is not None and tmuxctl.effective_socket(argv, None) in excused):
+            if why is not None and not (excusable and argv is not None
+                                        and tmuxctl.unseeded_excused(argv, UNSEEDED_DEFAULT_SOCKET)):
                 violations.append(f"{log}: {why}: {line[:300]}")
     pane_log = run.pane_tmux_argv_log
     entries: list[dict[str, object]] = []
@@ -266,6 +290,9 @@ def main(argv: list[str] | None = None) -> int:
     run_id = time.strftime("qa6-%Y%m%dT%H%M%SZ", time.gmtime())
     run_dir = args.report_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
+    # Tree identity (verification: evidence names the revision it ran): HEAD and every
+    # uncommitted path under the code the run executes, measured before anything runs.
+    (run_dir / TREE_FILE).write_text(json.dumps(tree_identity(), indent=1, sort_keys=True), encoding="utf-8")
     # INC-1: the user's link is measured before anything else runs, and every
     # later check compares against THIS state (it may already be damaged).
     link_start = realclaude.record_link_start(run_dir)
@@ -342,9 +369,8 @@ def _run(args: argparse.Namespace, run_id: str, run_dir: Path) -> int:
     LOG.info("run %s minted at %s", run_id, run.run0)
     state = RunState(args=args, run=run, baseline=baseline, reached=reached,
                      selected=set(args.wave) if args.wave else set(WAVE_LANES))
-    if sweep.orphans_stopped:
-        for line in sweep.orphans_stopped:
-            run.teardown_problem("pre-run sweep", line)
+    for line in [*sweep.orphans_stopped, *sweep.problems]:
+        run.teardown_problem("pre-run sweep", line)
     return guarded(lambda: _waves(state), lambda crash: _finish(state, run_id, crash))
 
 
@@ -472,7 +498,8 @@ def _finish(state: RunState, run_id: str, crash: str | None) -> int:
     errors = state.runner_errors
     if crash is not None:
         errors.append(f"runner crashed: {crash}")
-        LOG.error("runner crashed; tearing down and publishing INCOMPLETE: %s", crash[:600])
+        LOG.error("runner crashed; tearing down and publishing (RED if a product FAIL was recorded, else "
+                  "INCOMPLETE): %s", crash[:600])
 
     def step(name: str, action: Callable[[], None]) -> None:
         try:
@@ -490,17 +517,53 @@ def _finish(state: RunState, run_id: str, crash: str | None) -> int:
         step("wave 9", lambda: _host_wave(state))
     step("fill missing records", lambda: fill_missing(run, state.selected, state.blocked, state.implemented,
                                                       state.lane_exits, crash))
-    teardown_problems = _read_teardown_problems(run)
-    harness_problems = [*_read_problem_file(run.run_dir / "harness-problems.jsonl"), *errors]
-    decision = write_report(args.report_dir, run_id, run.run_dir, state.lane_exits, teardown_problems,
-                            extra={"preflight_reached": state.reached, "leak_notes": state.leak_notes,
-                                   "runner_crash": crash,
-                                   "real_claude": read_json(run.run_dir / realclaude.RESOLUTION_FILE),
-                                   "claude_link": {"start": realclaude.start_link_state(run.run_dir),
-                                                   "end": realclaude.link_state()}},
-                            harness_problems=harness_problems, runner_crash=crash)
+    try:
+        decision = _publish(state, run_id, crash)
+    except Exception as error:  # noqa: BLE001 - the last resort below publishes it, with the crash
+        publish_error = f"{type(error).__name__}: {error}\n{traceback.format_exc()[-3000:]}"
+        LOG.error("publication failed; writing the last-resort INCOMPLETE record: %s", publish_error[:600])
+        _publish_last_resort(args.report_dir, run_id, crash, publish_error, errors)
+        return 1
     LOG.info("report %s: %s — %s", run_id, decision.status, "; ".join(decision.reasons)[:1500])
     return 0 if decision.status == "GREEN" else 1
+
+
+def _publish(state: RunState, run_id: str, crash: str | None) -> report.Decision:
+    run, args = state.run, state.args
+    teardown_problems = _read_teardown_problems(run)
+    harness_problems = [*_read_problem_file(run.run_dir / "harness-problems.jsonl"), *state.runner_errors]
+    return write_report(args.report_dir, run_id, run.run_dir, state.lane_exits, teardown_problems,
+                        extra={"preflight_reached": state.reached, "leak_notes": state.leak_notes,
+                               "runner_crash": crash, "tree": read_json(run.run_dir / TREE_FILE),
+                               "real_claude": read_json(run.run_dir / realclaude.RESOLUTION_FILE),
+                               "claude_link": {"start": realclaude.start_link_state(run.run_dir),
+                                               "end": realclaude.link_state()}},
+                        harness_problems=harness_problems, runner_crash=crash)
+
+
+def _publish_last_resort(report_dir: Path, run_id: str, crash: str | None, publish_error: str,
+                         errors: list[str]) -> None:
+    """Hunter N1 / review N4: publication itself failed. Write an INCOMPLETE run file and a history
+    line that carry BOTH exceptions, so no run is ever invisible. Reads nothing that could be torn.
+
+    The run file is immutable: when the normal path already wrote it (and failed later), this
+    writes `<run_id>.last-resort.json` beside it instead of replacing it.
+    """
+    reasons = [f"publication failed: {publish_error.splitlines()[0][:600]}"]
+    if crash is not None:
+        reasons.append(f"the runner crashed: {crash.splitlines()[0][:600]}")
+    payload: dict[str, object] = {
+        "run_id": run_id, "status": "INCOMPLETE", "stage": "publish", "reasons": reasons,
+        "publish_error": publish_error, "runner_crash": crash, "runner_errors": list(errors),
+    }
+    report_dir.mkdir(parents=True, exist_ok=True)
+    target = report_dir / f"{run_id}.json"
+    if target.exists():
+        target = report_dir / f"{run_id}.last-resort.json"
+    target.write_text(json.dumps(payload, indent=1, sort_keys=True), encoding="utf-8")
+    target.chmod(0o444)
+    report.append_history(report_dir, {"run_id": run_id, "status": "INCOMPLETE", "stage": "publish",
+                                       "counts": {}, "reasons": reasons, "last_resort_file": target.name})
 
 
 def _copy_ledgers(run: RunContext) -> None:
@@ -520,6 +583,8 @@ def _remove_worktree(run: RunContext) -> None:
 def _teardown(state: RunState) -> None:
     leak = teardown.teardown_run(state.run)
     state.leak_notes.extend(leak.notes)
+    (state.run.run_dir / teardown.SIGNALLED_FILE).write_text(
+        json.dumps({"signalled": leak.signalled}, sort_keys=True), encoding="utf-8")
     for problem in leak.problems:
         state.run.teardown_problem("runner", problem)
 
@@ -586,28 +651,14 @@ def _join_background(background: list[Background], lane_exits: list[LaneExit]) -
 
 
 def _read_problem_file(path: Path) -> list[str]:
-    if not path.exists():
-        return []
-    problems: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            decoded: object = json.loads(line)
-            if isinstance(decoded, dict):
-                problems.append(f"{decoded.get('where')}: {decoded.get('problem')}")
-    return problems
+    """`where: problem` per line; a torn line is itself a problem, never an exception (hunter N1)."""
+    read = read_objects(path)
+    return [*(f"{row.get('where')}: {row.get('problem')}" for row in read.rows),
+            *(f"malformed problem line: {problem}" for problem in read.problems)]
 
 
 def _read_teardown_problems(run: RunContext) -> list[str]:
-    path = run.teardown_problems
-    if not path.exists():
-        return []
-    problems: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            decoded = json.loads(line)
-            if isinstance(decoded, dict):
-                problems.append(f"{decoded.get('where')}: {decoded.get('problem')}")
-    return problems
+    return _read_problem_file(run.teardown_problems)
 
 
 if __name__ == "__main__":

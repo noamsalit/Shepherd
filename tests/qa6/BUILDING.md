@@ -62,8 +62,19 @@ implemented twice, in the wrong wave's file, or a module is outside a lane dir.
 * **A failed clause outranks whatever interrupts the body afterwards** — a
   helper's `Blocked`, a skip, a harness exception, a missing `finish()`
   (`verdict.classify_outcome`, remfix 2 / H1): the record is FAIL.
+* A product socket failure from `Client.request` (refused, reset,
+  `RemoteDisconnected`, a garbled status line, a timeout) is raised as a
+  `verdict.ProductUnreachable` subclass of the original type (so `except
+  ConnectionRefusedError` still works). With no failed clause it is **FAIL**
+  when that same client answered earlier in the scenario (a timeout: FAIL(bound)
+  only when it is >= 10x that answer's latency), else **BLOCKED** (remfix 3,
+  hunter N2). Raw sockets you open yourself are not covered: classify them.
 * An unexpected exception with no failed clause is **FAIL(harness_error)**;
-  the gate reads it as INCOMPLETE, never RED. A scenario that does not take
+  the gate reads it as INCOMPLETE, never RED. A runner crash is RED when a
+  product FAIL was recorded (crash first in the reasons), else INCOMPLETE
+  (remfix 3, hunter N3).
+* Every JSONL reader goes through `jsonl.read_objects`: a torn line is a
+  published problem, never an exception and never dropped (remfix 3, N1/N5). A scenario that does not take
   `rec` is BLOCKED (and a guard fails the build).
 * `rec.fail_bound(name, what, bound_s, control, actual=…)`: pass what WAS
   observed instead, so the record tells "closed with the wrong code" from

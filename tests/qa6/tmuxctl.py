@@ -76,7 +76,12 @@ INVALID = "<invalid"
 
 
 def _socket_name(path: str) -> str:
-    """A socket path's name if it lives in this uid's tmux socket dir, else the path itself."""
+    """A socket path's name if it lives in this uid's tmux socket dir, else the path itself.
+
+    A relative path is `<invalid: …>` (review N2): tmux reads it from the client's cwd.
+    """
+    if not path.startswith("/"):
+        return f"{INVALID}: socket path {path!r} is not absolute>"
     directory = os.path.dirname(path)
     if directory and os.path.realpath(directory) == os.path.realpath(paths.TMUX_SOCKET_DIR):
         return os.path.basename(path)
@@ -88,6 +93,56 @@ def _words(argv: Sequence[str]) -> list[str]:
     if argv and (argv[0] == "tmux" or argv[0].endswith("/tmux")):
         return list(argv[1:])
     return list(argv)
+
+
+@dataclass(frozen=True)
+class GlobalOptions:
+    """tmux's global options as its getopt loop reads them, and the command words after them."""
+
+    label: str | None
+    path: str | None
+    command: tuple[str, ...]
+    #: `"<invalid: …>"` for an argv tmux itself would refuse, else `None`.
+    invalid: str | None
+    #: `-V` / `-h` reached: tmux prints and exits, no server is contacted.
+    no_server: bool
+
+
+def parse_globals(argv: Sequence[str]) -> GlobalOptions:
+    """Walk tmux 3.6a's getopt loop over `argv` (see `effective_socket`). Pure."""
+    words = _words(argv)
+    label: str | None = None
+    path: str | None = None
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if word == "--":
+            index += 1
+            break
+        if not word.startswith("-") or word == "-":
+            break
+        position = 1
+        while position < len(word):
+            letter = word[position]
+            if letter in _VALUED:
+                value = word[position + 1:]
+                if not value:
+                    index += 1
+                    if index >= len(words):
+                        return GlobalOptions(label, path, (), f"{INVALID}: -{letter} without a value>", False)
+                    value = words[index]
+                if letter == "L":
+                    label = value
+                elif letter == "S":
+                    path = value
+                break
+            if letter in _EXITS_IN_GETOPT:
+                return GlobalOptions(label, path, (), None, True)
+            if letter not in _FLAGS:
+                return GlobalOptions(label, path, (), f"{INVALID}: unknown option -{letter}>", False)
+            position += 1
+        index += 1
+    return GlobalOptions(label, path, tuple(words[index:]), None, False)
 
 
 def effective_socket(argv: Sequence[str], tmux_env: str | None) -> str | None:
@@ -102,47 +157,39 @@ def effective_socket(argv: Sequence[str], tmux_env: str | None) -> str | None:
     else `default`. `-V` and `-h` print and exit inside the getopt loop, so an
     argv that reaches one of them contacts no server: `None`.
 
-    A path in this uid's socket dir comes back as its name; any other path
-    comes back whole (no socket pattern matches it). An argv tmux would refuse
-    (an unknown option, a valued option with no value) comes back as
-    `"<invalid: …>"`, which no pattern matches either.
+    A path in this uid's socket dir comes back as its name; any other absolute
+    path comes back whole (no socket pattern matches it). A path that is **not
+    absolute** is `"<invalid: …>"` (review N2): tmux resolves it from the
+    CLIENT's working directory, which no post-hoc judge can see, so it is never
+    judged ours. An argv tmux would refuse (an unknown option, a valued option
+    with no value) comes back as `"<invalid: …>"`, which no pattern matches
+    either.
     """
-    words = _words(argv)
-    label: str | None = None
-    path: str | None = None
-    index = 0
-    while index < len(words):
-        word = words[index]
-        if word == "--" or not word.startswith("-") or word == "-":
-            break
-        position = 1
-        while position < len(word):
-            letter = word[position]
-            if letter in _VALUED:
-                value = word[position + 1:]
-                if not value:
-                    index += 1
-                    if index >= len(words):
-                        return f"{INVALID}: -{letter} without a value>"
-                    value = words[index]
-                if letter == "L":
-                    label = value
-                elif letter == "S":
-                    path = value
-                break
-            if letter in _EXITS_IN_GETOPT:
-                return None
-            if letter not in _FLAGS:
-                return f"{INVALID}: unknown option -{letter}>"
-            position += 1
-        index += 1
-    if path is not None:
-        return _socket_name(path)
-    if label is not None:
-        return label
+    parsed = parse_globals(argv)
+    if parsed.invalid is not None:
+        return parsed.invalid
+    if parsed.no_server:
+        return None
+    if parsed.path is not None:
+        return _socket_name(parsed.path)
+    if parsed.label is not None:
+        return parsed.label
     if tmux_env and not tmux_env.startswith(","):
         return _socket_name(tmux_env.split(",", 1)[0])
     return "default"
+
+
+#: The one argv an UNSEEDED instance's startup reconcile is excused for (C7; review N3): exactly
+#: `list-sessions` on the product's default runner socket. The shim refuses it like any foreign
+#: socket; any other verb there (a `kill-session`, a `kill-server`) is a violation that stops the run.
+UNSEEDED_EXCUSED_VERB = "list-sessions"
+
+
+def unseeded_excused(argv: Sequence[str], default_socket: str) -> bool:
+    """True only for `tmux -L <default_socket> list-sessions …` (any spelling of the globals)."""
+    parsed = parse_globals(argv)
+    return (effective_socket(argv, None) == default_socket and bool(parsed.command)
+            and parsed.command[0] == UNSEEDED_EXCUSED_VERB)
 
 
 def argv_violation(argv: Sequence[str], tmux_env: str | None, run_pid: int) -> str | None:

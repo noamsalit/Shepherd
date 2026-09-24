@@ -13,7 +13,9 @@ What it does for a qa6 run:
   AssertionError; `FAIL(bound)` for a `ProductFail`; `BLOCKED` for `Blocked`,
   a skip, or any setup error — a harness that could not set up has proven
   nothing about the product; a failed clause outranks a later `Blocked`, skip
-  or harness exception (FAIL); an unexpected exception with no failed clause
+  or harness exception (FAIL); a product socket failure from `Client.request`
+  is FAIL when that client answered earlier in the scenario, else BLOCKED; an
+  unexpected exception with no failed clause
   is `FAIL(harness_error)`, which the gate reads as INCOMPLETE; a scenario
   that never took `rec` is BLOCKED;
 * a failing non-scenario qa6 test (the INP self-check) is a harness problem
@@ -40,7 +42,7 @@ import pytest
 
 from typing import TYPE_CHECKING
 
-from .verdict import Blocked, Recorder, classify_outcome
+from .verdict import Blocked, Recorder, begin_scenario, classify_outcome
 
 if TYPE_CHECKING:
     from .browser import BrowserSession
@@ -145,6 +147,9 @@ def _blocked_by_runner(sid: str) -> str | None:
 def pytest_runtest_setup(item: pytest.Item) -> None:
     if not _is_qa6(item):
         return
+    # "Earlier in the scenario" for a product socket failure (hunter N2): an answer a client got
+    # in an earlier test does not prove this test's channel.
+    begin_scenario()
     sid = scenario_id(item)
     if sid is None:
         return

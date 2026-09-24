@@ -26,7 +26,7 @@ from pathlib import Path
 from shepherd.toolsurface.registry import GENERIC_ERROR
 
 from . import paths
-from .verdict import classify_blown_bound
+from .verdict import CONTROL_MULTIPLE, ProductUnreachable, classify_blown_bound, scenario_epoch
 
 #: `correlation_id` has no injection point, so it is matched as a pattern.
 CORRELATION_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -37,6 +37,61 @@ DEFAULT_TIMEOUT_S = 10.0
 
 class RefusedByHarness(RuntimeError):
     """A request this harness will not send (the forbidden port, or an unapproved master send)."""
+
+
+class ProductTimeout(ProductUnreachable, TimeoutError):
+    """The product did not answer within the request's timeout."""
+
+
+class ProductRefused(ProductUnreachable, ConnectionRefusedError):
+    """The product's port refused the connection."""
+
+
+class ProductReset(ProductUnreachable, ConnectionResetError):
+    """The product dropped the connection (a reset, or `RemoteDisconnected`)."""
+
+
+class ProductConnectionLost(ProductUnreachable, ConnectionError):
+    """Any other broken connection to the product (a broken pipe, an abort)."""
+
+
+class ProductBadHTTP(ProductUnreachable, http.client.HTTPException):
+    """The product answered something that is not HTTP (a bad status line, a short body)."""
+
+
+#: What `Client.request` converts, most specific first. Any other exception is the harness's.
+PRODUCT_SOCKET_ERRORS: tuple[tuple[type[BaseException], type[ProductUnreachable]], ...] = (
+    (TimeoutError, ProductTimeout),
+    (ConnectionRefusedError, ProductRefused),
+    (ConnectionResetError, ProductReset),
+    (ConnectionError, ProductConnectionLost),
+    (http.client.HTTPException, ProductBadHTTP),
+)
+
+
+def product_socket_error(error: BaseException, *, what: str, answered: bool, answer_latency_s: float | None,
+                         timeout_s: float) -> ProductUnreachable | None:
+    """The product-side exception for a socket failure on the product's port, or `None` (not one).
+
+    A timeout counts as "after an answer" only when the timeout is at least 10x that earlier answer's
+    latency (Difference 1, `kind: bound`); a refused/reset/garbled answer after an answer is FAIL(assert).
+    """
+    for source, target in PRODUCT_SOCKET_ERRORS:
+        if not isinstance(error, source):
+            continue
+        timed_out = target is ProductTimeout
+        qualified = answered and (not timed_out or (answer_latency_s is not None
+                                                    and timeout_s >= CONTROL_MULTIPLE * max(answer_latency_s, 1e-3)))
+        control = (f"this client answered earlier in this scenario (latency {answer_latency_s!r}s)" if answered
+                   else "no earlier answer from this client in this scenario")
+        detail = f"{what}: {type(error).__name__}: {error} ({control}; timeout {timeout_s}s)"
+        wrapped = target(detail)
+        wrapped.what = what
+        wrapped.after_answer = qualified
+        wrapped.kind = "bound" if timed_out else "assert"
+        wrapped.detail = detail
+        return wrapped
+    return None
 
 
 @dataclass(frozen=True)
@@ -82,6 +137,8 @@ class Client:
         self.host = f"127.0.0.1:{port}"
         self.origin = f"http://127.0.0.1:{port}"
         self.allow_master_send = allow_master_send
+        #: (scenario epoch, latency) of this client's last complete answer: the control N2 needs.
+        self.last_answer: tuple[int, float] | None = None
 
     def get(self, path: str, headers: Mapping[str, str] | None = None) -> Response:
         merged = {"Host": self.host, **(headers or {})}
@@ -125,12 +182,22 @@ class Client:
             connection.endheaders(body)
             response = connection.getresponse()
             raw = response.read()
+            elapsed = time.monotonic() - started
+            self.last_answer = (scenario_epoch(), elapsed)
             return Response(
                 status=response.status,
                 headers={key.lower(): value for key, value in response.getheaders()},
                 body=raw,
-                elapsed_s=time.monotonic() - started,
+                elapsed_s=elapsed,
             )
+        except (OSError, http.client.HTTPException) as error:
+            answered = self.last_answer is not None and self.last_answer[0] == scenario_epoch()
+            wrapped = product_socket_error(error, what=f"{method} {path} on 127.0.0.1:{self.port}", answered=answered,
+                                           answer_latency_s=self.last_answer[1] if self.last_answer else None,
+                                           timeout_s=timeout_s)
+            if wrapped is None:
+                raise
+            raise wrapped from error
         finally:
             connection.close()
 

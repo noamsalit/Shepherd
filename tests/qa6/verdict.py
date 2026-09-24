@@ -72,6 +72,43 @@ class ProductFail(AssertionError):
         self.source = source
 
 
+class ProductUnreachable(Exception):
+    """A product socket failure seen by `httpclient.Client.request` (hunter N2).
+
+    Mixed into a subclass of the original socket error (`TimeoutError`,
+    `ConnectionRefusedError`, `ConnectionResetError`/`RemoteDisconnected`, any
+    other `ConnectionError`, `http.client.HTTPException`), so every caller that
+    catches the socket type on purpose still catches it. Classified by WHERE it
+    came from (the product's loopback socket), never by its type alone:
+
+    * `after_answer`: this same client got a complete answer earlier in this
+      scenario (`scenario_epoch`), so the channel was proven, and the product
+      stopped answering: FAIL (`kind`: `assert`, or `bound` for a timeout that
+      is at least 10x the earlier answer's latency — Difference 1);
+    * otherwise no control proves the channel: BLOCKED.
+
+    `harness_error` stays for exceptions raised by harness code.
+    """
+
+    what: str = ""
+    after_answer: bool = False
+    kind: str = "assert"
+    detail: str = ""
+
+
+#: One number per scenario test, bumped by conftest before its setup: "earlier in the scenario".
+_SCENARIO_EPOCH: list[int] = [0]
+
+
+def begin_scenario() -> int:
+    _SCENARIO_EPOCH[0] += 1
+    return _SCENARIO_EPOCH[0]
+
+
+def scenario_epoch() -> int:
+    return _SCENARIO_EPOCH[0]
+
+
 @dataclass(frozen=True)
 class Sourced:
     """A bound that is a product constant with a citation (e.g. the 2.0 s scan)."""
@@ -289,6 +326,9 @@ def classify_outcome(error: BaseException | None, when: str, recorder: Recorder 
       helper's `Blocked`, a skip, a harness exception, or a return without
       `finish()` — so a proven FAIL is never published as BLOCKED (hunter H1);
     * a scenario that never requested `rec` is BLOCKED, never PASS (review 6);
+    * a product socket failure (`ProductUnreachable`, from `Client.request`) with
+      no failed clause is FAIL when this client answered earlier in the
+      scenario, else BLOCKED (hunter N2);
     * an unexpected exception with no failed clause is FAIL(harness_error)
       (review 7 / hunter M9), which the gate reads as INCOMPLETE.
     """
@@ -320,6 +360,12 @@ def classify_outcome(error: BaseException | None, when: str, recorder: Recorder 
                      else f"{'skip' if skipped else type(error).__name__}: {text}")[:600]
         return "FAIL", _failed_kind(recorder), (f"{len(recorder.failed)} clause(s) failed before the body was "
                                                 f"interrupted ({interrupt}): {_failed_names(recorder)}")
+    if isinstance(error, ProductUnreachable):
+        if error.after_answer:
+            return "FAIL", "bound" if error.kind == "bound" else "assert", (
+                f"product socket failure after this client had answered in this scenario: {text}")
+        return "BLOCKED", None, (f"product socket failure with no earlier answer from this client in this "
+                                 f"scenario (no control proves the channel): {text}")
     if isinstance(error, Blocked):
         return "BLOCKED", None, error.reason[:2000]
     if skipped:

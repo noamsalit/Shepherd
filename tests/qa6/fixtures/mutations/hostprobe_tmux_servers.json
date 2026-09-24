@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "        if os.path.basename(fields[2].strip()) == \"tmux\" and int(fields[1]) == 1:",
+ "new": "        if os.path.basename(fields[2].strip()) == \"tmux\":",
+ "proof": "test_proof_z3_servers_and_signalled",
+ "expect": "proof_z3.clients_are_not_servers",
+ "why": "review N5: Z3 counts every tmux client as a server again (planted ps text)"
+}

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "        _publish_last_resort(args.report_dir, run_id, crash, publish_error, errors)\n        return 1\n",
+ "new": "        raise\n",
+ "proof": "test_proof_publication_survives_torn_jsonl",
+ "expect": "proof_publication.last_resort_writes_run_file",
+ "why": "hunter N1 / review N4: a failed publication escapes _finish with no run file and no history line"
+}

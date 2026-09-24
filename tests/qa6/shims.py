@@ -88,8 +88,9 @@ def selftest(run: RunContext) -> dict[str, str]:
         [str(run.shims / "tmux"), "-V"], capture_output=True, text=True, timeout=10, check=False,
         env={"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"},
     )
-    if done.returncode != 0 or not done.stdout.startswith("tmux "):
-        raise AssertionError(f"tmux shim self-test failed: {done.returncode} {done.stdout!r} {done.stderr!r}")
+    if done.returncode != 0 or not done.stdout.startswith("tmux ") or done.stderr:
+        # stderr must be EMPTY on an allowed call (review N1): the shim adds nothing the product sees.
+        raise AssertionError(f"tmux shim self-test failed: {done.returncode} {done.stdout!r} stderr={done.stderr!r}")
     seen["tmux"] = done.stdout.strip()
     seen["tmux-refusal"] = selftest_refusal(run)
     # The claude self-test wrote one argv line; clear it so O1/O10/O12 count

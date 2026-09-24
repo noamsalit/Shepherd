@@ -14,7 +14,8 @@ run 2 overwrote run 1's red. Here:
   it, never hidden);
 * **INCOMPLETE** otherwise: a missing or duplicate record, a crashed lane (exit
   not 0/1, or exit 1 with no FAIL/BLOCKED record from that lane), a teardown
-  problem, a harness problem (a failed self-check, a runner crash), a
+  problem, a harness problem (a failed self-check, a torn record line, a
+  runner crash with no product FAIL), a
   `FAIL(harness_error)` record, or any BLOCKED;
 * every run writes an **immutable** `runs/<run_id>.json` (refused if it exists)
   and `runs/<run_id>/report.md`; `qa6-latest.json` is a copy carrying its own
@@ -34,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .catalog import BY_ID, PLANNED_TOTAL, SCENARIOS
+from .jsonl import read_objects
 
 RECORDS_DIR = "records"
 LATEST = "qa6-latest.json"
@@ -83,17 +85,20 @@ def append_record(path: Path, record: Mapping[str, object]) -> None:
         handle.write(json.dumps(dict(record), sort_keys=True) + "\n")
 
 
-def load_records(run_dir: Path) -> list[dict[str, object]]:
+def load_records(run_dir: Path, problems: list[str] | None = None) -> list[dict[str, object]]:
+    """Every record line under `<run_dir>/records/`. Never raises on a torn line (hunter N1):
+    it is appended to `problems`, which `write_report` publishes as a harness problem
+    (INCOMPLETE). Mid-run readers (stop-ifs, fill_missing) pass no list; the final
+    publication reads the same files again and reports every such line."""
     records: list[dict[str, object]] = []
     directory = run_dir / RECORDS_DIR
     if not directory.exists():
         return records
     for path in sorted(directory.glob("*.jsonl")):
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                decoded: object = json.loads(line)
-                if isinstance(decoded, dict):
-                    records.append({str(key): value for key, value in decoded.items()})
+        read = read_objects(path)
+        records.extend(read.rows)
+        if problems is not None:
+            problems.extend(f"malformed record line: {problem}" for problem in read.problems)
     return records
 
 
@@ -131,10 +136,10 @@ def decide_status(
 ) -> Decision:
     """The publish gate. Pure.
 
-    A runner that crashed (`runner_crash`) publishes INCOMPLETE whatever it
-    recorded before the crash, with the exception first and any FAIL count
-    beside it: its run did not finish, so it cannot say RED or GREEN about
-    the plan (hunter H6).
+    A runner that crashed (`runner_crash`) after recording a FAIL about the
+    product publishes **RED**, with the crash as the first reason (hunter N3:
+    a proven FAIL is never rounded down to INCOMPLETE); a crash with no product
+    FAIL publishes INCOMPLETE with the exception first (hunter H6). Never GREEN.
 
     RED needs a FAIL about the product. A `FAIL(harness_error)` record, a
     harness problem (a failed self-check, a runner crash) or any incompleteness
@@ -179,13 +184,12 @@ def decide_status(
     if counts.get("BLOCKED", 0):
         reasons.append(f"{counts['BLOCKED']} BLOCKED scenario(s)")
     failing = product_fails(records)
-    if runner_crash is not None:
-        crashed_reasons = [f"the runner crashed: {runner_crash.splitlines()[0][:600] if runner_crash else ''}"]
-        if failing:
-            crashed_reasons.append(f"{len(failing)} FAIL scenario(s) were recorded before the crash: {failing[:20]}")
-        return Decision("INCOMPLETE", (*crashed_reasons, *reasons), dict(counts))
+    crashed_first = ([f"the runner crashed: {runner_crash.splitlines()[0][:600] if runner_crash else ''}"]
+                     if runner_crash is not None else [])
     if failing:
-        return Decision("RED", (f"{len(failing)} FAIL scenario(s)", *reasons), dict(counts))
+        return Decision("RED", (*crashed_first, f"{len(failing)} FAIL scenario(s)", *reasons), dict(counts))
+    if runner_crash is not None:
+        return Decision("INCOMPLETE", (*crashed_first, *reasons), dict(counts))
     clean = (
         not reasons
         and all(lane.exit_code == 0 for lane in lane_exits)
@@ -207,8 +211,13 @@ def write_report(
     harness_problems: Sequence[str] = (),
     runner_crash: str | None = None,
 ) -> Decision:
-    """Write the immutable run file, the markdown, and the latest copy."""
-    records = load_records(run_dir)
+    """Write the immutable run file, the markdown, and the latest copy.
+
+    A torn record line is a harness problem here, never an exception (hunter N1).
+    """
+    record_problems: list[str] = []
+    records = load_records(run_dir, record_problems)
+    harness_problems = [*harness_problems, *record_problems]
     decision = decide_status(records, lane_exits, teardown_problems, [s.id for s in SCENARIOS], harness_problems,
                              runner_crash)
     run_file = report_dir / f"{run_id}.json"
@@ -234,7 +243,8 @@ def write_report(
     run_file.chmod(0o444)
     (run_dir / "report.md").write_text(render_markdown(payload), encoding="utf-8")
     append_history(report_dir, {"run_id": run_id, "status": decision.status, "counts": decision.counts})
-    history = [json.loads(line) for line in (report_dir / HISTORY).read_text(encoding="utf-8").splitlines() if line]
+    read = read_objects(report_dir / HISTORY)
+    history: list[object] = [*read.rows, *({"malformed_history_line": problem} for problem in read.problems)]
     latest = dict(payload)
     latest["history"] = history
     latest_path = report_dir / LATEST
