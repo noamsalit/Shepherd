@@ -212,7 +212,7 @@ function shepherdSays(text) {
 // A step with nothing to show still renders — *that the master called a tool*
 // is the fact, and a step that vanished when its detail was empty would be a
 // call the transcript silently omitted.
-function shepherdStep(toolName, detail) {
+function shepherdStep(toolName, body) {
   const turn = shepherdTurn();
   const step = el("details", "step");
   const head = el("summary", undefined);
@@ -220,9 +220,34 @@ function shepherdStep(toolName, detail) {
   head.appendChild(el("span", "step-tool", textOf(toolName)));
   head.appendChild(el("span", "step-time", UNKNOWN));
   step.appendChild(head);
-  step.appendChild(el("div", "step-body", textOf(detail)));
+  step.appendChild(el("div", "step-body", body));
   turn.appendChild(step);
   append(turn);
+}
+
+// What a step's body says, always a string (BC-06: `detail` is an object, and
+// an object handed to `textContent` is `[object Object]`). A call names its
+// argument **keys** and never their values — the same rule the approval card
+// keeps for raw arguments, which are not redacted. Anything else with a tool
+// name (a result) is its text, and says so when there was none.
+const TOOL_CALL = "tool_call";
+const NO_ARGUMENTS = "(no arguments)";
+const NO_RESULT_TEXT = "(no result text)";
+
+function argumentKeys(detail) {
+  const input = detail !== null && typeof detail === "object" ? detail.input : undefined;
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return UNKNOWN;
+  }
+  const keys = Object.keys(input).sort();
+  return keys.length === 0 ? NO_ARGUMENTS : `arguments: ${keys.join(", ")}`;
+}
+
+function stepBody(kind, data) {
+  if (kind === TOOL_CALL) {
+    return argumentKeys(data.detail);
+  }
+  return typeof data.text === "string" && data.text !== "" ? data.text : NO_RESULT_TEXT;
 }
 
 // One `MasterEvent` kind is one line. `text` is what the master said; anything
@@ -277,6 +302,17 @@ function cardFrom(data) {
   };
 }
 
+// One card per approval (BC-26): the load read and the stream can both carry
+// the same one. Compared by `dataset` rather than by a built selector, so an id
+// is never interpreted as selector syntax.
+function shown(approvalId) {
+  if (state.approvals.some((known) => known.approval_id === approvalId)) {
+    return true;
+  }
+  const cards = thread().querySelectorAll("[data-approval-id]");
+  return [...cards].some((card) => card.dataset.approvalId === approvalId);
+}
+
 function without(approvals, approvalId) {
   return approvals.filter((approval) => approval.approval_id !== approvalId);
 }
@@ -317,7 +353,12 @@ function grow(input) {
   input.style.height = `${Math.min(input.scrollHeight, COMPOSER_MAX)}px`;
 }
 
+// BC-25: an Enter that commits an IME composition is the input method's, not a
+// send — posting then would send half-composed text.
 function onComposerKey(event) {
+  if (event.isComposing) {
+    return;
+  }
   if (event.key === ENTER && !event.shiftKey) {
     event.preventDefault();
     submit();
@@ -327,7 +368,9 @@ function onComposerKey(event) {
 async function submit() {
   const input = slot("shepherd-input");
   const text = input.value;
-  if (text === "") {
+  // BC-25: nothing to say is not a turn. The check is trimmed, the text is not —
+  // a multi-line message posts exactly as typed.
+  if (text.trim() === "") {
     return;
   }
   input.value = "";
@@ -356,7 +399,7 @@ export function onShepherdEvent(envelope) {
   if (envelope.type.startsWith(MASTER_PREFIX)) {
     const kind = envelope.type.slice(MASTER_PREFIX.length);
     if (typeof data.tool_name === "string" && data.tool_name !== "") {
-      shepherdStep(data.tool_name, data.detail);
+      shepherdStep(data.tool_name, stepBody(kind, data));
       return;
     }
     shepherdSays(eventText(kind, data));
@@ -364,6 +407,10 @@ export function onShepherdEvent(envelope) {
   }
   if (envelope.type === APPROVAL_CREATED) {
     const raised = cardFrom(data);
+    // BC-26: the first-paint read may already have painted this card.
+    if (shown(raised.approval_id)) {
+      return;
+    }
     state.approvals = [...state.approvals, raised];
     // U6: the card appears inline in the conversation at the blocked turn, and
     // nowhere else — the rail is gone and U2 keeps it gone.
@@ -386,8 +433,11 @@ export async function loadShepherd() {
   if (approvals === null) {
     return;
   }
+  // BC-26: an `approval.created` that arrived while this read was in flight
+  // already painted its card; the read must not paint it a second time.
+  const unseen = approvals.approvals.filter((approval) => !shown(approval.approval_id));
   state.approvals = approvals.approvals;
-  for (const approval of state.approvals) {
+  for (const approval of unseen) {
     append(approvalCard(approval));
   }
 }
