@@ -76,6 +76,9 @@ LOCK_SUFFIX = ".lock"
 _HELD: dict[Path, int] = {}
 _HELD_GUARD = threading.Lock()
 
+#: One bind's umask window at a time (see `_umask`).
+_UMASK_GUARD = threading.Lock()
+
 
 class SocketInUse(RuntimeError):
     """The socket path is held by a listener that is still accepting (BC-16).
@@ -102,13 +105,16 @@ def _umask(mode: int) -> Iterator[None]:
     """Set the umask for exactly one bind, then put it back.
 
     `umask` is process-global: leaving it set would change the mode of every
-    file the process creates afterwards.
+    file the process creates afterwards. Serialised, because `controld` binds
+    two listeners on two threads (D68): two interleaved save/set/restore pairs
+    would restore the socket's umask, not the process's.
     """
-    previous = os.umask(0o777 & ~mode)
-    try:
-        yield
-    finally:
-        os.umask(previous)
+    with _UMASK_GUARD:
+        previous = os.umask(0o777 & ~mode)
+        try:
+            yield
+        finally:
+            os.umask(previous)
 
 
 def unlink_socket(path: Path) -> None:

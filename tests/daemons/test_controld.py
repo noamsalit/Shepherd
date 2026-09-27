@@ -51,6 +51,7 @@ from shepherd.testkit.scripted_host import ScriptedHost
 from shepherd.toolsurface import compose
 from shepherd.host.detect import detect_host
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
+from shepherd.toolsurface.rpc import RPC_SOCKET_NAME
 
 from shepherd.core.runner import ProcState
 from world_fixture import World, world  # noqa: F401 - the shared fixture, imported by name
@@ -608,9 +609,10 @@ def scripted_host(tmp_path: Path) -> ScriptedHost:
 def test_the_mailbox_sweep_runs_on_the_existing_loop(tmp_path: Path) -> None:
     """T14's `sweep_pending` rides the 2.0 s cadence `run_discovery_loop` owns.
 
-    Goes red if a fourth thread appears to carry it: the sweep is asserted to run
+    Goes red if a fifth thread appears to carry it: the sweep is asserted to run
     on **the loop's own thread**, which is this one, and `threads` in `start()`
-    is asserted to stay three in `test_the_root_still_wires_exactly_three_threads`.
+    is asserted to be exactly four, none of them a sweep, in
+    `test_the_root_wires_exactly_four_threads`.
 
     Arrival before absence: the call count is asserted non-zero before the thread
     identity is read, so a sweep that never ran cannot pass the identity check.
@@ -650,24 +652,27 @@ def test_the_mailbox_sweep_runs_on_the_existing_loop(tmp_path: Path) -> None:
     assert ran_on == [threading.get_ident()]
 
 
-def test_the_root_still_wires_exactly_three_threads(world: World) -> None:
-    """Out-of-Scope Drift, as a check: M3 buys no fourth thread and no second
-    socket. The ingest listener, the discovery loop and the HTTP server are the
-    three the root has had since T18; the mailbox sweep rides the second."""
+def test_the_root_wires_exactly_four_threads(world: World) -> None:
+    """Out-of-Scope Drift, as a check, re-valued by D68: the fourth thread is
+    the CLI's RPC listener and nothing else. The ingest listener, the RPC
+    listener, the discovery loop and the HTTP server; the mailbox sweep still
+    rides the discovery loop. Successor of the retired
+    `test_the_root_still_wires_exactly_three_threads` (qa6 rulings P10)."""
     with running(world) as started:
         names = tuple(thread.name for thread in started.threads)
 
-        assert names == ("ingest", "scan", "http")
+        assert names == ("ingest", "rpc", "scan", "http")
         assert all(thread.is_alive() for thread in started.threads)
 
 
-def test_no_new_socket_is_bound(world: World) -> None:
-    """DP4/§13: the terminal is served over the HTTP server's own upgrade, so
-    `controld` still binds exactly **one** socket of its own — the control
-    socket. (The ingest socket is `sessiond`'s; no file for it appears here
-    because no `sessiond` runs in this test.)
+def test_controld_binds_exactly_its_control_and_rpc_sockets(world: World) -> None:
+    """DP4/§13 and D68: the terminal is served over the HTTP server's own
+    upgrade, so `controld` binds exactly **two** sockets of its own — the
+    control socket and the CLI's RPC socket. (The ingest socket is `sessiond`'s;
+    no file for it appears here because no `sessiond` runs in this test.)
+    Successor of the retired `test_no_new_socket_is_bound` (qa6 rulings P10).
 
-    Goes red if a second listener appears — which is what a terminal daemon or a
+    Goes red if a third listener appears — which is what a terminal daemon or a
     second control channel would look like from here.
     """
     with running(world) as started:
@@ -676,11 +681,16 @@ def test_no_new_socket_is_bound(world: World) -> None:
 
         # Arrival: the directory really is the one `start()` bound into…
         assert started.control_socket_path.parent == world.runtime_dir
-        assert started.control_socket_path.exists()
-        # …and the one socket in it is that one, by name.
-        assert bound == [started.control_socket_path.name]
-        assert bound[0].startswith(CONTROL_SOCKET_NAME)
-        assert INGEST_SOCKET_NAME not in bound
+        assert started.rpc_socket_path.parent == world.runtime_dir
+        assert started.control_socket_path.exists() and started.rpc_socket_path.exists()
+        # …and the two sockets in it are those two, by name.
+        assert bound == sorted([started.control_socket_path.name, started.rpc_socket_path.name])
+        assert bound == [f"{CONTROL_SOCKET_NAME}.sock", f"{RPC_SOCKET_NAME}.sock"]
+        assert f"{INGEST_SOCKET_NAME}.sock" not in bound
+
+    # F15: both are unlinked on the way out.
+    assert not started.control_socket_path.exists()
+    assert not started.rpc_socket_path.exists()
 
 
 def test_the_composition_builds_the_runner_and_the_root_never_names_it() -> None:
@@ -863,7 +873,7 @@ def test_stop_returns_the_shutdown_outcome_rather_than_nothing(world: World) -> 
     outcome = controld.stop(started)
 
     assert outcome.hung == ()
-    assert sorted(outcome.joined) == ["http", "ingest", "scan"]
+    assert sorted(outcome.joined) == ["http", "ingest", "rpc", "scan"]  # D68: the fourth thread
     assert outcome.store_closed is True
     assert started.store.writer_is_alive() is False
 
@@ -905,4 +915,4 @@ def test_the_process_prints_what_shutdown_found(
     # Arrival before the claim: the run really did reach shutdown…
     assert started != []
     # …and the line a human reads names the count, not nothing.
-    assert "3 threads exited · store closed" in printed, printed
+    assert "4 threads exited · store closed" in printed, printed  # D68: the fourth thread, `rpc`

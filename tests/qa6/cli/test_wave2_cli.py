@@ -1,9 +1,9 @@
-"""Wave 2, CLI lane (no daemon): C3 (install-hooks dry run, then --yes) and C5 (usage errors).
+"""Wave 2, CLI lane (no daemon): C5 (usage errors).
 
 The shipped `.venv/bin/shepherd` as a subprocess with the allow-listed sandbox
-env of a fresh instance root (no controld is started: C3 and C5 need none).
-C3 keeps the spec's oracle and is predicted to FAIL (C-1: the tool is not
-registered in the CLI process).
+env of a fresh instance root (no controld is started: C5 needs none). C3 moved
+to the daemon-backed lane, `tests/qa6/sub/test_wave2_1_cli_status.py` (qa6
+rulings P10, RD-1): under D68 install-hooks runs in the daemon that registers it.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from .. import hostprobe, paths
+from .. import paths
 from ..sandbox import InstanceRoot, RunContext, checked_env, mint_instance, sandbox_env
 from ..scenario import scenario
 from ..verdict import Recorder
@@ -51,30 +51,6 @@ def shepherd(cli: CliEnv, *args: str) -> Ran:
     done = subprocess.run(list(argv), env=checked_env(cli.env, "a CLI child"), cwd=str(cli.root.cwd), capture_output=True, text=True,
                           timeout=CLI_TIMEOUT_S, check=False)
     return Ran(argv, done.returncode, done.stdout, done.stderr)
-
-
-@scenario("C3")
-def test_c3_install_hooks_dry_run_then_yes(cli_env: CliEnv, rec: Recorder) -> None:
-    directory = cli_env.hooks / "c3"
-    directory.mkdir()
-    target = directory / "settings.json"
-    dry = shepherd(cli_env, "install-hooks", "--settings", str(target), "--dry-run")
-    rec.note(f"dry run: rc={dry.rc} stdout={dry.stdout!r} stderr={dry.stderr!r}")
-    rec.equal("proc.dry_run_exit", 0, dry.rc)
-    rec.check("proc.dry_run_would_install", "would install" in dry.stdout, "stdout contains 'would install'", dry.stdout[:300])
-    rec.check("proc.dry_run_changed_nothing", "this run changed nothing. Pass --yes to apply it." in dry.stdout,
-              "the dry-run sentence", dry.stdout[:300])
-    rec.check("files.absent_after_dry_run", not target.exists(), "absent", target.exists())
-    rec.equal("logs.dry_run_stderr_empty", "", dry.stderr)
-    applied = shepherd(cli_env, "install-hooks", "--settings", str(target), "--yes")
-    rec.note(f"--yes: rc={applied.rc} stdout={applied.stdout!r} stderr={applied.stderr!r}")
-    rec.equal("proc.yes_exit", 0, applied.rc)
-    rec.check("proc.yes_installed", "installed" in applied.stdout, "stdout contains 'installed'", applied.stdout[:300])
-    rec.check("files.managed_entries_after_yes", target.exists() and "_shepherd_managed" in target.read_text(encoding="utf-8"),
-              "the managed entries (H1's shape)", target.exists())
-    rec.equal("logs.yes_stderr_empty", "", applied.stderr)
-    rec.equal("files.real_settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
-    rec.finish()
 
 
 def usage_argvs(target: str) -> list[tuple[str, tuple[str, ...]]]:

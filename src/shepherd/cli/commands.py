@@ -15,12 +15,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TextIO
 
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.states import FLEET_STATE_ORDER
 from shepherd.host.base import HostPlatform, SocketPathTooLong
 from shepherd.toolsurface.registry import invoke
+from shepherd.toolsurface.rpc import call_remote
 from shepherd.toolsurface.types import CallerContext, Failure, ToolResult
 
 EXIT_OK = 0
@@ -35,13 +37,19 @@ UNKNOWN = "unknown"
 
 @dataclass(frozen=True)
 class Cli:
-    """One command's world: where to write, who is asking, what host this is."""
+    """One command's world: where to write, who is asking, what host this is.
+
+    `remote` is the running daemon's RPC socket (D68), or `None` when this host
+    cannot even name one; a daemon that is not listening there is found out per
+    call, and the call then falls back to this process's own `invoke`.
+    """
 
     host: HostPlatform
     out: TextIO
     err: TextIO
     ctx: CallerContext
     socket_name: str
+    remote: Path | None = None
 
     def say(self, line: str) -> None:
         print(line, file=self.out)
@@ -50,6 +58,11 @@ class Cli:
         print(f"shepherd: {line}", file=self.err)
 
     def call(self, name: str, args: Mapping[str, object]) -> ToolResult:
+        """The daemon's answer when one is running, else this process's (D68)."""
+        if self.remote is not None:
+            answered = call_remote(self.remote, name, args, self.ctx)
+            if answered is not None:
+                return answered
         return invoke(name, args, self.ctx)
 
     def read(self, name: str, args: Mapping[str, object]) -> Mapping[str, object] | None:

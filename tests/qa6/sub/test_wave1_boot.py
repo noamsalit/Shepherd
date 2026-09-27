@@ -43,7 +43,7 @@ from ..verdict import Blocked, Recorder, await_env, observe
 #: W3's live-status bound (test-plan W3 UI row: "within 10 s"); a harness bound,
 #: FAIL(bound) only with the page's own /api/events 200 as the same-channel control.
 STREAM_LIVE_BOUND_S = 10.0
-W4_STOP_LINE = "controld stopped: 3 threads exited · store closed"
+W4_STOP_LINE = "controld stopped: 4 threads exited · store closed"
 
 
 class Boot:
