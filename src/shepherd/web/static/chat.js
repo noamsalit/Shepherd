@@ -77,8 +77,15 @@ const ENTER = "Enter";
 // and the page says so rather than showing a history that looks complete.
 const GAP_NOTE = "the stream dropped events — this conversation is incomplete";
 
+// `steps` is BC-06a's pairing: a call's step body, by the `tool_use_id` its
+// result will name, until that result arrives. `lastText` is BC-06c's: the
+// last thing each turn said, by turn id, so a final text equal to it is shown
+// once. Both are keyed rather than "the latest", because a result or an ending
+// that arrives for another turn must not be matched to this one.
 const state = {
   approvals: [],
+  steps: new Map(),
+  lastText: new Map(),
 };
 
 function slot(id) {
@@ -211,7 +218,8 @@ function shepherdSays(text) {
 // point: the conversation reads as prose and the mechanism is one click away.
 // A step with nothing to show still renders — *that the master called a tool*
 // is the fact, and a step that vanished when its detail was empty would be a
-// call the transcript silently omitted.
+// call the transcript silently omitted. The body is returned, because the
+// call's result lands inside it (BC-06a) rather than in a step of its own.
 function shepherdStep(toolName, body) {
   const turn = shepherdTurn();
   const step = el("details", "step");
@@ -220,9 +228,11 @@ function shepherdStep(toolName, body) {
   head.appendChild(el("span", "step-tool", textOf(toolName)));
   head.appendChild(el("span", "step-time", UNKNOWN));
   step.appendChild(head);
-  step.appendChild(el("div", "step-body", body));
+  const content = el("div", "step-body", body);
+  step.appendChild(content);
   turn.appendChild(step);
   append(turn);
+  return content;
 }
 
 // What a step's body says, always a string (BC-06: `detail` is an object, and
@@ -231,6 +241,7 @@ function shepherdStep(toolName, body) {
 // keeps for raw arguments, which are not redacted. Anything else with a tool
 // name (a result) is its text, and says so when there was none.
 const TOOL_CALL = "tool_call";
+const TOOL_RESULT = "tool_result";
 const NO_ARGUMENTS = "(no arguments)";
 const NO_RESULT_TEXT = "(no result text)";
 
@@ -248,6 +259,96 @@ function stepBody(kind, data) {
     return argumentKeys(data.detail);
   }
   return typeof data.text === "string" && data.text !== "" ? data.text : NO_RESULT_TEXT;
+}
+
+// The runtime's own payload, which `project_to_stream` nests under `detail`.
+// Anything that is not an object reads as empty, so a missing key is a missing
+// datum (principle 5) and never a throw.
+function detailOf(data) {
+  const detail = data.detail;
+  return detail !== null && typeof detail === "object" ? detail : {};
+}
+
+function useIdOf(data) {
+  const useId = detailOf(data).tool_use_id;
+  return typeof useId === "string" && useId !== "" ? useId : null;
+}
+
+// BC-06a (ruling 2): a call and its result are one step — the call is the
+// title, the result is inside, under the call's argument keys. A result whose
+// call this page never saw (it opened mid-turn, or the call had no id) is not
+// dropped: it renders as a step of its own, titled with its tool name.
+function fillStep(data) {
+  const useId = useIdOf(data);
+  if (useId === null || !state.steps.has(useId)) {
+    return false;
+  }
+  state.steps.get(useId).append("\n", stepBody(TOOL_RESULT, data));
+  state.steps.delete(useId);
+  return true;
+}
+
+function openStep(kind, data) {
+  const body = shepherdStep(data.tool_name, stepBody(kind, data));
+  const useId = useIdOf(data);
+  if (kind === TOOL_CALL && useId !== null) {
+    state.steps.set(useId, body);
+  }
+}
+
+// BC-06b (ruling 3): a turn's bookkeeping is not the conversation. It goes to
+// the event line beside the status slot — never into the thread, and never
+// over `#shepherd-status`, whose turn id, refusal or approval word a reader is
+// looking at (plan revision 4, B1). The line is a polite live region, so it is
+// announced without taking focus. BC-06c (ruling 4): the ending carries the
+// SDK's final text, which is normally the turn's last text again; it enters the
+// thread only when it says something the turn has not.
+const TEXT = "text";
+const TURN_ENDED = "turn_ended";
+const RATE_LIMIT = "rate_limit";
+const RATE_LIMIT_STOPS = "rejected";
+
+function turnEnded(data) {
+  const said = state.lastText.get(data.turn_id);
+  state.lastText.delete(data.turn_id);
+  fill("shepherd-event", `turn ended · ${textOf(detailOf(data).outcome)}`);
+  if (typeof data.text === "string" && data.text !== "" && data.text !== said) {
+    shepherdSays(data.text);
+  }
+}
+
+// RD-4: the SDK's `rejected` is the rate limit that stops the turn, and a turn
+// that stopped is part of the conversation, so it is in the thread as well.
+function rateLimited(data) {
+  const limit = detailOf(data).rate_limit;
+  const status = limit !== null && typeof limit === "object" ? limit.status : undefined;
+  const line = `rate limit · ${textOf(status)}`;
+  fill("shepherd-event", line);
+  if (status === RATE_LIMIT_STOPS) {
+    shepherdSays(line);
+  }
+}
+
+function onMasterEvent(kind, data) {
+  if (kind === TOOL_RESULT && fillStep(data)) {
+    return;
+  }
+  if (typeof data.tool_name === "string" && data.tool_name !== "") {
+    openStep(kind, data);
+    return;
+  }
+  if (kind === TURN_ENDED) {
+    turnEnded(data);
+    return;
+  }
+  if (kind === RATE_LIMIT) {
+    rateLimited(data);
+    return;
+  }
+  if (kind === TEXT && typeof data.text === "string") {
+    state.lastText.set(data.turn_id, data.text);
+  }
+  shepherdSays(eventText(kind, data));
 }
 
 // One `MasterEvent` kind is one line. `text` is what the master said; anything
@@ -397,12 +498,7 @@ export function onShepherdEvent(envelope) {
     return;
   }
   if (envelope.type.startsWith(MASTER_PREFIX)) {
-    const kind = envelope.type.slice(MASTER_PREFIX.length);
-    if (typeof data.tool_name === "string" && data.tool_name !== "") {
-      shepherdStep(data.tool_name, stepBody(kind, data));
-      return;
-    }
-    shepherdSays(eventText(kind, data));
+    onMasterEvent(envelope.type.slice(MASTER_PREFIX.length), data);
     return;
   }
   if (envelope.type === APPROVAL_CREATED) {

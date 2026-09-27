@@ -301,21 +301,27 @@ def test_u26_a_turn_renders_line_by_line_with_expandable_tool_steps(master: Mast
         mark = master.stream.mark()
         book.push(Turn(says="QA6 U26 prose", calls=[Call("fleet_summary", {})]))
         compose(page, "QA6 U26")
-        await_turn_end(master, mark)
-        settle(lambda: any("turn_ended" in item["prose"] for item in thread_items(page)) or None)
+        ended = await_turn_end(master, mark)
+        # Rulings 2-4 (U19; qa6 rulings P3): the ending is on the event line beside the status slot,
+        # never in the thread; the call and its result are one step; `#shepherd-status` is not read here.
+        detail = ended[-1].data.get("detail")
+        outcome = detail.get("outcome") if isinstance(detail, dict) else None
+        line_says = f"turn ended · {outcome if isinstance(outcome, str) and outcome else '—'}"
+        line, _ = settle(lambda: text_of(page.locator("#shepherd-event")) == line_says or None)
+        rec.equal("ui.turn_ended_reaches_the_status_area", line_says, text_of(page.locator("#shepherd-event")))
         frames = [f for f in master.stream.since(mark) if f.kind.startswith("master.")]
+        rec.record("stream.frames", [f.kind for f in frames])
         items = [item for item in thread_items(page) if not item["bubble"]]
-        expected: list[str] = []
-        for f in frames:
-            if isinstance(f.data.get("tool_name"), str) and f.data.get("tool_name"):
-                expected.append(f"step:{f.data['tool_name']}")
-            else:
-                text = f.data.get("text")
-                expected.append(f"prose:{text if isinstance(text, str) and text else f.kind.split('.', 1)[1]}")
+        rec.check("ui.no_turn_ended_line_in_the_thread", not any("turn_ended" in item["prose"] for item in items),
+                  "no .prose reads turn_ended", [item["prose"] for item in items])
+        # The scripted turn: one text, then fleet_summary's call and result (one step), then the ending
+        # (the event line). The text is not repeated: the scripted ending carries none (ruling 4).
+        expected = ["prose:QA6 U26 prose", "step:fleet_summary"]
         shown = [f"step:{i['tool']}" if i["tool"] else f"prose:{i['prose']}" for i in items]
-        rec.equal("ui.frames_render_in_order", expected, shown[-len(expected):] if expected else shown)
-        rec.check("ui.prose_and_step_before_turn_ended", len(expected) >= 3 and expected[-1] == "prose:turn_ended",
-                  ">= 2 DOM updates before turn_ended", expected)
+        rec.equal("ui.frames_render_in_order", expected, shown[-len(expected):])
+        rec.check("ui.prose_and_step_before_turn_ended", bool(line) and shown[-len(expected):] == expected,
+                  "the prose and the one step are in the thread when the event line says the turn ended",
+                  {"thread": shown, "event_line": text_of(page.locator("#shepherd-event"))})
         rec.block("ui.two_prose_lines_each_as_it_arrives",
                   "the shared ToolCallingMaster emits one `text` event per scripted Turn (inproc/master.py `says`), so a "
                   "turn with two text events cannot be scripted without editing a shared file (SCOPE_INCREASE)")
@@ -371,11 +377,15 @@ def decide_through_the_card(master: Master, browser_session: BrowserSession, rec
         word = "approved" if choice == "approve" else "rejected"
         said, _ = settle(lambda: text_of(page.locator("#shepherd-status")) == word or None)
         rec.equal("ui.status_says", word, text_of(page.locator("#shepherd-status")))
-        gone, _ = settle(lambda: page.locator(f"[data-approval-id='{approval}']").count() == 0 or None, 5.0)
-        rec.check("ui.no_element_with_the_id_remains", bool(gone), f"no [data-approval-id={approval}] (it leaves every position)",
+        # Ruling 17 (SD-04): the decided card stays inline in the thread, its buttons replaced by the outcome.
+        inline = page.locator(f"#shepherd-thread [data-approval-id='{approval}']")
+        label_node = inline.locator(".decided")
+        kept, _ = settle(lambda: (inline.count() == 1 and label_node.count() == 1 and text_of(label_node) == word) or None, 5.0)
+        rec.check("ui.one_inline_card_with_the_outcome", bool(kept) and page.locator(f"[data-approval-id='{approval}']").count() == 1,
+                  f"exactly one [data-approval-id={approval}], inside #shepherd-thread, reading {word!r}",
                   {"count": page.locator(f"[data-approval-id='{approval}']").count(),
-                   "card_text": text_of(page.locator(f"[data-approval-id='{approval}']").first)
-                   if page.locator(f"[data-approval-id='{approval}']").count() else ""})
+                   "in_thread": inline.count(),
+                   "card_text": text_of(inline.first) if inline.count() else ""})
         shots(page, "2-decided")
         rec.equal("api.one_decide_post", [{"choice": choice}], bodies.of(f"/api/approvals/{approval}"))
         await_turn_end(master, mark)

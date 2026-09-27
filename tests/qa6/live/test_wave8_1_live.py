@@ -893,11 +893,20 @@ def test_l1_real_master_turn_through_ui(live: Live, browser_session: BrowserSess
         page = context.new_page()
         page.goto(f"http://127.0.0.1:{a.controld.port}/", wait_until="load")
         await_env(lambda: page.locator("#stream-status").inner_text().strip() == "live", 15.0, "#stream-status live")
+
+        def shepherd_adds() -> list[dict[str, object]]:
+            added = page.evaluate("() => window.__qa6Thread || []")
+            return [as_dict(entry) for entry in (added if isinstance(added, list) else [])
+                    if isinstance(entry, dict) and "turn-shepherd" in str(entry.get("cls"))]
+
+        # The mark is re-taken before each send, so the count below covers only the final turn.
+        before = len(shepherd_adds())
         turn = ui_turn(live, page, L1_PROMPT)
         retried = False
         if turn.ended is not None and "fleet_summary" not in turn.tool_names():
             retried = True
             rec.note(f"L1 first turn did not call fleet_summary: {turn.summary()}; one clearer retry (OD-6)")
+            before = len(shepherd_adds())
             turn = ui_turn(live, page, L1_RETRY)
         rec.record("stream.turn", turn.summary())
         if turn.ended is None:
@@ -916,16 +925,13 @@ def test_l1_real_master_turn_through_ui(live: Live, browser_session: BrowserSess
         # UI: the user's bubble, and the Shepherd side growing across DOM updates.
         bubbles = [text.strip() for text in page.locator(".turn-you .bubble").all_inner_texts()]
         rec.check("ui.user_bubble", L1_PROMPT in bubbles, f"a .turn-you bubble reading {L1_PROMPT!r}", bubbles[-3:])
-        def shepherd_adds() -> list[dict[str, object]]:
-            added = page.evaluate("() => window.__qa6Thread || []")
-            return [as_dict(entry) for entry in (added if isinstance(added, list) else [])
-                    if isinstance(entry, dict) and "turn-shepherd" in str(entry.get("cls"))]
-
-        # Every master.* frame of a turn renders one Shepherd node (chat.js onShepherdEvent).
-        observe(lambda: len(shepherd_adds()) >= len(turn.frames), 10.0)
-        this_turn = shepherd_adds()[-len(turn.frames):] if turn.frames else []
-        rec.check("ui.assistant_grows_in_two_updates", len(this_turn) >= 3,
-                  ">= 2 Shepherd-side DOM additions before the turn-ending one",
+        # Not one node per master.* frame any more (qa6 rulings 2-4, U19): a call and its result are one
+        # step, `turn_ended` goes to the event line, and a final text equal to the last is not repeated.
+        # So the turn is counted from the pre-send mark: at least the merged tool step and one prose line.
+        observe(lambda: len(shepherd_adds()) - before >= 2, 10.0)
+        this_turn = shepherd_adds()[before:]
+        rec.check("ui.assistant_grows_in_two_updates", len(this_turn) >= 2,
+                  ">= 2 Shepherd-side DOM additions: the merged tool step and at least one prose line",
                   {"count": len(this_turn), "at": [entry.get("at") for entry in this_turn],
                    "texts": [str(entry.get("text"))[:60] for entry in this_turn]})
         # Observations with no plan oracle (recorded, reported as defect candidates, never asserted):

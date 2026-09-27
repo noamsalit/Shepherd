@@ -14,7 +14,9 @@ own `onShepherdEvent`, which is exactly what `app.js` does with every frame.
   tool step body is `[object Object]`. A call names its argument **keys** and
   never their values (the rule the approval card keeps for raw arguments); a
   result shows its text, or says it had none. How many steps a call and its
-  result render as is the owner's question and is deliberately not asserted.
+  result render as was the owner's question; ruling 2 (2026-09-27) answered it
+  — one step, the result inside the call's — and `test_chat_steps_live.py`
+  owns that assertion. The count below follows from it.
 * BC-25 composer (U25 clauses 4 and 5): whitespace-only text posts nothing, and
   an Enter pressed while an IME composition is open posts nothing — while a
   multi-line message still posts byte for byte (the send is not trimmed).
@@ -160,17 +162,21 @@ def test_no_step_renders_object_object(chat_page) -> None:
     for envelope in (call, result, silent, bare):
         page.evaluate(DELIVER, envelope)
 
+    # Ruling 2: the call and its first result are one step. The second result
+    # for the same id has no open call left, so it is a step of its own rather
+    # than dropped.
     bodies = page.locator("#shepherd-thread .step-body").all_text_contents()
-    assert len(bodies) == 4, bodies
+    assert len(bodies) == 3, bodies
     assert not any("[object Object]" in body for body in bodies), bodies
     # A call names its argument keys, and never a value.
     assert "brief" in bodies[0] and "cwd" in bodies[0], bodies[0]
     assert ARGUMENT_VALUE not in page.locator("#shepherd-thread").inner_text()
-    # A result is its text; an empty one says so rather than showing a blank.
-    assert bodies[1] == "spawned s-1", bodies[1]
-    assert bodies[2] == "(no result text)", bodies[2]
+    # A result is its text, inside its call's step; an empty one says so rather
+    # than showing a blank.
+    assert bodies[0].splitlines()[-1] == "spawned s-1", bodies[0]
+    assert bodies[1] == "(no result text)", bodies[1]
     # A call with no arguments is still a readable line, not an object or a blank.
-    assert bodies[3].strip() != "" and bodies[3] != "—", bodies[3]
+    assert bodies[2].strip() != "" and bodies[2] != "—", bodies[2]
     assert errors == [], errors
 
 
