@@ -59,6 +59,7 @@ from shepherd.engines.claude_code.fork import (
     parse_fork_result,
 )
 from shepherd.orchestration.ask import ASK_RECORD_PREFIX, AskResult, ask_session
+from shepherd.toolsurface.tools_messaging import project_ask
 from shepherd.store.db import Store, open_store
 from shepherd.store.models import Session
 
@@ -807,8 +808,34 @@ def test_from_fork_of_comes_from_our_own_row_not_from_the_transcript(
         encoding="utf-8",
     )
     result = ask(store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()))
-    assert result.from_fork_of == TARGET_ENGINE_ID
+    # D75 (ruling 21): our row's id names the asked session; the engine id our
+    # row holds travels beside it. Both still come from the row, not the file.
+    assert result.from_fork_of == SESSION_ID
+    assert result.from_fork_of_engine_session_id == TARGET_ENGINE_ID
     assert "forkedFrom" not in spelled(ASK_MODULE)
+
+
+def test_ask_names_the_asked_session_by_our_id_and_carries_the_engine_id(
+    store: Store, target: str, projects_root: Path
+) -> None:
+    """D75 (ruling 21, SD-08): `from_fork_of` is **Shepherd's** ULID for the asked
+    session — the id every other surface names it by — and the engine's session
+    id is a separate field, so a caller never has to translate one into the
+    other. Asserted on the fork path, the mailbox path, and the L4 projection.
+
+    Goes red if `from_fork_of` goes back to the engine id, or if the engine id
+    is dropped from the result or from `project_ask`.
+    """
+    forked = ask(store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()))
+    queued = ask(store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()), can_fork=False)
+    for result in (forked, queued):
+        assert result.from_fork_of == target, result
+        assert result.from_fork_of_engine_session_id == TARGET_ENGINE_ID, result
+    projected = project_ask(forked)
+    assert projected["from_fork_of"] == target
+    assert projected["from_fork_of_engine_session_id"] == TARGET_ENGINE_ID
+    # The fork row is still parented on our id; the fork still ran from the engine's.
+    assert ask_rows(store)[0].parent_session_id == target
 
 
 # ----- 7. `method` is always reported -----------------------------------------
@@ -835,7 +862,8 @@ def test_the_method_is_reported_never_silently_downgraded(
         store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()), can_fork=can_fork
     )
     assert result.method == expected, case
-    assert result.from_fork_of == TARGET_ENGINE_ID
+    assert result.from_fork_of == SESSION_ID
+    assert result.from_fork_of_engine_session_id == TARGET_ENGINE_ID
 
 
 def test_method_is_reported_on_every_failure_path_too(

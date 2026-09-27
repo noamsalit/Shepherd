@@ -7,16 +7,19 @@ every tmux fact arrives as a `RunnerHandle` or a `PaneRef`.
 **A kill is recorded before it is issued (G-M3-9, E-M3-17).** `kill-session`
 removes the listing row and `#{pane_dead_status}` with it
 (`15-list-sessions-after-kill.txt`), and whether a slow session-ending hook
-survives the kill is unverified. So: read the status, write the record, *then*
-kill. A crash in between leaves the record — what a later pass can act on —
-rather than an orphan nobody knows about. The verdict is written **from the
-recorded action**, and a kill the row had no ending for is counted
-`KILL_WITHOUT_SESSION_END`.
+survives the kill is unverified. So: read the status and the row, write the
+record, *then* kill. A crash in between leaves the record — what a later pass can
+act on — rather than an orphan nobody knows about. The verdict is written **from
+the recorded action**, and a kill no session ending followed is counted
+`KILL_WITHOUT_SESSION_END`. "A session end arrived during the kill" means the
+row's `ended_at` **changed across the kill** (ruling 10): a finished turn's older
+ending does not count as one, so a kill between turns still records `killed`.
 
 **Not a second stop writer.** `apply_stop_verdict` still holds the only write of
 the stop columns (its statement is not quoted here: the rule guarding it scans
 raw source text). This module calls that verb and classifies nothing — a declared
-kill is an action taken, not evidence read — and leaves an already-ended row be.
+kill is an action taken, not evidence read — and leaves a row whose ending
+arrived during the kill be.
 
 **`/resume` rebinds, it does not stop (C14)**: the row keeps its identity *and
 its stop history* and changes one column. `rebind_engine_session_id` is C14's
@@ -110,12 +113,15 @@ def record_and_terminate(
 ) -> ProcState:
     """End one owned session, in the only order that survives a crash mid-way.
 
-    Read the status, write the record, kill, write the verdict from the record.
+    Read the status and the row, write the record, kill, write the verdict from
+    the record unless `ended_at` moved during the kill.
     A failed kill's `RunnerRefusal` propagates — the session is still alive and a
     caller told "killed" would be told a false thing — and the record stays
     behind, which is the point of writing it first.
     """
     observed = observe_exit(runner=runner, handle=handle)
+    before = store.get_owned_session(session_id)
+    ended_before = None if before is None else before.ended_at
     recorded_at = now()
     record: dict[str, object] = {
         "session_id": session_id, "session_name": handle.session_name, "recorded_at": recorded_at,
@@ -127,25 +133,19 @@ def record_and_terminate(
     stopped = FoldDelta(state=SessionState.STOPPED, last_event_at=recorded_at)
     store.apply_fold_delta(session_id, stopped)
 
-    row = store.get_owned_session(session_id)
-    if row is None or row.ended_at is None:
-        # G-M3-9: no session ending had arrived, so the verdict comes from the
-        # record rather than from a hook that may never survive the kill.
+    after = store.get_owned_session(session_id)
+    if (None if after is None else after.ended_at) == ended_before:
+        # G-M3-9: no session ending arrived during the kill, so the verdict comes
+        # from the record rather than from a hook that may never survive the kill.
         store.bump_anomaly(str(AnomalyKind.KILL_WITHOUT_SESSION_END.value))
         store.apply_stop_verdict(session_id, _killed(), recorded_at, observed.exit_code)
     store.set_app_state(f"{KILL_RECORD_PREFIX}{session_id}", None)
-    publish(
-        StreamEvent(
-            kind=KILL_EVENT,
-            session_id=session_id,
-            occurred_at=recorded_at,
-            payload={
-                "exit_code": observed.exit_code,
-                "exit_signal": observed.exit_signal,
-                "recorded_at": recorded_at,
-            },
-        )
-    )
+    payload: dict[str, object] = {
+        "exit_code": observed.exit_code, "exit_signal": observed.exit_signal,
+        "recorded_at": recorded_at,
+    }
+    publish(StreamEvent(kind=KILL_EVENT, session_id=session_id, occurred_at=recorded_at,
+                        payload=payload))
     return observed
 
 

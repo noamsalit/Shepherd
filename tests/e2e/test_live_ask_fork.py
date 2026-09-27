@@ -171,7 +171,9 @@ def test_the_target_transcript_is_unchanged(throwaway: Throwaway, tmp_path: Path
 
         # ----- 4. the fork really ran and really answered.
         assert result.method == "fork", result
-        assert result.from_fork_of == engine_session_id, result
+        # D75 (ruling 21): our id names the asked session; the engine id rides beside it.
+        assert result.from_fork_of == SESSION_ID, result
+        assert result.from_fork_of_engine_session_id == engine_session_id, result
         assert result.refusal is None, result.refusal
         assert result.text, f"the fork returned no text: {result}"
 
