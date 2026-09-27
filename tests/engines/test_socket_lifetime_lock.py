@@ -12,20 +12,23 @@ closes, which is the ordinary end of a process, not a teardown verb.
 
 from __future__ import annotations
 
+import errno
 import fcntl
 import os
 import socket
 import stat
 import subprocess
 import sys
-from collections.abc import Iterator
+import threading
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
+from shepherd.daemons import control_ingest
 from shepherd.engines.claude_code import ingest_socket
-from shepherd.engines.claude_code.ingest_socket import SocketInUse, bind_listener, claim_socket
+from shepherd.engines.claude_code.ingest_socket import SocketInUse, bind_listener, claim_socket, serve_ingest
 from shepherd.host.base import SocketPlan
 from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, SOCKET_DIR_MODE, SOCKET_MODE
 
@@ -270,3 +273,171 @@ def test_a_child_process_that_exits_frees_its_lock(tmp_path: Path, claims: list[
     claims.append(plan.path)
     assert claim_socket(plan) is plan
     assert not another_process_can_lock(lock_path(plan))
+
+
+def failing_flock(error: OSError) -> Callable[[int, int], None]:
+    """An `fcntl.flock` that meets `error` on a lock and passes an unlock through."""
+    real_flock = fcntl.flock
+
+    def flock(fd: int, operation: int) -> None:
+        if operation & fcntl.LOCK_EX:
+            raise error
+        real_flock(fd, operation)
+
+    return flock
+
+
+def fd_is_open(fd: int) -> bool:
+    try:
+        os.fstat(fd)
+    except OSError as error:
+        assert error.errno == errno.EBADF, error
+        return False
+    return True
+
+
+@pytest.mark.parametrize(
+    ("error", "maps_to_in_use"),
+    [
+        (BlockingIOError(errno.EWOULDBLOCK, os.strerror(errno.EWOULDBLOCK)), True),
+        (OSError(errno.ENOLCK, os.strerror(errno.ENOLCK)), False),
+        (OSError(errno.EACCES, os.strerror(errno.EACCES)), False),
+    ],
+    ids=["EWOULDBLOCK", "ENOLCK", "EACCES"],
+)
+def test_only_a_would_block_lock_is_a_socket_in_use(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: OSError, maps_to_in_use: bool
+) -> None:
+    """A lock another process holds is `SocketInUse`; a lock the kernel will
+    not give at all (`ENOLCK`, `EACCES`) is not a held socket, and says so."""
+    plan = plan_for(tmp_path)
+    monkeypatch.setattr(fcntl, "flock", failing_flock(error))
+    with pytest.raises(RuntimeError) as refused:
+        claim_socket(plan)
+
+    assert isinstance(refused.value, SocketInUse) is maps_to_in_use, repr(refused.value)
+    if not maps_to_in_use:
+        assert isinstance(refused.value, ingest_socket.ClaimFailed), repr(refused.value)
+
+
+def test_a_lock_the_kernel_refuses_is_a_claim_failure_that_keeps_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ENOLCK is not "held by a running process": the claim fails with a typed
+    error naming the lock file and the errno's text, holds no claim, and closes
+    the descriptor it opened."""
+    plan = plan_for(tmp_path)
+    opened: list[int] = []
+    real_open = os.open
+
+    def spy_open(path: str | os.PathLike[str], flags: int, mode: int = 0o777) -> int:
+        fd = real_open(path, flags, mode)
+        opened.append(fd)
+        return fd
+
+    monkeypatch.setattr(os, "open", spy_open)
+    monkeypatch.setattr(fcntl, "flock", failing_flock(OSError(errno.ENOLCK, os.strerror(errno.ENOLCK))))
+    with pytest.raises(Exception) as refused:
+        claim_socket(plan)
+    monkeypatch.undo()
+
+    assert not isinstance(refused.value, OSError), f"a raw OSError reached the caller: {refused.value!r}"
+    assert isinstance(refused.value, ingest_socket.ClaimFailed)
+    assert not isinstance(refused.value, SocketInUse)
+    assert str(lock_path(plan)) in str(refused.value)
+    assert os.strerror(errno.ENOLCK) in str(refused.value)
+    assert plan.path not in ingest_socket._HELD, "a failed claim was recorded as held"
+    assert len(opened) == 1 and not fd_is_open(opened[0]), "the failed claim leaked its lock descriptor"
+    assert another_process_can_lock(lock_path(plan)), "a failed claim holds the lock"
+
+
+def test_a_lock_file_that_cannot_be_opened_is_a_claim_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = plan_for(tmp_path)
+    real_open = os.open
+
+    def refuse_the_lock(path: str | os.PathLike[str], flags: int, mode: int = 0o777) -> int:
+        if os.fspath(path).endswith(".lock"):
+            raise PermissionError(errno.EACCES, os.strerror(errno.EACCES), os.fspath(path))
+        return real_open(path, flags, mode)
+
+    monkeypatch.setattr(os, "open", refuse_the_lock)
+    with pytest.raises(Exception) as refused:
+        claim_socket(plan)
+    monkeypatch.undo()
+
+    assert not isinstance(refused.value, OSError), f"a raw OSError reached the caller: {refused.value!r}"
+    assert isinstance(refused.value, ingest_socket.ClaimFailed)
+    assert str(lock_path(plan)) in str(refused.value)
+    assert os.strerror(errno.EACCES) in str(refused.value)
+    assert plan.path not in ingest_socket._HELD
+
+
+def test_a_socket_dir_that_cannot_be_made_is_a_claim_failure(tmp_path: Path) -> None:
+    """The dir half of the claim: a file where the socket dir should be."""
+    plan = plan_for(tmp_path)
+    plan.path.parent.write_text("not a directory")
+    with pytest.raises(Exception) as refused:
+        claim_socket(plan)
+
+    assert not isinstance(refused.value, OSError), f"a raw OSError reached the caller: {refused.value!r}"
+    assert isinstance(refused.value, ingest_socket.ClaimFailed)
+    assert str(plan.path.parent) in str(refused.value)
+
+
+def test_a_release_whose_unlock_fails_still_closes_and_forgets_the_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`release_claim` is exception-safe: an unlock that raises still closes
+    the descriptor (which drops the lock) and the claim is not left recorded."""
+    plan = plan_for(tmp_path)
+    claim_socket(plan)
+    fd = ingest_socket._HELD[plan.path]
+    real_flock = fcntl.flock
+
+    def failing_unlock(descriptor: int, operation: int) -> None:
+        if operation == fcntl.LOCK_UN:
+            raise OSError(errno.EIO, os.strerror(errno.EIO))
+        real_flock(descriptor, operation)
+
+    monkeypatch.setattr(fcntl, "flock", failing_unlock)
+    with pytest.raises(OSError):
+        ingest_socket.release_claim(plan.path)
+    monkeypatch.undo()
+
+    assert plan.path not in ingest_socket._HELD
+    assert not fd_is_open(fd), "a failed unlock leaked the lock descriptor"
+    assert another_process_can_lock(lock_path(plan)), "a failed unlock kept the claim"
+
+
+def failing_unlink(path: Path, inode: int) -> None:
+    raise OSError(errno.EIO, os.strerror(errno.EIO), str(path))
+
+
+def test_the_ingest_listener_releases_its_claim_when_the_unlink_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`serve_ingest`'s `finally`: `release_claim` runs even if the unlink
+    raises. A shutdown already set makes the loop return at once, on this thread."""
+    plan = claim_socket(plan_for(tmp_path))
+    shutdown = threading.Event()
+    shutdown.set()
+    monkeypatch.setattr(ingest_socket, "unlink_owned_socket", failing_unlink)
+    with pytest.raises(OSError):
+        serve_ingest(plan=plan, on_frame=lambda frame: None, on_shutdown=lambda: None, shutdown=shutdown)
+
+    assert another_process_can_lock(lock_path(plan)), "a failed unlink kept the ingest claim"
+
+
+def test_the_control_listener_releases_its_claim_when_the_unlink_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = claim_socket(plan_for(tmp_path))
+    shutdown = threading.Event()
+    shutdown.set()
+    monkeypatch.setattr(control_ingest, "unlink_owned_socket", failing_unlink)
+    with pytest.raises(OSError):
+        control_ingest.serve_control_ingest(plan=plan, schema_version=1, on_frame=lambda frame: None, shutdown=shutdown)
+
+    assert another_process_can_lock(lock_path(plan)), "a failed unlink kept the control claim"

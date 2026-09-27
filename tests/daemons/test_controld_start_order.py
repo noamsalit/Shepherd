@@ -10,7 +10,8 @@ they run in; they call the real ones, so nothing is faked.
 * PP3 — a request queued on the bound port before `serve_forever` is answered
   by the frozen registry (ADR-7 §4 as amended by D71: frozen before it
   *serves*);
-* E-QR-5 — a newer schema refused after the bind releases the port;
+* E-QR-5 — a newer schema refused after the bind releases the port, and a
+  compose that raises closes the store and releases the port;
 * E-QR-16 — a first start with no runtime dir claims and binds;
 * D72 — the claim is held until `stop()`.
 """
@@ -27,17 +28,26 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 
 from shepherd.daemons import controld
 from shepherd.host.detect import detect_host
+from shepherd.store.db import Store
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION, MigrationRefused, migrate
 from shepherd.toolsurface.registry import RegistryFrozen, register, registered_tools
 from shepherd.toolsurface.types import Audience, BlastClass, ToolDef
 from world_fixture import World, world  # noqa: F401 - the shared fixture, imported by name
 
 CEILING_S = 10.0
+
+
+class CreateServer(Protocol):
+    """`controld.create_server`'s shape, as the root calls it."""
+
+    def __call__(self, host: str, port: int, static_root: Path) -> ThreadingHTTPServer: ...
+
 
 #: Tries `<socket>.lock` once from another process: exit 0 taken, 3 held.
 TRY_LOCK = (
@@ -110,25 +120,73 @@ def test_a_first_start_with_no_runtime_dir_claims_and_binds(world: World) -> Non
         assert (world.runtime_dir / f"{started.control_socket_path.name}.lock").is_file()
 
 
-def test_a_newer_schema_closes_the_port_it_bound(world: World, monkeypatch: pytest.MonkeyPatch) -> None:
-    """E-QR-5: the store refuses after the bind, and the bind does not outlive it."""
-    seed_a_newer_schema(world.data_dir / controld.DB_NAME)
-    bound: list[int] = []
-    real_create_server = controld.create_server
+def server_spy(real_create_server: CreateServer, servers: list[ThreadingHTTPServer]) -> CreateServer:
+    """A `create_server` that keeps a reference to what it built.
+
+    The reference is the point: a refused start that forgets to close its
+    server would otherwise be rescued by the garbage collector closing the
+    unreferenced socket, and the rebind below would pass vacuously."""
 
     def spy_create_server(host: str, port: int, static_root: Path) -> ThreadingHTTPServer:
         server = real_create_server(host, port, static_root=static_root)
-        bound.append(int(server.server_address[1]))
+        servers.append(server)
         return server
 
-    monkeypatch.setattr(controld, "create_server", spy_create_server)
-    port = free_port()
-    with pytest.raises(MigrationRefused):
-        controld.start(host=detect_host(), port=port, engine_config_dir=world.engine_config_dir)
+    return spy_create_server
 
-    assert bound == [port], "the store was opened before the port was bound"
+
+def assert_the_port_was_given_back(servers: list[ThreadingHTTPServer], port: int) -> None:
+    assert [int(server.server_address[1]) for server in servers] == [port]
+    assert servers[0].socket.fileno() == -1, "the refused start left its server's socket open"
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as again:
         again.bind(("127.0.0.1", port))  # EADDRINUSE here is the leaked listener
+
+
+def test_a_newer_schema_closes_the_port_it_bound(world: World, monkeypatch: pytest.MonkeyPatch) -> None:
+    """E-QR-5: the store refuses after the bind, and the bind does not outlive it.
+    `refused` is held too: its traceback keeps `start`'s frame, and so its
+    `server` local, alive."""
+    seed_a_newer_schema(world.data_dir / controld.DB_NAME)
+    servers: list[ThreadingHTTPServer] = []
+    monkeypatch.setattr(controld, "create_server", server_spy(controld.create_server, servers))
+    port = free_port()
+    with pytest.raises(MigrationRefused) as refused:
+        controld.start(host=detect_host(), port=port, engine_config_dir=world.engine_config_dir)
+
+    assert servers, "the store was opened before the port was bound"
+    assert_the_port_was_given_back(servers, port)
+    assert refused.value is not None
+
+
+def test_a_compose_that_raises_closes_the_store_and_the_port(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The `ExitStack`'s other exit: a refusal from `compose_tool_surface`, after
+    the bind *and* the store, undoes both — the writer thread is joined and the
+    port rebinds."""
+    servers: list[ThreadingHTTPServer] = []
+    stores: list[Store] = []
+    real_open_store = controld.open_store
+
+    def spy_open_store(db_path: Path) -> Store:
+        store = real_open_store(db_path)
+        stores.append(store)
+        return store
+
+    def compose_that_raises(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("compose refused")
+
+    monkeypatch.setattr(controld, "create_server", server_spy(controld.create_server, servers))
+    monkeypatch.setattr(controld, "open_store", spy_open_store)
+    monkeypatch.setattr(controld, "compose_tool_surface", compose_that_raises)
+    port = free_port()
+    with pytest.raises(RuntimeError, match="compose refused") as refused:
+        controld.start(host=detect_host(), port=port, engine_config_dir=world.engine_config_dir)
+
+    assert len(stores) == 1
+    assert not stores[0].writer_is_alive(), "a refused compose left the store open"
+    assert_the_port_was_given_back(servers, port)
+    assert refused.value is not None
 
 
 def test_the_registry_is_frozen_before_the_server_serves(

@@ -17,6 +17,7 @@ from collections.abc import Callable
 
 from shepherd.core.frames import Frame
 from shepherd.engines.claude_code.ingest_socket import (
+    ClaimFailed,
     SocketInUse,
     accept_next,
     bind_listener,
@@ -34,7 +35,7 @@ from shepherd.engines.claude_code.relay_wire import (
 )
 from shepherd.host.base import SocketPlan
 
-__all__ = ["SocketInUse", "claim_socket", "serve_control_ingest"]
+__all__ = ["ClaimFailed", "SocketInUse", "claim_socket", "serve_control_ingest"]
 
 
 def serve_control_ingest(
@@ -74,5 +75,7 @@ def serve_control_ingest(
                     continue
     finally:
         listener.close()
-        unlink_owned_socket(plan.path, inode)
-        release_claim(plan.path)  # after the unlink, so nobody binds before it (D72)
+        try:
+            unlink_owned_socket(plan.path, inode)
+        finally:
+            release_claim(plan.path)  # after the unlink, so nobody binds before it (D72)

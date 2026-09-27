@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from shepherd.daemons.control_ingest import SocketInUse, claim_socket, serve_control_ingest
+from shepherd.daemons.control_ingest import ClaimFailed, SocketInUse, claim_socket, serve_control_ingest
 from shepherd.daemons.plane import ShutdownOutcome, audit_sink, build_master, shut_down
 from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME, INGEST_SOCKET_NAME, install_shutdown_handlers
 from shepherd.host.base import HostPlatform, SocketPathTooLong
@@ -119,7 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         running = start(detect_host(), args.port, args.engine_config_dir)
-    except (SocketPathTooLong, SocketInUse, MigrationRefused) as refused:
+    except (SocketPathTooLong, SocketInUse, ClaimFailed, MigrationRefused) as refused:  # D72: not a port
         print(f"controld refuses to start: {refused}")
         return EXIT_REFUSED
     except OSError as refused:  # a held port is a refusal, like an over-long path

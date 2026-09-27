@@ -85,6 +85,18 @@ class SocketInUse(RuntimeError):
     """
 
 
+class ClaimFailed(RuntimeError):
+    """The claim could not be taken at all (D72): the socket dir could not be
+    made, or the lock file opened or locked for a reason other than another
+    holder (`ENOLCK`, `EACCES`, …). Nobody holds the path; this host cannot
+    lock it. Not an `OSError`, for `SocketInUse`'s reason: it is not a port.
+    """
+
+
+def _claim_failed(what: Path, error: OSError) -> ClaimFailed:
+    return ClaimFailed(f"cannot claim {what}: {error.strerror or error}")
+
+
 @contextmanager
 def _umask(mode: int) -> Iterator[None]:
     """Set the umask for exactly one bind, then put it back.
@@ -161,15 +173,22 @@ def _take_lock(path: Path) -> bool:
     `os.open` descriptors are non-inheritable, so a child the daemon spawns
     never keeps its lock alive after the daemon exits.
     """
+    lock = path.with_name(path.name + LOCK_SUFFIX)
     with _HELD_GUARD:
         if path in _HELD:
             return False
-        fd = os.open(path.with_name(path.name + LOCK_SUFFIX), os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+        except OSError as error:
+            raise _claim_failed(lock, error) from error
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
+        except BlockingIOError:  # only a lock another holder has is "in use"
             os.close(fd)
             raise _held_elsewhere(path) from None
+        except OSError as error:
+            os.close(fd)
+            raise _claim_failed(lock, error) from error
         except BaseException:
             os.close(fd)
             raise
@@ -183,14 +202,18 @@ def release_claim(path: Path) -> None:
     The lock file stays (see `LOCK_SUFFIX`)."""
     with _HELD_GUARD:
         fd = _HELD.pop(path, None)
-    if fd is not None:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        if fd is None:
+            return
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)  # closing drops the lock even if the unlock raised
 
 
 def claim_socket(plan: SocketPlan) -> SocketPlan:
     """`plan`, if its path is free or stale; `SocketInUse` if a live process
-    holds it. Unlinking a stale file is safe; unlinking a live one is theft.
+    holds it; `ClaimFailed` if the dir or the lock cannot be had at all.
+    Unlinking a stale file is safe; unlinking a live one is theft.
 
     The order is ADR-QR-2's: make the socket dir at `plan.dir_mode` (the first
     `controld` start claims before anything else has made it) → take the lock,
@@ -198,8 +221,11 @@ def claim_socket(plan: SocketPlan) -> SocketPlan:
     the probe refuses gives back a lock it newly took, and leaves a re-entrant
     holder's lock alone: that owner is still serving.
     """
-    plan.path.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(plan.path.parent, plan.dir_mode)
+    try:
+        plan.path.parent.mkdir(parents=True, exist_ok=True)
+        os.chmod(plan.path.parent, plan.dir_mode)
+    except OSError as error:
+        raise _claim_failed(plan.path.parent, error) from error
     newly_locked = _take_lock(plan.path)
     if plan.path.exists() and _is_live(plan.path):
         if newly_locked:
@@ -211,9 +237,8 @@ def claim_socket(plan: SocketPlan) -> SocketPlan:
 def bind_listener(plan: SocketPlan, backlog: int = LISTEN_BACKLOG) -> socket.socket:
     """A listening socket at `plan.path`, at `plan.sock_mode`, in a directory at
     `plan.dir_mode`. Shared by both listeners so the two sockets in M1 cannot
-    drift apart in the one property an attacker cares about."""
-    plan.path.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(plan.path.parent, plan.dir_mode)
+    drift apart in the one property an attacker cares about. The directory is
+    `claim_socket`'s to make, so a dir that cannot be had is `ClaimFailed`."""
     claim_socket(plan)
     unlink_socket(plan.path)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -319,5 +344,7 @@ def serve_ingest(
     finally:
         listener.close()
         on_shutdown()
-        unlink_owned_socket(plan.path, inode)
-        release_claim(plan.path)
+        try:
+            unlink_owned_socket(plan.path, inode)
+        finally:
+            release_claim(plan.path)
