@@ -211,16 +211,26 @@ INVALID: tuple[tuple[str, bytes | None], ...] = (
 PARTIAL_INSTALL_CASE = "stop_string"
 
 
+def has_managed_group(groups: object) -> bool:
+    return isinstance(groups, list) and any(
+        isinstance(group, dict) and group.get("_shepherd_managed") is True for group in groups)
+
+
 def stop_string_clauses(rec: Recorder, case: Path, content: bytes, result: InstallResult) -> None:
     """H5 `stop_string`: installed with a warning naming `Stop`, `Stop` still `"x"`, O backed up."""
     target = case / "settings.json"
     rec.equal(f"api.{PARTIAL_INSTALL_CASE}_installed", None, result.refused_reason)
+    rec.equal(f"api.{PARTIAL_INSTALL_CASE}_events_installed", len(SUBSCRIBED_EVENTS) - 1,
+              result.events_installed)
     rec.check(f"api.{PARTIAL_INSTALL_CASE}_warning_names_stop",
-              any("Stop" in warning for warning in result.warnings),
-              "a warning naming Stop", list(result.warnings))
+              any(warning.startswith("Stop:") for warning in result.warnings),
+              "a warning starting 'Stop:'", list(result.warnings))
     hooks = load(target).get("hooks")
     rec.equal(f"files.{PARTIAL_INSTALL_CASE}_stop_untouched", "x",
               hooks.get("Stop") if isinstance(hooks, dict) else hooks)
+    missing = [event for event in SUBSCRIBED_EVENTS if event != "Stop"
+               and not has_managed_group(hooks.get(event) if isinstance(hooks, dict) else None)]
+    rec.equal(f"files.{PARTIAL_INSTALL_CASE}_managed_on_every_other_event", [], missing)
     backup = case / ("settings.json" + BACKUP_SUFFIX)
     rec.equal(f"files.{PARTIAL_INSTALL_CASE}_backup_holds_original", content,
               backup.read_bytes() if backup.exists() else None)
