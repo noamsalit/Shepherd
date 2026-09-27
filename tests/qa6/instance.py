@@ -40,6 +40,7 @@ from pathlib import Path
 
 from shepherd.host.mac import MacHost
 from shepherd.store.db import open_store
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 
 from . import paths
 from .httpclient import Client
@@ -475,7 +476,7 @@ class SessiondManager:
         if alive:
             raise Blocked(f"{name}: a recorded sessiond is still alive: {alive}")
 
-    def start(self, name: str, schema: int = 4, argv_override: Sequence[str] | None = None) -> SessiondRun:
+    def start(self, name: str, schema: int = EXPECTED_SCHEMA_VERSION, argv_override: Sequence[str] | None = None) -> SessiondRun:
         self._assert_clear(name)
         argv = list(argv_override) if argv_override is not None else [
             str(paths.SESSIOND_BIN), "--expected-schema-version", str(schema)

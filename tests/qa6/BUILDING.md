@@ -131,7 +131,7 @@ D10 and U39 show the shape; remfix 2 / H2).
   `last_scan_at(db)`, `schema_version(db)`, `start_launcher(run, root)` (the
   `needs_real_home` launcher, `launch_controld.py`: real HOME, sandboxed
   Shepherd, `engine_config_dir=<root>/cfg`), `SessiondManager.start(name,
-  schema=4)` (refuses if the socket exists or a recorded sessiond lives),
+  schema=EXPECTED_SCHEMA_VERSION)` (refuses if the socket exists or a recorded sessiond lives),
   `.stop(run)` → `SessiondRun.counts()` from the stop line.
 * **hookrig.py** — `dispatch_argv(controld)` (the product installs a sandbox
   settings file; returns the argv of the first half of the command),
@@ -139,7 +139,7 @@ D10 and U39 show the shape; remfix 2 / H2).
   transcript_path=, **overrides)`, `copy_transcript(cfg, engine_id)` (an
   `end_turn` transcript), `send(argv, env, payload)` → `Sent(rc, elapsed_s,
   stderr, signalled)`, `start_ready_sessiond(manager, name, argv=,
-  target_engine_id=, target_cwd=, schema=4)` → `(run, probe_latency)`. **Every
+  target_engine_id=, target_cwd=, schema=EXPECTED_SCHEMA_VERSION)` → `(run, probe_latency)`. **Every
   `delivered=` oracle subtracts the one probe.** SD-W6 (wave 6) and SD-L4
   (wave 8) use exactly this.
 * **sessions.py** — `sidecar(pid=, proc_start=, cwd=, session_id=, status=,

@@ -31,6 +31,7 @@ from pathlib import Path
 from shepherd.engines.claude_code.hookd_command import build_hook_entry
 from shepherd.engines.claude_code.hooks_config import install_hooks
 from shepherd.host.mac import MacHost
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 
 from . import paths
 from .instance import Controld, SessiondManager, SessiondRun
@@ -137,7 +138,7 @@ def start_ready_sessiond(
     argv: list[str],
     target_engine_id: str,
     target_cwd: str,
-    schema: int = 4,
+    schema: int = EXPECTED_SCHEMA_VERSION,
 ) -> tuple[SessiondRun, float]:
     """Start a named sessiond and prove it relays with exactly one probe frame."""
     run = manager.start(name, schema=schema)
