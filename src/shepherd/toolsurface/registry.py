@@ -450,14 +450,18 @@ def _audit(
     )
 
 
-def audit_master_failure(turn_id: str, error_class: str) -> None:
+def audit_master_failure(
+    turn_id: str, error_class: str, autonomy_level: int = UNREPORTED_AUTONOMY_LEVEL
+) -> None:
     """D79 / ADR-QR-3: one record for a master turn that failed, built **here**,
     beside `_audit`, so the audit log keeps one writer (C-M4-2).
 
     `error_class` is a class name and never a message — the message can carry
     prompt text or a credential. A no-op with no chokepoint installed (there is
     no sink to write to, DP13), and in a process that registered no
-    `master_send`, which has no master turn to fail.
+    `master_send`, which has no master turn to fail. `autonomy_level` is the
+    level in force when the turn failed, read by the caller; left out, the record
+    says it was unreported (K23), never a level nobody read.
     """
     installed = chokepoint()
     with _LOCK:
@@ -474,7 +478,7 @@ def audit_master_failure(turn_id: str, error_class: str) -> None:
             tool=tool.name,
             blast_class=tool.blast_class,
             args={"turn_id": turn_id, "error_class": error_class},
-            autonomy_level=UNREPORTED_AUTONOMY_LEVEL,
+            autonomy_level=autonomy_level,
             decision=ALLOW,
             approved_by=None,
             approval_id=None,
@@ -485,16 +489,28 @@ def audit_master_failure(turn_id: str, error_class: str) -> None:
     )
 
 
-def master_failure_recorder(bump: Callable[[], None]) -> Callable[[str, str], None]:
+def master_failure_recorder(
+    bump: Callable[[], None], level: Callable[[], int] | None = None
+) -> Callable[[str, str], None]:
     """`TurnDriver`'s `record_failure` (D79, ADR-QR-3): audit the failed turn,
     then `bump` its counter — each on its own, so one failing still leaves the
     other. It never raises: it runs inside the driver's own failure path, and a
-    raise here would replace the error the caller is owed (REM-FIX 1).
+    raise here would replace the error the caller is owed (REM-FIX 1). `level`
+    reads the level in force for the record; a read that fails leaves it
+    unreported (qa6 M16: every row names the level in force).
     """
+
+    def level_in_force() -> int:
+        if level is None:
+            return UNREPORTED_AUTONOMY_LEVEL
+        try:
+            return level()
+        except Exception:  # noqa: BLE001 - the record still gets written, marked unreported
+            return UNREPORTED_AUTONOMY_LEVEL
 
     def record_failure(turn_id: str, error_class: str) -> None:
         with contextlib.suppress(Exception):
-            audit_master_failure(turn_id, error_class)
+            audit_master_failure(turn_id, error_class, level_in_force())
         with contextlib.suppress(Exception):
             bump()
 

@@ -488,7 +488,9 @@ def compose_tool_surface(
         publish=publish,
         withdraw_turn_approvals=approvals.withdraw_all,
         now=utc_now,
-        record_failure=master_failure_recorder(lambda: _bump(store, AnomalyKind.MASTER_FAILED)),
+        record_failure=master_failure_recorder(
+            lambda: _bump(store, AnomalyKind.MASTER_FAILED), level=lambda: int(autonomy_level(store))
+        ),
     )
     waker = LevelThreeWaker(store, level=lambda: int(autonomy_level(store)),
                             open_wake=driver.wake_turn, bump=store.bump_anomaly)

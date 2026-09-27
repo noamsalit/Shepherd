@@ -220,6 +220,28 @@ def test_the_failure_audit_record_carries_the_class_name_and_no_message(
     assert record.at, "the record is not stamped"
 
 
+def test_the_failure_record_names_the_level_in_force(store: Store, tmp_path: Path) -> None:
+    """qa6 M16: every audit row names the level in force. The recorder reads it
+    for the failed turn's record; a read that fails leaves it unreported."""
+    register_the_shipped_master_tools(store, tmp_path)
+    records: list[AuditRecord] = []
+    registry.install_chokepoint(_allow, records.append)
+    bumps: list[int] = []
+
+    registry.master_failure_recorder(lambda: bumps.append(1), level=lambda: 3)("01TURNLVL3", "RuntimeError")
+
+    def unreadable() -> int:
+        raise RuntimeError("no level")
+
+    registry.master_failure_recorder(lambda: bumps.append(1), level=unreadable)("01TURNLVLX", "RuntimeError")
+
+    assert [(r.correlation_id, r.autonomy_level) for r in records] == [
+        ("01TURNLVL3", 3),
+        ("01TURNLVLX", registry.UNREPORTED_AUTONOMY_LEVEL),
+    ]
+    assert bumps == [1, 1]
+
+
 def test_a_raising_turn_hands_the_recorder_no_message(store: Store, recorder: Recorder) -> None:
     """The driver hands on the class name only, so the message never reaches the
     recorder — and therefore never the record built from what it is handed."""
