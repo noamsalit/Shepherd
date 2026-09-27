@@ -27,6 +27,14 @@ places it after, so the worst case is that a row is drained twice, which is a
 repeated line in a summary rather than work nobody is ever told about. Losing a
 stop is the failure this component exists to prevent; repeating one is not.
 
+**Level 3 wakes the master** (D69, ADR-QR-5). `LevelThreeWaker.tick()` rides
+the existing 2 s sweep — no thread is added — and at level 3, with an item whose
+`retry_of` lineage is below `MAX_MASTER_ATTEMPTS` (the plan's RD-3), it calls
+the injected `open_wake`, which is `TurnDriver.wake_turn`. A turn holding the
+slot makes that return `None` and drains nothing, so the next tick offers the
+wake again. A stop in a lineage already at the cap opens nothing, is counted
+once per session as `wake_retry_cap_reached`, and waits for the next user turn.
+
 `needs_you` is absent for the same reason D31 gives: that is the human's rail,
 and routing it to an agent would hide the one thing the platform exists to show
 you. The exclusion is the store verb's, and `test_needs_you_never_wakes_the_
@@ -39,12 +47,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.stops import PALETTE, Bucket, NextAction
+from shepherd.orchestration.admission import MAX_MASTER_ATTEMPTS
 from shepherd.store.db import Store
 from shepherd.store.models import Session
 
 __all__ = [
     "MASTER_LAST_TURN_KEY",
+    "WAKE_LEVEL",
+    "LevelThreeWaker",
     "WakeItem",
     "WakeSummary",
     "drain",
@@ -59,6 +71,11 @@ MASTER_LAST_TURN_KEY = "master_last_turn_at"
 
 #: §12's opening line, verbatim.
 WAKE_HEADER = "while you were away —"
+
+#: D8's level 3, as the number the injected `level()` answers. L3 may not import
+#: `toolsurface.policy.AutonomyLevel` (§5.0), so the value is held here and
+#: `test_the_waker_reads_level_3_as_the_policy_spells_it` pins the two together.
+WAKE_LEVEL = 3
 
 #: Every value `Bucket` holds, so the projection maps an outcome to a bucket
 #: without re-stating *which* outcomes wake the master. That clause belongs to
@@ -161,3 +178,49 @@ def render_wake_text(summary: WakeSummary) -> str:
         *(_line(item) for item in summary.items),
     ]
     return "\n".join(lines)
+
+
+class LevelThreeWaker:
+    """D69's opener, ticked by the 2 s sweep. `tick()` is `True` when it opened
+    a turn.
+
+    Everything is injected: the level (read per tick, so a toggle takes effect
+    on the next sweep), the opener (`TurnDriver.wake_turn`, whose `None` means
+    "not now") and the counter. `declined` remembers the sessions already
+    counted at the cap, so the anomaly is bumped once per session rather than
+    once per 2 s pass.
+    """
+
+    def __init__(
+        self,
+        store: Store,
+        *,
+        level: Callable[[], int],
+        open_wake: Callable[[], object],
+        bump: Callable[[str], None],
+    ) -> None:
+        self._store = store
+        self._level = level
+        self._open_wake = open_wake
+        self._bump = bump
+        self.declined: set[str] = set()
+
+    def tick(self) -> bool:
+        """One sweep's look: open a wake turn if level 3 has something to act on."""
+        if self._level() != WAKE_LEVEL:
+            return False
+        if not self._eligible(peek(self._store)):
+            return False
+        return self._open_wake() is not None
+
+    def _eligible(self, items: tuple[WakeItem, ...]) -> tuple[WakeItem, ...]:
+        """RD-3: the items whose lineage the master could still retry. A capped
+        item is counted once and left in the set for the next user turn."""
+        eligible: list[WakeItem] = []
+        for item in items:
+            if self._store.retry_chain_depth(item.session_id) < MAX_MASTER_ATTEMPTS:
+                eligible.append(item)
+            elif item.session_id not in self.declined:
+                self.declined.add(item.session_id)
+                self._bump(AnomalyKind.WAKE_RETRY_CAP_REACHED.value)
+        return tuple(eligible)

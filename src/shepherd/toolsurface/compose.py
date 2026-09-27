@@ -55,6 +55,7 @@ from shepherd.orchestration.dialog_keys import SidecarState
 from shepherd.orchestration.lifecycle import reconcile_owned_panes
 from shepherd.orchestration.mailbox import sweep_pending
 from shepherd.orchestration.master_turn import TurnDriver
+from shepherd.orchestration.wake import LevelThreeWaker
 from shepherd.runner.base import Runner
 from shepherd.runner.local import RUNNER_NAME, CommandResult, LocalRunner, make_run_argv
 from shepherd.runner.tmux_cmd import DEFAULT_SOCKET, permitted_commands, permitted_sockets
@@ -63,6 +64,7 @@ from shepherd.signals.replay import DIFF_DIRNAME
 from shepherd.store.db import Store
 from shepherd.toolsurface.approvals import ApprovalStore, build_authorizer
 from shepherd.toolsurface.client import bind_master_client
+from shepherd.toolsurface.registry import audit_master_failure
 from shepherd.toolsurface.registry import freeze_registry, install_chokepoint, reset_registry
 from shepherd.toolsurface.stream import publish, reset_stream, stream_seq_base
 from shepherd.toolsurface.tools_engine import register_engine_tools
@@ -96,6 +98,7 @@ __all__ = [
     "run_fork",
     "runner_socket",
     "sidecar_reader",
+    "sweep_and_wake",
     "transcript_root",
 ]
 
@@ -383,7 +386,7 @@ def compose_tool_surface(
     Order, and why it is this one: the reconcile runs **before** the freeze
     because an orphaned pane holds one of §11's total-cap slots whether or not
     anything knows of it, and the cap is asked on the first spawn — which cannot
-    arrive before the server binds, which cannot happen before the freeze.
+    arrive before the server serves, which cannot happen before the freeze.
 
     **The two M4 parameters are the two things L4 may not say** (ADR-M4-6).
     `build_master` is `shepherd.master`, which is L5 and upward; `audit_sink` is
@@ -484,7 +487,10 @@ def compose_tool_surface(
         publish=publish,
         withdraw_turn_approvals=approvals.withdraw_all,
         now=utc_now,
+        record_failure=_master_failure_recorder(store),
     )
+    waker = LevelThreeWaker(store, level=lambda: int(autonomy_level(store)),
+                            open_wake=driver.wake_turn, bump=store.bump_anomaly)
     register_master_tools(
         store=store,
         approvals=approvals,
@@ -510,9 +516,28 @@ def compose_tool_surface(
     )
     _install_plane(_MasterPlane(driver=driver, approvals=approvals))
     freeze_registry()
-    return M4Wiring(
-        runner=runner, sweep=mailbox_sweep(store, runner), approvals=approvals
-    )
+    sweep = sweep_and_wake(mailbox_sweep(store, runner), waker.tick)
+    return M4Wiring(runner=runner, sweep=sweep, approvals=approvals)
+
+
+def sweep_and_wake(
+    sweep: Callable[[], MailboxCounts], tick: Callable[[], bool]
+) -> Callable[[], MailboxCounts]:
+    """One 2 s pass (D69, ADR-QR-5: no thread): the mailbox sweep, then the waker."""
+
+    def run() -> MailboxCounts:
+        counts = sweep()
+        tick()
+        return counts
+    return run
+
+
+def _master_failure_recorder(store: Store) -> Callable[[str, str], None]:
+    """D79 / ADR-QR-3: count a failed turn, then audit it via `audit_master_failure`."""
+    def record_failure(turn_id: str, error_class: str) -> None:
+        _bump(store, AnomalyKind.MASTER_FAILED)
+        audit_master_failure(turn_id, error_class)
+    return record_failure
 
 
 def _install_plane(plane: _MasterPlane) -> None:

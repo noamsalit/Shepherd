@@ -181,6 +181,16 @@ class AnomalyKind(StrEnum):
     for an operator — and two near-identical names are how a builder bumps one
     and asserts the other."""
 
+    # ----- post-M4 (qa6 rulings, D79) -------------------------------------
+    # Appended after M4's section, never into it. Each member still needs a
+    # reachable increment site (K24): the reachability check reads everything
+    # below M4's marker, so these members are held to it as well.
+    MASTER_FAILED = "master_failed"
+    """D79 / H3 — a master turn failed to open, or failed while it ran. The
+    page is shown fixed text, and without this count the failure was visible
+    only to someone watching at that moment. Bumped once per failed turn by the
+    composition's recorder, which also writes the turn's audit record."""
+
 
 @dataclass(frozen=True)
 class Anomaly:

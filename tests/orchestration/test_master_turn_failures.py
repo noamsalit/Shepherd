@@ -64,6 +64,7 @@ def a_driver_whose_first_build_raises(
         publish=recorder.publish,
         withdraw_turn_approvals=recorder.withdraw,
         now=lambda: TURN_OPENED,
+        record_failure=lambda _turn_id, _error_class: None,
     )
 
 
@@ -140,6 +141,7 @@ def test_a_runtime_built_for_a_turn_that_fails_to_open_is_closed(
         publish=recorder.publish,
         withdraw_turn_approvals=recorder.withdraw,
         now=lambda: TURN_OPENED,
+        record_failure=lambda _turn_id, _error_class: None,
     )
     assert isinstance(driver.send_turn("hello"), TurnRefused)
     assert not driver.is_running()
@@ -184,6 +186,7 @@ def test_a_close_that_raises_on_a_failed_open_still_releases_the_slot(
         publish=recorder.publish,
         withdraw_turn_approvals=recorder.withdraw,
         now=lambda: TURN_OPENED,
+        record_failure=lambda _turn_id, _error_class: None,
     )
     try:
         with pytest.raises(RuntimeError, match="QA6-REMFIX-1-CLOSE-FAILED"):

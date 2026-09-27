@@ -375,6 +375,11 @@ def test_m3_anomaly_members_are_appended_at_the_end() -> None:
 #: string, so the two cannot disagree about which members are M4's.
 M4_SECTION_MARKER = "M4's orchestrator"
 
+#: The marker above the members appended after M4 (qa6 rulings P6, D79). The
+#: M4 reader takes everything below its own marker, so the post-M4 members are
+#: read separately and subtracted from it.
+POST_M4_SECTION_MARKER = "post-M4 (qa6 rulings, D79)"
+
 
 def anomaly_source() -> str:
     return (CORE_DIR / "anomalies.py").read_text(encoding="utf-8")
@@ -413,7 +418,14 @@ def test_every_anomaly_member_is_unique_and_appended() -> None:
     counter that has been accumulating under the old meaning.
     """
     source = anomaly_source()
-    m4 = members_after_marker(source, M4_SECTION_MARKER)
+    post_m4 = members_after_marker(source, POST_M4_SECTION_MARKER)
+    below_m4 = members_after_marker(source, M4_SECTION_MARKER)
+    m4 = below_m4[: len(below_m4) - len(post_m4)]
+
+    # qa6 rulings P6 (D79): the post-M4 members, typed from the plan, and they
+    # are the tail of what sits below M4's marker.
+    assert post_m4 == ["MASTER_FAILED"]
+    assert below_m4[len(m4) :] == post_m4
 
     # Written out from the plan's own table — an independent source of truth,
     # in the plan's order. A name set, never a count (K19).
@@ -429,14 +441,15 @@ def test_every_anomaly_member_is_unique_and_appended() -> None:
     ]
 
     order = [member.name for member in AnomalyKind]
-    # 1. M4's members are the last ones, and they are last in **file** order
-    #    too — the enum's order is the file's order, so a member appended to
-    #    the source in the wrong place moves a member in the enum.
-    assert order[-len(m4) :] == m4
+    # 1. M4's members, then the post-M4 members, are the last ones, and they
+    #    are last in **file** order too — the enum's order is the file's order,
+    #    so a member appended to the source in the wrong place moves a member
+    #    in the enum.
+    assert order[-len(below_m4) :] == m4 + post_m4
     # 2. Nothing already shipped moved: everything before M4's section keeps
     #    its position, compared as a sequence rather than as a set.
-    before = order[: -len(m4)]
-    assert before == [name for name in order if name not in set(m4)]
+    before = order[: -len(below_m4)]
+    assert before == [name for name in order if name not in set(below_m4)]
     # 3. No name and no wire value is used twice.
     assert len(set(order)) == len(order)
     values = [member.value for member in AnomalyKind]
