@@ -598,10 +598,16 @@ def mailbox_rows(env: Owned, sid: str) -> list[dict[str, object]]:
                                     "WHERE session_id = ? ORDER BY queued_at", (sid,))
 
 
+def mailbox_delivered(env: Owned, sid: str) -> object:
+    """`GET /api/mailbox?session_id=`'s `delivered` count (fleet-wide today; report O8's sibling note)."""
+    return env.client.get(f"/api/mailbox?session_id={sid}").data().get("delivered")
+
+
 @scenario("O8")
 def test_o8_the_mailbox_is_idempotent_and_validates_the_origin_label(mod: Mod, rec: Recorder) -> None:
     env = mod.env
     sid = spawn_ok(env, "QA6 O8")
+    delivered_before = mailbox_delivered(env, sid)
     amark = env.audit.mark()
     path = f"/api/sessions/{sid}/send"
     first = post_json(env.client, path, {"body": "QA6 MSG", "idempotency_key": "k1"})
@@ -638,11 +644,16 @@ def test_o8_the_mailbox_is_idempotent_and_validates_the_origin_label(mod: Mod, r
     k3_rows = [r for r in rows if r["idempotency_key"] == "k3"]
     rec.check("db.k3_origin_user_ui", bool(k3_rows) and k3_rows[0].get("origin") == "user_ui", "k3 origin user_ui",
               k3_rows)
+    # Ruling 25 (O8, 2026-09-27): the listing holds PENDING messages only (tools_messaging.py), so two
+    # delivered messages are proved by the delivered count rising by exactly 2, and by their absence.
     listing = env.client.get(f"/api/mailbox?session_id={sid}").data()
     listed = [as_dict(m).get("id") for m in as_list(listing.get("messages"))]
-    rec.check("api.mailbox_lists_k1_once_and_k3_once", listed.count(one.get("message_id")) == 1
-              and listed.count(k3.get("message_id")) == 1,
-              "GET /api/mailbox?session_id= lists k1 once and k3 once", listing)
+    after = listing.get("delivered")
+    rose = isinstance(delivered_before, int) and isinstance(after, int) and after - delivered_before == 2
+    rec.check("api.mailbox_delivered_count_rose_by_2", rose and one.get("message_id") not in listed
+              and k3.get("message_id") not in listed,
+              "delivered rose by exactly 2 across k1 and k3, and messages (pending) holds neither id",
+              {"before": delivered_before, "after": after, "listing": listing})
     sends = env.audit.records_for(amark, "send_to_session")
     args = [as_dict(r.get("args")).get("idempotency_key") for r in sends]
     rec.check("logs.idempotency_key_recorded", len(sends) == 4 and all(a is not None for a in args),

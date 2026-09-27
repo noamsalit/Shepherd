@@ -1588,8 +1588,9 @@ def test_proof_tmuxctl() -> None:
 # ----- the settings guard (U2, INC-3) ------------------------------------------------------------
 
 #: Independent source for U2: the value the owner named, spelled here from the plan (env-plan §3 / U2)
-#: rather than read back from `paths`, so a drifted constant cannot agree with itself.
-U2_OWNER_SHA = "28067dc4591aaaa659aea971845be01717abadbd078ad1651d926311bef61b4c"
+#: rather than read back from `paths`, so a drifted constant cannot agree with itself. Re-named by the
+#: owner on 2026-09-27 (INC-3 accepted, ruling 28): the value below replaced 28067dc4…1b4c.
+U2_OWNER_SHA = "f99112b6db8b5adb5014792c84e75cac806ec12ecb73a2dee3a1ef95a7f1c52b"
 _SHA_A = "a" * 64
 _SHA_B = "b" * 64
 
@@ -1667,7 +1668,7 @@ def test_proof_settings_owner_mismatch_warns() -> None:
     problems: list[str] = []
     rows = settings_checks(_SHA_B, _SHA_B, U2_OWNER_SHA)
     warned = [row for row in rows if row.warn]
-    expected_line = f"owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    expected_line = f"owner-named sha (U2) differs: expected f99112b6…, actual {_SHA_B} — INC-3"
     if not warned or warned[0].warn != expected_line or warned[0].as_json().get("result") != "warn" \
             or not warnings(rows) or expected_line not in warnings(rows)[0]:
         problems.append(f"proof_settings.owner_mismatch_warns: {[row.as_json() for row in rows]}")
@@ -1692,7 +1693,7 @@ def test_proof_preflight_warn_is_published(monkeypatch: pytest.MonkeyPatch) -> N
 
     for name in ("_copy_ledgers", "_remove_worktree", "_post_teardown_checks", "_teardown"):
         monkeypatch.setattr(runner, name, lambda *_a: None)
-    line = f"preflight T1 real settings sha (U2): owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    line = f"preflight T1 real settings sha (U2): owner-named sha (U2) differs: expected f99112b6…, actual {_SHA_B} — INC-3"
     problems: list[str] = []
     with tempfile.TemporaryDirectory(prefix="qa6warn-", dir="/tmp") as scratch:
         report_dir = Path(scratch) / "runs"

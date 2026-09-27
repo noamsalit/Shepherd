@@ -31,7 +31,7 @@ reading before planning.
 You have everything you need. Do this, in order:
 
 1. Read §1–§4. §3 (Decision log) is the most important section in the document —
-   **67 decisions** (D1–D67, plus D38.1, an amendment) with their reasoning. If
+   **79 decisions** (D1–D79, plus D38.1, an amendment) with their reasoning. If
    implementation pressure pushes against one, say so and re-decide out loud; do
    not quietly reverse it.
 2. Note §2 — the product name (`shepherd`) and repo location are settled.
@@ -184,6 +184,30 @@ re-decide.
 | D66 | **The Needs-You rail leaves the shell. §12's "on every page" is reversed; if the rail returns it lives on the Flock page alone (U2).** §12 previously fixed the rail to the top of every page — *"not a page you navigate to"* — and `tests/web/test_rail.py::test_rail_is_on_every_page` encoded that by asserting the `id="rail"` slot sits in `index.html` before `<main>`. That test is retired with this row. **The projection is not retired**: `tools_m1.py::project_needs_you` and `fleet_summary`'s `needs_you` list stay exactly as they are, approval rows included — only the renderer goes, and what it displayed is the data the Flock page will need. | Owner decision, 2026-09-21, recorded 2026-09-22. The rail has **no home in the new shell**: the redesign gives every page a single scrolling column under one header, and a fixed bar above it is the one element that belongs to no page and is therefore nobody's to maintain. The intent is that it lives on the **Flock page only**, if it returns at all — the Flock is where the sessions it names already are, so a row that says *payments-api · permission: Bash(git push)* is one tap from the thing it is about instead of being a permanent banner over pages that have nothing to do with it. This is the same shape as D65: a thing that was put on every page so it could never be missed became permanent clutter, and the information is not lost, because a blocked session is legible on the page that lists sessions. Recorded rather than applied quietly, per §0, and written in the same task that deletes the assertion. |
 
 | D67 | **The session view relocates into the Flock's third pane. It is not deleted: `session.js`, `terminal.js` and `web/static/vendor/xterm.js` are retained and reachable from that pane. §12's Page 3 is rewritten as a pane rather than a page. D21's `next_actions` list renders in that pane's header, which is where §12 already placed it — the session **card** carries U7's four items and no more.** | Owner decision, 2026-09-21, recorded 2026-09-22. U9 makes the Flock three panes — projects → session cards → the session — and the third of those *is* the session view, so keeping it as a separate page would mean shipping the same screen twice and choosing between them at navigation time. The relocation is deliberately **not** a deletion, and the distinction is the whole of the row: the terminal is the one part of this product that cannot be re-derived from a projection, and a redesign that quietly dropped it would cost M3's entire vendoring and WebSocket lane. `terminal.js` and `sse.js` are byte-unchanged by the move, which is asserted rather than asked for. What *does* move is D21's `next_actions[]`: U7 fixes the card at four items — bucket glyph and colour, title, the ask verbatim, relative time — so the list has nowhere on the card to be, and §12's own Page 3 mock already drew it in the header band. One frozen node id retires with this row, `tests/web/test_fleet_page.py::test_stopped_row_renders_why_and_first_action`, and its successor `test_the_session_pane_renders_why_and_every_action` is strictly stronger: the collapsed row rendered `actions[0]` because it had space for one, and the pane renders every action with its ordinal and its source. Every rule the list carried travels with it — RD6's labelled-and-inert kinds, N10's honest `[why?]`, §14's `nothing to do`, G-M2-7's targetless `external` — because a relocation that loses the rules is a deletion with a better name. On a phone the three panes are a drill-down, one level at a time, with a back chevron (U9). Recorded rather than applied quietly, per §0, and written in the same task that performs the relocation. |
+
+| D68 | **The CLI reaches a running `controld` through a dedicated owner-only RPC Unix socket, `rpc` (0600, in the 0700 runtime directory), that runs `registry.invoke()` with the `HUMAN` audience. Refines §5's process topology and §13's socket list (`controld` now owns two sockets: the one-way control-ingest socket and this one) and D38's "no byte of `cli/`", which governed M4 only; every post-milestone `cli/` edit is declared.** One JSON request in, one JSON reply out, framed as the ingest hop is (write, then `SHUT_WR`; read to EOF). The request carries no audience field: the server sets `HUMAN`, `caller_id="cli"`. It covers `status`, `doctor` (discovery and hooks lines), `install-hooks`, `uninstall-hooks`, `replay` and `recompute`; `replay --since 2026-13-45` is a usage error, exit 64. With no daemon running, the CLI keeps its local read-only projections and a tool-backed command says to start the daemon. | Owner ruling 1 (BC-05), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:19`; ADR-QR-1 in `docs/plans/2026-09-27-qa6-rulings-plan.md`). Before this row the CLI's `Cli.call` ran a **local** `invoke()` against a registry holding only local reads, so every tool-backed command answered "no such capability registered" on a host where the daemon was running (qa6 C1–C5). Same uid is the same trust as the loopback page, which is why the audience is `HUMAN` and the gate and audit are the web UI's, unchanged. **Rejected:** loopback HTTP — any local process can reach a port, the needed tools are not routed there, and `web/server.py` is digest-pinned (ADR-M4-7); multiplexing the control-ingest socket — that wire is one-way `sessiond` → `controld` behind a schema-versioned hello, so request/reply there changes every running `sessiond`; a client-declared audience — it hands a security field to the caller. The name is `rpc` because the socket path must be no longer than `controld`'s (C8's 103-byte budget, D55). Recorded rather than applied quietly, per §0. |
+
+| D69 | **At level 3 a stop that wakes the master opens an unprompted master turn whose only input is the wake summary. If a turn is running, the wake waits: the existing 2 s sweep offers it again, and the wake set is not drained until a turn opens, so a stop is queued and never dropped. It counts toward D31's per-lineage cap: a wake opens only while the stopped session's `retry_of` lineage is below the cap; a stop in a lineage already at the cap opens nothing, bumps `wake_retry_cap_reached` once per session, and waits for the next user turn (the level-2 behaviour). Refines D31's "at level 3 it wakes the master immediately".** The wake set it reads excludes `refused` rows (D73). | Owner ruling 5 (BC-14), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:23`; ADR-QR-5). D31 promised an immediate wake at level 3, but nothing opened a turn without a user message: `send_turn(text)` was the only opener and the wake set drained only there, so level 3 behaved exactly like level 2 (qa6 M12). "Immediately" is read as "at the next sweep once the turn slot is free", because a second concurrent master turn is not a thing the driver has. The cap reading (the plan's RD-3) exists because a wake the master could not act on — admission would refuse its retry — is noise: it costs a turn and changes nothing. **Rejected:** a pending flag checked when a turn releases (it opens a turn from the releasing worker thread's `finally`), and a second subscriber on the stream ring (a second cursor to lose). |
+
+| D70 | **A master retry is declared, not inferred: `spawn_session` takes an optional `retry_of` (the id of the attempt being retried), and the master prompt teaches it. The lineage `Store.link_retry` records is what D31's cap counts; the cap is enforced by admission (`admit(retry=…)`), before any row is written. A second retry of the same attempt is refused, with a reason naming the existing retry ("retry that one instead") and no cap anomaly.** Closes T10-4. | Owner ruling 6 (BC-15), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:24`). The cap existed (`admission._retry_cap`, `retry_chain_depth`) but was unreachable: the tool schema had no `retry_of` and `link_retry` had no caller (qa6 M14). The ruling says "`Store.link_retry` enforces the cap"; this row reads that as "the link is what the cap counts", because a cap checked inside the link writer runs **after** `create_owned_session` has made the row, and a refused retry would leave a row behind — against admission's own rule that a refusal writes nothing — and would put a second cap reader beside `_retry_cap`. The observable behaviour the ruling asks for, a declared lineage capped at two attempts, is the same. Refusing a sibling retry (the plan's RD-2) goes beyond the ruling's text: `retry_chain_depth` walks **up** from `retry_of`, so two retries both declared "of X" are each depth 1 and would bypass the cap forever. **Rejected:** inferring a retry from the same brief and cwd — false positives and negatives on a safety cap. |
+
+| D71 | **`controld` binds its HTTP port before it opens the store, so a busy port refuses the start having written nothing. The tool registry is frozen before the server *serves* (before `serve_forever`), no longer before it *binds*. Amends ADR-7 §4 of the M1 plan.** | Owner ruling 8 (BC-21), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:26`). ADR-7 §4's purpose is that the module-global registry is written by one thread at start-up and read-only afterwards, and that is a property of when requests are **served**, not of when the port is bound: `ThreadingHTTPServer.__init__` binds and listens, and a request that arrives before `serve_forever` waits in the backlog and is served only after the registry is frozen. Binding first therefore costs ADR-7 nothing, and it means a start refused on a busy port no longer opens, migrates or writes the database first (qa6 C7). |
+
+| D72 | **Each daemon (`controld`, and `sessiond`, same shape) holds an exclusive `flock` on `<socket>.lock` for its whole lifetime.** The claim makes the socket's directory at the plan's mode, takes the lock (re-entrant within one process), and still runs the connect-probe on every claim. Lock files are never unlinked. | Owner ruling 13 (H1-lock), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:31`; ADR-QR-2). The claim was a connect-probe alone, which leaves a window between claim and bind in which a second owner can take the socket (residual E16), and on macOS a full listen backlog answers `ECONNREFUSED`, which the probe could not tell from a stale path (the REMFIX-1 owner item). A lock held for the process's life closes both: `flock` holds across processes, is released when the holder exits even after a crash, and is POSIX on both hosts, so it is not a platform branch (D55). The probe stays, to refuse an older binary that holds no lock. Unlinking a lock file would let two processes lock two different inodes, so they stay. |
+
+| D73 | **A start the runner refuses ends its pre-written row with `stop_reason = refused` (bucket `error`, decided `declared`), the 21st value of §8's vocabulary. It needs migration 005 (schema 4 → 5, forward-only), which the owner approved on 2026-09-27; the mechanism is a stash-and-rebuild of `session` (ADR-QR-6). A `refused` row wakes nothing: it is excluded from D31's wake set at level 2 and at level 3.** This refines D31's "only `unfinished` and `error` outcomes on master-owned sessions wake anything". | Owner ruling 9 (BC-28), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:27`). The spawn path wrote the row first and then returned `SpawnRefused` with the row still live, so a refused start showed as a ghost session (qa6 O4). Deleting the row would hide the attempt, against C-M3-7's intent that an attempt stays visible; keeping it with a verdict keeps the attempt and ends it. No other spelling is honest: `stop_reason` is a `CHECK` list and a `why` on an existing reason is not the value the ruling names. **The wake exclusion is a consequence, not in the ruling's text.** A refused row is an ended `error` row, which is exactly D31's wake population; at level 3 (D69) it would open a turn, and a fresh respawn with no `retry_of` starts a new lineage at depth 1, so the cap would not bound the loop refuse → wake → respawn → refuse. The master that asked for the spawn already holds the refusal as that call's synchronous tool result, so a wake would tell it nothing new. |
+
+| D74 | **A message to a pane-less session (`runner_handle IS NULL`: an attached session, or a handle-less orphan) is refused at send time, and no mailbox row is written.** This reverses D45's "attached sessions keep `Stop` as their only trigger" for delivery. | Owner ruling 20 (SD-07), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:38`; the QA test-plan's oracle O51, "writes only to owned sessions"). The message was queued **before** the pane-less branch was reached, so it sat as a durable row waiting for a `Stop` that, for a session Shepherd cannot type into, delivers nothing (qa6 O9). A refusal the caller reads now is honest; a row that may never deliver is principle 5's silent success. "Pane-less" is read as `runner_handle is None` (the plan's RD-5), the branch that exists, which also covers T12's orphans: one re-adopted later is sent to again by its caller, never by a stale queued row. |
+
+| D75 | **`ask()` names the asked session by Shepherd's id: `from_fork_of` is the session's ULID. The engine's session id travels as a separate field, `from_fork_of_engine_session_id`.** | Owner ruling 21 (SD-08), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:39`). Every other tool names a session by Shepherd's id; `ask()` alone returned the engine's, so a caller could not pass the answer's `from_fork_of` back to any tool (qa6 O10). The engine id is kept, not dropped, because it is what the fork actually resumed and it is evidence. |
+
+| D76 | **Browser keystrokes reach the pane over the terminal WebSocket. This reverses BLOCKER-T19-c (the read-only terminal). D40 is unchanged: opening the terminal is the audited call, and keystrokes are not.** | Owner ruling 18 (SD-05), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:36`; spec C-19; ADR-QR-4). The terminal view rendered the pane but typing did nothing (qa6 U10, T3). Keystrokes go through the handle the audited `terminal_stream` open returned, so they are not tool calls, which is D40's own asymmetry: `authorize()` gates what a program does on your behalf, and your keyboard is not that. **Rejected:** one `terminal_write` tool call per frame (it would audit every key) and a POST route for input. |
+
+| D77 | **Decision-card choices are clickable and answer through `answer_permission` (C-18), which re-verifies the dialog server-side. The trust dialog stays inert and labelled, with RD6's reason.** | Owner ruling 19 (SD-06), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:37`). The card rendered the engine's own numbered choices (U11) but every one was inert, while the HTTP answer route already worked (qa6 U14). The page maps the engine's numbers to `approve` / `approve_always` / `deny` from one table, cross-checked against the keys the server sends, and never parses a screen; the server still decides whether the dialog on screen is the one captured. The trust dialog keeps RD6's treatment because answering it changes what a folder may do from then on, which is not a one-click decision. |
+
+| D78 | **`session.spawned.trusted` is `false` until the folder is known to be trusted, and `trust_source` names the unknown. `trust.py`'s reader keeps `None` for "no entry".** | Owner ruling 27 (L5), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:45`). The frame carried `trusted: null` for a folder with no trust entry. A consumer reading the frame needs a boolean answer to "will a trust dialog block this session?", and "not known to be trusted" is `false` for that question; principle 5 is kept because the reason for `false` — no entry, as opposed to an entry that says untrusted — travels in `trust_source` rather than being flattened away, and the reader underneath still says `None`. |
+
+| D79 | **A master turn that fails is counted as the anomaly `master_failed` and written to the audit log, carrying its error's class name only. `AnomalyKind` gains a post-M4 member for it.** | Owner ruling 12 (H3), 2026-09-27 (`docs/plans/2026-09-27-qa6-owner-rulings.md:30`; ADR-QR-3). A turn that failed to open or failed mid-run published fixed text to the page and recorded nothing, so the failure was invisible to anyone who was not watching the page at that moment. The record is built in `registry.py`, next to the one existing audit-record constructor, so the audit log keeps one writer (C-M4-2). The class name only, never the message, because an exception message can carry prompt text or a credential. |
 
 ---
 
@@ -968,6 +992,12 @@ follows a rejection. Real shapes and examples: data-schemas.md §Notification, �
 
 ### `stop_reason` — mechanical, confidence 1.0
 
+*Amended 2026-09-27 (qa6 SD-01, D73).* The table now says what the code's stop map
+(`engines/claude_code/stop_map.py`) already does, by the owner's ruling 14: the two
+unmapped `StopFailure` values are rows, SessionEnd `other` is a row that defers, `unknown`
+is decided at confidence **0.0**, not 1.0, and `refused` is the 21st reason (D73). Every
+other row is unchanged.
+
 `StopFailure` carries an `error` whose allowed values map almost
 one-to-one onto the reasons you want. `message.stop_reason` below is the field
 on the session's last `assistant` transcript entry; the `Stop` hook payload has
@@ -977,7 +1007,7 @@ no `stop_reason` field:
 |---|---|---|
 | `rate_limited` | `StopFailure.error` ∈ {`rate_limit`, `overloaded`} | `paused` |
 | `quota_paused` | `Notification` ∈ {`quota_auto_resume_fired`, `quota_auto_resume_stale`, `quota_auto_resume_disabled`} | `paused` |
-| `auth_failed` | ∈ {`authentication_failed`, `oauth_org_not_allowed`} | `error` |
+| `auth_failed` | ∈ {`authentication_failed`, `oauth_org_not_allowed`, `verification_required`, `cloud_credential_error`} | `error` |
 | `account_blocked` | ∈ {`account_on_hold`, `billing_error`} | `error` |
 | `bad_request` | ∈ {`invalid_request`, `model_not_found`} | `error` |
 | `server_error` | `= server_error` | `error` |
@@ -990,14 +1020,22 @@ no `stop_reason` field:
 | `cleared` | `SessionEnd.reason = clear` | `unfinished` |
 | `logged_out` | `SessionEnd.reason = logout` | `error` |
 | `resumed_elsewhere` | `SessionEnd.reason = resume` | `unfinished` |
-| `unknown` | `StopFailure.error = unknown`, or nothing matched | `error` |
+| *(defers)* | `SessionEnd.reason = other` — decides nothing; the stop goes on to the transcript's turn ending and, for `end_turn`, the completeness split below (heuristic, confidence < 1.0) | — |
+| `refused` | the runner refused the start (`runner.start` raised); the pre-written row is ended rather than left live (D73). Decided `declared`, never a wake (D31, D73) | `error` |
+| `unknown` | `StopFailure.error = unknown`, or nothing matched — **confidence 0.0**, still decided `mechanical`: a rule said "unknown", which is the tuning backlog and must never read as settled | `error` |
 
 What the values mean in 2.1.270: `overloaded` is in the enum but never
 assigned, and a (mocked) HTTP 529 arrives as `server_error`. A (mocked) generic
 HTTP 400 arrives as `unknown`; only a prompt-too-long 400 is `invalid_request`. The enum also has
-`verification_required` and `cloud_credential_error`, which no row above maps.
-`SessionEnd.reason` also has `other`, which every `-p` exit, `tmux kill-session`
-and SIGTERM produce, and which no row above maps. Real shapes and examples:
+`verification_required` and `cloud_credential_error`, which have no capture and map to
+`auth_failed` (both are a credential the engine could not use; the rows are marked
+unverified in the stop map). `SessionEnd.reason` also has `other`, which every `-p` exit,
+`tmux kill-session` and SIGTERM produce: it says the process ended and nothing about why, so
+its row **defers** and the verdict comes from the turn ending — a finished `-p` turn is
+`completed`, decided by the heuristic lane, not at 1.0. `unknown` is deliberately 0.0: a
+rule wrote it (`decided_by = mechanical`), which is what separates "a rule said unknown"
+from "no verdict ever arrived" (`unclassified`). All three were DP8 departures in the stop
+map before this amendment; qa6 D12 found the spec saying otherwise (SD-01). Real shapes and examples:
 data-schemas.md §StopFailure, §SessionEnd, §Stop, §Enumerations (SessionStart.source, SessionEnd.reason, StopFailure.error, Notification.notification_type), §`SessionEnd.reason` = `resume` and `logout`, §Auto compaction: `PreCompact{trigger:auto}` / `PostCompact`, and death mid-compaction, §Observed process exit for a process Shepherd did not spawn (pidfd), §Transcript entry: `assistant`.
 
 `quota_paused` shows the resume time rather than an error — it is not a failure
@@ -1204,9 +1242,12 @@ Real shapes and examples: data-schemas.md §Raw key bytes delivered to a pane th
 | `needs_you` (question in the transcript) | write immediately (it is *asking* you) | n/a |
 | `needs_you` (**permission dialog open**) | **refused** — the dialog eats the text and the Enter approves the tool (D44) | answer explicitly via `approve`/`deny` |
 | `running` | **queue to mailbox**, deliver at next `Stop` | allowed, requires confirmation |
+| any state, **no pane** (`runner_handle` absent: an attached session, or a handle-less orphan) | **refused** at send time, and **no mailbox row is written** (D74, amended 2026-09-27) | n/a |
 
 You typing in the terminal pane is a **direct write and bypasses the queue** —
-it is your keyboard, you own the consequences. It also bypasses `authorize()`
+it is your keyboard, you own the consequences. The keystrokes travel over the
+terminal WebSocket, through the handle the audited terminal open returned (D76,
+2026-09-27). It also bypasses `authorize()`
 and the audit log (D40): keystrokes are not tool calls. Opening and closing the
 terminal connection is audited, so the log still shows who was at the keyboard
 and when. Programmatic writes
@@ -1284,8 +1325,8 @@ Every path between the master, a session, and you. There are no others.
 | action | mechanism |
 |---|---|
 | spawn | `spawn_session(...)` — recursion caps enforced inside the tool |
-| talk to it mid-run | `send_to_session()` → the write policy above: immediate when stopped or `needs_you`, **queued to the mailbox when running** |
-| ask it something | `ask_session()` → forks the target (D13); never interrupts it |
+| talk to it mid-run | `send_to_session()` → the write policy above: immediate when stopped or `needs_you`, **queued to the mailbox when running**, **refused with no row when the session has no pane** (an attached session, D74) |
+| ask it something | `ask_session()` → forks the target (D13); never interrupts it. The answer's `from_fork_of` is Shepherd's id for the asked session; the engine's id is `from_fork_of_engine_session_id` (D75) |
 | interrupt · kill | `interrupt_session()` · `kill_session()` — `local_destructive` |
 | broadcast | `post_to_channel()` → fans out into each member's mailbox |
 | read | `get_session`, `get_session_output`, `get_session_evidence` |
@@ -1299,6 +1340,12 @@ Every path between the master, a session, and you. There are no others.
 | reach a platform | `ask_orchestrator()` → **brokered tool call, not a master turn** (below) |
 | report its outcome | implicit — Analysis writes the conclusion when it stops |
 
+**You, from a terminal → the daemon (D68, 2026-09-27)**
+
+| action | mechanism |
+|---|---|
+| `status`, `doctor`, `install-hooks`, `uninstall-hooks`, `replay`, `recompute` | the `shepherd` CLI → the owner-only `rpc` socket (0600) → `registry.invoke()` with the `HUMAN` audience, one JSON request and one JSON reply. Same gate and same audit as the web UI. With no daemon running, only the CLI's local read-only projections answer |
+
 **When a session stops (D31)**
 
 ```
@@ -1306,16 +1353,21 @@ session stops
   ├─ spawned by a queue   → the worker loop routes it        (§10, unchanged)
   └─ spawned by the master
        outcome finished / paused / blocked / needs_you → nothing wakes
-       outcome unfinished / error
+       outcome unfinished / error        (a `refused` start wakes nothing, D73)
             level 2 → added to the wake set; the master is handed
                       "while you were away: …" at the start of your next turn
-            level 3 → the master is woken now, acts, and logs
-                      hard cap: attempt < 2 along the `retry_of` chain
+            level 3 → an unprompted master turn opens with the wake summary
+                      as its only input; queued behind a running turn by the
+                      2 s sweep, never dropped (D69)
+                      hard cap: attempt < 2 along the declared `retry_of`
+                      chain (D70); at the cap no turn opens, the anomaly is
+                      counted once, and it waits for your next turn
 ```
 
 The wake set is **a query, not a table**: master-owned sessions whose `ended_at`
-is later than `app_state.master_last_turn_at` and whose `outcome` is
-`unfinished` or `error`. Draining it stamps a new `master_last_turn_at`.
+is later than `app_state.master_last_turn_at`, whose `outcome` is
+`unfinished` or `error`, and whose `stop_reason` is not `refused` (D73: the master
+already holds a refused start as that spawn call's result). Draining it stamps a new `master_last_turn_at`.
 
 `needs_you` is excluded on purpose. That is the human's rail, and routing it to
 an agent would hide the one thing the platform exists to show you.
@@ -1762,6 +1814,11 @@ that.
 > `tools_list_payload()` was retired because its only consumer was that binding, and
 > `pyproject.toml` declares exactly three console scripts: `shepherd`, `shepherd-controld`,
 > `shepherd-sessiond`. The master's `to_sdk_mcp_server()` is the one that shipped., scoped differently
+>
+> **Status, 2026-09-27 (unchanged meaning).** SD-09, the session → tool-surface channel, is deferred
+> by the owner (2026-09-27); see `docs/backlog/2026-09-27-sd09-session-tool-channel.md`. D80 is
+> reserved for it. Until it ships, a tier-2 session has no channel to the tool surface, and the
+> README marks capability 3 "not yet".
 
 Both are **exporters over the one registry** (§11.0, D32) — not two tool
 implementations, and not two places a capability is defined:
@@ -1910,7 +1967,17 @@ unaffected — they never depended on a bar being on the page.
 
 Left: the master conversation. Right: a live SSE-fed sidebar, so you are never
 reading a stale claim while the chat is turn-based. Approval cards appear in the
-sidebar **and** inline in the chat at the blocked turn.
+sidebar **and** inline in the chat at the blocked turn. A decided card leaves the
+sidebar and **stays inline, with its outcome label** (qa6 SD-04, ruling 17,
+2026-09-27).
+
+**How a turn renders (qa6 BC-06, rulings 2–4, 2026-09-27; `docs/design/ui-decisions.md` U19).**
+A tool call and its result are **one** expandable step: the call is the title, the
+result is inside it. `turn_ended` and non-stopping `rate_limit` are shown in the master
+chat's status area, on a dedicated event line beside the status slot (never in the
+thread, never overwriting the status slot's turn id or approval word); a rate limit
+enters the thread only when it stops the turn. The SDK's final `result` text is not
+rendered when it equals the last assistant text, so the answer appears once.
 
 **The autonomy toggle does not live here (D65).** It is a Settings control and
 nothing else. An earlier version of this paragraph put it on this page, *"visible
@@ -2372,6 +2439,12 @@ exactly as written. Every entry we own carries `"_shepherd_managed": true`, so
 `uninstall-hooks` removes precisely our entries and leaves the user's own hooks
 untouched. CCC merges hooks with no ownership marker, which makes clean removal
 impossible. The file is backed up before it is written.
+
+*Amended 2026-09-27 (qa6 BC-20 and SD-10, rulings 7 and 23).* The first pre-install
+image is kept at `<file>.shepherd-backup` and never overwritten. `uninstall-hooks`
+removes exactly our entries and does not restore bytes: a byte-for-byte restore would
+lose every edit the user made since the install. An event value that is not an array of
+matchers is left untouched and reported as a warning. The other events are installed.
 
 **The hook-side dispatch command is a platform branch and lives in the seam.**
 It is a shell one-liner a non-Python hook client uses to reach the control

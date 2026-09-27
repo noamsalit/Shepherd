@@ -813,6 +813,8 @@ The `shutdown` Event is created **six lines after** the composition returns. A t
 
 ### ADR-M4-7: `web/` learns nothing new about the system
 
+*Amended 2026-09-27 (qa6 BC-32, owner ruling 11):* a declared `post_milestone` edit of `server.py` is accepted. The digest pin stays — `test_web_server_is_byte_unchanged` accepts a `web/server.py` digest only when it is declared as a `post_milestone.edits` entry in `tests/boundaries/consumer_manifest.json`, and the manifest's `baseline` is never rewritten.
+
 **Context.** DP1 Gate B. The chat page is the first surface that needs a *stream of a conversation* and a *pending-approval list*.
 
 **Decision.** The chat page is built from the three mechanisms `web/` already has: `POST /api/master/send` resolves to a registered tool through the **existing** route table (a path→name entry and a body-field tuple, no handler body); the conversation and the approval cards arrive as new `StreamEvent.kind`s on the **existing** `/api/events`; the autonomy toggle is `POST /api/autonomy` → a registered tool. `web/routes.py` gains table entries only; `web/server.py` gains **nothing**, and Gate B asserts its import set is unchanged.
