@@ -47,14 +47,25 @@
 // build must not spend: `runner/local.py::resize` forces tmux's
 // `window-size=manual`, so a later human attach is clipped (E-M3-22), and a
 // viewport is then a **mutation of the work** — a glance from a phone would
-// shrink a running agent's pane to 39 columns. This page declares itself as
-// having no path from the browser to the pane (T19-c); a resize that travelled
-// that way would be the first, arriving by accident of window size.
+// shrink a running agent's pane to 39 columns. Since D76 the one path from the
+// browser to the pane carries a human's keystrokes and nothing else; a resize
+// travelling it would change the work by accident of window size.
 //
 // So one residual survives the fit and is **said on the page** rather than left
 // silent, which is the whole of what made the absent fit a defect: a pane wider
 // than the window is re-wrapped here, at the window's width. `FIT_LIMITATION`
-// below is that sentence, and `session.js` puts it beside `INPUT_UNAVAILABLE`.
+// below is that sentence, and `session.js` puts it in the page's note slot.
+//
+// **Input (D76, owner ruling 18 — reversing T19-c's read-only terminal).** The
+// emulator takes keystrokes, and `term.onData` sends each one as a text frame on
+// the socket the snapshot arrived on. `web/server.py` reads that socket and hands
+// the bytes to the pane this socket was opened for, through the handle the
+// audited `terminal_stream` open returned — so no key is a tool call and there is
+// no POST route for one. Typed text is sent, never rendered: it reaches
+// `socket.send` and no DOM sink (`test_session_page.py`'s pty scan inspects the
+// `onData` line). Once the socket closes the emulator refuses keys again and
+// `INPUT_CLOSED` says why, because a terminal that silently swallowed keystrokes
+// would be a lie about what happened to them.
 //
 // What this file still does NOT claim: that the *bytes* draw identically to a
 // real terminal. Every byte up to `term.write` is asserted, and now the box
@@ -72,15 +83,12 @@ const VENDOR_MODULE = "./vendor/xterm.js";
 // be the silent failure this project's principle 5 exists to prevent.
 const DEGRADE_MESSAGE = "live terminal unavailable: xterm.js is not vendored";
 
-// Principle 5, on the half of page 3 that is not built yet. `POST_ROUTES` has no
-// path for `terminal_write` and the server never reads the upgraded socket, so
-// there is no browser-to-pane path in this build at all (blocker T19-c). A
-// terminal that quietly swallowed keystrokes would be a lie about what happened
-// to them, so input is disabled in the emulator and the reason is on the page.
-export const INPUT_UNAVAILABLE =
-  "input is not wired yet: no route carries a keystroke to the pane (T19-c)";
+// Principle 5, where input is impossible: the socket that carried keys to the
+// pane has closed, so the emulator refuses them and the page says so.
+export const INPUT_CLOSED =
+  "input is off: the terminal stream closed, so nothing typed here reaches the pane";
 
-// D6's residual, declared for the same reason T19-c is. The emulator is fitted
+// D6's residual, declared because a reader is owed it. The emulator is fitted
 // to this window; the pane keeps its own geometry, because nothing here may
 // resize it (see the head of this file). When the window is narrower than the
 // pane the lines are re-wrapped at the window's width — visible and inside the
@@ -164,9 +172,8 @@ export async function openTerminal(sessionId, el) {
     const initial = fitGeometry(el, top, EMPTY);
     term = new vendor.Terminal({
       convertEol: false,
-      // T19-c: no route carries a keystroke, so the emulator refuses them
-      // rather than accepting bytes that go nowhere.
-      disableStdin: true,
+      // D76: keystrokes go to the pane over the socket below (`sendKeys`).
+      disableStdin: false,
       scrollback: 2000,
       // D6. The four constructor arguments QA swept for and found absent; the
       // font is named here because `fitGeometry` measures that exact font.
@@ -205,6 +212,7 @@ export async function openTerminal(sessionId, el) {
     // frame is `pipe-pane`'s bytes and reaches the emulator unchanged.
     term.write(frames === 1 ? snapshotForEmulator(payload) : payload);
   };
+  term.onData((keys) => sendKeys(socket, keys));
   socket.onerror = () => {
     notice(el, STREAM_LOST);
   };
@@ -213,6 +221,7 @@ export async function openTerminal(sessionId, el) {
     // T12's orphan (a 404 upgrade), the second is a pane that ended.
     if (!closing) {
       notice(el, frames === 0 ? STREAM_NEVER_ARRIVED : STREAM_LOST);
+      stopInput(term, el);
     }
   };
 
@@ -370,6 +379,22 @@ export function snapshotForEmulator(capture) {
   }
   out.push(CR, LF);
   return Uint8Array.from(out);
+}
+
+// D76: one keystroke (or a paste) out on the terminal socket, as a text frame.
+// Only while the socket is open: a key typed into a closing socket would be
+// dropped by the browser without a word, which is the silence `stopInput` ends.
+function sendKeys(socket, keys) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(keys);
+  }
+}
+
+// The stream is gone, so input is too: the emulator stops taking keys and the
+// page says why, beside the stream's own notice.
+function stopInput(term, el) {
+  term.options.disableStdin = true;
+  notice(el, INPUT_CLOSED);
 }
 
 // The degrade's own three outcomes (review finding 5). The old code had one —

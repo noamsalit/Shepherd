@@ -277,15 +277,15 @@ REQUIRED_ASSIGNMENTS = {
     "banner.hidden = false",
     "terminal.hidden = true",
     'note.textContent = ""',
-    # …and an owned one gets the terminal, with T19-c's reason for the keys.
+    # …and an owned one gets the terminal, which since D76 takes keystrokes.
     'banner.textContent = ""',
     "banner.hidden = true",
     "terminal.hidden = false",
-    # …and D6's second limitation beside T19-c's first, in the one slot the
-    # page has for them. QA run 4: the absent keystroke path was declared on
-    # the page in words and the absent fit said nothing at all, which is what
-    # made the fit a defect rather than a shortfall.
-    "note.textContent = `${INPUT_UNAVAILABLE} · ${FIT_LIMITATION}`",
+    # …and D6's limitation, alone in the one slot the page has for what it is
+    # not doing. P12 (D76): T19-c's "input is not wired yet" left this slot the
+    # day it became false — a declared limitation that is no longer true is the
+    # same defect as the silent one QA run 4 found beside it.
+    "note.textContent = FIT_LIMITATION",
     # The rename affordance `index.html` has always shipped and nothing wired.
     "rename.onclick = () => beginRename(row)",
     # One terminal at a time: a second open with the first socket still live

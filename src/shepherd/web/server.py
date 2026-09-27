@@ -26,6 +26,8 @@ structurally.
 from __future__ import annotations
 
 import json
+import socket
+import threading
 import time
 import uuid
 from collections.abc import Mapping
@@ -71,6 +73,36 @@ BODY_READ_TIMEOUT_S = 2.0
 #: upgrade is not a call, so the name is spelled once, here, beside the one
 #: handler that may use it.
 TERMINAL_TOOL = "terminal_stream"
+
+#: D76: the name of the one reader thread per terminal connection, and how long
+#: the handler waits for it once the socket is shut. A bound, not a hope.
+INPUT_THREAD_NAME = "shepherd-terminal-input"
+INPUT_JOIN_S = 5.0
+
+
+class _Ending:
+    """How one terminal connection ended, and the **one** close of its stream.
+
+    Two threads can end a connection — the writer when the pane's stream stops,
+    the reader when the client closes (D76) — and the stream is released once,
+    whichever is first. The reader's code is recorded under the same lock, so
+    the writer's close frame carries it.
+    """
+
+    def __init__(self, stream: TerminalStream) -> None:
+        self.stream = stream
+        self.code = ws.CLOSE_NORMAL
+        self._lock = threading.Lock()
+        self._closed = False
+
+    def close(self, code: int | None = None) -> None:
+        with self._lock:
+            if code is not None:
+                self.code = code
+            if self._closed:
+                return
+            self._closed = True
+        self.stream.close()
 
 
 class BindAddressRefused(ValueError):
@@ -343,6 +375,12 @@ class FleetHandler(BaseHTTPRequestHandler):
         showed. It is written as it came back: this module does not decode,
         escape or re-encode a pane byte, which is what T19's
         `test_the_first_frame_is_the_snapshot_byte_for_byte` holds.
+
+        **D76: after the snapshot, one reader thread carries keystrokes** from
+        this socket to `stream.write` — the handle this audited open returned,
+        so input reaches only this session and no key is a tool call (ADR-QR-4).
+        The close frame is written here, carrying the code the reader ended on;
+        the socket is then shut, which ends a reader blocked on a silent client.
         """
         if not self._origin_is_allowed():
             self._fail(403, correlation_id)
@@ -367,19 +405,45 @@ class FleetHandler(BaseHTTPRequestHandler):
             return
         stream = result.data
         self.close_connection = True
+        ending = _Ending(stream)
+        reader = threading.Thread(
+            target=self._read_keys, args=(ending,), name=INPUT_THREAD_NAME, daemon=True
+        )
         try:
             self.wfile.write(accepted)
             self.wfile.write(ws.build_frame(stream.snapshot, opcode=ws.OP_BINARY))
             self.wfile.flush()
+            reader.start()
             for chunk in stream.chunks():
                 self.wfile.write(ws.build_frame(chunk, opcode=ws.OP_BINARY))
                 self.wfile.flush()
-            self.wfile.write(ws.close_frame(ws.CLOSE_NORMAL))
+            self.wfile.write(ws.close_frame(ending.code))
             self.wfile.flush()
         except OSError:  # a closed tab, from in here, is a write that fails
             pass
         finally:
-            stream.close()
+            ending.close()
+            self._stop_reading(reader)
+
+    def _read_keys(self, ending: _Ending) -> None:
+        """The reader: frames to `stream.write` until the client stops (D76).
+
+        Ending it ends the stream, so `chunks()` returns and the writer's close
+        frame goes out carrying the reader's code (1009 for an oversize frame).
+        """
+        try:
+            ending.close(ws.pump_input(self.rfile.read1, ending.stream.write))
+        except OSError:  # the socket shut under a blocked read
+            ending.close()
+
+    def _stop_reading(self, reader: threading.Thread) -> None:
+        """Shut the socket so a blocked read returns, then join, bounded."""
+        try:
+            self.connection.shutdown(socket.SHUT_RDWR)
+        except OSError:  # already gone
+            pass
+        if reader.ident is not None:
+            reader.join(INPUT_JOIN_S)
 
     def _static(self, path: str, correlation_id: str) -> None:
         """`/` and `/static/*`, served from the package — no build step (D51)."""

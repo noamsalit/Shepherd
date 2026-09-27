@@ -28,7 +28,7 @@
 // code no browser ever loaded (`test_session_wiring.py`).
 
 import { element, showLevel } from "./flock.js";
-import { openTerminal, FIT_LIMITATION, INPUT_UNAVAILABLE } from "./terminal.js";
+import { openTerminal, FIT_LIMITATION } from "./terminal.js";
 
 // §9, verbatim. An `attached` session has no pty of ours: it was started in the
 // user's own terminal, on the user's own tmux socket. Rendering a live terminal
@@ -465,13 +465,12 @@ export function renderSession(row) {
   banner.textContent = "";
   banner.hidden = true;
   terminal.hidden = false;
-  // Two limitations, one line, both of them the page saying what it is not
-  // doing. `INPUT_UNAVAILABLE` is T19-c — no route carries a keystroke — and
-  // `FIT_LIMITATION` is D6: the emulator is fitted to this window and the pane
-  // keeps its own geometry, so a pane wider than the window is re-wrapped here.
-  // QA run 4's finding was that the second of those was true and silent, while
-  // the first had been said on the page since T19.
-  note.textContent = `${INPUT_UNAVAILABLE} · ${FIT_LIMITATION}`;
+  // The page saying what it is not doing. `FIT_LIMITATION` is D6: the emulator
+  // is fitted to this window and the pane keeps its own geometry, so a pane
+  // wider than the window is re-wrapped here. T19-c's read-only sentence
+  // shared this line until D76 wired the keys (P12) and made it false; where
+  // input is impossible, `terminal.js` says so itself (`INPUT_CLOSED`).
+  note.textContent = FIT_LIMITATION;
   attached = openTerminal(row.session_id, terminal);
   return attached;
 }

@@ -30,18 +30,17 @@ from __future__ import annotations
 
 import base64
 import binascii
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
-from shepherd.core.runner import RunnerHandle
+from shepherd.core.runner import RunnerHandle, RunnerRefusal
 from shepherd.core.states import Ownership
 from shepherd.engines.claude_code.transcript import locate_transcript
 from shepherd.engines.claude_code.transcript_tail import read_tail
 from shepherd.orchestration.dialog_digest import digest_of
 from shepherd.runner.base import ByteStream, Runner
 from shepherd.runner.pane import DecisionPrompt, read_decision
-from pathlib import Path
-
 from shepherd.store.db import Store
 from shepherd.toolsurface.types import (
     Audience,
@@ -124,10 +123,8 @@ def kill_landed(answer: Mapping[str, object]) -> bool:
     `commit_project_delete` refuses on it rather than deleting a live session's
     rows.
 
-    **Here rather than in `tools_m3.py`, beside `kill` itself**, for one
-    measured reason: that module is at 445 of the 450-line cap and this
-    docstring does not fit under it. `no_pane` — the answer with no key, and the
-    branch this predicate exists for — is the thing it is now beside.
+    **Beside `no_pane` rather than `kill`**, because `tools_m3.py` is at its
+    450-line cap (`test_tools_m3.py` records the measure beside the test).
     """
     return answer.get("killed") is True
 
@@ -148,10 +145,18 @@ class TerminalStream:
     session_id: str
     snapshot: bytes
     stream: ByteStream
+    writer: Callable[[bytes], None]
 
     def chunks(self) -> Iterator[bytes]:
         """The live frames, in order, until the stream closes."""
         return self.stream.chunks()
+
+    def write(self, data: bytes) -> None:
+        """D76: keys, byte-exact, to the pane the audited open bound; a refusal ends it."""
+        try:
+            self.writer(data)
+        except RunnerRefusal:
+            self.close()
 
     def close(self) -> None:
         """Stop reading. Idempotent, because `ByteStream.close` is."""
@@ -183,9 +188,6 @@ def _arg_int(args: ToolArgs, key: str) -> int:
 
 def _arg_optional_int(args: ToolArgs, key: str, default: int) -> int:
     return default if args.get(key) is None else _arg_int(args, key)
-
-
-# ----- the four handlers ------------------------------------------------------
 
 
 def terminal_snapshot(
@@ -235,7 +237,8 @@ def terminal_stream(
     if handle is None:
         return no_pane(session_id)
     raw = runner.snapshot(handle, scrollback)
-    return TerminalStream(session_id=session_id, snapshot=raw, stream=runner.attach(handle))
+    keys: Callable[[bytes], None] = lambda data: runner.write(handle, data)
+    return TerminalStream(session_id, raw, runner.attach(handle), keys)
 
 
 def session_output(

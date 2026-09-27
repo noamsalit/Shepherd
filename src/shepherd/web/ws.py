@@ -13,36 +13,27 @@ and imports nothing from `shepherd` at all — the handler above it is handed a
 stream and resolves its capability through `toolsurface` (DP4, D35). That also
 keeps D25 intact by construction: there is no path from here to a log.
 
-**Half of this module has no caller in this build, and that is deliberate.**
-`handshake_response`, `build_frame` and `close_frame` are reached;
-`parse_frame`, `Frame`, `WebSocketClosed` and `close_code` — the *reader* — are
-not, anywhere in `src/`. `web/server.py::_terminal` writes the 101, the
-snapshot frame, the live chunks and a close frame, and **never reads** a byte
-back from the upgraded socket: there is no browser→pane keystroke path in M3 by
-decision, because it would need a route outside T18's closed set
-(**BLOCKER-T19-c**). The reader is kept because it is correct and a future read
-loop will use it, and the absence is asserted rather than assumed, by
-`tests/boundaries/test_ws_read_path.py` — which goes red the day a caller
-appears, so the read loop brings its own tests instead of inheriting the
-parser's. An earlier revision of this docstring said an unmasked frame "fails
-the connection with 1002"; that is true of `parse_frame` and false of this
-server, which never looks.
+**Both halves are called.** `handshake_response`, `build_frame` and
+`close_frame` are the writer's: `web/server.py::_terminal` writes the 101, the
+snapshot frame, the live chunks and a close frame. `pump_input` is the reader's,
+and it is the **one** caller of `parse_frame` in `src/` (D76, ruling 18 —
+reversing BLOCKER-T19-c, under which the server read nothing back): the server
+runs it on a thread per terminal connection, and every data frame it parses is
+a human's keystrokes, handed to the audited handle's `write`.
+`tests/boundaries/test_ws_read_path.py` holds it to one caller, and the loop's
+own contract is `tests/web/test_ws_input_pump.py`'s.
 
 Three rules are enforced in code rather than documented, because each is a place
-where a hand-rolled framer is commonly wrong in the permissive direction. The
-first two are the reader's, so they bind whoever calls it and bind nothing in
-this build today:
+where a hand-rolled framer is commonly wrong in the permissive direction:
 
 * **A client frame must be masked** (RFC §5.1). A server that accepts an
-  unmasked frame is a bug, so `parse_frame` fails the connection with 1002 —
-  and nothing here hands it a client frame, so no connection of this server's
-  has ever failed that way.
+  unmasked frame is a bug, so `parse_frame` fails the connection with 1002, and
+  `pump_input` ends on it with that code.
 * **A payload over `MAX_FRAME_BYTES` fails with 1009 from the header alone** —
   before a byte of it is read, which is the only point at which refusing costs
-  nothing. `parse_frame`'s rule again, and unreached for the same reason.
+  nothing. It bounds what one frame can make the pump buffer.
 * **A server frame is never masked** (RFC §5.1 again, the other direction).
-  `build_frame` has no mask key and no parameter that would add one. This one
-  is on the write path, which the product does use on every terminal stream.
+  `build_frame` has no mask key and no parameter that would add one.
 
 §13 is upstream of all of this: the handshake is origin-checked against the
 address the server actually bound, and an absent `Origin` is refused here even
@@ -55,7 +46,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 #: RFC 6455 §1.3. The constant is the whole of the handshake's security value —
@@ -89,6 +80,11 @@ MAX_CONTROL_BYTES = 125
 CLOSE_NORMAL = 1000
 CLOSE_PROTOCOL_ERROR = 1002
 CLOSE_TOO_BIG = 1009
+
+#: How much one `read` asks for. A keystroke frame is a few bytes; the pump asks
+#: for more so a paste arrives in few reads, and never for more than one frame
+#: may hold.
+READ_BYTES = 1 << 16
 
 _FIN = 0x80
 _RSV = 0x70
@@ -276,3 +272,35 @@ def close_code(frame: Frame) -> int | None:
     if len(frame.payload) < 2:
         return None
     return int.from_bytes(frame.payload[:2], "big")
+
+
+def pump_input(read: Callable[[int], bytes], deliver: Callable[[bytes], None]) -> int:
+    """Read client frames until the connection ends; the close code it ended on.
+
+    `read(n)` returns up to `n` bytes, or `b""` at the end of the stream (the
+    socket's `read1`). Every data frame's payload — text, binary or a
+    continuation — goes to `deliver` **verbatim**: text frames are already UTF-8
+    on the wire, so nothing here decodes, strips or re-encodes. A ping or a pong
+    is not a keystroke and is dropped.
+
+    It ends on a close frame, on an empty read, or on a frame the parser refuses.
+    The code returned is the one the server's own close frame should carry:
+    `CLOSE_NORMAL` for the first two, the parser's (1002, 1009) for the third.
+    """
+    buffer = b""
+    while True:
+        try:
+            frame, consumed = parse_frame(buffer)
+        except WebSocketClosed as refused:
+            return refused.code
+        if frame is None:
+            chunk = read(READ_BYTES)
+            if not chunk:
+                return CLOSE_NORMAL
+            buffer += chunk
+            continue
+        buffer = buffer[consumed:]
+        if frame.opcode == OP_CLOSE:
+            return CLOSE_NORMAL
+        if frame.opcode in _DATA_OPCODES:
+            deliver(frame.payload)

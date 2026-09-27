@@ -130,7 +130,13 @@ HTML_SINKS = (
 #: (`setHTMLUnsafe`) left the whole of `tests/web` green. `screen.` is the dot
 #: form on purpose: it names the property accesses on the degrade's `<pre>` and
 #: not the bare identifier in `const screen = …` or `refreshScreen(screen, …)`.
-PTY_TOKENS = ("event.data", "payload", "bytes", "body.data", "data.text", "screen.")
+#:
+#: **Widened at P12 (D76): `onData`.** The emulator's input callback is the one
+#: line where typed text enters this module; it is inspected so a sink planted
+#: on it trips the scan like one on the frame path would.
+PTY_TOKENS = (
+    "event.data", "payload", "bytes", "body.data", "data.text", "screen.", "onData",
+)
 
 #: Where pane bytes are allowed to go: the emulator, a `textContent` slot, a
 #: length, or a local binding on its way to one of those.
@@ -138,6 +144,7 @@ _ALLOWED_PTY_LINE = re.compile(
     r"""^\s*(?:
         (?:const|let)\s+\w+\s*=\s*[^=;]*;?            # binding it to a name
       | \w+\.write\(                                   # term.write(bytes)
+      | \w+\.onData\(\(\w+\)\s*=>\s*\w+\(             # term.onData((k) => send(…))
       | \w+\.(?:textContent|className)\s*=             # a text slot, or its class
       | (?:return|if|\}|//|\*|/\*)                     # control flow, comments
       | \w+\s*\(\s*\w                                  # handing it to a function
@@ -462,21 +469,58 @@ def test_every_slot_the_scripts_fill_exists_in_the_markup() -> None:
     assert wanted <= ids, sorted(wanted - ids)
 
 
-def test_the_keystroke_path_is_absent_and_says_so() -> None:
-    """Principle 5: the browser cannot type into a pane yet, and it is shown.
+#: T19-c's sentence, which D76 made false. It may not come back on any page.
+RETIRED_INPUT_SENTENCE = "input is not wired yet"
 
-    `POST_ROUTES` carries no path for `terminal_write` and `web/server.py` never
-    **reads** the upgraded socket, so there is no browser→pane path in this tree
-    at all (blocker **T19-c**). A terminal that silently swallowed keystrokes
-    would be the "silent half-success" D29 forbids one page over, so input is
-    disabled in the emulator and the reason is rendered.
+
+def test_the_keystroke_path_is_wired_and_the_page_says_nothing_false() -> None:
+    """D76 (ruling 18, SD-05) — the successor of `test_the_keystroke_path_is_absent_and_says_so`.
+
+    Keystrokes typed into the emulator go out on the terminal socket the
+    snapshot came in on (ADR-QR-4); `web/server.py` reads them and hands them to
+    the handle the audited open returned. So the emulator accepts input, the
+    sentence that said it did not is gone from both modules, and — the half of
+    the old test that is still true — there is **no POST route** for
+    `terminal_write`: the socket is the only way a key reaches a pane.
     """
     text = source("terminal.js")
-    assert "disableStdin: true" in text
-    assert "INPUT_UNAVAILABLE" in text
+    opened = function_body(text, "openTerminal")
+    assert "disableStdin: false" in opened, opened
+    assert "disableStdin: true" not in code_only(opened), opened
+    # The emulator's keys go to the socket, and nowhere else.
+    wired = re.search(r"term\.onData\(\((\w+)\)\s*=>\s*sendKeys\(socket,\s*\1\)\)", opened)
+    assert wired is not None, opened
+    send = function_body(text, "sendKeys")
+    assert "socket.send(" in send, send
+    assert "WebSocket.OPEN" in send, "a key typed at a closed socket must not be sent"
+
+    # The pty-token scan inspects the input line, and a sink on it would trip.
+    inspected = pty_lines(text)
+    assert any("onData(" in line for line in inspected), inspected
+    planted = "  term.onData((keys) => { el.innerHTML = keys; });\n"
+    assert pty_path_findings(planted) != [], "the scan does not bite on the input line"
+
+    # Nothing false on the page: T19-c's sentence is in neither module.
+    for name in ("terminal.js", "session.js"):
+        assert RETIRED_INPUT_SENTENCE not in source(name), name
+        assert "INPUT_UNAVAILABLE" not in code_only(source(name)), name
+
     from shepherd.web import routes
 
     assert "terminal_write" not in set(routes.POST_ROUTES.values())
+
+
+def test_input_stops_with_the_stream_and_says_so() -> None:
+    """Where input is impossible the page still says why: once the socket has
+    closed, the emulator refuses keys again and `INPUT_CLOSED` is shown."""
+    text = source("terminal.js")
+    stop = function_body(text, "stopInput")
+    assert "disableStdin = true" in stop, stop
+    assert "INPUT_CLOSED" in stop, stop
+    assert re.search(r"^export const INPUT_CLOSED\s*=", text, flags=re.MULTILINE)
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and "stopInput(" in close_handler, close_handler
 
 
 # ----- the failure paths the degrade and the socket each own ------------------
@@ -575,13 +619,13 @@ def test_the_vendor_record_claims_only_what_is_proved() -> None:
     """Review finding 8: `VERSION.txt` listed a proof that does not exist.
 
     It said that among the things "asserted" on the browser path is *"a
-    keystroke reaches the pane through `send-keys -H`"*. There is **no**
-    browser→pane keystroke path in this tree — `POST_ROUTES` carries no
-    `terminal_write`, `web/server.py` never reads the upgraded socket, and
-    `test_the_keystroke_path_is_absent_and_says_so` asserts the absence one
-    screen up. `send-keys -H` byte-exactness is real, at the `Runner` seam and
-    the contract and the write path; it is simply not on the path that
-    paragraph is about.
+    keystroke reaches the pane through `send-keys -H`"*. At the time there was
+    **no** browser→pane keystroke path at all (T19-c). Since D76 there is one —
+    the terminal socket, proved at `test_terminal_input_server.py` and
+    `test_terminal_input_live.py` — but it is still not something the
+    *vendoring* proves, so the record still may not list it. `send-keys -H`
+    byte-exactness is real, at the `Runner` seam and the contract and the
+    write path; it is simply not what that paragraph is about.
 
     A record that over-claims is the same defect as a test whose name promises
     more than its body, so it gets the same kind of gate.
@@ -590,8 +634,8 @@ def test_the_vendor_record_claims_only_what_is_proved() -> None:
     assert "G-M3-6" in manifest, "arrival: this is the section under test"
 
     assert "a keystroke reaches the pane through" not in manifest
-    # The blocker that explains *why* there is no such path, and the three
-    # seams where the byte-exactness claim is actually proved.
+    # The blocker that explains the retraction's history (T19-c, reversed by
+    # D76), and the three seams where the byte-exactness claim is proved.
     assert "T19-c" in manifest
     for proof in (
         "tests/runner/test_local.py",

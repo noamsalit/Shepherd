@@ -270,9 +270,10 @@ def test_a_window_narrower_than_the_pane_re_wraps_and_the_page_says_so(
     assert narrow["declaredCols"] < PANE_COLS, (narrow, PANE_COLS)
     assert "fitted to this window" in narrow["note"], narrow["note"]
     assert "re-wrapped" in narrow["note"], narrow["note"]
-    # …and T19-c's older sentence is still in the same slot beside it: the two
-    # limitations share one line, and neither may quietly displace the other.
-    assert "keystroke" in narrow["note"], narrow["note"]
+    # …and it is alone in that slot. T19-c's older sentence ("input is not
+    # wired yet") shared it until D76 made it false (P12); a declared limitation
+    # that is no longer true is the defect this slot exists to prevent.
+    assert "input is not wired" not in narrow["note"], narrow["note"]
 
 
 def test_a_wide_enough_window_shows_the_whole_pane_width(
