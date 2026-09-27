@@ -26,6 +26,7 @@ structurally.
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -59,9 +60,11 @@ JSON_TYPE = "application/json"
 #: bounds what one `Content-Length` header can make this process allocate.
 MAX_BODY_BYTES = 1 << 20
 
-#: BC-32: how long a declared body may take to arrive. A client that claims a
-#: `Content-Length` and stops short used to hold a handler thread in `read()`
-#: forever; past this window the body is refused (400) and the connection closed.
+#: BC-32: how long a declared body may take to arrive, in total — a deadline for
+#: the whole body, not an idle window per `recv`. A client that claims a
+#: `Content-Length` and stops short (or trickles) used to hold a handler thread
+#: in `read()` forever; past this window the body is refused (400) and the
+#: connection closed.
 BODY_READ_TIMEOUT_S = 2.0
 
 #: The tool the WebSocket path resolves to. It is **not** in `API_ROUTES`: an
@@ -144,14 +147,22 @@ class FleetHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_json(self, status: int, payload: Mapping[str, object]) -> None:
-        self._send(status, json.dumps(payload).encode("utf-8"), JSON_TYPE)
+    def _send_json(
+        self,
+        status: int,
+        payload: Mapping[str, object],
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
+        self._send(status, json.dumps(payload).encode("utf-8"), JSON_TYPE, headers)
 
-    def _fail(self, status: int, correlation_id: str) -> None:
+    def _fail(
+        self, status: int, correlation_id: str, headers: Mapping[str, str] | None = None
+    ) -> None:
         """§13 Errors: one generic literal and an id, whatever went wrong."""
         self._send_json(
             status, {"ok": False, "data": None, "error": GENERIC_ERROR,
-                     "correlation_id": correlation_id}
+                     "correlation_id": correlation_id},
+            headers,
         )
 
     # ----- the origin check (§13) -------------------------------------------
@@ -199,7 +210,10 @@ class FleetHandler(BaseHTTPRequestHandler):
             return
         body = self._json_body()
         if body is None:
-            self._fail(400, correlation_id)
+            # BC-32: a short body has already decided the connection closes;
+            # say so, so a keep-alive client does not queue a request behind it.
+            closing = {"Connection": "close"} if self.close_connection else None
+            self._fail(400, correlation_id, closing)
             return
         resolved = routes.resolve_post(urlparse(self.path).path, body)
         if resolved is None:
@@ -236,20 +250,40 @@ class FleetHandler(BaseHTTPRequestHandler):
     def _read_body(self, length: int) -> bytes | None:
         """Exactly `length` bytes within `BODY_READ_TIMEOUT_S`, or `None` (BC-32).
 
+        The window is a whole-body deadline, not a per-`recv` idle timeout: each
+        pass re-arms the socket timeout to what is left of it, so a client that
+        trickles bytes, each inside the window, is still cut off when it ends.
         A short or stalled body closes the connection: whatever the client sends
         after it cannot be framed as the next request.
         """
-        self.connection.settimeout(BODY_READ_TIMEOUT_S)
+        deadline = time.monotonic() + BODY_READ_TIMEOUT_S
         try:
-            raw = self.rfile.read(length)
-        except OSError:  # `TimeoutError` is one
-            raw = b""
+            raw = self._read_until(length, deadline)
         finally:
             self.connection.settimeout(None)
         if len(raw) != length:
             self.close_connection = True
             return None
         return raw
+
+    def _read_until(self, length: int, deadline: float) -> bytes:
+        """Up to `length` bytes, stopping at EOF, an error or `deadline`."""
+        chunks: list[bytes] = []
+        received = 0
+        while received < length:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            self.connection.settimeout(remaining)
+            try:
+                chunk = self.rfile.read1(length - received)
+            except OSError:  # `TimeoutError` is one
+                break
+            if not chunk:
+                break
+            chunks.append(chunk)
+            received += len(chunk)
+        return b"".join(chunks)
 
     def _call(self, resolved: routes.Resolved, correlation_id: str) -> None:
         """The whole of `web/`'s access to the system (D19, D35)."""

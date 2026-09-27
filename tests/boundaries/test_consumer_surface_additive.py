@@ -421,8 +421,11 @@ def test_a_post_m4_import_without_a_manifest_entry_is_caught() -> None:
     new = frozenset({"cli/new.py"})
     messages = addition_violations([], new, {}, new, module_only)
     assert any("no post_milestone entry" in m and "cli/new.py" in m for m in messages), messages
+    # The module half's positive control: the same module, declared, is accepted.
+    new_declared = manifest_with([declared_edit("cli/new.py")], {})
+    assert addition_violations([], new, {}, new, new_declared) == []
 
-    declared = manifest_with([declared_edit("cli/main.py")], {})
+    declared =manifest_with([declared_edit("cli/main.py")], {})
     assert addition_violations(added, frozenset(), imports, frozenset(), declared) == []
     # …and an import the table does not name is still undeclared, manifest or not.
     stray = [*added, "cli/main.py: shepherd.store.db"]
