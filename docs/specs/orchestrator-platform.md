@@ -2633,7 +2633,7 @@ Named so they do not leak into v1:
   executable (LangGraph, an SDK loop, a script) and joining the flock without
   forking this repository. Decided in outline on 2026-09-21 and written down in
   **`docs/specs/harness-contract.md`**: the stop vocabulary stays closed (7
-  outward, 20 inward), the adapter runs out of process, `unknown` is a
+  outward, 21 inward (D73)), the adapter runs out of process, `unknown` is a
   fall-through and never a target, and conformance is claimed in capability
   tiers so a partial harness renders what it supplied and nothing more. The
   wire protocol, the security model and the bidirectional control path are

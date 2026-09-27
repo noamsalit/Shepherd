@@ -1719,6 +1719,46 @@ def test_proof_preflight_warn_is_published(monkeypatch: pytest.MonkeyPatch) -> N
     assert not problems, f"preflight WARN publication: {problems}"
 
 
+# ----- oracle self-checks (qa6-rulings P1 REM-FIX 1) -----------------------------------------------
+
+
+def test_guard_d12_unknown_is_not_a_classifier_fallback() -> None:
+    """D12's `unknown` case passes only on a rule's answer, never on the classifier's own fallbacks.
+
+    `verdict.py` answers `(0.0, "mechanical")` for a rule's `unknown` AND for an unreadable record
+    or a turn with no ending; only `why` tells them apart.
+    """
+    from shepherd.signals.verdict import WHY_NO_ENDING, WHY_UNREADABLE
+
+    from .sub.test_wave3_3_hooks import check_decision
+
+    def failed(why: str) -> list[str]:
+        rec = Recorder("D12-guard")
+        check_decision(rec, "unknown", {"confidence": 0.0, "decided_by": "mechanical", "why": why})
+        return [clause.name for clause in rec.failed]
+
+    assert failed("the engine reported this stop as unknown") == []
+    assert failed(WHY_UNREADABLE), "an unreadable stop record passed as a rule's unknown"
+    assert failed(WHY_NO_ENDING), "a turn with no ending passed as a rule's unknown"
+
+
+def test_guard_u7_legend_probe_cannot_compare_with_itself() -> None:
+    """U7's legend-text probe sits inside a sentinel-coloured span, and the oracle refuses the sentinel.
+
+    Inside the `.legend-key` alone, a mix that fails to resolve inherits the key's own colour and the
+    clause compares the value under test with itself. The sentinel breaks that inheritance.
+    """
+    from .sub import test_wave6_2_flock as flock
+
+    assert flock.PROBE_SENTINEL == "rgb(1, 2, 3)"
+    wrapper = f"s.style.color = '{flock.PROBE_SENTINEL}'"
+    assert wrapper in flock.PROBE_JS, "the probe is not wrapped in the sentinel span"
+    assert "s.appendChild(p)" in flock.PROBE_JS and "e.appendChild(s)" in flock.PROBE_JS
+    source = Path(flock.__file__).read_text(encoding="utf-8")
+    assert "ui.legend_probe_resolved." in source and "!= PROBE_SENTINEL" in source, \
+        "no clause refuses a probe that kept the sentinel colour"
+
+
 # ----- the mutation drivers ------------------------------------------------------------------------
 
 

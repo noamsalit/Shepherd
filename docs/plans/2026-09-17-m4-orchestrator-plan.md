@@ -813,7 +813,7 @@ The `shutdown` Event is created **six lines after** the composition returns. A t
 
 ### ADR-M4-7: `web/` learns nothing new about the system
 
-*Amended 2026-09-27 (qa6 BC-32, owner ruling 11):* a declared `post_milestone` edit of `server.py` is accepted. The digest pin stays — `test_web_server_is_byte_unchanged` accepts a `web/server.py` digest only when it is declared as a `post_milestone.edits` entry in `tests/boundaries/consumer_manifest.json`, and the manifest's `baseline` is never rewritten.
+*Amended 2026-09-27 (qa6 BC-32, owner ruling 11):* a declared `post_milestone` edit of `server.py` is accepted. The digest pin stays — from qa6-rulings P9 on, `test_web_server_is_byte_unchanged` accepts a `web/server.py` digest only when it is declared as a `post_milestone.edits` entry in `tests/boundaries/consumer_manifest.json`, and the manifest's `baseline` is never rewritten.
 
 **Context.** DP1 Gate B. The chat page is the first surface that needs a *stream of a conversation* and a *pending-approval list*.
 

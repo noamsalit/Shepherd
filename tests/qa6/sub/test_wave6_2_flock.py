@@ -237,16 +237,25 @@ def rgb(hex_colour: str) -> str:
 LEGEND_TEXT_MIX = "color-mix(in srgb, {hex} 78%, var(--text))"
 
 
+#: The colour of the span the probe sits in. A mix that fails to resolve makes the probe inherit
+#: this, never the `.legend-key`'s own colour, so the clause cannot compare that colour with itself.
+PROBE_SENTINEL = "rgb(1, 2, 3)"
+
+PROBE_JS = (
+    "(e, c) => { const s = document.createElement('span'); s.style.color = '" + PROBE_SENTINEL + "';"
+    " const p = document.createElement('span'); p.style.color = c; s.appendChild(p); e.appendChild(s);"
+    " const v = getComputedStyle(p).getPropertyValue('color'); s.remove(); return v; }"
+)
+
+
 def mixed_text_colour(key: Locator, hex_colour: str) -> str:
     """The browser's own computed colour for the AA mix, from a probe inside the same `.legend-key`.
 
     A probe rather than arithmetic: the expected value then comes from the page's `--text` and the
-    browser's colour-mix, spelled independently of the `--b-text` declarations under test.
+    browser's colour-mix, spelled independently of the `--b-text` declarations under test. The probe
+    sits in a `PROBE_SENTINEL` span, so an unresolved mix reads as the sentinel (refused by U7).
     """
-    value = key.evaluate(
-        "(e, c) => { const p = document.createElement('span'); p.style.color = c; e.appendChild(p);"
-        " const v = getComputedStyle(p).getPropertyValue('color'); p.remove(); return v; }",
-        LEGEND_TEXT_MIX.format(hex=hex_colour))
+    value = key.evaluate(PROBE_JS, LEGEND_TEXT_MIX.format(hex=hex_colour))
     return str(value).strip()
 
 
@@ -279,7 +288,10 @@ def test_u7_bucket_colours_glyphs_and_the_new_vocabulary(flock: Flock, browser_s
             bucket = str(key.get_attribute("data-bucket"))
             style = PALETTE[Bucket(bucket)]
             labels.append((key.locator(".legend-label").text_content() or "").strip())
-            rec.equal(f"ui.legend_text_colour.{bucket}", mixed_text_colour(key, style.colour), computed(key, "color"))
+            probe = mixed_text_colour(key, style.colour)
+            rec.check(f"ui.legend_probe_resolved.{bucket}", probe != PROBE_SENTINEL,
+                      f"the AA mix resolved (not the sentinel {PROBE_SENTINEL})", probe)
+            rec.equal(f"ui.legend_text_colour.{bucket}", probe, computed(key, "color"))
             rec.equal(f"ui.legend_glyph_colour.{bucket}", rgb(style.colour), computed(key.locator(".legend-mark"), "color"))
         rec.equal("ui.visible_labels", ["needs you", "error", "stranded", "running", "limit exceeded", "blocked", "finished",
                                         "unknown"], labels)

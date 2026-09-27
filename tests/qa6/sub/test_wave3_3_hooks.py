@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from shepherd.signals.verdict import WHY_NO_ENDING, WHY_UNREADABLE
+
 from .. import hostprobe, paths
 from ..hookrig import captured, copy_transcript, dispatch_argv, frame, last_event_at, send, start_ready_sessiond
 from ..httpclient import Client, as_dict
@@ -124,6 +126,10 @@ def check_decision(rec: Recorder, name: str, got: dict[str, object]) -> None:
     confidence, decided_by = got.get("confidence"), got.get("decided_by")
     if name == "unknown":
         rec.equal("verdict.unknown.mechanical_0_0", D12_UNKNOWN_DECISION, (confidence, decided_by))
+        # The classifier's own fallbacks are also (0.0, "mechanical"); only `why` says a rule answered.
+        why = got.get("why")
+        rec.check("verdict.unknown.a_rule_answered", why not in (WHY_UNREADABLE, WHY_NO_ENDING),
+                  "a rule's why, not the unreadable/no-ending fallback", why)
     elif name == D12_HEURISTIC_OTHER:
         rec.equal(f"verdict.{name}.heuristic", "heuristic", decided_by)
     elif name == D12_HEURISTIC_BELOW_1:
