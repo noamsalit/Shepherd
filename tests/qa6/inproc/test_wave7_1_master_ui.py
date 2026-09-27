@@ -289,6 +289,26 @@ def thread_items(page: Page) -> list[dict[str, str]]:
     return [{str(k): str(v) for k, v in item.items()} for item in value] if isinstance(value, list) else []
 
 
+#: U26's ordering signal (qa6 rulings P3, REM-FIX 1): the Shepherd side of the thread, snapshotted by the page
+#: itself the first time `#shepherd-event` reads "turn ended". Read after the turn, it says what the thread held
+#: when the ending was shown, not what it holds now.
+AT_TURN_END = """
+() => {
+  window.__qa6AtTurnEnd = null;
+  const line = document.getElementById('shepherd-event');
+  if (line === null) { return; }
+  new MutationObserver(() => {
+    if (window.__qa6AtTurnEnd !== null || !line.textContent.startsWith('turn ended')) { return; }
+    window.__qa6AtTurnEnd = [...document.querySelectorAll('#shepherd-thread > .turn-shepherd')].map(t => {
+      const tool = t.querySelector('.step-tool');
+      if (tool !== null) { return 'step:' + tool.textContent; }
+      return 'prose:' + [...t.querySelectorAll('.prose')].map(p => p.textContent).join(' | ');
+    });
+  }).observe(line, {childList: true, characterData: true, subtree: true});
+}
+"""
+
+
 @scenario("U26")
 def test_u26_a_turn_renders_line_by_line_with_expandable_tool_steps(master: Master, browser_session: BrowserSession,
                                                                     rec: Recorder) -> None:
@@ -298,6 +318,7 @@ def test_u26_a_turn_renders_line_by_line_with_expandable_tool_steps(master: Mast
     with browser_session.context("U26", viewport=VIEWPORTS[DESKTOP], abort_master_send=False) as (context, log):
         page = open_app(context, master.port)
         go(page, "shepherd", drawer=False)
+        page.evaluate(AT_TURN_END)
         mark = master.stream.mark()
         book.push(Turn(says="QA6 U26 prose", calls=[Call("fleet_summary", {})]))
         compose(page, "QA6 U26")
@@ -312,16 +333,21 @@ def test_u26_a_turn_renders_line_by_line_with_expandable_tool_steps(master: Mast
         frames = [f for f in master.stream.since(mark) if f.kind.startswith("master.")]
         rec.record("stream.frames", [f.kind for f in frames])
         items = [item for item in thread_items(page) if not item["bubble"]]
-        rec.check("ui.no_turn_ended_line_in_the_thread", not any("turn_ended" in item["prose"] for item in items),
-                  "no .prose reads turn_ended", [item["prose"] for item in items])
+        rec.check("ui.no_turn_ended_line_in_the_thread",
+                  not any("turn_ended" in item["prose"] or "turn ended ·" in item["prose"] for item in items),
+                  "no .prose reads turn_ended or the event line's 'turn ended ·'", [item["prose"] for item in items])
         # The scripted turn: one text, then fleet_summary's call and result (one step), then the ending
         # (the event line). The text is not repeated: the scripted ending carries none (ruling 4).
         expected = ["prose:QA6 U26 prose", "step:fleet_summary"]
         shown = [f"step:{i['tool']}" if i["tool"] else f"prose:{i['prose']}" for i in items]
         rec.equal("ui.frames_render_in_order", expected, shown[-len(expected):])
-        rec.check("ui.prose_and_step_before_turn_ended", bool(line) and shown[-len(expected):] == expected,
-                  "the prose and the one step are in the thread when the event line says the turn ended",
-                  {"thread": shown, "event_line": text_of(page.locator("#shepherd-event"))})
+        # Ordering, from the page's own snapshot taken when the event line first said the turn ended
+        # (AT_TURN_END): the prose and the one step were already there, not added after the ending.
+        at_end = page.evaluate("() => window.__qa6AtTurnEnd")
+        at_end_tail = [str(entry) for entry in at_end][-len(expected):] if isinstance(at_end, list) else None
+        rec.check("ui.prose_and_step_before_turn_ended", bool(line) and at_end_tail == expected,
+                  "the prose and the one step were in the thread when the event line first said the turn ended",
+                  {"at_turn_end": at_end, "thread": shown, "event_line": text_of(page.locator("#shepherd-event"))})
         rec.block("ui.two_prose_lines_each_as_it_arrives",
                   "the shared ToolCallingMaster emits one `text` event per scripted Turn (inproc/master.py `says`), so a "
                   "turn with two text events cannot be scripted without editing a shared file (SCOPE_INCREASE)")

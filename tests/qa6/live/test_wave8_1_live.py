@@ -930,8 +930,13 @@ def test_l1_real_master_turn_through_ui(live: Live, browser_session: BrowserSess
         # So the turn is counted from the pre-send mark: at least the merged tool step and one prose line.
         observe(lambda: len(shepherd_adds()) - before >= 2, 10.0)
         this_turn = shepherd_adds()[before:]
-        rec.check("ui.assistant_grows_in_two_updates", len(this_turn) >= 2,
-                  ">= 2 Shepherd-side DOM additions: the merged tool step and at least one prose line",
+        # When the turn called fleet_summary, one of this turn's additions is that merged step: its text
+        # names the tool (REM-FIX 1), so two prose lines alone cannot pass for "the step and a prose line".
+        names_step = "fleet_summary" not in turn.tool_names() or any(
+            "fleet_summary" in str(entry.get("text")) for entry in this_turn)
+        rec.check("ui.assistant_grows_in_two_updates", len(this_turn) >= 2 and names_step,
+                  ">= 2 Shepherd-side DOM additions: the merged tool step (naming fleet_summary when it was called) "
+                  "and at least one prose line",
                   {"count": len(this_turn), "at": [entry.get("at") for entry in this_turn],
                    "texts": [str(entry.get("text"))[:60] for entry in this_turn]})
         # Observations with no plan oracle (recorded, reported as defect candidates, never asserted):

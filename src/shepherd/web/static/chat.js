@@ -77,8 +77,9 @@ const ENTER = "Enter";
 // and the page says so rather than showing a history that looks complete.
 const GAP_NOTE = "the stream dropped events — this conversation is incomplete";
 
-// `steps` is BC-06a's pairing: a call's step body, by the `tool_use_id` its
-// result will name, until that result arrives. `lastText` is BC-06c's: the
+// `steps` is BC-06a's pairing: a call's step body and its turn, by the
+// `tool_use_id` its result will name, until that result arrives or the turn
+// ends. `lastText` is BC-06c's: the
 // last thing each turn said, by turn id, so a final text equal to it is shown
 // once. Both are keyed rather than "the latest", because a result or an ending
 // that arrives for another turn must not be matched to this one.
@@ -254,11 +255,16 @@ function argumentKeys(detail) {
   return keys.length === 0 ? NO_ARGUMENTS : `arguments: ${keys.join(", ")}`;
 }
 
+// A failed result says so on its own line (the SDK's `is_error`), because a
+// step that reads like a success when the tool refused is a wrong transcript.
+const FAILED = "error · ";
+
 function stepBody(kind, data) {
   if (kind === TOOL_CALL) {
     return argumentKeys(data.detail);
   }
-  return typeof data.text === "string" && data.text !== "" ? data.text : NO_RESULT_TEXT;
+  const text = typeof data.text === "string" && data.text !== "" ? data.text : NO_RESULT_TEXT;
+  return detailOf(data).is_error === true ? `${FAILED}${text}` : text;
 }
 
 // The runtime's own payload, which `project_to_stream` nests under `detail`.
@@ -283,16 +289,16 @@ function fillStep(data) {
   if (useId === null || !state.steps.has(useId)) {
     return false;
   }
-  state.steps.get(useId).append("\n", stepBody(TOOL_RESULT, data));
+  state.steps.get(useId).content.append("\n", stepBody(TOOL_RESULT, data));
   state.steps.delete(useId);
   return true;
 }
 
 function openStep(kind, data) {
-  const body = shepherdStep(data.tool_name, stepBody(kind, data));
+  const content = shepherdStep(data.tool_name, stepBody(kind, data));
   const useId = useIdOf(data);
   if (kind === TOOL_CALL && useId !== null) {
-    state.steps.set(useId, body);
+    state.steps.set(useId, { content, turnId: data.turn_id });
   }
 }
 
@@ -300,20 +306,40 @@ function openStep(kind, data) {
 // the event line beside the status slot — never into the thread, and never
 // over `#shepherd-status`, whose turn id, refusal or approval word a reader is
 // looking at (plan revision 4, B1). The line is a polite live region, so it is
-// announced without taking focus. BC-06c (ruling 4): the ending carries the
-// SDK's final text, which is normally the turn's last text again; it enters the
-// thread only when it says something the turn has not.
+// announced without taking focus. BC-06c (ruling 4): every SDK ending carries
+// the final text, which is normally the turn's last text again; it enters the
+// thread only when it says something the turn has not. A turn that failed
+// (`error`) still says so in the thread: its kind word stands in for a
+// repeated text, so the failure is never only on the event line.
 const TEXT = "text";
 const TURN_ENDED = "turn_ended";
+const ERROR = "error";
 const RATE_LIMIT = "rate_limit";
 const RATE_LIMIT_STOPS = "rejected";
 
-function turnEnded(data) {
+// A result for a call whose turn is over is not this turn's any more.
+function closeSteps(turnId) {
+  for (const [useId, open] of state.steps) {
+    if (open.turnId === turnId) {
+      state.steps.delete(useId);
+    }
+  }
+}
+
+function newText(data, said) {
+  return typeof data.text === "string" && data.text !== "" && data.text !== said ? data.text : null;
+}
+
+function turnEnded(kind, data) {
   const said = state.lastText.get(data.turn_id);
   state.lastText.delete(data.turn_id);
-  fill("shepherd-event", `turn ended · ${textOf(detailOf(data).outcome)}`);
-  if (typeof data.text === "string" && data.text !== "" && data.text !== said) {
-    shepherdSays(data.text);
+  closeSteps(data.turn_id);
+  const failed = kind === ERROR;
+  const outcome = failed ? ERROR : textOf(detailOf(data).outcome);
+  fill("shepherd-event", `turn ended · ${outcome}`);
+  const text = newText(data, said);
+  if (text !== null || failed) {
+    shepherdSays(text !== null ? text : ERROR);
   }
 }
 
@@ -337,8 +363,8 @@ function onMasterEvent(kind, data) {
     openStep(kind, data);
     return;
   }
-  if (kind === TURN_ENDED) {
-    turnEnded(data);
+  if (kind === TURN_ENDED || kind === ERROR) {
+    turnEnded(kind, data);
     return;
   }
   if (kind === RATE_LIMIT) {
@@ -477,6 +503,9 @@ async function submit() {
   input.value = "";
   grow(input);
   youSays(text);
+  // The last turn's ending is not this turn's. Cleared before the POST, since a
+  // fast turn's own ending can arrive on the stream before the POST answers.
+  fill("shepherd-event", "");
   const data = await post(MASTER_SEND, { text });
   if (data === null) {
     return;

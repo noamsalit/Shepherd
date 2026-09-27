@@ -77,12 +77,24 @@ def _call(tool: str, use_id: str, arguments: dict[str, object]) -> dict[str, obj
     return _master("tool_call", tool=tool, payload={"tool_use_id": use_id, "input": arguments})
 
 
-def _result(tool: str | None, use_id: str, text: str | None) -> dict[str, object]:
-    return _master("tool_result", text=text, tool=tool, payload={"tool_use_id": use_id, "is_error": False})
+def _result(tool: str | None, use_id: str, text: str | None, *, is_error: bool = False) -> dict[str, object]:
+    return _master("tool_result", text=text, tool=tool, payload={"tool_use_id": use_id, "is_error": is_error})
 
 
 def _ended(text: str | None, outcome: str = "success", turn: str = TURN) -> dict[str, object]:
     return _master("turn_ended", text=text, payload={"outcome": outcome, "subtype": outcome}, turn=turn)
+
+
+def _error(text: str | None, turn: str = TURN) -> dict[str, object]:
+    """The `error` ending `result_ending` projects from an `is_error` ResultMessage (qa6 BC-07):
+    in every probe capture its text is the turn's last assistant text again."""
+    payload: dict[str, object] = {
+        "outcome": "error",
+        "subtype": "success",
+        "terminal_reason": "api_error",
+        "is_error": True,
+    }
+    return _master("error", text=text, payload=payload, turn=turn)
 
 
 def _rate_limit(status: str) -> dict[str, object]:
@@ -144,6 +156,32 @@ def test_a_result_with_no_call_still_renders_as_its_own_step(chat_page) -> None:
     assert errors == [], errors
 
 
+def test_a_failed_tool_result_is_visibly_marked(chat_page) -> None:
+    """REM-FIX 1 (3): `is_error` is not dropped, merged into its call's step or not."""
+    page, errors, _ = chat_page
+    _deliver(
+        page,
+        _call("kill_session", "tu-1", {"session_id": "s-1"}),
+        _result("kill_session", "tu-1", "no such session", is_error=True),
+        _result("list_sessions", "tu-unseen", "refused", is_error=True),
+        _call("fleet_summary", "tu-2", {}),
+        _result("fleet_summary", "tu-2", "2 running"),
+    )
+    bodies = page.locator("#shepherd-thread .step-body").all_text_contents()
+    assert bodies[0].splitlines()[-1] == "error · no such session", bodies
+    assert bodies[1] == "error · refused", bodies
+    assert bodies[2].splitlines()[-1] == "2 running", bodies
+    assert errors == [], errors
+
+
+def test_a_call_left_open_at_the_turn_end_is_not_matched_later(chat_page) -> None:
+    """REM-FIX 1 (7): a turn's open steps are dropped when it ends."""
+    page, errors, _ = chat_page
+    _deliver(page, _call("fleet_summary", "tu-1", {}), _ended(None), _result("fleet_summary", "tu-1", "late"))
+    assert _thread(page) == ["step:fleet_summary", "step:fleet_summary"]
+    assert errors == [], errors
+
+
 # ----- ruling 3: events go to the event line ----------------------------------
 
 
@@ -196,6 +234,29 @@ def test_a_final_result_text_that_differs_is_rendered_once(chat_page) -> None:
     # The last text is per turn: another turn's text does not suppress this one's.
     _deliver(page, _master("text", text="Other.", turn="turn-other"), _ended("Other.", turn=TURN))
     assert _thread(page)[-2:] == ["prose:Other.", "prose:Other."]
+    assert errors == [], errors
+
+
+# ----- ruling 4 for every ending: the `error` ending (REM-FIX 1) --------------
+
+
+def test_an_error_ending_equal_to_the_last_text_says_error_not_the_text_again(chat_page) -> None:
+    """Two turns; the second ends `error` with the probe's shape (text == the last text)."""
+    page, errors, _ = chat_page
+    _deliver(page, _master("text", text="First answer.", turn="turn-a"), _ended("First answer.", turn="turn-a"))
+    _deliver(page, _master("text", text=FINAL, turn="turn-b"), _error(FINAL, turn="turn-b"))
+    assert _thread(page) == ["prose:First answer.", f"prose:{FINAL}", "prose:error"]
+    assert _event_line(page) == "turn ended · error"
+    assert errors == [], errors
+
+
+def test_an_error_ending_with_new_or_no_text_is_rendered(chat_page) -> None:
+    page, errors, _ = chat_page
+    _deliver(page, _master("text", text="Working."), _error("the API refused the request"))
+    assert _thread(page) == ["prose:Working.", "prose:the API refused the request"]
+    assert _event_line(page) == "turn ended · error"
+    _deliver(page, _error(None, turn="turn-other"))
+    assert _thread(page)[-1] == "prose:error"
     assert errors == [], errors
 
 
@@ -283,6 +344,17 @@ def test_an_event_never_touches_the_status_after_an_approval_or_a_refusal(
         "() => document.getElementById('shepherd-status').textContent === 'a turn is already running'"
     )
     _both_events_leave_the_status(page, "a turn is already running")
+    assert errors == [], errors
+
+
+def test_a_send_clears_the_last_turns_event_line(chat_page, master_doubles: MasterDoubles) -> None:
+    """REM-FIX 1 (2): the previous turn's ending does not sit beside the new turn's id."""
+    page, errors, _ = chat_page
+    _deliver(page, _ended(None))
+    assert _event_line(page) == "turn ended · success"
+    _send(page, "and now?")
+    page.wait_for_function("id => document.getElementById('shepherd-status').textContent === id", arg=TURN_ID)
+    assert _event_line(page) == ""
     assert errors == [], errors
 
 
