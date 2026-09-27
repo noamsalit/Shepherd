@@ -126,6 +126,7 @@ def a_driver(store: Store, built: list[ReportingMaster]) -> TurnDriver:
         publish=lambda event: 0,
         withdraw_turn_approvals=lambda turn_id: 0,
         now=lambda: NOW,
+        record_failure=lambda _turn_id, _error_class: None,
     )
 
 
@@ -178,6 +179,7 @@ def test_the_first_event_that_names_a_session_wins(store: Store) -> None:
         publish=lambda event: 0,
         withdraw_turn_approvals=lambda turn_id: 0,
         now=lambda: NOW,
+        record_failure=lambda _turn_id, _error_class: None,
     )
     run_one_turn(driver, "hello")
     assert store.get_app_state(MASTER_SESSION_KEY) == RUNTIME_SESSION_ID

@@ -517,6 +517,10 @@ class Store:
     def set_app_state(self, key: str, value: object) -> None:
         self._write(lambda c: writes.set_app_state(c, key, value))
 
+    def compare_and_set_app_state(self, key: str, expected: object, value: object) -> bool:
+        """Write `value` iff the key still holds `expected`; `True` when it did."""
+        return self._write(lambda c: writes.compare_and_set_app_state(c, key, expected, value))
+
     def list_anomaly_counts(self) -> dict[str, int]:
         return reads.list_anomaly_counts(self._read())
 

@@ -26,6 +26,25 @@ has exactly one caller in `src/`**, and this module is it.
    one, so D10's one continuous orchestrator conversation survives a restart.
 6. **Release the slot on every exit path, including an exception.** A slot
    released only on success is a chat that wedges on the first error.
+7. **Count and audit a failed turn** (D79, ADR-QR-3). Both failure paths hand
+   the injected `record_failure` the turn id and the error's **class name
+   only** — a message can carry prompt text or a credential. It is required,
+   not defaulted: a no-op default would let a new composition drop H3 silently.
+   It must not raise (`registry.master_failure_recorder` never does).
+
+**`wake_turn()` is level 3's opener** (D69, ADR-QR-5). It is `send_turn`'s
+sibling with no user text: it claims the slot or returns `None` when a turn
+holds it — the set is not drained, so the next 2 s sweep offers the wake again
+and a stop is queued rather than dropped — and it opens with the summary alone.
+A turn that could not open answers `WakeOpenFailed`, not `None`, so the waker
+can tell "not now" from "this set fails" (REM-FIX 1). A wake turn that fails
+*while running* puts the pre-drain stamp back — compare-and-set, so a later
+turn's stamp is never undone — and the set it drained is offered again.
+`orchestration/wake.py::LevelThreeWaker` decides *whether* to call it.
+
+**`close()` is final.** It marks the driver closed under the slot's lock, and
+`_claim` refuses from then on: a sweep racing the shutdown builds no runtime
+and drains nothing (REM-FIX 1).
 
 **`interrupt_master()` withdraws first, then interrupts** (ADR-M4-3, measured by
 probe P2). No cancellation of any kind reaches a running in-process tool handler
@@ -58,11 +77,17 @@ from dataclasses import dataclass, field
 from shepherd.core.ids import new_ulid
 from shepherd.core.master import MasterEvent, MasterRuntime
 from shepherd.core.stream import StreamEvent
-from shepherd.orchestration.wake import drain, render_wake_text
+from shepherd.orchestration.wake import (
+    MASTER_LAST_TURN_KEY,
+    WakeOpenFailed,
+    drain,
+    render_wake_text,
+)
 from shepherd.store.db import Store
 
 __all__ = [
     "MASTER_SESSION_KEY",
+    "CLOSED_REASON",
     "OPEN_FAILED_REASON",
     "STREAM_KIND_PREFIX",
     "TURN_FAILED_TEXT",
@@ -95,6 +120,7 @@ OPEN_FAILED_REASON = (
     "the turn {turn_id} could not be opened — the master runtime failed to start"
 )
 TURN_FAILED_TEXT = "the turn failed inside Shepherd before it could finish"
+CLOSED_REASON = "the master is shutting down, and no new turn opens"
 
 
 @dataclass(frozen=True)
@@ -122,6 +148,9 @@ class _Turn:
     runtime: MasterRuntime | None = None
     thread: threading.Thread | None = None
     session_recorded: bool = False
+    #: A wake turn's `(stamp it drained at, stamp before the drain)`: what a
+    #: failure puts back. `None` for a user turn, whose text is not re-offered.
+    restore: tuple[str, object] | None = None
 
 
 def project_to_stream(event: MasterEvent, turn_id: str) -> StreamEvent:
@@ -149,7 +178,7 @@ class TurnDriver:
     """The single caller of `MasterRuntime.send()` (P-M4-21).
 
     Everything below the seam is injected: the store, the runtime factory, the
-    publisher, the withdrawal and the clock. Nothing is constructed at boot —
+    publisher, the withdrawal, the clock and the failure recorder. Nothing is constructed at boot —
     `build_master` is called **per turn**, so a driver that has never run a turn
     has no runtime, no thread and no loop.
 
@@ -174,14 +203,17 @@ class TurnDriver:
         publish: Callable[[StreamEvent], int],
         withdraw_turn_approvals: Callable[[str], int],
         now: Callable[[], str],
+        record_failure: Callable[[str, str], None],
     ) -> None:
         self._store = store
         self._build_master = build_master
         self._publish = publish
         self._withdraw = withdraw_turn_approvals
         self._now = now
+        self._record_failure = record_failure
         self._lock = threading.Lock()
         self._turn: _Turn | None = None
+        self._closed = False
 
     # ----- the public verbs, verbatim what T23's `ToolDef`s sit over ----------
 
@@ -196,37 +228,51 @@ class TurnDriver:
         consumes the wake set and moves the stamp, so a runtime that fails to
         start after it would lose §12's summary to a turn that never ran.
         """
-        with self._lock:
-            if self._turn is not None:
-                return TurnRefused(
-                    reason=(
-                        f"a turn is already running ({self._turn.turn_id}), and a"
-                        " second turn is refused rather than queued — wait for it"
-                        " to end, or interrupt it"
-                    )
+        turn, claimed = self._claim()
+        if turn is None:
+            return TurnRefused(reason=CLOSED_REASON)
+        if not claimed:
+            return TurnRefused(
+                reason=(
+                    f"a turn is already running ({turn.turn_id}), and a"
+                    " second turn is refused rather than queued — wait for it"
+                    " to end, or interrupt it"
                 )
-            turn = _Turn(turn_id=new_ulid(), started_at=self._now())
-            self._turn = turn
-
+            )
         try:
             turn.runtime = self._build_master(turn.turn_id)
-            prompt = self._opening_text(text)
-            turn.thread = threading.Thread(
-                target=self._run_turn,
-                args=(turn, turn.runtime, prompt),
-                name=f"master-turn-{turn.turn_id}",
-                daemon=True,
-            )
-            turn.thread.start()
-        except Exception:
-            # `_run_turn`'s shape: a `close()` that raises must not skip the
-            # release, or every later turn is refused as "already running".
-            try:
-                if turn.runtime is not None:
-                    turn.runtime.close()
-            finally:
-                self._release(turn)
+            self._start(turn, turn.runtime, self._opening_text(text))
+        except Exception as error:
+            self._fail_open(turn, error)
             return TurnRefused(reason=OPEN_FAILED_REASON.format(turn_id=turn.turn_id))
+        return TurnStarted(turn_id=turn.turn_id, started_at=turn.started_at)
+
+    def wake_turn(self) -> TurnStarted | WakeOpenFailed | None:
+        """D69: one unprompted turn whose only input is the wake summary.
+
+        `None` when the slot is held or the driver is closed — the wake is not
+        drained, so the next sweep offers it again (ADR-QR-5) — and `None` when
+        the drain finds the set already consumed by a turn that opened first
+        (E-QR-7). `WakeOpenFailed` when the turn could not open. The runtime is
+        built before the drain for `send_turn`'s reason (qa6 BC-08).
+        """
+        turn, claimed = self._claim()
+        if turn is None or not claimed:
+            return None
+        try:
+            turn.runtime = self._build_master(turn.turn_id)
+            before = self._store.get_app_state(MASTER_LAST_TURN_KEY)
+            drained = drain(self._store, self._now)
+            summary = render_wake_text(drained)
+            if summary:
+                turn.restore = (drained.drained_at, before)
+                self._start(turn, turn.runtime, summary)
+        except Exception as error:
+            self._fail_open(turn, error)
+            return WakeOpenFailed(turn_id=turn.turn_id)
+        if not summary:
+            self._abandon(turn)
+            return None
         return TurnStarted(turn_id=turn.turn_id, started_at=turn.started_at)
 
     def interrupt_master(self) -> bool:
@@ -269,7 +315,10 @@ class TurnDriver:
             return self._turn is not None
 
     def close(self) -> None:
-        """End the turn in flight and wait for its thread. Idempotent."""
+        """Refuse every later turn, then end the one in flight and wait for its
+        thread. Idempotent."""
+        with self._lock:
+            self._closed = True
         if self.is_running():
             self.interrupt_master()
             self.wait_for_turn(CLOSE_TIMEOUT_S)
@@ -292,11 +341,11 @@ class TurnDriver:
 
         An exception from the runtime becomes an `error` event on the ring — a
         turn that ended badly is still a turn, and a page told nothing cannot
-        tell a failure from silence (principle 5).
+        tell a failure from silence (principle 5) — and one `record_failure`.
         """
         try:
             asyncio.run(self._stream(turn, runtime, prompt))
-        except Exception:
+        except Exception as error:
             self._publish(
                 project_to_stream(
                     MasterEvent(
@@ -309,11 +358,11 @@ class TurnDriver:
                     turn.turn_id,
                 )
             )
+            # D79: counted before the release, so a caller woken by the end
+            # of the turn reads the count.
+            self._fail(turn, error)
         finally:
-            try:
-                runtime.close()
-            finally:
-                self._release(turn)
+            self._abandon(turn)
 
     async def _stream(self, turn: _Turn, runtime: MasterRuntime, prompt: str) -> None:
         """The one `send()` call in `src/` (P-M4-21)."""
@@ -333,6 +382,59 @@ class TurnDriver:
         if isinstance(value, str) and value:
             turn.session_recorded = True
             self._store.set_app_state(MASTER_SESSION_KEY, value)
+
+    def _claim(self) -> tuple[_Turn | None, bool]:
+        """Take the slot **before** anything slow happens — the runtime, the
+        drain, the thread — so two callers racing here cannot both open a turn.
+        `(the new turn, True)`, `(the turn holding the slot, False)`, or
+        `(None, False)` once `close()` has run."""
+        with self._lock:
+            if self._closed:
+                return None, False
+            if self._turn is not None:
+                return self._turn, False
+            turn = _Turn(turn_id=new_ulid(), started_at=self._now())
+            self._turn = turn
+            return turn, True
+
+    def _start(self, turn: _Turn, runtime: MasterRuntime, prompt: str) -> None:
+        """The turn's one worker thread, over the runtime already built."""
+        turn.thread = threading.Thread(
+            target=self._run_turn,
+            args=(turn, runtime, prompt),
+            name=f"master-turn-{turn.turn_id}",
+            daemon=True,
+        )
+        turn.thread.start()
+
+    def _fail_open(self, turn: _Turn, error: Exception) -> None:
+        """A turn that could not open: counted and audited (D79) by its class
+        name alone — a message can carry prompt text or a credential — and then
+        abandoned, whatever the recorder does."""
+        try:
+            self._fail(turn, error)
+        finally:
+            self._abandon(turn)
+
+    def _fail(self, turn: _Turn, error: Exception) -> None:
+        """A failed turn: a wake turn's drained set is put back first — the
+        stop matters more than the count — and then the failure is recorded."""
+        try:
+            if turn.restore is not None:
+                drained_at, before = turn.restore
+                self._store.compare_and_set_app_state(MASTER_LAST_TURN_KEY, drained_at, before)
+        finally:
+            self._record_failure(turn.turn_id, type(error).__name__)
+
+    def _abandon(self, turn: _Turn) -> None:
+        """Close the turn's runtime, then release the slot. A `close()` that
+        raises must not skip the release, or every later turn is refused as
+        "already running"."""
+        try:
+            if turn.runtime is not None:
+                turn.runtime.close()
+        finally:
+            self._release(turn)
 
     def _release(self, turn: _Turn) -> None:
         """Give the slot back, then say the turn is over — in that order.

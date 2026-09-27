@@ -277,6 +277,7 @@ def a_driver(
         publish=recorder.publish,
         withdraw_turn_approvals=recorder.withdraw,
         now=lambda: now,
+        record_failure=lambda _turn_id, _error_class: None,
     )
 
 
@@ -633,6 +634,7 @@ def test_an_interrupt_withdraws_before_the_timeout(store: Store, recorder: Recor
         publish=recorder.publish,
         withdraw_turn_approvals=withdraw,
         now=lambda: TURN_OPENED,
+        record_failure=lambda _turn_id, _error_class: None,
     )
     try:
         assert isinstance(driver.send_turn("do the destructive thing"), TurnStarted)
@@ -722,6 +724,7 @@ def test_the_factory_is_handed_the_turn_it_is_building_for(
         publish=recorder.publish,
         withdraw_turn_approvals=recorder.withdraw,
         now=lambda: TURN_OPENED,
+        record_failure=lambda _turn_id, _error_class: None,
     )
 
     started = driver.send_turn("go")

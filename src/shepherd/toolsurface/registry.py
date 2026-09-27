@@ -19,7 +19,7 @@ Three properties, each bought by a measured failure:
   validated the payload and the other forwarded one missing a required field
   (spec l.1464-1472), so validation that lives in a binding is validation that
   two bindings disagree about.
-* **The registry is frozen before the server binds** (ADR-7). It is written by
+* **The registry is frozen before the server serves** (ADR-7, D71). It is written by
   exactly one thread at startup and read-only thereafter, which is what makes a
   module-global safe under `ThreadingHTTPServer`.
 
@@ -42,14 +42,16 @@ property of one composition root instead of a property of this function.
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from shepherd.core.clock import utc_now
 
 from shepherd.toolsurface.types import (
+    ActorKind,
     AuditRecord,
     AuditSink,
     Authorizer,
@@ -80,6 +82,14 @@ DENIED = "denied by the gate"
 ALLOW = "allow"
 DENY = "deny"
 DENIED_RESULT = "denied"
+
+#: The tool a failed master turn is recorded under (ADR-QR-3): the turn is what
+#: `master_send` opened, so the record names it and takes its blast class.
+MASTER_TURN_TOOL = "master_send"
+
+#: The master's `actor_id` on that record: the caller id `daemons/plane.py`
+#: binds the master client under (`MASTER_CALLER_ID`), which L4 cannot import.
+MASTER_ACTOR_ID = "master"
 
 #: `Failure` -> the record's `result`. Written out and **total over
 #: `set(Failure) | {None}`**, which `test_the_result_vocabulary_is_total_over_
@@ -200,7 +210,7 @@ def register(tool: ToolDef) -> None:
     with _LOCK:
         if _FROZEN:
             raise RegistryFrozen(
-                f"the registry was frozen before the server bound; {tool.name!r} is too late"
+                f"the registry was frozen before the server served; {tool.name!r} is too late"
             )
         if tool.name in _TOOLS:
             raise RegistryFrozen(f"{tool.name!r} is already registered")
@@ -208,7 +218,7 @@ def register(tool: ToolDef) -> None:
 
 
 def freeze_registry() -> None:
-    """Called by the composition root before it binds anything (ADR-7)."""
+    """Called by the composition root before it serves anything (ADR-7, D71)."""
     global _FROZEN
     with _LOCK:
         _FROZEN = True
@@ -438,6 +448,57 @@ def _audit(
             duration_ms=max(0, round((time.monotonic() - started) * 1000)),
         )
     )
+
+
+def audit_master_failure(turn_id: str, error_class: str) -> None:
+    """D79 / ADR-QR-3: one record for a master turn that failed, built **here**,
+    beside `_audit`, so the audit log keeps one writer (C-M4-2).
+
+    `error_class` is a class name and never a message — the message can carry
+    prompt text or a credential. A no-op with no chokepoint installed (there is
+    no sink to write to, DP13), and in a process that registered no
+    `master_send`, which has no master turn to fail.
+    """
+    installed = chokepoint()
+    with _LOCK:
+        tool = _TOOLS.get(MASTER_TURN_TOOL)
+    if installed is None or tool is None:
+        return
+    _, sink = installed
+    sink(
+        AuditRecord(
+            at=utc_now(),
+            correlation_id=turn_id,
+            actor_kind=ActorKind.MASTER,
+            actor_id=MASTER_ACTOR_ID,
+            tool=tool.name,
+            blast_class=tool.blast_class,
+            args={"turn_id": turn_id, "error_class": error_class},
+            autonomy_level=UNREPORTED_AUTONOMY_LEVEL,
+            decision=ALLOW,
+            approved_by=None,
+            approval_id=None,
+            result=_RESULT_OF[Failure.FAILED],
+            failure=Failure.FAILED,
+            duration_ms=0,
+        )
+    )
+
+
+def master_failure_recorder(bump: Callable[[], None]) -> Callable[[str, str], None]:
+    """`TurnDriver`'s `record_failure` (D79, ADR-QR-3): audit the failed turn,
+    then `bump` its counter — each on its own, so one failing still leaves the
+    other. It never raises: it runs inside the driver's own failure path, and a
+    raise here would replace the error the caller is owed (REM-FIX 1).
+    """
+
+    def record_failure(turn_id: str, error_class: str) -> None:
+        with contextlib.suppress(Exception):
+            audit_master_failure(turn_id, error_class)
+        with contextlib.suppress(Exception):
+            bump()
+
+    return record_failure
 
 
 def _run(tool: ToolDef, args: Mapping[str, object], ctx: CallerContext) -> ToolResult:
