@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from shepherd.core.fold_types import FoldDelta
+from shepherd.core.states import SessionState
 from shepherd.store.db import Store
 
 from .test_tools_m3 import (  # noqa: F401 — `store`, `root`, `workspace_id`, `make_world` are fixtures
@@ -31,16 +33,26 @@ def spawn_as_master(workspace_id: str, root: Path, retry_of: str | None) -> dict
     return payload("spawn_session", args, MASTER)
 
 
+def stop(store: Store, session_id: object) -> None:
+    """The attempt ends, as the hook lane would record it: only a stopped session is retried."""
+    assert isinstance(session_id, str)
+    store.apply_fold_delta(
+        session_id, FoldDelta(state=SessionState.STOPPED, last_event_at="2026-09-17T11:00:00Z")
+    )
+
+
 def test_spawn_session_carries_retry_of_through_invoke(
     make_world: Callable[..., World], store: Store, workspace_id: str, root: Path
 ) -> None:
     """The declared chain end to end at L4: X, its retry r1 (linked to X), the
-    retry of r1 refused at the cap, and a second retry of X refused naming r1."""
+    retry of r1 refused at the cap, and a second retry of X refused naming r1 —
+    at the cap too, since the lineage is full, and pointing at the human."""
     make_world()
     first = spawn_as_master(workspace_id, root, None)
     assert first["spawned"] is True
     x = first["session_id"]
     assert isinstance(x, str)
+    stop(store, x)
 
     retry = spawn_as_master(workspace_id, root, x)
     assert retry["spawned"] is True, retry
@@ -49,11 +61,13 @@ def test_spawn_session_carries_retry_of_through_invoke(
     row = store.get_session(r1)
     assert row is not None and row.retry_of == x
     assert row.origin == "orchestrator"
+    stop(store, r1)
 
     capped = spawn_as_master(workspace_id, root, r1)
     assert capped["spawned"] is False and capped["cap"] == "retry_cap_reached", capped
 
     sibling = spawn_as_master(workspace_id, root, x)
-    assert sibling["spawned"] is False and sibling["cap"] is None, sibling
+    assert sibling["spawned"] is False and sibling["cap"] == "retry_cap_reached", sibling
     refusal = sibling["refusal"]
     assert isinstance(refusal, str) and "already retried" in refusal and r1 in refusal
+    assert "human" in refusal

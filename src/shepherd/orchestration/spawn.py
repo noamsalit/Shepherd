@@ -54,6 +54,7 @@ from shepherd.core.stream import StreamEvent
 from shepherd.engines.claude_code.trust import TrustState, trust_state
 from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, Retry, admit
 from shepherd.orchestration.declared_verdicts import refused_verdict
+from shepherd.orchestration.retry_target import link, refuse_target
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
 from shepherd.store.models import StoreError
@@ -208,12 +209,9 @@ def spawn_owned_session(
     ephemeral: bool = False,
 ) -> SpawnOutcome | SpawnRefused:
     """Start one owned session. Every failure is a `SpawnRefused`, never a raise."""
-    if retry_of is not None and store.get_session(retry_of) is None:
-        return SpawnRefused(f"no session {retry_of!r} to retry: start it afresh instead", None)
-    existing = None if retry_of is None else store.retried_by(retry_of)
-    if existing is not None:  # RD-2: a sibling retry would walk past D31's cap (§3 D70)
-        why = f"{retry_of!r} was already retried as {existing!r}; retry that one instead"
-        return SpawnRefused(why, None)
+    target = None if retry_of is None else refuse_target(store, retry_of, workspace_id, origin)
+    if target is not None:  # before admission and any row: only a stopped attempt (§3 D70)
+        return target
     admitted = admit(
         store=store,
         runner=runner,
@@ -248,9 +246,6 @@ def spawn_owned_session(
         model=model,
         effort=effort,
     )
-    if retry_of is not None:  # the lineage the cap walks (§3 D70); admission already capped it
-        store.link_retry(session_id, retry_of)
-
     spec = SessionSpec(
         session_id=session_id,
         engine_session_id=engine_session_id,
@@ -273,6 +268,9 @@ def spawn_owned_session(
             pass  # the runner's refusal is the answer; a failed ending does not replace it
         return SpawnRefused(refusal.reason, None)
     store.set_runner_handle(session_id, handle)
+    linked = None if retry_of is None else link(store, session_id, retry_of, now)
+    if linked is not None:  # only a started attempt joins the lineage (§3 D70)
+        return linked
 
     found = _resolution(_poll(runner, handle, now, sleep), here)
     _record(store, session_id, found, now)

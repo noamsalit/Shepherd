@@ -50,7 +50,13 @@ def store(tmp_path: Path) -> typing.Iterator[Store]:
         opened.close()
 
 
-def attempt(store: Store, session_id: str, *, engine: str | None = None) -> str:
+def attempt(
+    store: Store,
+    session_id: str,
+    *,
+    engine: str | None = None,
+    started_at: str = "2026-09-17T12:00:00Z",
+) -> str:
     """One owned, master-spawned session row, created by the shipped verb."""
     workspace = next(w for w in store.list_workspaces() if w.name == "shepherd")
     store.create_owned_session(
@@ -59,7 +65,7 @@ def attempt(store: Store, session_id: str, *, engine: str | None = None) -> str:
         workspace_id=workspace.id,
         repo_id=None,
         cwd="/root/Shepherd",
-        started_at="2026-09-17T12:00:00Z",
+        started_at=started_at,
         origin=Origin.ORCHESTRATOR,
         parent_session_id=None,
         depth=0,
@@ -286,3 +292,17 @@ def test_retried_by_names_the_one_retry_an_attempt_has(store: Store) -> None:
 
     assert store.retried_by(ROOT) == SECOND
     assert store.retried_by(SECOND) is None, "the retry itself has not been retried"
+
+
+def test_retried_by_answers_the_earliest_of_two_planted_retries(store: Store) -> None:
+    """A hand edit (or a sibling race) can leave two rows both "of ROOT"; RD-2 names
+    the **earliest started**, not the smallest id. The later-started row's id sorts
+    first, so an `ORDER BY id` (or a dropped / reversed order) answers wrong."""
+    earlier_started, later_started = "01ZZEARLY000000000000000", "01AALATE0000000000000000"
+    attempt(store, ROOT)
+    attempt(store, later_started, started_at="2026-09-17T12:00:09Z")
+    attempt(store, earlier_started, started_at="2026-09-17T12:00:05Z")
+    store.link_retry(session_id=later_started, retry_of=ROOT)
+    store.link_retry(session_id=earlier_started, retry_of=ROOT)
+
+    assert store.retried_by(ROOT) == earlier_started

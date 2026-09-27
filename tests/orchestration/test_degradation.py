@@ -77,6 +77,7 @@ from shepherd.orchestration import (
     mailbox,
     master_turn,
     rename,
+    retry_target,
     spawn,
     wake,
     write_policy,
@@ -166,6 +167,9 @@ POPULATION: frozenset[tuple[str, str]] = frozenset(
         ("rename", "confirm_engine_title"),
         ("rename", "drive_engine_rename"),
         ("rename", "rename_session"),
+        # §3 D70's retry target and lineage link, split out of `spawn` for its cap.
+        ("retry_target", "link"),
+        ("retry_target", "refuse_target"),
         ("spawn", "spawn_owned_session"),
         ("wake", "drain"),
         ("wake", "peek"),
@@ -448,6 +452,15 @@ def drivers(world: World, workspace_id: str, index: int) -> dict[tuple[str, str]
             ownership=Ownership.OWNED,
             config_dir=world.config_dir,
         ),
+        # Both name rows that do not exist, so each answers with a refusal: `link`'s
+        # two store writes are refused (the path that must answer, not raise) and
+        # no row is ended; `None` would mean "retryable", which nothing here is.
+        ("retry_target", "link"): lambda: retry_target.link(
+            store, f"01NOSUCHSESSION{index}", world.text or "01NOSUCHTARGET", lambda: NOW
+        ),
+        ("retry_target", "refuse_target"): lambda: retry_target.refuse_target(
+            store, world.text or "01NOSUCHTARGET", workspace_id, Origin.ORCHESTRATOR
+        ),
         ("spawn", "spawn_owned_session"): lambda: spawn.spawn_owned_session(
             store=store,
             runner=runner,
@@ -557,8 +570,8 @@ def test_the_enumerated_population_is_the_one_this_suite_drives(
         "gone": sorted(POPULATION - enumerated),
     }
     # Arrival: the rule really walked the package and really found functions…
-    assert len(orchestration_modules()) == 12
-    assert len(enumerated) == 27
+    assert len(orchestration_modules()) == 13
+    assert len(enumerated) == 29
 
     # …and every one of them has a driver, keyed by the same pair.
     place_sidecar(config_dir, degradations()[0])
