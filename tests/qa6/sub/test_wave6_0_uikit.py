@@ -203,7 +203,11 @@ def open_app(context: BrowserContext, port: int, *, wait_live: bool = True, host
                        or page.locator("#empty-state").get_attribute("hidden") is None) or None, LOAD_BOUND_S,
               "the Flock's first read painted (a project button or the empty state)")
     if wait_live:
-        await_env(lambda: text_of(page.locator("#stream-status")) == "live" or None, LOAD_BOUND_S,
+        # A readiness gate, not an assertion: read the node's text, not its
+        # rendered text. Below 760px `#stream-status` sits in the closed drawer,
+        # which BC-19 made `visibility: hidden`, so `inner_text()` is "" there.
+        await_env(lambda: (page.locator("#stream-status").text_content() or "").strip() == "live" or None,
+                  LOAD_BOUND_S,
                   "#stream-status reads live")
     return page
 
