@@ -74,21 +74,11 @@ from shepherd.toolsurface.registry import register
 from shepherd.toolsurface.spawn_origin import spawn_origin
 from shepherd.toolsurface.tools_messaging import build_messaging_tools
 from shepherd.toolsurface.tools_terminal import (
-    TerminalStream,
-    build_terminal_tools,
-    handle_for,
-    no_pane,
+    TerminalStream, build_terminal_tools, handle_for, no_pane,
 )
 from shepherd.toolsurface.types import (
-    Audience,
-    BlastClass,
-    CallerContext,
-    ToolArgs,
-    ToolArgumentRefused,
-    ToolDef,
-    arg_bool,
-    arg_optional_str,
-    arg_str,
+    Audience, BlastClass, CallerContext, ToolArgs, ToolArgumentRefused, ToolDef,
+    arg_bool, arg_optional_str, arg_str,
 )
 
 __all__ = [
@@ -202,6 +192,7 @@ def spawn(
             effort=arg_optional_str(args, "effort"),
             parent_session_id=arg_optional_str(args, "parent_session_id"),
             origin=spawn_origin(ctx),
+            retry_of=arg_optional_str(args, "retry_of"),
             ephemeral=arg_bool(args, "ephemeral"),
         )
     )
@@ -337,6 +328,11 @@ def build_m3_tools(
                     "effort": {"type": "string"},
                     "parent_session_id": {"type": "string"},
                     "ephemeral": {"type": "boolean"},
+                    "retry_of": {
+                        "type": "string",
+                        "description": "the id of the stopped session this spawn retries"
+                        " (D31 caps the lineage)",
+                    },
                 },
                 "required": ["workspace_id", "cwd"],
             },

@@ -236,6 +236,28 @@ def test_the_prompt_names_no_tool() -> None:
         assert named == frozenset({"fleet_summary"}), named
 
 
+def test_the_prompt_teaches_retry_of_without_naming_a_tool() -> None:
+    """§3 D70: a retry is declared, so the prompt must teach the declaration.
+
+    A sentence predicate, not a spelling: at every level one sentence names the
+    `retry_of` argument **and** the two-attempt lineage it is capped at, and the
+    D32 property (no tool named but `fleet_summary`) still holds over the text
+    that now carries it — so the lesson cannot be taught by naming the tool.
+    """
+    names = registry_tool_names()
+    assert "spawn_session" in names  # arrival: the population the absence is over
+    for level in AUTONOMY_LEVELS:
+        text = orchestrator_prompt(level)
+        taught = [
+            sentence
+            for sentence in prompt_sentences(text)
+            if "`retry_of`" in sentence and "two attempts" in sentence
+        ]
+        assert len(taught) == 1, taught
+        assert not any(name in taught[0] for name in names), taught[0]
+        assert "spawn_session" not in text
+
+
 def test_the_prompt_names_no_vendor() -> None:
     """The prompt is handed to whichever `MasterRuntime` is configured (§17)."""
     assert VENDOR_WORDS

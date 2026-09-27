@@ -18,6 +18,7 @@ from pathlib import Path
 
 from shepherd.host.base import SocketPathTooLong
 from shepherd.host.mac import MacHost
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 
 from .. import hostprobe, paths
 from ..instance import Controld, seed_db
@@ -177,8 +178,8 @@ def test_c10_newer_database_refuses_start(pool: InstancePool, qa6_run: RunContex
     connection = sqlite3.connect(root.db_path, isolation_level=None)
     try:
         connection.execute(
-            "INSERT INTO schema_migration (version, name, checksum, applied_at) VALUES (5, 'qa6_fixture_fiction', 'qa6', ?)",
-            (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),),
+            "INSERT INTO schema_migration (version, name, checksum, applied_at) VALUES (?, 'qa6_fixture_fiction', 'qa6', ?)",
+            (EXPECTED_SCHEMA_VERSION + 1, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())),
         )
         connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     finally:

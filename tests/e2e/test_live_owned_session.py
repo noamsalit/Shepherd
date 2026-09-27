@@ -223,6 +223,7 @@ def spawn(store: Store, runner: LocalRunner, throwaway: Throwaway) -> Lane:
         effort=None,
         parent_session_id=None,
         origin=Origin.ORCHESTRATOR,
+        retry_of=None,
     )
     # Arrival, before anything reads a property: the spawn is an outcome and not
     # a refusal. A refused spawn starts no pane, and every assertion below it

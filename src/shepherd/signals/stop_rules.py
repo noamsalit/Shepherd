@@ -1,6 +1,6 @@
 """D21's bucket map and the default `next_actions[]` table (T7).
 
-Two **total** tables over the twenty `StopReason` values, and one derivation
+Two **total** tables over the twenty-one `StopReason` values, and one derivation
 that reads them. Both are computed free in the same pass that sets the bucket,
 which is D21's whole argument: *"it stopped"* is a fact nobody can act on, and
 *"it stopped and here is the one thing to do"* is the product.
@@ -70,6 +70,7 @@ BUCKET_OF: Mapping[StopReason, Bucket] = MappingProxyType(
         StopReason.DERAILED: Bucket.UNFINISHED,
         StopReason.COMPLETED: Bucket.FINISHED,
         StopReason.BLOCKED_EXTERNAL: Bucket.BLOCKED,
+        StopReason.REFUSED: Bucket.ERROR,
     }
 )
 
@@ -81,7 +82,7 @@ def _action(text: str, kind: NextActionKind, target: str | None = None) -> NextA
     return NextAction(text=text, kind=kind, target=target, source=ActionSource.HEURISTIC)
 
 
-#: §8's default table, total over the twenty reasons. The rows that depend on
+#: §8's default table, total over every reason. The rows that depend on
 #: a *parameter* — `completed` on its confidence, `incomplete` on `missing[]`,
 #: `blocked_external` on `waiting_on` — carry their **fixed** part here and are
 #: completed by `default_actions`. `completed` is the one empty row, and
@@ -146,6 +147,11 @@ DEFAULT_ACTIONS: Mapping[StopReason, tuple[NextAction, ...]] = MappingProxyType(
         StopReason.UNKNOWN: (
             _action("Open logs", NextActionKind.INSPECT),
             _action("Run shepherd replay after fixing the rule", NextActionKind.INSPECT),
+        ),
+        # D73: nothing started, so the first thing to do is to start it again.
+        StopReason.REFUSED: (
+            _action("Start it again", NextActionKind.RESPAWN),
+            _action("Read why the start was refused", NextActionKind.INSPECT),
         ),
     }
 )

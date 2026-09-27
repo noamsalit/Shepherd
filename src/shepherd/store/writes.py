@@ -197,6 +197,22 @@ def apply_stop_verdict(
     return session(row)
 
 
+
+def end_refused(
+    connection: sqlite3.Connection, session_id: str, verdict: Verdict, ended_at: str
+) -> Session:
+    """A refused start's whole ending (§3 D73) in the one transaction `_write`
+    opens: the `stopped` fold and the stop columns land together or not at all.
+
+    Not a second stop writer — the columns still go through `apply_stop_verdict`
+    (D37). A refusal started nothing, so there is no exit code.
+    """
+    apply_fold_delta(
+        connection, session_id, FoldDelta(state=SessionState.STOPPED, last_event_at=ended_at)
+    )
+    return apply_stop_verdict(connection, session_id, verdict, ended_at, None)
+
+
 # ----- app state -------------------------------------------------------------
 
 

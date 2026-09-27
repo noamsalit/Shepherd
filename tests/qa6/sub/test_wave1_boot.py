@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from shepherd.host.mac import MacHost
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 
 from .. import hostprobe, paths
 from ..browser import BrowserSession, visible_roots
@@ -124,7 +125,7 @@ def test_w1_controld_ready_by_four_signals(boot: Boot, qa6_run: RunContext, rec:
     runner = app_state(controld.db, "runner_socket")
     rec.equal("db.runner_socket", qa6_run.runner_socket(root.k), runner)
     rec.record("db.instance_k", root.k)
-    rec.equal("db.schema_version", 4, schema_version(controld.db))
+    rec.equal("db.schema_version", EXPECTED_SCHEMA_VERSION, schema_version(controld.db))
 
     stream = open_stream("W1", port)
     if isinstance(stream, Refusal):

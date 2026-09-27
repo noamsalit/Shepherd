@@ -477,6 +477,10 @@ class Store:
             lambda c: writes.apply_stop_verdict(c, session_id, verdict, ended_at, exit_code)
         )
 
+    def end_refused(self, session_id: str, verdict: Verdict, ended_at: str) -> Session:
+        """§3 D73: a refused start's `stopped` fold and stop verdict, one transaction."""
+        return self._write(lambda c: writes.end_refused(c, session_id, verdict, ended_at))
+
     def stop_verdict_counts(self) -> StopCounts:
         return reads.stop_verdict_counts(self._read())
 
@@ -487,7 +491,8 @@ class Store:
 
     def wake_candidates(self, since: str | None) -> tuple[Session, ...]:
         """D31's wake set — master-owned rows that stopped `unfinished` or
-        `error` since `since`. `None` asks for all of them."""
+        `error` since `since`. `None` asks for all of them. A `refused` start
+        wakes nothing (§3 D73): the master already holds that refusal."""
         return reads.wake_candidates(self._read(), since)
 
     def link_retry(self, session_id: str, retry_of: str) -> Session:
@@ -499,6 +504,10 @@ class Store:
         """The size of this session's `retry_of` lineage, **walked**. D31's cap
         is a property of the lineage, not of the `attempt` column (T10)."""
         return reads.retry_chain_depth(self._read(), session_id)
+
+    def retried_by(self, session_id: str) -> str | None:
+        """The retry this session already has, if any — RD-2 refuses a second."""
+        return reads.retried_by(self._read(), session_id)
 
     # ----- app state -------------------------------------------------------
 
