@@ -826,10 +826,13 @@ def test_the_card_never_guesses_and_never_answers() -> None:
     card renders the ask and a sentence saying the choices could not be read —
     it does not synthesise approve/reject as though the engine had drawn them.
 
-    *Never answers*: nothing in this file posts to the permission route, and the
-    trust dialog is named so the card can say, in words, that Enter there
-    answers *"No, exit"*. A page that could answer the trust screen is the C15
-    incident with a mouse.
+    *Never answers the trust screen*: D77 (SD-06) made the permission dialog's
+    choices answer through `/permission`, and that is the only answer route this
+    file names — nothing here reaches `answer_trust`, and the trust dialog is
+    named so the card can say, in words, that Enter there answers *"No, exit"*.
+    A page that could answer the trust screen is the C15 incident with a mouse.
+    The browser half is `test_decision_live.py::test_the_trust_dialog_choices_
+    stay_inert_and_say_why`.
     """
     text = source("session.js")
     body = code_only(text)
@@ -837,7 +840,11 @@ def test_the_card_never_guesses_and_never_answers() -> None:
     assert "readable" in session_function("renderDecision") + session_function(
         "decisionCard"
     )
-    assert "/permission" not in body, "the card can answer a dialog"
+    assert re.findall(r'"/api/[^"]*"', body).count(
+        '"/api/sessions/{session_id}/permission"'
+    ) == 1, "the card names no answer route, or names it twice"
+    for trust_route in ("/trust", "answer_trust"):
+        assert trust_route not in body, f"the card can answer the trust dialog: {trust_route}"
     assert "trust_dialog" in body, "the trust dialog is not named"
     # Either quoting: the sentence carries `"No, exit"` in double quotes,
     # which is the whole reason the constant is single-quoted, and a scan that

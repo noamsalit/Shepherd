@@ -306,6 +306,26 @@ REQUIRED_ASSIGNMENTS = {
     "showing = row.session_id",
     "host.hidden = true",
     "host.hidden = false",
+    # D77 (SD-06, qa6 rulings P11): the permission dialog's choices answer
+    # through `answer_permission`. An answerable row is a real button (never a
+    # submit); a choice with no word in the table, and every trust-dialog row,
+    # stays inert and the card says why (RD6).
+    'row.type = "button"',
+    "inert = true",
+    # PP12: every choice on the card is disabled while its answer is out, and
+    # stays disabled once the dialog is answered.
+    "pick.disabled = busy",
+    # The outcome, painted into the card's own note (`role="status"`): hidden
+    # until there is one, then the server's own words — answered, or the
+    # refusal's `reason`, or the envelope's error, or unreachable.
+    "outcome.hidden = true",
+    'outcome.className = done ? "decision-done" : "decision-readonly"',
+    "outcome.textContent = text",
+    "outcome.hidden = false",
+    "done = body.data.answered === true",
+    "text = `${ANSWER_FAILED}: ${body.error} (${body.correlation_id})`",
+    "text = done ? `${ANSWERED}: ${answer}` : `${ANSWER_REFUSED}: ${body.data.reason}`",
+    "text = ANSWER_UNREACHABLE",
 }
 
 

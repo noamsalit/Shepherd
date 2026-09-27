@@ -25,7 +25,7 @@ from __future__ import annotations
 import pytest
 
 from web.conftest import Client
-from web.test_routes_decision import PERMISSION_CHOICES, owned, pane_of
+from web.test_routes_decision import PERMISSION_CHOICES, _unparseable, owned, pane_of
 
 from shepherd.core.fold_types import FoldDelta
 from shepherd.core.runner import PaneState, ProcState
@@ -46,15 +46,27 @@ IDLE_ASK = "waiting on a permission prompt"
 
 
 @pytest.fixture()
-def pane() -> PaneState:
-    """The permission dialog, off the frozen capture, for every test here."""
-    return pane_of("06-permission-dialog.ansi")
+def pane(request: pytest.FixtureRequest) -> PaneState:
+    """The permission dialog, off the frozen capture, unless a test names another.
+
+    Overridden by `@pytest.mark.parametrize("pane", [...], indirect=True)` with a
+    `PaneState` — the trust capture, or a degradation no capture shows.
+    """
+    wanted = getattr(request, "param", None)
+    return wanted if isinstance(wanted, PaneState) else pane_of("06-permission-dialog.ansi")
 
 
 @pytest.fixture()
-def scripted_runner(pane: PaneState) -> ScriptedRunner:
+def scripted_runner(request: pytest.FixtureRequest, pane: PaneState) -> ScriptedRunner:
+    """`pane` for the card's read; `request.param`, when given, for the reads after.
+
+    The runner replays its panes in order and repeats the last, so a test can
+    script "the card read a dialog, and by the time the answer arrived the pane
+    had moved on" with no clock — the refusal D44's gates exist for.
+    """
+    after: tuple[PaneState, ...] = getattr(request, "param", ())
     return ScriptedRunner(
-        panes=(pane,),
+        panes=(pane, *after),
         proc=ProcState(
             alive=True, pid=4041880, exit_code=None, exit_signal=None, observed_at=NOW
         ),
@@ -246,3 +258,188 @@ def test_the_session_pane_is_laid_out_on_a_phone(
         )
     assert errors == [], errors
 
+
+
+# ----- D77 (SD-06): a choice is clicked, and the existing route answers it ---
+
+
+def permission_posts(page) -> list[object]:
+    """Every POST the page sends to the answer route, as the wire carried it."""
+    posts: list[object] = []
+    page.on(
+        "request",
+        lambda request: posts.append(request.post_data_json)
+        if request.method == "POST" and request.url.endswith("/permission")
+        else None,
+    )
+    return posts
+
+
+def outcome_of(page) -> str:
+    """The card's answer line, once the reply has been painted into it."""
+    note = page.locator("#session-decision [role=status]")
+    note.wait_for(state="visible", timeout=5000)
+    return note.text_content() or ""
+
+
+def choice_buttons(page):  # type: ignore[no-untyped-def]
+    return page.locator("#session-decision button.choice")
+
+
+def test_clicking_a_permission_choice_posts_its_answer_once(
+    desktop, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """Choice 2 — the scope-carrying one — reaches the pane as the key `2`.
+
+    Three observations, none of them the page's own bookkeeping: the one POST
+    the wire carried, the one key the runner was handed, and the outcome the
+    server answered, painted on the card.
+    """
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    posts = permission_posts(page)
+    open_session(page, session.id)
+
+    buttons = choice_buttons(page)
+    assert buttons.count() == 3, page.locator("#session-decision").inner_html()
+    buttons.nth(1).click()
+
+    assert "answered" in outcome_of(page)
+    assert posts == [{"choice": "approve_always"}], posts
+    assert scripted_runner.writes == [b"2"], scripted_runner.writes
+    assert errors == [], errors
+
+
+def test_a_double_click_posts_once(
+    desktop, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """PP12: one POST per click, however fast the second one lands."""
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    posts = permission_posts(page)
+    open_session(page, session.id)
+
+    choice_buttons(page).nth(2).dblclick()
+    outcome_of(page)
+    page.wait_for_timeout(500)
+
+    assert posts == [{"choice": "deny"}], posts
+    assert scripted_runner.writes == [b"3"], scripted_runner.writes
+    assert errors == [], errors
+
+
+@pytest.mark.parametrize("pane", [pane_of("01-trust-dialog.ansi")], indirect=True)
+def test_the_trust_dialog_choices_stay_inert_and_say_why(
+    desktop, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """D77: answering the trust screen changes what a folder may do from then on,
+    so it keeps RD6's treatment — labelled, inert, and never posted."""
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    posts = permission_posts(page)
+    open_session(page, session.id)
+
+    card = page.locator("#session-decision")
+    assert len(choice_rows(page)) == 2, card.inner_html()
+    assert page.locator("#session-decision button").count() == 0
+    text = card.text_content() or ""
+    assert "No, exit" in text
+    assert "press the option in the session's own terminal" in text
+    page.locator("#session-decision .choice").first.click()
+    page.wait_for_timeout(500)
+    assert posts == [], posts
+    assert scripted_runner.writes == [], scripted_runner.writes
+    assert errors == [], errors
+
+
+@pytest.mark.parametrize(
+    ("label", "answer"), [("approve", "approve"), ("reject", "deny")]
+)
+@pytest.mark.parametrize("pane", [_unparseable()], indirect=True)
+def test_an_unreadable_permission_screen_answers_approve_and_reject_through_the_same_route(
+    desktop, store: Store, scripted_runner: ScriptedRunner, label: str, answer: str
+) -> None:
+    """The two unnumbered options post a **word**, never a position.
+
+    The server still decides whether the screen is the option set it captured
+    (`is_the_captured_permission_dialog`), so whatever it answers — a key or a
+    refusal — is what the card shows.
+    """
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    posts = permission_posts(page)
+    open_session(page, session.id)
+
+    buttons = choice_buttons(page)
+    assert buttons.count() == 2, page.locator("#session-decision").inner_html()
+    page.locator("#session-decision button.choice", has_text=label).click()
+
+    assert outcome_of(page).strip() != ""
+    assert posts == [{"choice": answer}], posts
+    assert errors == [], errors
+
+
+@pytest.mark.parametrize(
+    "scripted_runner", [(pane_of("03-after-stop.ansi"),)], indirect=True
+)
+def test_a_refused_answer_is_shown_on_the_card(
+    desktop, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """The dialog was answered in the terminal before the click landed.
+
+    The server re-reads the pane, finds no dialog, sends nothing, and says so —
+    and that sentence is on the card, with the choices offered again.
+    """
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    posts = permission_posts(page)
+    open_session(page, session.id)
+
+    choice_buttons(page).first.click()
+    shown = outcome_of(page)
+
+    assert "not a permission dialog" in shown, shown
+    assert posts == [{"choice": "approve"}], posts
+    assert scripted_runner.writes == [], scripted_runner.writes
+    assert choice_buttons(page).first.is_enabled()
+    assert errors == [], errors
+
+
+def test_a_reply_for_a_card_no_longer_open_paints_nothing(
+    desktop, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """BC-12's intent rule: the reply is held until the pane has been re-opened.
+
+    The card it answered is gone; the card on screen now asked nothing, so it
+    shows no outcome and keeps its choices live. And while the first answer is
+    still out, the re-opened card posts nothing of its own.
+    """
+    page, errors = desktop
+    session = needs_you(store, owned(store, scripted_runner))
+    held: list[object] = []
+    page.route("**/permission", lambda route: held.append(route))
+    open_session(page, session.id)
+
+    choice_buttons(page).first.click()
+    for _ in range(50):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    assert len(held) == 1, "the click never reached the wire"
+
+    # Re-opened by the card, not by `open_session`: a reload would take the
+    # fetch — and the module that awaits it — down with the old page.
+    page.locator(f'#flock-cards .card[data-session-id="{session.id}"]').click()
+    page.wait_for_timeout(700)
+    # The re-opened card is live, but its session's answer is still out: a
+    # click on it posts nothing (PP12 across cards, not only within one).
+    choice_buttons(page).first.click()
+    page.wait_for_timeout(300)
+    assert len(held) == 1, "a second answer was posted while the first was in flight"
+    held[0].continue_()  # type: ignore[attr-defined]
+    page.wait_for_timeout(700)
+
+    assert page.locator("#session-decision [role=status]:visible").count() == 0
+    assert choice_buttons(page).count() == 3
+    assert choice_buttons(page).first.is_enabled()
+    assert errors == [], errors

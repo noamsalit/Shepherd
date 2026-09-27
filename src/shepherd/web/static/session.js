@@ -519,12 +519,36 @@ const DECISION_UNREADABLE =
 const TRUST_WARNING =
   'workspace trust — Enter on this screen answers "No, exit" and ends the session. The cursor is reported, never interpreted.';
 
-// RD6's shape, for a capability that is not built: labelled and inert, with the
-// reason in words. `POST /api/sessions/{id}/permission` exists in the route
-// table and nothing on any page calls it; a card that pretended otherwise would
-// be the silent dead button one file over already refuses to ship.
+// RD6's shape, kept by D77 for what the card still cannot answer: the trust
+// dialog — answering it changes what a folder may do from then on, which is
+// not a one-click decision — and any choice the table below has no word for.
+// Labelled and inert, with the reason in words, never a silent dead button.
 const DECISION_INERT =
-  "answering from Shepherd is not built in this build — press the option in the session's own terminal.";
+  "answering this screen from Shepherd is not built in this build — press the option in the session's own terminal.";
+
+// D77 (SD-06): the permission dialog's choices answer through
+// `answer_permission` (C-18), which re-reads the pane and refuses any screen
+// that is not the option set it captured. The engine's numbers map to the
+// server's words in `orchestration/dialog_keys.py::PERMISSION_KEYS` order —
+// Enter (`1. Yes`), then `2`, then `3` — and `test_decision_answer_table.py`
+// compares the two tables whole, because a swap here sends a standing grant as
+// a refusal or the other way round.
+const PERMISSION_PATH = "/api/sessions/{session_id}/permission";
+const PERMISSION_DIALOG = "permission_dialog";
+const PERMISSION_ANSWERS = { 1: "approve", 2: "approve_always", 3: "deny" };
+
+// The unreadable screen's two unnumbered options answer by **word**, never by
+// position: the server decides whether the screen is one it may key into.
+const UNIVERSAL_ANSWERS = { approve: "approve", reject: "deny" };
+
+const ANSWERED = "answered";
+const ANSWER_REFUSED = "not answered";
+const ANSWER_FAILED = "could not answer";
+const ANSWER_UNREACHABLE = "could not answer: the request did not reach the server";
+
+// Sessions whose answer POST has not replied yet (PP12): a second click while
+// one is in flight posts nothing. Keyed by session id, as `renaming` is.
+const answering = new Set();
 
 // The two options every dialog has whatever else is on it. They are rendered
 // **without numbers**, because a number is a key the engine drew and these are
@@ -546,8 +570,13 @@ const DECISION_UNREACHABLE = "could not read the decision: the request did not r
 // worst kind of wrong this page can be.
 let showing = null;
 
-function choiceRow(choice) {
-  const row = element("li", "choice choice-inert");
+// One row per choice, the engine's own number and label. `answer` is the word
+// the server is sent, or `null` for a row that stays inert: an answerable row is
+// a real `<button>`, so a keyboard reaches it too. The rows sit in a `div`
+// rather than a list because a `<button>` is not a list item, and `.choices`
+// already lays either out as a column.
+function choiceRow(choice, answer) {
+  const row = answer === null ? element("div", "choice choice-inert") : element("button", "choice");
   if (choice.selected) {
     row.classList.add("choice-1");
   }
@@ -558,14 +587,82 @@ function choiceRow(choice) {
     label.appendChild(element("span", "choice-note", CURSOR_NOTE));
   }
   row.appendChild(label);
+  if (answer !== null) {
+    row.type = "button";
+  }
   return row;
+}
+
+// The word a choice answers with, or `null`. Only the permission dialog is
+// answerable (D77); its numbered choices are keyed by number and the two
+// universal options by label. `Object.hasOwn`, so a label that happens to spell
+// an `Object.prototype` member is not an answer.
+function answerFor(kind, universal, choice) {
+  if (kind !== PERMISSION_DIALOG) {
+    return null;
+  }
+  const table = universal ? UNIVERSAL_ANSWERS : PERMISSION_ANSWERS;
+  const key = universal ? choice.label : choice.number;
+  return Object.hasOwn(table, key) ? table[key] : null;
+}
+
+function setChoicesBusy(card, busy) {
+  for (const pick of card.querySelectorAll("button.choice")) {
+    pick.disabled = busy;
+  }
+}
+
+function paintOutcome(outcome, text, done) {
+  outcome.className = done ? "decision-done" : "decision-readonly";
+  outcome.textContent = text;
+  outcome.hidden = false;
+}
+
+// PP12 and BC-12. One POST per click: every choice on the card is disabled
+// until the reply, and the session's in-flight mark refuses a second POST from
+// a card re-opened while the first is still out. The reply paints only if this
+// card is still on the page — `renderDecision` replaces the card whenever the
+// pane is re-opened, on this session or another, so a card that is no longer
+// connected is exactly "the pane has moved past it". An answered dialog keeps
+// its choices disabled; anything else offers them again, with the reason.
+async function answerChoice(card, outcome, sessionId, answer) {
+  if (answering.has(sessionId)) {
+    return;
+  }
+  answering.add(sessionId);
+  setChoicesBusy(card, true);
+  let text = "";
+  let done = false;
+  try {
+    const response = await fetch(path(PERMISSION_PATH, sessionId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ choice: answer }),
+    });
+    const body = await response.json();
+    if (!body.ok) {
+      text = `${ANSWER_FAILED}: ${body.error} (${body.correlation_id})`;
+    } else {
+      done = body.data.answered === true;
+      text = done ? `${ANSWERED}: ${answer}` : `${ANSWER_REFUSED}: ${body.data.reason}`;
+    }
+  } catch (unreachable) {
+    text = ANSWER_UNREACHABLE;
+  } finally {
+    answering.delete(sessionId);
+  }
+  if (!card.isConnected) {
+    return;
+  }
+  paintOutcome(outcome, text, done);
+  setChoicesBusy(card, done);
 }
 
 function decisionNote(text) {
   return element("p", "decision-readonly", text);
 }
 
-function decisionCard(data) {
+function decisionCard(data, sessionId) {
   const card = element("section", "decision");
   const head = element("div", "decision-head", "needs you");
   head.appendChild(element("span", "decision-src", data.pane_kind || UNKNOWN));
@@ -579,14 +676,33 @@ function decisionCard(data) {
     card.appendChild(decisionNote(TRUST_WARNING));
   }
 
-  const list = element("ul", "choices");
-  const choices = data.readable && Array.isArray(data.choices) ? data.choices : UNIVERSAL_CHOICES;
-  choices.forEach((choice) => list.appendChild(choiceRow(choice)));
+  const list = element("div", "choices");
+  const universal = !(data.readable && Array.isArray(data.choices));
+  const choices = universal ? UNIVERSAL_CHOICES : data.choices;
+  // The answer's outcome, announced as it lands (`role="status"`). Hidden until
+  // there is one: an empty note would still draw its rule.
+  const outcome = decisionNote("");
+  outcome.setAttribute("role", "status");
+  outcome.hidden = true;
+  let inert = false;
+  choices.forEach((choice) => {
+    const answer = answerFor(data.pane_kind, universal, choice);
+    const row = choiceRow(choice, answer);
+    if (answer === null) {
+      inert = true;
+    } else {
+      row.addEventListener("click", () => answerChoice(card, outcome, sessionId, answer));
+    }
+    list.appendChild(row);
+  });
   card.appendChild(list);
   if (!data.readable) {
     card.appendChild(decisionNote(DECISION_UNREADABLE));
   }
-  card.appendChild(decisionNote(DECISION_INERT));
+  if (inert) {
+    card.appendChild(decisionNote(DECISION_INERT));
+  }
+  card.appendChild(outcome);
   return card;
 }
 
@@ -636,7 +752,7 @@ async function renderDecision(row) {
       host.replaceChildren(decisionNote(NO_DIALOG));
       return null;
     }
-    host.replaceChildren(decisionCard(body.data));
+    host.replaceChildren(decisionCard(body.data, row.session_id));
   } catch (unreachable) {
     if (showing === row.session_id) {
       host.replaceChildren(decisionNote(DECISION_UNREACHABLE));
