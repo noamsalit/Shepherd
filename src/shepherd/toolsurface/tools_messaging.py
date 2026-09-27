@@ -230,7 +230,10 @@ def build_messaging_tools(
     return (
         ToolDef(
             name="send_to_session",
-            description="Queue a message and try to deliver it; the result names the decision.",
+            description=(
+                "Queue a message and try to deliver it; the result names the decision. "
+                "A send to a session with no pane of ours is refused, nothing queued."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {

@@ -10,16 +10,15 @@ removes the listing row and `#{pane_dead_status}` with it
 survives the kill is unverified. So: read the status and the row, write the
 record, *then* kill. A crash in between leaves the record — what a later pass can
 act on — rather than an orphan nobody knows about. The verdict is written **from
-the recorded action**, and a kill no session ending followed is counted
-`KILL_WITHOUT_SESSION_END`. "A session end arrived during the kill" means the
-row's `ended_at` **changed across the kill** (ruling 10): a finished turn's older
-ending does not count as one, so a kill between turns still records `killed`.
+the recorded action**, and counted `KILL_WITHOUT_SESSION_END`, for a session live
+between turns (ruling 10): the row had no ending or the probe saw a live pane, and
+its **verdict** did not change across the kill (a sweep's bare `ended_at` is none).
 
 **Not a second stop writer.** `apply_stop_verdict` still holds the only write of
 the stop columns (its statement is not quoted here: the rule guarding it scans
 raw source text). This module calls that verb and classifies nothing — a declared
-kill is an action taken, not evidence read — and leaves a row whose ending
-arrived during the kill be.
+kill is an action taken, not evidence read — and leaves a dead pane's ending, or
+one that arrived during the kill, be.
 
 **`/resume` rebinds, it does not stop (C14)**: the row keeps its identity *and
 its stop history* and changes one column. `rebind_engine_session_id` is C14's
@@ -114,14 +113,15 @@ def record_and_terminate(
     """End one owned session, in the only order that survives a crash mid-way.
 
     Read the status and the row, write the record, kill, write the verdict from
-    the record unless `ended_at` moved during the kill.
+    the record unless the session had already ended or ended during the kill.
     A failed kill's `RunnerRefusal` propagates — the session is still alive and a
     caller told "killed" would be told a false thing — and the record stays
     behind, which is the point of writing it first.
     """
     observed = observe_exit(runner=runner, handle=handle)
     before = store.get_owned_session(session_id)
-    ended_before = None if before is None else before.ended_at
+    live = before is None or before.ended_at is None or observed.alive
+    verdict = None if before is None else (before.stop_reason, before.decided_by)
     recorded_at = now()
     record: dict[str, object] = {
         "session_id": session_id, "session_name": handle.session_name, "recorded_at": recorded_at,
@@ -134,7 +134,7 @@ def record_and_terminate(
     store.apply_fold_delta(session_id, stopped)
 
     after = store.get_owned_session(session_id)
-    if (None if after is None else after.ended_at) == ended_before:
+    if live and (None if after is None else (after.stop_reason, after.decided_by)) == verdict:
         # G-M3-9: no session ending arrived during the kill, so the verdict comes
         # from the record rather than from a hook that may never survive the kill.
         store.bump_anomaly(str(AnomalyKind.KILL_WITHOUT_SESSION_END.value))

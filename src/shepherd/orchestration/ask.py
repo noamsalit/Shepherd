@@ -65,13 +65,14 @@ from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.clock import parse_stamp
 from shepherd.core.ids import new_ulid
 from shepherd.core.mailbox import MailboxOrigin
-from shepherd.core.runner import RunnerRefusal
+from shepherd.core.runner import RunnerRefusal, WriteDecision
 from shepherd.core.states import Origin, SessionState
 from shepherd.core.stops import DecidedBy, StopReason, Verdict
 from shepherd.core.fold_types import FoldDelta
 from shepherd.engines.claude_code.fork import ForkResult, fork_argv, parse_fork_result
 from shepherd.engines.claude_code.transcript import locate_transcript
 from shepherd.orchestration.mailbox import queue_message
+from shepherd.orchestration.write_policy import refusal_text
 from shepherd.runner.local import CommandResult
 from shepherd.signals.stop_rules import BUCKET_OF, default_actions
 from shepherd.store.db import Store
@@ -91,6 +92,9 @@ _MAILBOX_REFUSAL = (
     "for the session to answer at its next turn boundary instead of forked"
 )
 _NO_TARGET = "there is no owned, engine-bound session {!r} to fork from"
+#: D74's family (`tools_messaging._refuse_no_pane`): a row with no pane of ours
+#: would hold a queued question for a delivery that never comes.
+_NO_PANE = "{}: no pane of ours — can_fork is False and the question was refused, nothing queued"
 _ASK_CONFIDENCE = 1.0
 
 
@@ -206,6 +210,15 @@ def ask_session(
     # D75: the reply names the target by our id; the fork runs from the engine's.
     from_fork_of, target_engine_id = row.id, row.engine_session_id
 
+    if not can_fork and row.runner_handle is None:
+        return AskResult(
+            text=None,
+            method="mailbox",
+            from_fork_of=from_fork_of,
+            from_fork_of_engine_session_id=target_engine_id,
+            duration_ms=_elapsed(started, now()),
+            refusal=f"{refusal_text(WriteDecision.REFUSE_NO_PTY)} {_NO_PANE.format(session_id)}",
+        )
     if not can_fork:
         queue_message(
             store=store,

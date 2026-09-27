@@ -49,8 +49,8 @@ import pytest
 from engines.test_spawn_argv import markdown_headings
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.mailbox import MailboxOrigin
-from shepherd.core.runner import RunnerRefusal
-from shepherd.core.states import Origin, SessionState
+from shepherd.core.runner import RunnerHandle, RunnerRefusal, WriteDecision
+from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.core.stops import StopReason
 from shepherd.engines.claude_code.fork import (
     FORK_RULES,
@@ -59,6 +59,7 @@ from shepherd.engines.claude_code.fork import (
     parse_fork_result,
 )
 from shepherd.orchestration.ask import ASK_RECORD_PREFIX, AskResult, ask_session
+from shepherd.orchestration.write_policy import refusal_text
 from shepherd.toolsurface.tools_messaging import project_ask
 from shepherd.store.db import Store, open_store
 from shepherd.store.models import Session
@@ -187,6 +188,11 @@ def projects_root(tmp_path: Path) -> Path:
     return root
 
 
+#: The target's pane. A fork never uses it, but the `can_fork=False` mailbox
+#: fallback needs one: a pane-less row is refused with nothing queued (D74).
+TARGET_HANDLE = RunnerHandle(runner="tmux", socket="shepherd-m3-t15", session_name="shp-target")
+
+
 @pytest.fixture()
 def target(store: Store, workspace_id: str, tmp_path: Path) -> str:
     store.create_owned_session(
@@ -202,7 +208,7 @@ def target(store: Store, workspace_id: str, tmp_path: Path) -> str:
         ephemeral=False,
         title=None,
         title_source="brief",
-        handle=None,
+        handle=TARGET_HANDLE,
         model=None,
         effort=None,
     )
@@ -925,6 +931,89 @@ def test_the_fallback_is_the_mailbox_and_it_says_so(
     assert [message.body for message in pending] == [QUESTION]
     assert pending[0].origin is MailboxOrigin.SESSION
     assert ask_rows(store) == [], "a mailbox fallback starts no session"
+
+
+def test_the_fallback_refuses_a_pane_less_session_with_nothing_queued(
+    store: Store, projects_root: Path
+) -> None:
+    """REM-FIX 1 decision 3 (D74's family). An **attached** row is bound but has
+    no pane of ours, so a queued question would wait for a delivery that never
+    comes. The fallback refuses in `REFUSE_NO_PTY`'s words, names the session by
+    both ids, and leaves the mailbox empty.
+
+    Goes red if the fallback queues before looking for the pane.
+    """
+    attached = store.register_session(
+        engine_session_id="attached-engine-1",
+        workspace_id=store.create_project(name="attached", description=None).id,
+        repo_id=None,
+        cwd="/tmp",
+        started_at=NOW,
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
+    )
+    assert attached.runner_handle is None
+    runs = ForkRuns(NSP_STDOUT.read_bytes())
+    result = ask_session(
+        store=store,
+        run_fork=runs,
+        now=Clock(NOW, LATER),
+        binary=BINARY,
+        projects_root=projects_root,
+        can_fork=False,
+        session_id=attached.id,
+        question=QUESTION,
+    )
+
+    assert runs.argvs == []
+    assert (result.method, result.text) == ("mailbox", None)
+    assert result.refusal is not None
+    assert refusal_text(WriteDecision.REFUSE_NO_PTY) in result.refusal
+    assert "nothing queued" in result.refusal
+    assert result.from_fork_of == attached.id
+    assert result.from_fork_of_engine_session_id == "attached-engine-1"
+    assert store.pending_for(attached.id) == []
+    assert store.mailbox_counts().pending == 0
+    assert ask_rows(store) == []
+
+
+# ----- 8b. the early return names what it could --------------------------------
+
+
+def test_the_early_return_for_no_row_names_nothing(
+    store: Store, projects_root: Path
+) -> None:
+    """REM-FIX 1 decision 4, first branch: no row, so neither id exists."""
+    result = ask(store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()))
+    assert (result.from_fork_of, result.from_fork_of_engine_session_id) == ("", "")
+    assert result.refusal is not None and SESSION_ID in result.refusal
+
+
+def test_the_early_return_for_an_unbound_row_names_our_id_only(
+    store: Store, workspace_id: str, projects_root: Path
+) -> None:
+    """REM-FIX 1 decision 4, second branch: our row exists but was never bound,
+    so our id is named and the engine id is `""`."""
+    store.create_owned_session(
+        session_id=SESSION_ID,
+        engine_session_id=None,
+        workspace_id=workspace_id,
+        repo_id=None,
+        cwd="/tmp",
+        started_at=NOW,
+        origin=Origin.ASK_FORK,
+        parent_session_id=None,
+        depth=0,
+        ephemeral=True,
+        title=None,
+        title_source="brief",
+        handle=None,
+        model=None,
+        effort=None,
+    )
+    result = ask(store, projects_root, ForkRuns(NSP_STDOUT.read_bytes()))
+    assert (result.from_fork_of, result.from_fork_of_engine_session_id) == (SESSION_ID, "")
+    assert result.method == "fork" and result.text is None
 
 
 # ----- 9. the timeout ---------------------------------------------------------

@@ -262,13 +262,17 @@ def driver(
     panes: Sequence[PaneRef] = (),
     terminate_refusal: str | None = None,
     during_kill: Callable[[], None] | None = None,
+    alive: bool = False,
 ) -> Driver:
+    """`alive=True` makes the default pane live before the kill — a session
+    between turns (ruling 10); the default is a dead pane that kept its status.
+    `ScriptedRunner.probe` reads liveness from the pane, not from `proc`."""
     live = tuple(panes) or (
         PaneRef(
             session_name=HANDLE.session_name,
             session_id=SESSION_ID,
             pane_pid=4041880,
-            dead=True,
+            dead=not alive,
         ),
     )
     return Driver(
@@ -379,16 +383,20 @@ def test_an_owned_exit_code_reaches_the_row(
 def test_a_kill_whose_session_end_never_followed_is_counted(
     store: Store, workspace_id: str
 ) -> None:
-    """G-M3-9's count, in three directions (ruling 10 re-drew the second).
+    """G-M3-9's count, in three directions (ruling 10, REM-FIX 1 re-drew the
+    second and third).
 
-    "A session end arrived during the kill" means `ended_at` **changed across
-    the kill**. A row with no ending is counted, because the verdict then came
-    from the record rather than from a hook. A row whose ending arrived *before*
-    the kill — every finished turn stamps one — is counted too and now records
-    `killed` (declared reason, ruling 10: the old pin kept the turn's verdict,
-    so a killed session read as merely finished). A row whose ending arrives
-    *during* the kill is not counted and keeps that verdict: `apply_stop_verdict`
-    stays the one stop writer and this is not a second one.
+    `killed` is written — and counted — only for a kill of a session that was
+    live between turns: no verdict arrived during the kill **and** either the
+    row had no ending or the pre-kill probe saw a live pane. A row with no ending
+    is counted, because the verdict then came from the record rather than from a
+    hook. A row whose **dead** pane already has an ending keeps it and is not
+    counted (declared reason: ruling 10 is about a live session between turns;
+    P7's pin re-killed a session that had already ended). A liveness sweep that
+    stamps `ended_at` during a mid-turn kill carries no verdict, so it is not a
+    session end and the kill is counted (declared reason: REM-FIX 1 decision 2;
+    P7's pin read the sweep's stamp as an ending). `apply_stop_verdict` stays the
+    one stop writer and this is not a second one.
     """
     owned_row(store, workspace_id)
     assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 0
@@ -402,8 +410,8 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
     )
     assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 1
 
-    # The second direction: the ending arrived first, so the kill is still the
-    # session's end — counted, and the verdict is `killed` (ruling 10).
+    # The second direction: a dead pane whose ending arrived first — the kill
+    # ends nothing, so nothing is counted and the row keeps its ending.
     second = "01JBQ8Z9XKME5RT3VWNY6P0D02"
     owned_row(
         store,
@@ -425,12 +433,13 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
         now=lambda: LATER,
         publish=lambda event: None,
     )
-    assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 2
+    assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 1, "counted twice"
     ended_first = store.get_owned_session(second)
-    assert ended_first is not None and ended_first.stop_reason == str(StopReason.KILLED.value)
-    assert ended_first.ended_at == LATER
+    assert ended_first is not None and ended_first.stop_reason is None
+    assert ended_first.ended_at == NOW
 
-    # The third direction: the ending arrives during the kill — not counted.
+    # The third direction: the liveness sweep stamps `ended_at` during a mid-turn
+    # kill, with no verdict — not a session end, so the kill is counted.
     third = "01JBQ8Z9XKME5RT3VWNY6P0D03"
     owned_row(
         store, workspace_id, session_id=third, engine_session_id="6f1e2d3c-4b5a-4987-8a6b-5c4d3e2f1a09"
@@ -439,7 +448,9 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
     pane = PaneRef(session_name=handle.session_name, session_id=third, pane_pid=None, dead=True)
 
     def session_end() -> None:
-        store.apply_fold_delta(third, FoldDelta(ended_at=NOW, state=SessionState.STOPPED))
+        store.apply_fold_delta(
+            third, FoldDelta(state=SessionState.STOPPED, ended_at=NOW, observed_at=NOW)
+        )
 
     record_and_terminate(
         store=store,
@@ -449,9 +460,10 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
         now=lambda: LATER,
         publish=lambda event: None,
     )
-    assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 2, "counted a hook's ending"
-    kept = store.get_owned_session(third)
-    assert kept is not None and kept.stop_reason is None and kept.ended_at == NOW
+    assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 2, "a sweep is no ending"
+    swept = store.get_owned_session(third)
+    assert swept is not None and swept.stop_reason == str(StopReason.KILLED.value)
+    assert swept.ended_at == LATER
 
 
 # ----- 3. G-M2-2, both directions ---------------------------------------------
