@@ -167,6 +167,26 @@ def test_a_master_sibling_retry_of_a_full_lineage_names_the_human_and_is_counted
     assert cap_count(store) == 1
 
 
+def test_a_master_refusal_over_a_lineage_the_human_filled_does_not_call_it_master_initiated(
+    store: Store, workspace_id: str, root: Path
+) -> None:
+    """P13b: D31's cap counts the lineage's attempts, whoever made them, so X and
+    r1 started by the human still fill it for the master. The refusal names the
+    lineage's two attempts and says D31 caps the master there; it never claims
+    attempts the master did not make were its own."""
+    first = spawned(attempt(store, workspace_id, root, None, origin=Origin.USER_UI))
+    existing = spawned(attempt(store, workspace_id, root, first, origin=Origin.USER_UI))
+
+    sibling = attempt(store, workspace_id, root, first)
+
+    assert isinstance(sibling, SpawnRefused), sibling
+    assert sibling.cap == "retry_cap_reached"
+    assert "master-initiated" not in sibling.reason, sibling.reason
+    assert "already holds 2 attempts" in sibling.reason, sibling.reason
+    assert "already retried" in sibling.reason and repr(existing) in sibling.reason
+    assert "human" in sibling.reason
+
+
 def test_a_human_retry_is_linked_and_not_capped(
     store: Store, workspace_id: str, root: Path
 ) -> None:

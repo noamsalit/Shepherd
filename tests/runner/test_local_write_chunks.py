@@ -50,6 +50,10 @@ SOCKET = "shepherd-m3-write-chunks"
 #: More than three times the ~5.4 KB tmux refused in one command.
 LONG = 20_480
 
+#: The live paste: 257 lines of 80 bytes, deliberately **not** a multiple of
+#: 512 (`dd`'s default block), so a last short block cannot pass unseen (P13b).
+LIVE_LONG = 20_560
+
 OK = CommandResult(rc=0, stdout=b"", stderr=b"")
 
 
@@ -125,8 +129,10 @@ def test_an_empty_write_sends_nothing(tmp_path: Path) -> None:
 
 @pytest.fixture()
 def live_runner(tmp_path: Path) -> Iterator[LocalRunner]:
-    """A `LocalRunner` on `SOCKET` whose pane is `dd of=<RECEIVED>`: what the pane
-    read is on disk byte for byte, not re-drawn on a screen the tty echo shares."""
+    """A `LocalRunner` on `SOCKET` whose pane is `dd bs=1 of=<RECEIVED>`: what the
+    pane read is on disk byte for byte, not re-drawn on a screen the tty echo
+    shares. `bs=1` because without `bs` `dd` gathers its 512-byte output blocks
+    and holds a short last one until EOF, which a live pane never sends (P13b)."""
     if shutil.which(VERSION_ARGV[0]) is None:
         pytest.skip(f"no multiplexer binary on this host, so no server on {SOCKET}")
     run_argv = make_run_argv(permitted_sockets(SOCKET), permitted_commands("cat", "dd"))
@@ -137,7 +143,7 @@ def live_runner(tmp_path: Path) -> Iterator[LocalRunner]:
         run_argv=run_argv,
         launch=NO_PREFIX,
         now=lambda: NOW,
-        spawn_argv=lambda spec, *, frame_bytes: ["dd", f"of={received}"],
+        spawn_argv=lambda spec, *, frame_bytes: ["dd", "bs=1", f"of={received}"],
         record_anomaly=anomalies.append,
         sink_dir=tmp_path,
     )
@@ -178,8 +184,8 @@ def test_a_paste_longer_than_one_tmux_command_reaches_a_real_pane_exactly(
         env={},
     )
     handle = live_runner.start(spec)
-    payload = lines_of(LONG)
-    assert len(payload) == LONG
+    payload = lines_of(LIVE_LONG)
+    assert len(payload) == LIVE_LONG and LIVE_LONG % 512 != 0
     live_runner.write(handle, payload)
     received = tmp_path / RECEIVED
     deadline = time.monotonic() + 10.0

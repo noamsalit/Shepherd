@@ -11,9 +11,10 @@ one project's history and woken into another's.
 **RD-2 at a full lineage is the cap, said once.** A second retry of X names the
 retry that exists. For a human, "retry that one instead" is advice that can
 succeed, since D31 caps only the master. For the master, X and its retry already
-fill D31's two attempts, so that advice would only reach `retry_cap_reached`: the
-refusal names the human as the next step instead, carries the cap, and bumps the
-cap's anomaly, so the fleet sees it as the cap it is.
+fill D31's two attempts (whoever started them: the cap counts the lineage), so
+that advice would only reach `retry_cap_reached`: the refusal names the human as
+the next step instead, carries the cap, and bumps the cap's anomaly, so the
+fleet sees it as the cap it is.
 
 **Only a started attempt joins the lineage.** `link` runs after `runner.start`
 succeeded. A start the runner refused is not an attempt at the work, so it
@@ -47,8 +48,8 @@ def _sibling(store: Store, retry_of: str, existing: str, origin: Origin) -> Spaw
         return SpawnRefused(f"{already}; retry that one instead", None)
     store.bump_anomaly(str(AnomalyKind.WAKE_RETRY_CAP_REACHED.value))
     return SpawnRefused(
-        f"{already}, and that lineage has used its {MAX_MASTER_ATTEMPTS} master-initiated "
-        f"attempts (D31): read their conclusions, and ask the human to re-run it.",
+        f"{already}, and that lineage already holds {MAX_MASTER_ATTEMPTS} attempts, the most "
+        f"D31 lets the master start: read their conclusions, and ask the human to re-run it.",
         CAP_RETRY,
     )
 

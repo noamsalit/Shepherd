@@ -155,6 +155,53 @@ def test_a_refused_key_says_so_once(
             stream.close()
 
 
+#: P13b (P12 sibling): what the page says when the server's reader itself died —
+#: the same 1011 as a refused key, told apart by the close reason.
+READER_FAILED_NOTICES = [
+    "the terminal stream stopped — no more bytes will arrive",
+    "input is off: the server stopped reading this terminal, so nothing more typed here reaches it",
+]
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+def test_a_reader_that_died_is_not_told_as_a_refused_key(
+    client: Client, store: Store, scripted_runner: HoldingRunner, master_doubles: MasterDoubles
+) -> None:
+    """The write raises something that is not a refusal, so the reader dies: the
+    server closes 1011 with `the input reader failed`, and the page says that —
+    not that the pane refused a key."""
+    from playwright.sync_api import sync_playwright
+
+    session_id = _owned(store)
+    scripted_runner.fault = RuntimeError("p13b: the reader's write blew up")
+    play = sync_playwright().start()
+    try:
+        browser = play.chromium.launch()
+    except Exception as exc:  # noqa: BLE001 - an absent browser is not a defect
+        play.stop()
+        pytest.skip(f"chromium is not available: {exc}")
+    try:
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
+        _open_terminal(page, client, session_id)
+        page.locator("#session-terminal .xterm-screen").click()
+        page.keyboard.type("x")
+        notices = page.locator("#session-terminal .terminal-degraded")
+        deadline = time.monotonic() + BOUND_S
+        while time.monotonic() < deadline and notices.count() < len(READER_FAILED_NOTICES):
+            time.sleep(0.05)
+        page.wait_for_timeout(300)
+        assert notices.all_text_contents() == READER_FAILED_NOTICES
+        assert scripted_runner.writes == []
+        assert errors == [], errors
+    finally:
+        browser.close()
+        play.stop()
+        for stream in scripted_runner.streams:
+            stream.close()
+
+
 def test_keystrokes_in_the_emulator_are_sent_on_the_socket(
     client: Client, store: Store, scripted_runner: HoldingRunner, master_doubles: MasterDoubles
 ) -> None:

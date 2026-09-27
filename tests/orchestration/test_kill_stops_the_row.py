@@ -9,9 +9,9 @@ before BC-37 nothing set it: qa6 O6's killed row read `starting` with
 **The residual was decided by the owner (ruling 10, 2026-09-27).** A session
 that finished a turn before it was killed used to keep that turn's verdict:
 G-M3-9's guard read `ended_at`, and every turn end stamps it (`signals/fold.py`).
-The guard now compares `ended_at` across the kill, so an older turn ending no
-longer blocks `killed`. The row ends `stopped` either way — the kill itself is
-the hard signal.
+The guard now compares the row's **verdict** (`stop_reason`, `decided_by`) across
+the kill (P7 REM-FIX 1), so an older turn ending no longer blocks `killed`. The
+row ends `stopped` either way — the kill itself is the hard signal.
 """
 
 from __future__ import annotations
@@ -143,7 +143,7 @@ def test_a_kill_after_a_turn_leaves_the_row_stopped(store: Store) -> None:
     `ended_at` is still the turn's (nothing clears it) and the state is
     `running` again, so the kill is the only thing that can say `stopped`.
     Ruling 10 (BC-37 residual, 2026-09-27): the turn's older ending is not a
-    session end during the kill (`ended_at` did not change across it), so the
+    session end during the kill (the verdict did not change across it), so the
     verdict is `killed` at the kill's time. This pin used to record the turn's
     `completed` surviving the kill, as the pre-ruling behaviour.
     """

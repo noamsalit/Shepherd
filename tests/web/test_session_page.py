@@ -542,7 +542,10 @@ def test_the_close_code_says_why_input_stopped() -> None:
     text = source("terminal.js")
     opened = function_body(text, "openTerminal")
     close_handler = block_after(opened, "socket.onclose")
-    assert close_handler is not None and re.search(r"stopInput\([^)]*\.code\)", close_handler)
+    # P13b: the reason rides along, because 1011 has two causes.
+    assert close_handler is not None and re.search(
+        r"stopInput\([^)]*\.code, [^)]*\.reason\)", close_handler
+    )
     reason = function_body(text, "inputClosedReason")
     for code, constant in INPUT_CLOSE_CODES.items():
         named = re.search(rf"^const (\w+) = {code};", text, re.MULTILINE)
@@ -562,6 +565,30 @@ def test_the_close_code_says_why_input_stopped() -> None:
     assert "notice(el, inputClosedReason(" in stop, stop
     notice_body = function_body(text, "notice")
     assert "textContent = message" in notice_body and html_sink_findings(notice_body) == []
+
+
+def test_a_1011_from_a_failed_reader_is_not_told_as_a_refused_key() -> None:
+    """P13b (P12 sibling): the server closes 1011 for two things — a refused key
+    and a reader that died (`web/server.py`'s two reasons). The page branches on
+    the close reason, so a dead reader has its own sentence and is never told as
+    the pane refusing a key. The reason is compared against the server's own
+    constant, spelled once in each module."""
+    from shepherd.web import server
+
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and "event.reason" in close_handler, close_handler
+    reasons = dict(re.findall(r'^const (\w+_REASON) = "([^"]*)";', text, re.MULTILINE))
+    assert reasons.get("READER_FAILED_REASON") == server.READER_FAILED_REASON, reasons
+    reason = function_body(text, "inputClosedReason")
+    branch = r"reason === READER_FAILED_REASON\)\s*\{\s*return INPUT_CLOSED_READER_FAILED;"
+    assert re.search(branch, reason), reason
+    said = re.search(
+        r'^export const INPUT_CLOSED_READER_FAILED\s*=\s*\n?\s*"([^"]+)"', text, re.MULTILINE
+    )
+    assert said is not None and said.group(1).startswith("input is off: "), said
+    assert "refused" not in said.group(1), said.group(1)
 
 
 def test_a_failed_stream_is_reported_once() -> None:

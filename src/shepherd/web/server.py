@@ -276,9 +276,13 @@ class FleetHandler(BaseHTTPRequestHandler):
             closing = {"Connection": "close"} if self.close_connection else None
             self._fail(400, correlation_id, closing)
             return
-        resolved = routes.resolve_post(urlparse(self.path).path, body)
+        path = urlparse(self.path).path
+        resolved = routes.resolve_post(path, body)
         if resolved is None:
             self._fail(404, correlation_id)
+            return
+        if routes.missing_body_args(path, body):  # P13b: nothing runs without them
+            self._fail(400, correlation_id)
             return
         self._call(resolved, correlation_id)
 

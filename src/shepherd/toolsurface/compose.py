@@ -13,9 +13,10 @@ composition root", and the file sat at exactly 150 lines with nothing to spare,
 so the next wiring change could not be additive. The ledger's own second option
 was this: move tool registration into `toolsurface/`, where capabilities live.
 
-`controld` keeps the *order*, which is the part that is a contract: compose,
-then freeze, then bind (ADR-7 — the registry is written by one thread at
-startup and read-only from the moment the server can serve a request).
+`controld` keeps the *order*, which is the part that is a contract: bind the
+port before the store is opened (D71), then compose, then freeze, then serve
+(ADR-7 §4 as amended — the registry is written by one thread at startup and
+read-only from the moment the server can serve a request).
 
 `ingest` is a parameter rather than something composed here: the socket's name
 belongs to `daemons/sessiond.py`, and L4 does not import L6.

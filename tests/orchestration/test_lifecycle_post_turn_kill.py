@@ -108,7 +108,7 @@ def test_a_session_end_during_the_kill_keeps_its_own_verdict(
     store: Store, workspace_id: str, turn_finished_first: bool
 ) -> None:
     """Ruling 10's second half. A session ending that lands **during** the kill
-    moves `ended_at`, so it is the evidence and the kill writes nothing over it:
+    changes the verdict, so it is the evidence and the kill writes nothing over it:
     the hook's verdict and stamp stay, and nothing is counted. Asserted from a
     finished turn and from a row that never ended, so the comparison — not the
     emptiness of the column — is what decides.

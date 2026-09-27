@@ -33,7 +33,8 @@ Merge commits are on `fix/qa6-rulings` (first parent); phase commits are on `fix
 | 23 | SD-10 (spec text P1; H5 oracle P2) | P1, P2 | as P1, P2 | `04fde2e`, `1e2e01a` | `P1.md`, `P2.md` |
 | 27 | L5 (`trusted: false` until known) | P4 | as ruling 9 | `b175550` (via P5) | `P4.md` |
 | — | D68–D79 spec rows, ADR-7 §4 and ADR-M4-7 amendments | P1 | `f5b048d`, `d26aabe` | `04fde2e` | `P1.md` |
-| — | integration (manifest, retired ids, import table, one test) | P13 | uncommitted | — | `P13.md` |
+| — | integration (manifest, retired ids, import table, one test) | P13 | `72fce99` | — | `P13.md` |
+| — | polish + doc-sync (deferred review items: permission digest required on the web route, RD-2 wording, doctor `fleet:` line, 1011 reader sentence, `dd bs=1`; stale comments) | P13b (router remfix) | uncommitted | — | `P13b.md` |
 
 Branch heads at integration: `fix/qa6r-P1` `d26aabe`, `-P2` `25fda95`, `-P3` `7376ab9`, `-P4`
 `5526e95`, `-P5` `2618255`, `-P6` `93f0af9`, `-P7` `31b991a`, `-P8` `6197873`, `-P9` `ba08abb`,
@@ -90,6 +91,10 @@ functions. The declared shared qa6 files (`test_wave1_boot.py`, `test_wave2_1_cl
   `test_terminal_fit_live.py` one assertion; `test_ws_read_path.py::test_the_parser_tests_outnumber_the_parsers_callers`
   (frozen, kept, body asserts exactly `{pump_input}`); `tests/runner/test_local.py::test_the_module_is_within_its_line_budget`
   ≤ 500 → ≤ 508.
+- **P13b** `tests/web/test_session_page.py::test_the_close_code_says_why_input_stopped`: the
+  close-handler regex also requires `.reason` (1011 has two causes). Also new tests only; the
+  manifest's `files` (7 paths) and four `post_milestone` `why` entries (`P13b.md`). The qa6 L6
+  HTTP control (`test_wave8_1_live.py`) now sends `dialog_sha256`; its clauses are unchanged.
 - **P13** `tests/boundaries/consumer_manifest.json` (`files`, `post_milestone`),
   `test_collected_node_ids.py::RETIRED_NODE_IDS` (nine entries; the `…_at_four` reason now names
   `…_at_six`), `test_consumer_surface_additive.py::POST_M4_ADDED_IMPORTS` (four paths).
@@ -180,23 +185,29 @@ Post-milestone entries written or rewritten by P13: `cli/commands.py`, `cli/main
 - **P7**: rows queued before D74 to pane-less sessions stay pending (no sweep); a retry under an
   old `idempotency_key` now gets the refusal; a session end landing during a kill with the same
   verdict tuple reads as no change; D-row follow-ups for ruling 10's reading, D74's extension to
-  `ask()`'s fallback and D75's early-return ids; **doc-sync**: `web/static/session.js:45-47` still
-  says a session killed after a turn keeps that turn's `stop_reason` (stale since ruling 10;
-  P13 makes no product edit).
+  `ask()`'s fallback and D75's early-return ids. (The `session.js:45-47` doc-sync is closed by
+  P13b, as are the stale test docstrings at `test_kill_stops_the_row.py:12,146` and
+  `test_lifecycle_post_turn_kill.py:111`.)
 - **P8**: `tests/qa6/launch_controld.py`'s arm (done by P10); `serve_ingest`'s `finally` skips
   unlink/release when `on_shutdown()` raises; a refused `controld.start` keeps its claim until exit;
-  `compose.py:386` "binds" (now reads "serves" on the merged tree).
+  `compose.py:386` "binds" (now reads "serves" on the merged tree; `compose.py:17`'s order
+  sentence closed by P13b).
 - **P9**: the request header phase has no timeout (needs its own ruling).
 - **P10**: `read_to_eof` has no size bound; a timed-out request still runs; the bind→chmod umask
   window; a non-hex `correlation_id` via the seam is refused by the daemon; `BindFailed` leaves
-  started threads in-process; doctor's `fleet:` line wording beside the no-answer problem;
-  `tests/qa6/catalog.py:43` C3 metadata (P15).
-- **P11**: the master's MCP `answer_permission` has no digest (shape-bound only); a cursor move
-  between read and click gives a fail-closed refusal.
-- **P12**: `index.html:325` comment and `app.css:1541` comment still name T19-c;
-  `tests/boundaries/fixtures/web_reads_the_upgraded_socket.py` docstring; no browser→pane resize;
+  started threads in-process; `tests/qa6/catalog.py:43` C3 metadata (P15). (Doctor's `fleet:`
+  line beside a silent daemon is closed by P13b.)
+- **P11**: a cursor move between read and click gives a fail-closed refusal. (The "master's MCP
+  `answer_permission` has no digest" item was a misreading: the tool is `HUMAN`-only. P13b made
+  the digest required on the web route; the RPC socket can still reach the tool without one. See
+  `P13b.md`.)
+- **P12**: no browser→pane resize;
   the terminal close is not audited (spec `:1251` drift, pre-existing); the loopback `Origin`
   forgery threat model; a refused key is not counted as an anomaly; `socketserver`
-  `ConnectionResetError` noise in `test_an_attached_session_gets_no_reader`.
+  `ConnectionResetError` noise in `test_an_attached_session_gets_no_reader`. (The T19-c comments
+  at `index.html:325` and `app.css:1541`, the inert fixture's docstring, and the 1011
+  reader-failure sentence are closed by P13b.)
 - **P13**: none new beyond `P13.md`'s deviations.
+- **P13b**: the RPC socket's digest-less `answer_permission`; `admission.py:211`'s cap sentence
+  wording (accurate, but open to the same misreading).
 - **P14 / ruling 22 (SD-09)**: deferred by the owner; O12 stays FAIL; D80 reserved.

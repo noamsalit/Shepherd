@@ -1538,8 +1538,8 @@ button, input, textarea { font: inherit; color: inherit; }
   overflow-wrap: anywhere;
 }
 
-/* §9's banner and T19-c's note: both are refusals in words, and both are the
-   only thing standing between a human and a control that would do nothing. */
+/* §9's banner and the terminal's note (D6's fit limitation): both say in words
+   what the terminal cannot do, rather than leaving a human to find out. */
 .session-banner,
 .session-input-note {
   flex: none;

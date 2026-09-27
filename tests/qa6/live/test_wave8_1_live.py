@@ -1404,7 +1404,10 @@ def test_l6_real_permission_dialog_as_decision_card(live: Live, browser_session:
         audit_mark = AuditProbe.for_instance(a.controld.root).mark()
         still = classify(run, spawned.socket_name, spawned.tmux_name)
         if still is not None and still.kind is PaneKind.PERMISSION_DIALOG:
-            answered = a.client.post(f"/api/sessions/{spawned.session_id}/permission", {"choice": "approve"}).data()
+            # P13b: the web route requires the digest of the dialog it answers (400 without it).
+            digest = a.client.get(f"/api/sessions/{spawned.session_id}/decision").data().get("dialog_sha256")
+            answered = a.client.post(f"/api/sessions/{spawned.session_id}/permission",
+                                     {"choice": "approve", "dialog_sha256": digest}).data()
             rec.record("api.permission", answered)
             rec.check("api.permission_answered", answered.get("answered") is True, "answered: true", answered)
             moved, _w = observe(lambda: (s := classify(run, spawned.socket_name, spawned.tmux_name)) is not None

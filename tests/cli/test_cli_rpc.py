@@ -408,6 +408,22 @@ def test_doctor_names_a_daemon_that_did_not_answer_and_exits_1(
     assert {r["tool"] for r in double.requests} >= {"fleet_summary", "schema_status", "engine_version"}
 
 
+def test_doctor_s_fleet_line_says_the_daemon_did_not_answer(
+    garbage_double: tuple[ListenerDouble, ScriptedHost],
+) -> None:
+    """P13b (P10 sibling): a silent daemon is not a missing capability. The
+    `fleet:` line says the daemon did not answer, never that `fleet_summary` is
+    not registered in this process (that is the no-daemon line)."""
+    _double, host = garbage_double
+    host.dirs().data_dir.mkdir(parents=True)
+
+    _code, out, _err = run(["doctor"], host)
+
+    fleet = next(line for line in out.splitlines() if line.startswith("fleet: "))
+    assert "not registered in this process" not in fleet, fleet
+    assert fleet.startswith("fleet: unknown — the control daemon did not answer"), fleet
+
+
 def test_a_call_that_could_not_be_sent_is_not_called_half_done(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

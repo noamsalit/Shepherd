@@ -445,7 +445,10 @@ def describe_anomalies(summary: Mapping[str, object] | None) -> str:
     return f"anomalies: {counted}"
 
 
-def describe_fleet(summary: Mapping[str, object] | None) -> str:
+def describe_fleet(summary: Mapping[str, object] | None, daemon_silent: bool = False) -> str:
+    """A silent daemon is said as that (P13b), never as an absent capability."""
+    if summary is None and daemon_silent:
+        return "fleet: unknown — the control daemon did not answer, so no fleet was read"
     if summary is None:
         return (
             "fleet: unknown — fleet_summary is not registered in this process."
@@ -463,7 +466,8 @@ def run_doctor(cli: Cli, settings_path: str | None) -> int:
     problems: list[str] = []
     summary_result = cli.call("fleet_summary", {})
     summary = as_mapping(summary_result.data) if summary_result.ok else None
-    if is_no_answer(summary_result):  # H-2: a daemon that is there and silent needs a human
+    silent = is_no_answer(summary_result)
+    if silent:  # H-2: a daemon that is there and silent needs a human
         detail = (summary_result.error or "").removeprefix(f"{NO_ANSWER}: ")
         problems.append(f"the control daemon at {cli.remote} did not answer: {detail}")
     lines = (
@@ -477,7 +481,7 @@ def run_doctor(cli: Cli, settings_path: str | None) -> int:
         describe_discovery(summary),
         describe_engine(cli, problems),
         describe_anomalies(summary),
-        describe_fleet(summary),
+        describe_fleet(summary, silent),
     )
     for line in lines:
         cli.say(line)

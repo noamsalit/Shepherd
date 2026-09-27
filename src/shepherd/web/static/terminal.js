@@ -94,12 +94,17 @@ export const INPUT_CLOSED_PROTOCOL =
   "input is off: the server refused a malformed terminal frame, so the stream closed";
 export const INPUT_CLOSED_KEY_REFUSED =
   "input is off: the pane refused a key, so nothing more typed here reaches it";
+export const INPUT_CLOSED_READER_FAILED =
+  "input is off: the server stopped reading this terminal, so nothing more typed here reaches it";
 
 // The server's close codes (`web/ws.py`, `web/server.py`): 1009 a frame over
-// its cap, 1002 a protocol error, 1011 a key the pane refused.
+// its cap, 1002 a protocol error, 1011 input that failed. 1011 has two causes,
+// told apart by the close reason: a key the pane refused, or the server's
+// reader itself dying (`READER_FAILED_REASON`, `web/server.py`'s literal).
 const CLOSE_TOO_BIG = 1009;
 const CLOSE_PROTOCOL_ERROR = 1002;
 const CLOSE_INPUT_FAILED = 1011;
+const READER_FAILED_REASON = "the input reader failed";
 
 // D6's residual, declared because a reader is owed it. The emulator is fitted
 // to this window; the pane keeps its own geometry, because nothing here may
@@ -238,7 +243,7 @@ export async function openTerminal(sessionId, el) {
     // T12's orphan (a 404 upgrade), the second is a pane that ended.
     if (!closing) {
       notice(el, frames === 0 ? STREAM_NEVER_ARRIVED : STREAM_LOST);
-      stopInput(term, el, event.code);
+      stopInput(term, el, event.code, event.reason);
     }
   };
 
@@ -409,19 +414,22 @@ function sendKeys(socket, keys) {
 
 // The stream is gone, so input is too: the emulator stops taking keys and the
 // page says why, beside the stream's own notice.
-function stopInput(term, el, code) {
+function stopInput(term, el, code, reason) {
   term.options.disableStdin = true;
-  notice(el, inputClosedReason(code));
+  notice(el, inputClosedReason(code, reason));
 }
 
-// The sentence for the code the socket closed with. A code the server does not
-// send for input is the plain closed stream.
-function inputClosedReason(code) {
+// The sentence for the code (and, for 1011, the reason) the socket closed with.
+// A code the server does not send for input is the plain closed stream.
+function inputClosedReason(code, reason) {
   if (code === CLOSE_TOO_BIG) {
     return INPUT_CLOSED_TOO_LARGE;
   }
   if (code === CLOSE_PROTOCOL_ERROR) {
     return INPUT_CLOSED_PROTOCOL;
+  }
+  if (code === CLOSE_INPUT_FAILED && reason === READER_FAILED_REASON) {
+    return INPUT_CLOSED_READER_FAILED;
   }
   if (code === CLOSE_INPUT_FAILED) {
     return INPUT_CLOSED_KEY_REFUSED;

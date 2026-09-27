@@ -149,7 +149,7 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     "/api/sessions/{session_id}/kill": (),
     "/api/sessions/{session_id}/rename": ("title",),
     # P11 REM-FIX 1: `dialog_sha256` binds the answer to the dialog the card
-    # showed; omitted, the gate is the shape-only one it always was.
+    # showed. Required on this route (`REQUIRED_BODY_ARGS`, P13b).
     "/api/sessions/{session_id}/permission": ("choice", "dialog_sha256"),
     "/api/master/send": ("text",),
     # `approval_id` is deliberately absent: it is the path parameter, and the
@@ -176,6 +176,16 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     "/api/projects/{project_id}/delete": ("on_running",),
     "/api/projects/{project_id}/repos/add": ("root_path",),
     "/api/projects/{project_id}/repos/remove": ("repo_id",),
+}
+
+#: path template -> the body fields a POST **must** carry, each a subset of its
+#: `BODY_ARGS`. A body missing one (or sending it `null`) is refused with 400
+#: before `invoke()`, so nothing runs. The permission answer is the one entry:
+#: the page always sends the digest of the card it drew, so an answer without
+#: one did not come from a card (P13b). The tool keeps it optional for its other
+#: caller, the owner-only RPC socket (D68).
+REQUIRED_BODY_ARGS: Mapping[str, tuple[str, ...]] = {
+    "/api/sessions/{session_id}/permission": ("dialog_sha256",),
 }
 
 #: §12's page 3. Not in `API_ROUTES`: an upgrade is not a call, exactly as
@@ -271,6 +281,15 @@ def resolve_post(path: str, body: Mapping[str, object]) -> Resolved | None:
         args.update(captured)
         return Resolved(tool=POST_ROUTES[template], args=args)
     return None
+
+
+def missing_body_args(path: str, body: Mapping[str, object]) -> tuple[str, ...]:
+    """The `REQUIRED_BODY_ARGS` the POST to `path` did not carry (absent or `null`)."""
+    for template in _ordered(POST_ROUTES):
+        if _match(template, path) is not None:
+            required = REQUIRED_BODY_ARGS.get(template, ())
+            return tuple(name for name in required if body.get(name) is None)
+    return ()
 
 
 def resolve_terminal(path: str) -> str | None:

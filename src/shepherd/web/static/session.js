@@ -42,9 +42,9 @@ const READ_ONLY_BANNER =
 // socket can only 404. **Not `ended_at`:** every turn end stamps it on a live
 // pane, and keying on it would hide the terminal of every session that has
 // answered once. A session whose process exited on its own keeps its pane
-// (`remain-on-exit on`) and still opens. Limit, recorded (BC-37 residual): a
-// session killed after a turn keeps that turn's `stop_reason` and still opens
-// a socket that 404s.
+// (`remain-on-exit on`) and still opens. A session killed after a turn is
+// `killed` too (ruling 10, BC-37 residual): the kill's verdict replaces the
+// turn's, so it takes this branch rather than opening a socket that 404s.
 export const KILLED_BANNER = "this session was killed — its terminal is gone";
 
 // D29/RD9: exactly §12's words. "local only" is the difference between a

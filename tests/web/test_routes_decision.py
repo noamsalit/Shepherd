@@ -364,3 +364,25 @@ def test_an_answer_bound_to_the_dialog_on_the_pane_is_sent(
     data = answer.json()["data"]
     assert data["answered"] is True, data
     assert scripted_runner.writes == [b"2"]
+
+
+# ----- P13b (P11 follow-up): the web route requires the digest ------------------
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"choice": "approve"}, {"choice": "approve", "dialog_sha256": None}],
+    ids=["omitted", "null"],
+)
+def test_a_web_answer_without_the_dialog_digest_is_a_400_and_sends_nothing(
+    client: Client, store: Store, scripted_runner: ScriptedRunner, body: dict[str, object]
+) -> None:
+    """The page always sends the digest of the card it drew, so a web answer with
+    none is not the page's: it is refused before `invoke()`, and no key is sent.
+    The tool keeps the digest optional for its one other caller, the owner-only
+    RPC socket (D68)."""
+    session = owned(store, scripted_runner)
+    answer = client.post(f"/api/sessions/{session.id}/permission", body)
+    assert answer.status == 400, answer.body
+    assert answer.json()["ok"] is False
+    assert scripted_runner.writes == []
