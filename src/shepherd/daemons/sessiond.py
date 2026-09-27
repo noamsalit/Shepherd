@@ -16,6 +16,9 @@ Two facts shape this file:
 * **A dead daemon degrades visibility, never agents** (principle 4). A socket
   path that does not fit the platform's budget is a refusal to start with a
   readable reason (E19), not a traceback in a hook's stderr.
+* **Its claim is held for its whole life** (D72). `claim_socket` takes the
+  `flock` on `<socket>.lock` that `serve_ingest` releases on the way out, so a
+  second `sessiond` is refused even in the window before the first has bound.
 """
 
 from __future__ import annotations

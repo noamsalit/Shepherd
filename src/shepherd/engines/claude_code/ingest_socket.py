@@ -12,6 +12,13 @@ here has a capture behind it in data-schemas §"Unix domain socket at mode 0600
   that cannot rebind after a crash is a `sessiond` that cannot restart. Only a
   *stale* file is unlinked: `claim_socket` refuses a path a live listener still
   accepts on (qa6 BC-16), so a second start is a refusal, not a theft.
+* **a claim is a lock held for life** (D72, ADR-QR-2). `claim_socket` takes an
+  exclusive `flock` on `<socket>.lock` and keeps it until the listener's
+  `finally` calls `release_claim`, so there is no claim-to-bind window (E16),
+  and a path that refuses the probe while the lock is ours is stale by
+  construction, which the macOS full backlog alone could not prove. The kernel
+  drops the lock when the holder exits, crash included. The probe still runs on
+  every claim, to refuse an older binary that holds no lock.
 * **read to EOF** (§"Hook runtime contract"). The dispatcher writes and closes
   and never waits for a reply; a listener that stops at the first short read
   truncates a 40 KB frame that the probe verified arrives complete.
@@ -30,6 +37,7 @@ an unknown pid (principle 5), never a guess.
 from __future__ import annotations
 
 import errno
+import fcntl
 import os
 import socket
 import threading
@@ -58,6 +66,15 @@ LISTEN_BACKLOG = 64
 
 #: How long `claim_socket` waits for a live owner to accept its probe (BC-16).
 CLAIM_PROBE_TIMEOUT_S = 0.25
+
+#: The lock file beside each socket (D72). Never unlinked: unlinking it would let
+#: two processes lock two different inodes at the same path.
+LOCK_SUFFIX = ".lock"
+
+#: This process's claims, `{socket path: lock fd}`. Process-wide, so a second
+#: claim in the owning process is re-entrant **for the lock only** (ADR-QR-2).
+_HELD: dict[Path, int] = {}
+_HELD_GUARD = threading.Lock()
 
 
 class SocketInUse(RuntimeError):
@@ -134,11 +151,60 @@ def _is_live(path: Path) -> bool:
     return True
 
 
+def _held_elsewhere(path: Path) -> SocketInUse:
+    return SocketInUse(f"{path} is held by a running process")
+
+
+def _take_lock(path: Path) -> bool:
+    """Lock `<path>.lock` for this process; whether this call newly took it.
+
+    `os.open` descriptors are non-inheritable, so a child the daemon spawns
+    never keeps its lock alive after the daemon exits.
+    """
+    with _HELD_GUARD:
+        if path in _HELD:
+            return False
+        fd = os.open(path.with_name(path.name + LOCK_SUFFIX), os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            os.close(fd)
+            raise _held_elsewhere(path) from None
+        except BaseException:
+            os.close(fd)
+            raise
+        _HELD[path] = fd
+        return True
+
+
+def release_claim(path: Path) -> None:
+    """Give up this process's claim on `path`; one it does not hold is a no-op.
+
+    The lock file stays (see `LOCK_SUFFIX`)."""
+    with _HELD_GUARD:
+        fd = _HELD.pop(path, None)
+    if fd is not None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
 def claim_socket(plan: SocketPlan) -> SocketPlan:
     """`plan`, if its path is free or stale; `SocketInUse` if a live process
-    holds it. Unlinking a stale file is safe; unlinking a live one is theft."""
+    holds it. Unlinking a stale file is safe; unlinking a live one is theft.
+
+    The order is ADR-QR-2's: make the socket dir at `plan.dir_mode` (the first
+    `controld` start claims before anything else has made it) → take the lock,
+    unless this process already holds it → probe, on **every** claim. A claim
+    the probe refuses gives back a lock it newly took, and leaves a re-entrant
+    holder's lock alone: that owner is still serving.
+    """
+    plan.path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(plan.path.parent, plan.dir_mode)
+    newly_locked = _take_lock(plan.path)
     if plan.path.exists() and _is_live(plan.path):
-        raise SocketInUse(f"{plan.path} is held by a running process")
+        if newly_locked:
+            release_claim(plan.path)
+        raise _held_elsewhere(plan.path)
     return plan
 
 
@@ -235,7 +301,8 @@ def serve_ingest(
 
     Returns when `shutdown` is set: it stops accepting, gives the caller its
     drain window through `on_shutdown`, then unlinks the socket so the next
-    start binds instead of failing with `EADDRINUSE`.
+    start binds instead of failing with `EADDRINUSE`, and only then releases
+    the claim (D72), so no second owner can bind before the unlink.
     """
     listener = bind_listener(plan)
     inode = owned_inode(plan.path)
@@ -253,3 +320,4 @@ def serve_ingest(
         listener.close()
         on_shutdown()
         unlink_owned_socket(plan.path, inode)
+        release_claim(plan.path)

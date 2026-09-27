@@ -12,7 +12,8 @@ host's real one.
 
 What each test is the acceptance evidence for:
 
-* ADR-7 — the registry is frozen before the server binds;
+* ADR-7 — the registry is frozen before the server serves (§4 as amended by
+  D71; the test is `test_controld_start_order.py`'s);
 * §12 — an update reaches a subscriber over SSE with no polling anywhere;
 * D37 — `controld` is the only writer, and a restart drains `sessiond`'s buffer
   **in order**, which is the entire reason the two-process split exists;
@@ -29,7 +30,6 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -51,10 +51,9 @@ from shepherd.testkit.scripted_host import ScriptedHost
 from shepherd.toolsurface import compose
 from shepherd.host.detect import detect_host
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
-from shepherd.toolsurface.registry import RegistryFrozen, register, registered_tools
-from shepherd.toolsurface.types import Audience, BlastClass, ToolDef
 
 from shepherd.core.runner import ProcState
+from world_fixture import World, world  # noqa: F401 - the shared fixture, imported by name
 
 ENGINE_SESSION_ID = "5d1202ea-3765-459d-8299-8630c710c50d"
 CEILING_S = 10.0
@@ -94,79 +93,6 @@ def payload_for(cwd: str, engine_session_id: str = ENGINE_SESSION_ID) -> bytes:
             }
         ).encode("utf-8")
         + b"\n"
-    )
-
-
-@dataclass(frozen=True)
-class World:
-    """A throwaway host: XDG dirs, an engine config dir with no sessions in it."""
-
-    data_dir: Path
-    runtime_dir: Path
-    engine_config_dir: Path
-    cwd: Path
-
-
-#: Every environment variable any `HostPlatform` driver reads to place its
-#: directories. All of them are redirected, not just the ones the platform this
-#: was written on happens to read: `LinuxHost` takes `XDG_*`, `MacHost` takes
-#: `HOME` and `TMPDIR`, and a fixture that sets only one family silently hands
-#: the *other* platform the developer's real home. That is not hypothetical —
-#: it is what this fixture did, and `~/Library/Application Support/Shepherd`
-#: had a real `shepherd.db` in it to prove the point.
-HOST_DIR_ENV: tuple[str, ...] = (
-    "XDG_DATA_HOME",
-    "XDG_CONFIG_HOME",
-    "XDG_STATE_HOME",
-    "XDG_CACHE_HOME",
-    "XDG_RUNTIME_DIR",
-    "HOME",
-    "TMPDIR",
-)
-
-
-@pytest.fixture()
-def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> World:
-    """A throwaway host — for **whichever** driver `detect_host()` returns.
-
-    `data_dir` and `runtime_dir` are read back from the seam rather than spelled
-    here, because the two drivers place them differently
-    (`.local/share/shepherd` vs `Library/Application Support/Shepherd`) and a
-    test that spells one platform's layout is asserting about the wrong machine
-    on the other.
-    """
-    targets = {
-        "XDG_DATA_HOME": tmp_path / "xdg_data_home",
-        "XDG_CONFIG_HOME": tmp_path / "xdg_config_home",
-        "XDG_STATE_HOME": tmp_path / "xdg_state_home",
-        "XDG_CACHE_HOME": tmp_path / "xdg_cache_home",
-        "XDG_RUNTIME_DIR": tmp_path / "run",
-        "HOME": tmp_path / "home",
-        "TMPDIR": tmp_path / "run",
-    }
-    # The list and the redirect cannot drift apart: adding a variable to
-    # HOST_DIR_ENV without redirecting it fails here rather than in whichever
-    # test first reads the developer's real home.
-    assert tuple(targets) == HOST_DIR_ENV
-    for name, target in targets.items():
-        monkeypatch.setenv(name, str(target))
-
-    engine_config_dir = tmp_path / "engine-config"
-    (engine_config_dir / "sessions").mkdir(parents=True)
-    work = tmp_path / "work"
-    work.mkdir()
-
-    dirs = detect_host().dirs()
-    # Arrival, not trust: the driver really did follow the redirect. Without
-    # this the fixture is happy to hand back the real user's directories.
-    for directory in (dirs.data_dir, dirs.runtime_dir):
-        assert tmp_path in directory.parents, f"{directory} escaped the throwaway host"
-
-    return World(
-        data_dir=dirs.data_dir,
-        runtime_dir=dirs.runtime_dir,
-        engine_config_dir=engine_config_dir,
-        cwd=work,
     )
 
 
@@ -283,26 +209,6 @@ def relay_to(started: controld.Controld, frames: list[bytes]) -> None:
             relay.send(Frame(payload=raw, received_at=f"2026-09-16T10:00:{index:02d}Z", peer_pid=None))
     finally:
         relay.close(5.0)
-
-
-def test_the_registry_is_frozen_before_the_server_binds(world: World) -> None:
-    """ADR-7: written by one thread at startup, read-only thereafter."""
-    with running(world) as started:
-        assert started.port != 0
-        assert {"fleet_summary", "fleet_tree", "schema_status", "engine_version"} <= set(
-            registered_tools()
-        )
-        with pytest.raises(RegistryFrozen):
-            register(
-                ToolDef(
-                    name="too_late",
-                    description="registered after the bind",
-                    input_schema={"type": "object", "properties": {}},
-                    blast_class=BlastClass.LOCAL_READ,
-                    handler=lambda args, ctx: None,
-                    audiences=frozenset({Audience.HUMAN}),
-                )
-            )
 
 
 def test_the_page_and_its_tools_are_served_on_loopback(world: World) -> None:
@@ -765,7 +671,8 @@ def test_no_new_socket_is_bound(world: World) -> None:
     second control channel would look like from here.
     """
     with running(world) as started:
-        bound = sorted(path.name for path in world.runtime_dir.iterdir())
+        # Sockets only: each claim's `<socket>.lock` sits beside its socket (D72).
+        bound = sorted(path.name for path in world.runtime_dir.iterdir() if path.is_socket())
 
         # Arrival: the directory really is the one `start()` bound into…
         assert started.control_socket_path.parent == world.runtime_dir
@@ -806,7 +713,7 @@ def test_the_reconcile_runs_before_the_registry_freezes(
 
     An orphaned pane fills one of §11's total-cap slots whether or not anything
     knows of it, and the cap is asked on the first spawn — which cannot happen
-    before the registry is frozen and the server binds. So the observation is
+    before the registry is frozen and the server serves. So the observation is
     taken at the freeze itself: the anomaly the reconcile counts is asserted to
     be **already in the store** at the moment `freeze_registry()` is called.
 
