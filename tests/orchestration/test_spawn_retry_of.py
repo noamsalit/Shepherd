@@ -187,6 +187,23 @@ def test_a_master_refusal_over_a_lineage_the_human_filled_does_not_call_it_maste
     assert "human" in sibling.reason
 
 
+def test_the_refusal_names_the_lineage_it_walked_not_the_cap(
+    store: Store, workspace_id: str, root: Path
+) -> None:
+    """P13b review F1: a human is never capped, so a lineage can hold three; the
+    master's sibling refusal prints the depth it walked, and the cap beside it."""
+    first = spawned(attempt(store, workspace_id, root, None, origin=Origin.USER_UI))
+    second = spawned(attempt(store, workspace_id, root, first, origin=Origin.USER_UI))
+    third = spawned(attempt(store, workspace_id, root, second, origin=Origin.USER_UI))
+
+    sibling = attempt(store, workspace_id, root, second)
+
+    assert isinstance(sibling, SpawnRefused), sibling
+    assert repr(third) in sibling.reason, sibling.reason
+    assert "already holds 3 attempts" in sibling.reason, sibling.reason
+    assert "at most 2" in sibling.reason, sibling.reason
+
+
 def test_a_human_retry_is_linked_and_not_capped(
     store: Store, workspace_id: str, root: Path
 ) -> None:

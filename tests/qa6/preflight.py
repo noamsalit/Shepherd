@@ -82,10 +82,15 @@ def _exists(tier: str, name: str, path: Path, executable: bool = True) -> Check:
                  ok, "" if ok else "missing-input")
 
 
+#: The branches a qa6 run may start on: the round-6 harness branch, and the qa6 rulings fix branch
+#: that P15 verifies in the main checkout. Ancestry is checked separately (dc913fc).
+QA6_BRANCHES: tuple[str, ...] = ("qa/round6-full", "fix/qa6-rulings")
+
+
 def tier1() -> list[Check]:
     checks: list[Check] = []
     rc, out = _run([str(paths.GIT_BIN), "-C", str(paths.REPO), "rev-parse", "--abbrev-ref", "HEAD"], 10)
-    checks.append(Check("T1", "branch", "git rev-parse --abbrev-ref HEAD", "qa/round6-full", out, rc == 0 and out == "qa/round6-full", "wrong-guess"))
+    checks.append(Check("T1", "branch", "git rev-parse --abbrev-ref HEAD", " | ".join(QA6_BRANCHES), out, rc == 0 and out in QA6_BRANCHES, "wrong-guess"))
     rc, out = _run([str(paths.GIT_BIN), "-C", str(paths.REPO), "merge-base", "--is-ancestor", "dc913fc", "HEAD"], 10)
     checks.append(Check("T1", "descends from dc913fc", "git merge-base --is-ancestor dc913fc HEAD", "exit 0", f"exit {rc}", rc == 0, "wrong-guess"))
     rc, out = _run([str(paths.PYTHON), "-c", "import sys, shepherd, playwright.sync_api; sys.stdout.write(shepherd.__file__)"], 30)

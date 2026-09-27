@@ -43,13 +43,13 @@ __all__ = ["link", "refuse_target"]
 def _sibling(store: Store, retry_of: str, existing: str, origin: Origin) -> SpawnRefused:
     """RD-2: `retry_of` already has the retry `existing`."""
     already = f"{retry_of!r} was already retried as {existing!r}"
-    full = store.retry_chain_depth(existing) >= MAX_MASTER_ATTEMPTS
-    if Origin(origin) is not MASTER_ORIGIN or not full:
+    depth = store.retry_chain_depth(existing)
+    if Origin(origin) is not MASTER_ORIGIN or depth < MAX_MASTER_ATTEMPTS:
         return SpawnRefused(f"{already}; retry that one instead", None)
     store.bump_anomaly(str(AnomalyKind.WAKE_RETRY_CAP_REACHED.value))
     return SpawnRefused(
-        f"{already}, and that lineage already holds {MAX_MASTER_ATTEMPTS} attempts, the most "
-        f"D31 lets the master start: read their conclusions, and ask the human to re-run it.",
+        f"{already}, and that lineage already holds {depth} attempts; D31 lets the master start "
+        f"at most {MAX_MASTER_ATTEMPTS}: read their conclusions, and ask the human to re-run it.",
         CAP_RETRY,
     )
 
