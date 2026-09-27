@@ -70,6 +70,7 @@ from shepherd.core.stops import Bucket
 from shepherd.orchestration import (
     admission,
     ask,
+    dialog_digest,
     dialog_keys,
     dialogs,
     lifecycle,
@@ -142,6 +143,8 @@ POPULATION: frozenset[tuple[str, str]] = frozenset(
     {
         ("admission", "admit"),
         ("ask", "ask_session"),
+        # P11 REM-FIX 1: the digest that binds an answer to the dialog shown.
+        ("dialog_digest", "digest_of"),
         ("dialog_keys", "is_the_captured_permission_dialog"),
         ("dialog_keys", "is_the_captured_trust_dialog"),
         ("dialogs", "answer_permission"),
@@ -342,6 +345,7 @@ def drivers(world: World, workspace_id: str, index: int) -> dict[tuple[str, str]
             session_id=OWNED_ID,
             question=world.text,
         ),
+        ("dialog_digest", "digest_of"): lambda: dialog_digest.digest_of(world.text),
         ("dialog_keys", "is_the_captured_permission_dialog"): (
             lambda: dialog_keys.is_the_captured_permission_dialog(world.text)
         ),
@@ -493,11 +497,13 @@ def returns_a_value(module_name: str, name: str) -> bool:
 
     Read off the annotation rather than assumed: `interrupt_session` and
     `rebind` are declared `-> None`, and demanding a value from them would be
-    this test inventing a contract the seam never made.
+    this test inventing a contract the seam never made. Likewise a declared
+    `X | None` (P11 REM-FIX 1's `digest_of`, `None` when there is no dialog)
+    promises a value *or* `None`, so `None` from it is not a missing value.
     """
     module = importlib.import_module(f"{orchestration_package.__name__}.{module_name}")
-    annotation = inspect.signature(getattr(module, name)).return_annotation
-    return str(annotation).strip("'\"") not in {"None", "NoneType"}
+    annotation = str(inspect.signature(getattr(module, name)).return_annotation).strip("'\"")
+    return annotation not in {"None", "NoneType"} and not annotation.endswith("| None")
 
 
 @pytest.fixture()
@@ -550,8 +556,8 @@ def test_the_enumerated_population_is_the_one_this_suite_drives(
         "gone": sorted(POPULATION - enumerated),
     }
     # Arrival: the rule really walked the package and really found functions…
-    assert len(orchestration_modules()) == 11
-    assert len(enumerated) == 26
+    assert len(orchestration_modules()) == 12
+    assert len(enumerated) == 27
 
     # …and every one of them has a driver, keyed by the same pair.
     place_sidecar(config_dir, degradations()[0])

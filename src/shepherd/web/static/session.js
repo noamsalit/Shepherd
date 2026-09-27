@@ -545,6 +545,7 @@ const ANSWERED = "answered";
 const ANSWER_REFUSED = "not answered";
 const ANSWER_FAILED = "could not answer";
 const ANSWER_UNREACHABLE = "could not answer: the request did not reach the server";
+const ANSWER_PENDING = "an answer for this session is still out";
 
 // Sessions whose answer POST has not replied yet (PP12): a second click while
 // one is in flight posts nothing. Keyed by session id, as `renaming` is.
@@ -612,21 +613,44 @@ function setChoicesBusy(card, busy) {
   }
 }
 
+// The note is in the tree from the card's first paint — a live region that
+// appears in the same step as its text is one a screen reader may never hear —
+// so painting it is a class and a text, never a `hidden` toggle.
 function paintOutcome(outcome, text, done) {
-  outcome.className = done ? "decision-done" : "decision-readonly";
+  outcome.className = done ? "decision-status decision-done" : "decision-status decision-readonly";
   outcome.textContent = text;
-  outcome.hidden = false;
 }
 
-// PP12 and BC-12. One POST per click: every choice on the card is disabled
-// until the reply, and the session's in-flight mark refuses a second POST from
-// a card re-opened while the first is still out. The reply paints only if this
-// card is still on the page — `renderDecision` replaces the card whenever the
-// pane is re-opened, on this session or another, so a card that is no longer
-// connected is exactly "the pane has moved past it". An answered dialog keeps
-// its choices disabled; anything else offers them again, with the reason.
-async function answerChoice(card, outcome, sessionId, answer) {
+// BC-12 R3, the `commitRename` rule: a reply paints only while its session is
+// the one on screen, and into the card that is up **now** — re-opening the
+// session replaced the card that was clicked, and the news belongs on the one
+// the human is looking at. A session showing no card gets the line on its own.
+function paintCurrent(sessionId, text, done) {
+  if (showing !== sessionId) {
+    return;
+  }
+  const host = slot("session-decision");
+  const card = host.querySelector(".decision");
+  const outcome = card === null ? null : card.querySelector('[role="status"]');
+  if (outcome === null) {
+    host.appendChild(decisionNote(text));
+    return;
+  }
+  paintOutcome(outcome, text, done);
+  setChoicesBusy(card, done);
+}
+
+// PP12 and REM-FIX 1. One POST per click, bound by `dialog_sha256` to the
+// dialog this card was built from: the server re-reads the pane and refuses,
+// before any key, a dialog that is not that one. Every choice is disabled
+// until the reply. An answered dialog keeps them disabled. **Anything else
+// never re-enables the card that was clicked** — what it offered is exactly
+// what the server could not confirm — so the card is repainted from a fresh
+// read, and the reason goes on the new one.
+async function answerChoice(row, card, outcome, answer, digest) {
+  const sessionId = row.session_id;
   if (answering.has(sessionId)) {
+    paintOutcome(outcome, ANSWER_PENDING, false);
     return;
   }
   answering.add(sessionId);
@@ -637,7 +661,7 @@ async function answerChoice(card, outcome, sessionId, answer) {
     const response = await fetch(path(PERMISSION_PATH, sessionId), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ choice: answer }),
+      body: JSON.stringify({ choice: answer, dialog_sha256: digest }),
     });
     const body = await response.json();
     if (!body.ok) {
@@ -651,18 +675,17 @@ async function answerChoice(card, outcome, sessionId, answer) {
   } finally {
     answering.delete(sessionId);
   }
-  if (!card.isConnected) {
-    return;
+  if (!done && showing === sessionId) {
+    await renderDecision(row);
   }
-  paintOutcome(outcome, text, done);
-  setChoicesBusy(card, done);
+  paintCurrent(sessionId, text, done);
 }
 
 function decisionNote(text) {
   return element("p", "decision-readonly", text);
 }
 
-function decisionCard(data, sessionId) {
+function decisionCard(data, row) {
   const card = element("section", "decision");
   const head = element("div", "decision-head", "needs you");
   head.appendChild(element("span", "decision-src", data.pane_kind || UNKNOWN));
@@ -679,21 +702,22 @@ function decisionCard(data, sessionId) {
   const list = element("div", "choices");
   const universal = !(data.readable && Array.isArray(data.choices));
   const choices = universal ? UNIVERSAL_CHOICES : data.choices;
-  // The answer's outcome, announced as it lands (`role="status"`). Hidden until
-  // there is one: an empty note would still draw its rule.
-  const outcome = decisionNote("");
+  // The answer's outcome, announced as it lands (`role="status"`). Empty, and
+  // without `.decision-readonly`'s rule, until there is something to say.
+  const outcome = element("p", "decision-status", "");
   outcome.setAttribute("role", "status");
-  outcome.hidden = true;
   let inert = false;
   choices.forEach((choice) => {
     const answer = answerFor(data.pane_kind, universal, choice);
-    const row = choiceRow(choice, answer);
+    const pick = choiceRow(choice, answer);
     if (answer === null) {
       inert = true;
     } else {
-      row.addEventListener("click", () => answerChoice(card, outcome, sessionId, answer));
+      pick.addEventListener("click", () =>
+        answerChoice(row, card, outcome, answer, data.dialog_sha256),
+      );
     }
-    list.appendChild(row);
+    list.appendChild(pick);
   });
   card.appendChild(list);
   if (!data.readable) {
@@ -703,6 +727,12 @@ function decisionCard(data, sessionId) {
     card.appendChild(decisionNote(DECISION_INERT));
   }
   card.appendChild(outcome);
+  // Re-opened while this session's answer is still out: say so, and offer
+  // nothing until the reply — which `paintCurrent` then paints here.
+  if (answering.has(row.session_id)) {
+    paintOutcome(outcome, ANSWER_PENDING, false);
+    setChoicesBusy(card, true);
+  }
   return card;
 }
 
@@ -752,7 +782,7 @@ async function renderDecision(row) {
       host.replaceChildren(decisionNote(NO_DIALOG));
       return null;
     }
-    host.replaceChildren(decisionCard(body.data, row.session_id));
+    host.replaceChildren(decisionCard(body.data, row));
   } catch (unreachable) {
     if (showing === row.session_id) {
       host.replaceChildren(decisionNote(DECISION_UNREACHABLE));

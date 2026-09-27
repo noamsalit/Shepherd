@@ -1575,11 +1575,22 @@ button, input, textarea { font: inherit; color: inherit; }
    opened, which `[hidden]`'s reset (U18) enforces over any display here. */
 .session-decision { flex: none; }
 
-/* The choices are **inert in this build**: nothing on any page posts to
-   `/api/sessions/{id}/permission`, so the pointer cursor `.choice` carries for
-   the answerable case would be a promise this build does not keep. */
+/* An inert choice — every trust-dialog row, and a permission choice with no
+   answer word (D77) — is a `div`, not a button: nothing posts from it, so the
+   pointer cursor `.choice` carries for the answerable case would be a promise
+   the row does not keep. */
 .choice-inert { cursor: default; }
 .choice-inert:hover { border-color: var(--line); background: var(--ink-800); color: var(--text-soft); }
+
+/* An answerable choice while its answer is out, or once the dialog it answered
+   is gone: shown and greyed (the `.dlg-choice[disabled]` rule), with a hover
+   that offers nothing. */
+.choice[disabled] { opacity: 0.55; cursor: not-allowed; }
+.choice[disabled]:hover { border-color: var(--line); background: var(--ink-800); color: var(--text-soft); }
+
+/* The answer's outcome note, in the tree from the card's first paint so a
+   screen reader hears it fill. Empty, it draws nothing of its own. */
+.decision-status { margin: 0; }
 
 
 

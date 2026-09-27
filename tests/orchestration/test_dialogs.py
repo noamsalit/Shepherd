@@ -25,6 +25,7 @@ count is satisfied just as well by a call that never got that far.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -60,6 +61,7 @@ PROBES = REPO_ROOT / "docs" / "probes"
 SCHEMAS = REPO_ROOT / "docs" / "specs" / "data-schemas.md"
 MODULE = REPO_ROOT / "src" / "shepherd" / "orchestration" / "dialogs.py"
 KEYS_MODULE = REPO_ROOT / "src" / "shepherd" / "orchestration" / "dialog_keys.py"
+DIGEST_MODULE = REPO_ROOT / "src" / "shepherd" / "orchestration" / "dialog_digest.py"
 
 P4 = PROBES / "2026-09-17-m3-tmux" / "p4-permission-20260917T110527Z"
 RUN = PROBES / "2026-09-14-schemas" / "tmux-tui" / "run-20260914T154946Z"
@@ -402,6 +404,65 @@ def test_a_trust_dialog_is_not_a_permission_dialog(store: Store) -> None:
     assert driver.writes == []
 
 
+# ----- P11 REM-FIX 1: an answer is bound to the dialog the human read ----------
+
+
+def sha256_of(text: str | None) -> str:
+    """The digest's definition, spelled from the spec rather than imported:
+    sha256 hex over the dialog text's UTF-8 bytes, exactly as the pane gave it."""
+    assert text is not None
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def test_an_answer_bound_to_another_dialog_sends_nothing(store: Store) -> None:
+    """The stale-card hole: same kind, same option set, a different command.
+
+    A digit is positional, and so is the whole card: the human read `touch
+    perm-tab.txt`, and a pane now asking about another command must not take the
+    key their click meant for the first. Arrival first — the same call against
+    the dialog that *was* shown sends its key — then the refusal.
+    """
+    shown = pane_state(DIALOG)
+    assert shown.dialog_text is not None and "touch perm-tab.txt" in shown.dialog_text
+    other = dataclasses.replace(
+        shown, dialog_text=shown.dialog_text.replace("touch perm-tab.txt", "rm -rf ~/precious")
+    )
+    assert dialog_keys.is_the_captured_permission_dialog(other.dialog_text)
+    digest = sha256_of(shown.dialog_text)
+
+    same = runner(shown)
+    kept = answer_permission(
+        store=store, runner=same, handle=HANDLE, session_id=SESSION_ID,
+        choice="approve", sidecar=SidecarState.WAITING, dialog_sha256=digest,
+    )
+    assert kept.decision is WriteDecision.SEND_NOW
+    assert same.writes == [b"\r"]
+
+    moved = runner(other)
+    refused = answer_permission(
+        store=store, runner=moved, handle=HANDLE, session_id=SESSION_ID,
+        choice="approve", sidecar=SidecarState.WAITING, dialog_sha256=digest,
+    )
+    assert refused.decision is WriteDecision.REFUSE_DIALOG
+    assert refused.reason == (
+        f"{SESSION_ID}: the dialog changed since it was shown — nothing was sent;"
+        " read it again before answering"
+    )
+    assert refused.keys_sent == 0
+    assert moved.writes == []
+
+
+def test_an_answer_with_no_digest_is_gated_as_before(store: Store) -> None:
+    """Omitted — the master's path — the gate is exactly the pre-fix one."""
+    driver = runner(pane_state(DIALOG))
+    answer = answer_permission(
+        store=store, runner=driver, handle=HANDLE, session_id=SESSION_ID,
+        choice="deny", sidecar=SidecarState.WAITING,
+    )
+    assert answer.decision is WriteDecision.SEND_NOW
+    assert driver.writes == [b"3"]
+
+
 # ----- clause 4's remaining half: the sidecar ---------------------------------
 
 
@@ -580,12 +641,15 @@ def test_both_halves_are_small_and_import_only_downward() -> None:
             {
                 "shepherd.core.anomalies",
                 "shepherd.core.runner",
+                "shepherd.orchestration.dialog_digest",
                 "shepherd.orchestration.dialog_keys",
                 "shepherd.runner.base",
                 "shepherd.store.db",
             },
         ),
         (KEYS_MODULE, {"shepherd.runner.pane"}),
+        # P11 REM-FIX 1: the digest both sides of the answer wire share.
+        (DIGEST_MODULE, set()),
     ):
         source = module.read_text(encoding="utf-8")
         imported = set(re.findall(r"^from (shepherd[\w.]*) import", source, re.MULTILINE))

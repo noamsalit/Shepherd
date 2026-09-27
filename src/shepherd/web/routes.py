@@ -148,7 +148,9 @@ BODY_ARGS: Mapping[str, tuple[str, ...]] = {
     "/api/sessions/{session_id}/interrupt": (),
     "/api/sessions/{session_id}/kill": (),
     "/api/sessions/{session_id}/rename": ("title",),
-    "/api/sessions/{session_id}/permission": ("choice",),
+    # P11 REM-FIX 1: `dialog_sha256` binds the answer to the dialog the card
+    # showed; omitted, the gate is the shape-only one it always was.
+    "/api/sessions/{session_id}/permission": ("choice", "dialog_sha256"),
     "/api/master/send": ("text",),
     # `approval_id` is deliberately absent: it is the path parameter, and the
     # merge order means a body claiming another card could not move the target

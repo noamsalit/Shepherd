@@ -315,13 +315,13 @@ REQUIRED_ASSIGNMENTS = {
     # PP12: every choice on the card is disabled while its answer is out, and
     # stays disabled once the dialog is answered.
     "pick.disabled = busy",
-    # The outcome, painted into the card's own note (`role="status"`): hidden
-    # until there is one, then the server's own words — answered, or the
-    # refusal's `reason`, or the envelope's error, or unreachable.
-    "outcome.hidden = true",
-    'outcome.className = done ? "decision-done" : "decision-readonly"',
+    # The outcome, painted into the card's own note (`role="status"`). P11
+    # REM-FIX 1: the note is in the tree from the first paint and is never
+    # `hidden`-toggled (a live region that appears with its text may go
+    # unheard), so painting it is a class and the server's own words —
+    # answered, the refusal's `reason`, the envelope's error, or unreachable.
+    'outcome.className = done ? "decision-status decision-done" : "decision-status decision-readonly"',
     "outcome.textContent = text",
-    "outcome.hidden = false",
     "done = body.data.answered === true",
     "text = `${ANSWER_FAILED}: ${body.error} (${body.correlation_id})`",
     "text = done ? `${ANSWERED}: ${answer}` : `${ANSWER_REFUSED}: ${body.data.reason}`",

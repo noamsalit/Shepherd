@@ -73,12 +73,8 @@ from shepherd.store.db import Store
 from shepherd.toolsurface.registry import register
 from shepherd.toolsurface.spawn_origin import spawn_origin
 from shepherd.toolsurface.tools_messaging import build_messaging_tools
-from shepherd.toolsurface.tools_terminal import (
-    TerminalStream,
-    build_terminal_tools,
-    handle_for,
-    no_pane,
-)
+from shepherd.toolsurface.tools_terminal import TerminalStream, build_terminal_tools
+from shepherd.toolsurface.tools_terminal import handle_for, no_pane
 from shepherd.toolsurface.types import (
     Audience,
     BlastClass,
@@ -263,6 +259,7 @@ def answer(
     read_sidecar: SidecarReader,
     session_id: str,
     choice: PermissionChoice,
+    dialog_sha256: str | None,
 ) -> dict[str, object]:
     """D44. Both sources are composed **inside** `answer_permission`: the pane
     kind, then the sidecar, then the option set, and only then a key."""
@@ -278,6 +275,7 @@ def answer(
             session_id=session_id,
             choice=choice,
             sidecar=read_sidecar(row.engine_session_id),
+            dialog_sha256=dialog_sha256,
         ),
         session_id,
     )
@@ -390,6 +388,7 @@ def build_m3_tools(
                 "properties": {
                     "session_id": {"type": "string"},
                     "choice": {"type": "string"},
+                    "dialog_sha256": {"type": "string"},
                 },
                 "required": ["session_id", "choice"],
             },
@@ -400,6 +399,7 @@ def build_m3_tools(
                 read_sidecar=read_sidecar,
                 session_id=arg_str(args, "session_id"),
                 choice=_choice(args),
+                dialog_sha256=arg_optional_str(args, "dialog_sha256"),
             ),
             audiences=_HUMAN_ONLY,
         ),

@@ -37,6 +37,7 @@ from shepherd.core.runner import RunnerHandle
 from shepherd.core.states import Ownership
 from shepherd.engines.claude_code.transcript import locate_transcript
 from shepherd.engines.claude_code.transcript_tail import read_tail
+from shepherd.orchestration.dialog_digest import digest_of
 from shepherd.runner.base import ByteStream, Runner
 from shepherd.runner.pane import DecisionPrompt, read_decision
 from pathlib import Path
@@ -323,6 +324,8 @@ def get_decision(store: Store, runner: Runner, session_id: str) -> dict[str, obj
         "asking": bool(state.dialog_text),
         "readable": prompt is not None,
         "text": prompt.text if prompt is not None else (state.dialog_text or None),
+        # P11 REM-FIX 1: what an answer from this card must still find on the pane.
+        "dialog_sha256": digest_of(state.dialog_text),
         "choices": [
             {"number": choice.number, "label": choice.label, "selected": choice.selected}
             for choice in (prompt.choices if prompt is not None else ())

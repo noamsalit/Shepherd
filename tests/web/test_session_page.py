@@ -840,8 +840,10 @@ def test_the_card_never_guesses_and_never_answers() -> None:
     assert "readable" in session_function("renderDecision") + session_function(
         "decisionCard"
     )
-    assert re.findall(r'"/api/[^"]*"', body).count(
-        '"/api/sessions/{session_id}/permission"'
+    # Quote-agnostic (P11 REM-FIX 1): a second copy in single quotes or a
+    # template literal is still a second answer route.
+    assert re.findall(r"""["'`](/api/[^"'`]*)["'`]""", body).count(
+        "/api/sessions/{session_id}/permission"
     ) == 1, "the card names no answer route, or names it twice"
     for trust_route in ("/trust", "answer_trust"):
         assert trust_route not in body, f"the card can answer the trust dialog: {trust_route}"

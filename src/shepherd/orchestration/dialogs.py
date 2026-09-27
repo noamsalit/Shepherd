@@ -43,6 +43,7 @@ from dataclasses import dataclass
 
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.runner import PaneKind, RunnerHandle, WriteDecision
+from shepherd.orchestration.dialog_digest import DIALOG_CHANGED, digest_of
 from shepherd.orchestration.dialog_keys import (
     ALLOW_OPTION_PREFIX,
     DIALOG_EVIDENCE,
@@ -99,12 +100,14 @@ def answer_permission(
     session_id: str,
     choice: PermissionChoice,
     sidecar: SidecarState,
+    dialog_sha256: str | None = None,
 ) -> DialogAnswer:
     """Answer D44's dialog with one captured key, or refuse and say why.
 
     The order is the safety property: the pane kind, then the sidecar, then the
-    option set, and only then a key. Each refusal names itself, so a caller can
-    tell "there is no dialog" from "there is one I must not key into".
+    option set, then — when the caller read the dialog first — that it is still
+    the one read (`dialog_digest.py`), and only then a key. Each refusal names
+    itself, so a caller can tell "no dialog" from "one I must not key into".
     """
     pane = runner.pane(handle)
     if pane.kind is not PaneKind.PERMISSION_DIALOG:
@@ -124,6 +127,8 @@ def answer_permission(
             f"{session_id}: this screen is not the option set we captured — Tab may have amended"
             " it, or it is another tool's dialog. A digit is positional, so nothing is sent"
         )
+    if dialog_sha256 is not None and dialog_sha256 != digest_of(pane.dialog_text):
+        return _refuse(f"{session_id}: {DIALOG_CHANGED}")
     return _send(runner, handle, PERMISSION_KEYS[choice])
 
 
