@@ -52,15 +52,8 @@ from shepherd.toolsurface.types import (
 )
 
 __all__ = [
-    "EVERY_AUDIENCE",
-    "HUMAN_ONLY",
-    "SNAPSHOT_SCROLLBACK",
-    "TerminalStream",
-    "build_terminal_tools",
-    "get_decision",
-    "handle_for",
-    "kill_landed",
-    "no_pane",
+    "EVERY_AUDIENCE", "HUMAN_ONLY", "SNAPSHOT_SCROLLBACK", "KeyRefused", "TerminalStream",
+    "build_terminal_tools", "get_decision", "handle_for", "kill_landed", "no_pane",
     "session_output",
 ]
 
@@ -129,6 +122,10 @@ def kill_landed(answer: Mapping[str, object]) -> bool:
     return answer.get("killed") is True
 
 
+class KeyRefused(Exception):
+    """The pane refused a key (a failed or timed-out write), which is not the pane ending."""
+
+
 @dataclass(frozen=True)
 class TerminalStream:
     """ADR-M3-3's handle: the first frame, then the live ones, then the stop.
@@ -152,11 +149,14 @@ class TerminalStream:
         return self.stream.chunks()
 
     def write(self, data: bytes) -> None:
-        """D76: keys, byte-exact, to the pane the audited open bound; a refusal ends it."""
+        """D76: keys, byte-exact, to the pane the audited open bound; `KeyRefused` if not.
+
+        It does not close the stream: the transport ends the connection once, saying why.
+        """
         try:
             self.writer(data)
-        except RunnerRefusal:
-            self.close()
+        except RunnerRefusal as refused:
+            raise KeyRefused(str(refused)) from None
 
     def close(self) -> None:
         """Stop reading. Idempotent, because `ByteStream.close` is."""

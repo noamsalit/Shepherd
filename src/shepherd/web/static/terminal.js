@@ -84,9 +84,22 @@ const VENDOR_MODULE = "./vendor/xterm.js";
 const DEGRADE_MESSAGE = "live terminal unavailable: xterm.js is not vendored";
 
 // Principle 5, where input is impossible: the socket that carried keys to the
-// pane has closed, so the emulator refuses them and the page says so.
+// pane has closed, so the emulator refuses them and the page says so — and,
+// where the server's close code says why, says that (`inputClosedReason`).
 export const INPUT_CLOSED =
   "input is off: the terminal stream closed, so nothing typed here reaches the pane";
+export const INPUT_CLOSED_TOO_LARGE =
+  "input is off: a paste was larger than one terminal frame (1 MiB), so the stream closed";
+export const INPUT_CLOSED_PROTOCOL =
+  "input is off: the server refused a malformed terminal frame, so the stream closed";
+export const INPUT_CLOSED_KEY_REFUSED =
+  "input is off: the pane refused a key, so nothing more typed here reaches it";
+
+// The server's close codes (`web/ws.py`, `web/server.py`): 1009 a frame over
+// its cap, 1002 a protocol error, 1011 a key the pane refused.
+const CLOSE_TOO_BIG = 1009;
+const CLOSE_PROTOCOL_ERROR = 1002;
+const CLOSE_INPUT_FAILED = 1011;
 
 // D6's residual, declared because a reader is owed it. The emulator is fitted
 // to this window; the pane keeps its own geometry, because nothing here may
@@ -172,8 +185,9 @@ export async function openTerminal(sessionId, el) {
     const initial = fitGeometry(el, top, EMPTY);
     term = new vendor.Terminal({
       convertEol: false,
-      // D76: keystrokes go to the pane over the socket below (`sendKeys`).
-      disableStdin: false,
+      // D76: keystrokes go to the pane over the socket below (`sendKeys`) — from
+      // `onopen` on. Until then a key would be dropped without a word.
+      disableStdin: true,
       scrollback: 2000,
       // D6. The four constructor arguments QA swept for and found absent; the
       // font is named here because `fitGeometry` measures that exact font.
@@ -213,15 +227,18 @@ export async function openTerminal(sessionId, el) {
     term.write(frames === 1 ? snapshotForEmulator(payload) : payload);
   };
   term.onData((keys) => sendKeys(socket, keys));
-  socket.onerror = () => {
-    notice(el, STREAM_LOST);
+  socket.onopen = () => {
+    term.options.disableStdin = false;
   };
-  socket.onclose = () => {
+  // A browser follows every `error` with a `close`, and the close handler is the
+  // one that says what happened: a notice here too said it twice.
+  socket.onerror = () => {};
+  socket.onclose = (event) => {
     // Never a frame is a different fact from stopped after some: the first is
     // T12's orphan (a 404 upgrade), the second is a pane that ended.
     if (!closing) {
       notice(el, frames === 0 ? STREAM_NEVER_ARRIVED : STREAM_LOST);
-      stopInput(term, el);
+      stopInput(term, el, event.code);
     }
   };
 
@@ -392,9 +409,24 @@ function sendKeys(socket, keys) {
 
 // The stream is gone, so input is too: the emulator stops taking keys and the
 // page says why, beside the stream's own notice.
-function stopInput(term, el) {
+function stopInput(term, el, code) {
   term.options.disableStdin = true;
-  notice(el, INPUT_CLOSED);
+  notice(el, inputClosedReason(code));
+}
+
+// The sentence for the code the socket closed with. A code the server does not
+// send for input is the plain closed stream.
+function inputClosedReason(code) {
+  if (code === CLOSE_TOO_BIG) {
+    return INPUT_CLOSED_TOO_LARGE;
+  }
+  if (code === CLOSE_PROTOCOL_ERROR) {
+    return INPUT_CLOSED_PROTOCOL;
+  }
+  if (code === CLOSE_INPUT_FAILED) {
+    return INPUT_CLOSED_KEY_REFUSED;
+  }
+  return INPUT_CLOSED;
 }
 
 // The degrade's own three outcomes (review finding 5). The old code had one —

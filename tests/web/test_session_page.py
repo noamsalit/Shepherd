@@ -485,8 +485,11 @@ def test_the_keystroke_path_is_wired_and_the_page_says_nothing_false() -> None:
     """
     text = source("terminal.js")
     opened = function_body(text, "openTerminal")
-    assert "disableStdin: false" in opened, opened
-    assert "disableStdin: true" not in code_only(opened), opened
+    # REM-FIX 1 #4 (hunter M6): the emulator is built refusing keys and takes
+    # them only once the socket is open, so nothing typed before then is lost.
+    assert "disableStdin: true" in code_only(opened), opened
+    on_open = block_after(opened, "socket.onopen")
+    assert on_open is not None and "disableStdin = false" in on_open, on_open
     # The emulator's keys go to the socket, and nowhere else.
     wired = re.search(r"term\.onData\(\((\w+)\)\s*=>\s*sendKeys\(socket,\s*\1\)\)", opened)
     assert wired is not None, opened
@@ -516,11 +519,61 @@ def test_input_stops_with_the_stream_and_says_so() -> None:
     text = source("terminal.js")
     stop = function_body(text, "stopInput")
     assert "disableStdin = true" in stop, stop
-    assert "INPUT_CLOSED" in stop, stop
+    # REM-FIX 1 #4: the sentence is chosen by close code; `INPUT_CLOSED` is the
+    # plain case (`test_the_close_code_says_why_input_stopped`).
+    assert "inputClosedReason(" in stop, stop
+    assert "return INPUT_CLOSED;" in function_body(text, "inputClosedReason")
     assert re.search(r"^export const INPUT_CLOSED\s*=", text, flags=re.MULTILINE)
     opened = function_body(text, "openTerminal")
     close_handler = block_after(opened, "socket.onclose")
     assert close_handler is not None and "stopInput(" in close_handler, close_handler
+
+
+#: REM-FIX 1 #4 (hunter M5): the close codes the server ends input with, each
+#: with its own sentence. Spelled here, not read from the module under test.
+INPUT_CLOSE_CODES = {1009: "INPUT_CLOSED_TOO_LARGE", 1002: "INPUT_CLOSED_PROTOCOL",
+                     1011: "INPUT_CLOSED_KEY_REFUSED"}
+
+
+def test_the_close_code_says_why_input_stopped() -> None:
+    """A paste over the frame cap (1009), a protocol error (1002) and a refused
+    key (1011) each say so; any other close is `INPUT_CLOSED`. The sentence goes
+    to a `textContent` slot and nowhere else."""
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and re.search(r"stopInput\([^)]*\.code\)", close_handler)
+    reason = function_body(text, "inputClosedReason")
+    for code, constant in INPUT_CLOSE_CODES.items():
+        named = re.search(rf"^const (\w+) = {code};", text, re.MULTILINE)
+        assert named is not None, f"no constant holds {code}"
+        branch = rf"=== {named.group(1)}\)\s*\{{\s*return {constant};"
+        assert re.search(branch, reason), (code, reason)
+    assert "INPUT_CLOSED;" in reason, "an unlisted code has no sentence"
+    sentences = {
+        name: re.search(rf"^export const {name}\s*=\s*\n?\s*\"([^\"]+)\"", text, re.MULTILINE)
+        for name in (*INPUT_CLOSE_CODES.values(), "INPUT_CLOSED")
+    }
+    assert all(match is not None for match in sentences.values()), sentences
+    said = [match.group(1) for match in sentences.values() if match is not None]
+    assert len(set(said)) == len(said), said
+    assert all(line.startswith("input is off: ") for line in said), said
+    stop = function_body(text, "stopInput")
+    assert "notice(el, inputClosedReason(" in stop, stop
+    notice_body = function_body(text, "notice")
+    assert "textContent = message" in notice_body and html_sink_findings(notice_body) == []
+
+
+def test_a_failed_stream_is_reported_once() -> None:
+    """Hunter L1: a browser fires `error` then `close` for one failure, and both
+    handlers painted a notice — `STREAM_LOST` twice, or `STREAM_LOST` above
+    `STREAM_NEVER_ARRIVED`. The close handler is the one that says it."""
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    on_error = block_after(opened, "socket.onerror")
+    assert on_error is not None and "notice(" not in on_error, on_error
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and close_handler.count("notice(") == 1, close_handler
 
 
 # ----- the failure paths the degrade and the socket each own ------------------

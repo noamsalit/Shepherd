@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -28,6 +29,9 @@ from shepherd.store.db import Store
 from shepherd.testkit.scripted_runner import ScriptedRunner
 
 playwright_api = pytest.importorskip("playwright.sync_api")
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 SESSION_NAME = "shp_eng-input"
 ENGINE_SESSION_ID = "eng-input"
@@ -86,6 +90,71 @@ def _owned(store: Store) -> str:
     return session.id
 
 
+#: REM-FIX 1 #4: what the page says, in order, when the pane refused a key —
+#: the stream's notice **once** (hunter L1), then the refusal's own sentence (M5).
+REFUSED_NOTICES = [
+    "the terminal stream stopped — no more bytes will arrive",
+    "input is off: the pane refused a key, so nothing more typed here reaches it",
+]
+
+
+def _open_terminal(page: Page, client: Client, session_id: str) -> None:
+    """Navigate to the session and wait for the snapshot, so the socket is open."""
+    page.goto(f"{client.origin}/")
+    page.wait_for_timeout(700)
+    page.locator('.nav-item[data-page="flock"]').click()
+    page.wait_for_timeout(400)
+    page.locator("#flock-projects .project").first.click()
+    page.wait_for_timeout(300)
+    page.locator(f'#flock-cards .card[data-session-id="{session_id}"]').click()
+    page.locator("#session-terminal .xterm-screen").wait_for(timeout=BOUND_S * 1000)
+    page.wait_for_function(
+        "() => document.querySelector('#session-terminal .xterm-rows')"
+        " && document.querySelector('#session-terminal .xterm-rows').textContent.trim() !== ''",
+        timeout=BOUND_S * 1000,
+    )
+
+
+def test_a_refused_key_says_so_once(
+    client: Client, store: Store, scripted_runner: HoldingRunner, master_doubles: MasterDoubles
+) -> None:
+    """The pane refuses the first key: the server closes with 1011, and the page
+    says the stream stopped once and that the pane refused a key — not that the
+    pane ended, and not the same notice twice."""
+    from playwright.sync_api import sync_playwright
+
+    from shepherd.core.runner import RunnerRefusal
+
+    session_id = _owned(store)
+    scripted_runner.fault = RunnerRefusal("tmux exited 1: command too long")
+    play = sync_playwright().start()
+    try:
+        browser = play.chromium.launch()
+    except Exception as exc:  # noqa: BLE001 - an absent browser is not a defect
+        play.stop()
+        pytest.skip(f"chromium is not available: {exc}")
+    try:
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
+        _open_terminal(page, client, session_id)
+        page.locator("#session-terminal .xterm-screen").click()
+        page.keyboard.type("x")
+        notices = page.locator("#session-terminal .terminal-degraded")
+        deadline = time.monotonic() + BOUND_S
+        while time.monotonic() < deadline and notices.count() < len(REFUSED_NOTICES):
+            time.sleep(0.05)
+        page.wait_for_timeout(300)
+        assert notices.all_text_contents() == REFUSED_NOTICES
+        assert scripted_runner.writes == []
+        assert errors == [], errors
+    finally:
+        browser.close()
+        play.stop()
+        for stream in scripted_runner.streams:
+            stream.close()
+
+
 def test_keystrokes_in_the_emulator_are_sent_on_the_socket(
     client: Client, store: Store, scripted_runner: HoldingRunner, master_doubles: MasterDoubles
 ) -> None:
@@ -102,20 +171,8 @@ def test_keystrokes_in_the_emulator_are_sent_on_the_socket(
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
-        page.goto(f"{client.origin}/")
-        page.wait_for_timeout(700)
-        page.locator('.nav-item[data-page="flock"]').click()
-        page.wait_for_timeout(400)
-        page.locator("#flock-projects .project").first.click()
-        page.wait_for_timeout(300)
-        page.locator(f'#flock-cards .card[data-session-id="{session_id}"]').click()
-        page.locator("#session-terminal .xterm-screen").wait_for(timeout=BOUND_S * 1000)
         # Arrival: the snapshot frame arrived, so the socket is open.
-        page.wait_for_function(
-            "() => document.querySelector('#session-terminal .xterm-rows')"
-            " && document.querySelector('#session-terminal .xterm-rows').textContent.trim() !== ''",
-            timeout=BOUND_S * 1000,
-        )
+        _open_terminal(page, client, session_id)
         page.locator("#session-terminal .xterm-screen").click()
         page.keyboard.type("qa6")
         page.keyboard.press("Enter")

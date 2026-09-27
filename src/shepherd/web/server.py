@@ -36,7 +36,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from shepherd.toolsurface.registry import GENERIC_ERROR, invoke
-from shepherd.toolsurface.tools_terminal import TerminalStream
+from shepherd.toolsurface.tools_terminal import KeyRefused, TerminalStream
 from shepherd.toolsurface.types import Audience, CallerContext
 from shepherd.web import routes, sse, ws
 
@@ -75,34 +75,63 @@ BODY_READ_TIMEOUT_S = 2.0
 TERMINAL_TOOL = "terminal_stream"
 
 #: D76: the name of the one reader thread per terminal connection, and how long
-#: the handler waits for it once the socket is shut. A bound, not a hope.
+#: the handler waits for it once the socket is shut. A bound, not a hope — and
+#: longer than one tmux call (`runner/local.py`'s `TMUX_CALL_TIMEOUT_S`, 10 s),
+#: so a key write in flight at the end finishes inside it. `web/` may not import
+#: `runner/`; `test_the_input_join_outlasts_one_tmux_call` pins the relation.
 INPUT_THREAD_NAME = "shepherd-terminal-input"
-INPUT_JOIN_S = 5.0
+INPUT_JOIN_S = 12.0
+
+#: RFC 6455 §7.4.1's 1011: input ended on something other than the pane or the
+#: client ending — the pane refused a key, or the reader itself failed. The page
+#: tells it from 1000 (the pane ended) and says which (`terminal.js`).
+CLOSE_INPUT_FAILED = 1011
+KEY_REFUSED_REASON = "a key was refused"
+READER_FAILED_REASON = "the input reader failed"
+
+
+class _InputEnded(Exception):
+    """The connection has ended, so the pump stops before another key is written."""
 
 
 class _Ending:
     """How one terminal connection ended, and the **one** close of its stream.
 
     Two threads can end a connection — the writer when the pane's stream stops,
-    the reader when the client closes (D76) — and the stream is released once,
-    whichever is first. The reader's code is recorded under the same lock, so
-    the writer's close frame carries it.
+    the reader when the client closes or a key is refused (D76) — and the stream
+    is released once, whichever is first. The first close's code and reason are
+    recorded under the same lock, so the writer's close frame carries them.
     """
 
     def __init__(self, stream: TerminalStream) -> None:
         self.stream = stream
         self.code = ws.CLOSE_NORMAL
+        self.reason = ""
         self._lock = threading.Lock()
         self._closed = False
 
-    def close(self, code: int | None = None) -> None:
+    @property
+    def closed(self) -> bool:
         with self._lock:
-            if code is not None:
-                self.code = code
+            return self._closed
+
+    def close(self, code: int = ws.CLOSE_NORMAL, reason: str = "") -> None:
+        with self._lock:
             if self._closed:
                 return
             self._closed = True
+            self.code, self.reason = code, reason
         self.stream.close()
+
+    def deliver(self, keys: bytes) -> None:
+        """One frame's keys to the pane — never after the end, never after a refusal."""
+        if self.closed:
+            raise _InputEnded
+        try:
+            self.stream.write(keys)
+        except KeyRefused:
+            self.close(CLOSE_INPUT_FAILED, KEY_REFUSED_REASON)
+            raise _InputEnded from None
 
 
 class BindAddressRefused(ValueError):
@@ -417,7 +446,7 @@ class FleetHandler(BaseHTTPRequestHandler):
             for chunk in stream.chunks():
                 self.wfile.write(ws.build_frame(chunk, opcode=ws.OP_BINARY))
                 self.wfile.flush()
-            self.wfile.write(ws.close_frame(ending.code))
+            self.wfile.write(ws.close_frame(ending.code, ending.reason))
             self.wfile.flush()
         except OSError:  # a closed tab, from in here, is a write that fails
             pass
@@ -429,12 +458,26 @@ class FleetHandler(BaseHTTPRequestHandler):
         """The reader: frames to `stream.write` until the client stops (D76).
 
         Ending it ends the stream, so `chunks()` returns and the writer's close
-        frame goes out carrying the reader's code (1009 for an oversize frame).
+        frame goes out carrying the reader's code (1009 for an oversize frame,
+        1011 for a refused key). A reader that dies on anything else still ends
+        the connection, with 1011, on its way out.
         """
+        code, reason = CLOSE_INPUT_FAILED, READER_FAILED_REASON
         try:
-            ending.close(ws.pump_input(self.rfile.read1, ending.stream.write))
-        except OSError:  # the socket shut under a blocked read
-            ending.close()
+            code, reason = ws.pump_input(lambda size: self._keys(ending, size), ending.deliver), ""
+        except _InputEnded:
+            pass  # already ended; the first close's code stands
+        finally:
+            ending.close(code, reason)
+
+    def _keys(self, ending: _Ending, size: int) -> bytes:
+        """Up to `size` bytes from the client; `b""` once the connection has ended."""
+        if ending.closed:
+            return b""
+        try:
+            return self.rfile.read1(size)
+        except (OSError, ValueError):  # shut under a blocked read; a closed `rfile`
+            return b""
 
     def _stop_reading(self, reader: threading.Thread) -> None:
         """Shut the socket so a blocked read returns, then join, bounded."""
