@@ -192,12 +192,14 @@ def test_install_sets_explicit_timeout(settings_path: Path, entry: HookEntry) ->
 
 def test_install_is_idempotent(settings_path: Path, entry: HookEntry) -> None:
     """E17: twice ⇒ identical bytes, so two scopes carry one identical command."""
+    pre_image = settings_path.read_bytes()
     install_hooks(settings_path, entry)
     once = settings_path.read_bytes()
     result = install_hooks(settings_path, entry)
     assert result.refused_reason is None
     assert settings_path.read_bytes() == once
-    assert result.backup_path.read_bytes() == once
+    # BC-20 (ruling 7): the backup keeps the first pre-install image, not the second's.
+    assert result.backup_path.read_bytes() == pre_image
 
 
 def test_installed_command_is_the_host_command_verbatim(

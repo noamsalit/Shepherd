@@ -27,7 +27,12 @@ import pytest
 
 from shepherd.engines.claude_code.events import SUBSCRIBED_EVENTS
 from shepherd.engines.claude_code.hookd_command import HookEntry, build_hook_entry
-from shepherd.engines.claude_code.hooks_config import BACKUP_SUFFIX, install_hooks, uninstall_hooks
+from shepherd.engines.claude_code.hooks_config import (
+    BACKUP_SUFFIX,
+    InstallResult,
+    install_hooks,
+    uninstall_hooks,
+)
 from shepherd.host.mac import MacHost
 
 from .. import hostprobe, paths
@@ -179,8 +184,15 @@ def test_h4_original_survives_two_installs(hooks_env: HooksEnv, rec: Recorder) -
               "after the second install some backup the product wrote holds bytes O",
               {name: (directory / name).read_bytes()[:80] for name in backups(directory)})
     uninstall_hooks(target)
-    rec.check("files.clause2_uninstall_restores_bytes", target.read_bytes() == H4_ORIGINAL,
-              "after the uninstall the file is byte-equal to O", target.read_bytes()[:160])
+    # Ruling 7 (BC-20): uninstall removes only our entries and restores no bytes (a byte
+    # restore would lose the user's edits since install); the backup keeps O.
+    backup = directory / ("settings.json" + BACKUP_SUFFIX)
+    after = load(target)
+    backup_bytes = backup.read_bytes() if backup.exists() else None
+    rec.check("files.clause2_uninstall_removes_only_ours",
+              after == json.loads(H4_ORIGINAL) and backup_bytes == H4_ORIGINAL,
+              "after the uninstall the file is JSON-equal to O and the backup still holds bytes O",
+              {"file": after, "backup": (backup_bytes or b"")[:160]})
     sha_clause(rec)
     rec.finish()
 
@@ -194,8 +206,39 @@ INVALID: tuple[tuple[str, bytes | None], ...] = (
 )
 
 
+#: Ruling 23 (SD-10): an event value that is not an array of matchers is left untouched and
+#: reported as a warning; the other events are installed. So this case is a partial install.
+PARTIAL_INSTALL_CASE = "stop_string"
+
+
+def has_managed_group(groups: object) -> bool:
+    return isinstance(groups, list) and any(
+        isinstance(group, dict) and group.get("_shepherd_managed") is True for group in groups)
+
+
+def stop_string_clauses(rec: Recorder, case: Path, content: bytes, result: InstallResult) -> None:
+    """H5 `stop_string`: installed with a warning naming `Stop`, `Stop` still `"x"`, O backed up."""
+    target = case / "settings.json"
+    rec.equal(f"api.{PARTIAL_INSTALL_CASE}_installed", None, result.refused_reason)
+    rec.equal(f"api.{PARTIAL_INSTALL_CASE}_events_installed", len(SUBSCRIBED_EVENTS) - 1,
+              result.events_installed)
+    rec.check(f"api.{PARTIAL_INSTALL_CASE}_warning_names_stop",
+              any(warning.startswith("Stop:") for warning in result.warnings),
+              "a warning starting 'Stop:'", list(result.warnings))
+    hooks = load(target).get("hooks")
+    rec.equal(f"files.{PARTIAL_INSTALL_CASE}_stop_untouched", "x",
+              hooks.get("Stop") if isinstance(hooks, dict) else hooks)
+    missing = [event for event in SUBSCRIBED_EVENTS if event != "Stop"
+               and not has_managed_group(hooks.get(event) if isinstance(hooks, dict) else None)]
+    rec.equal(f"files.{PARTIAL_INSTALL_CASE}_managed_on_every_other_event", [], missing)
+    backup = case / ("settings.json" + BACKUP_SUFFIX)
+    rec.equal(f"files.{PARTIAL_INSTALL_CASE}_backup_holds_original", content,
+              backup.read_bytes() if backup.exists() else None)
+
+
 @scenario("H5")
 def test_h5_invalid_settings_refused_and_never_written(hooks_env: HooksEnv, rec: Recorder) -> None:
+    """The refusal cases are refused and never written; `stop_string` is a partial install (ruling 23)."""
     directory = hooks_env.root / "h5"
     directory.mkdir()
     for name, content in INVALID:
@@ -215,6 +258,9 @@ def test_h5_invalid_settings_refused_and_never_written(hooks_env: HooksEnv, rec:
         finally:
             if name == "mode_000":
                 target.chmod(0o600)  # H5 Cleanup: restore the mode
+        if name == PARTIAL_INSTALL_CASE and not raised:
+            stop_string_clauses(rec, case, content or b"", result)
+            continue
         rec.check(f"api.{name}_refused", refusal is not None and bool(refusal.strip()),
                   "a refusal naming the problem (returned, not raised)", refusal or raised)
         rec.equal(f"files.{name}_bytes_unchanged", content, target.read_bytes())
