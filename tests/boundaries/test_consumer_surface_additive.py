@@ -67,7 +67,40 @@ T24_ADDED_MODULES: frozenset[str] = frozenset()
 #: `post_milestone.edits` entry in the consumer manifest, so an import cannot
 #: arrive without the same named reason a byte change needs. Filled by the
 #: rulings plan's P13, from the phase ledgers.
-POST_M4_ADDED_IMPORTS: Mapping[str, frozenset[str]] = {}
+POST_M4_ADDED_IMPORTS: Mapping[str, frozenset[str]] = {
+    # qa6 BC-05 (owner ruling 1, §3 D68, ADR-QR-1; rulings P10 + REM-FIX 1): the CLI
+    # reaches the running controld over its owner-only RPC socket.
+    "cli/commands.py": frozenset({
+        "pathlib",
+        "pathlib.Path",
+        "shepherd.toolsurface.rpc",
+        "shepherd.toolsurface.rpc.NOT_SENT",
+        "shepherd.toolsurface.rpc.NO_ANSWER",
+        "shepherd.toolsurface.rpc.call_remote",
+    }),
+    # …and `main()` names that socket, refuses an impossible `--since` through the one
+    # date reader, and makes `--settings` absolute before any call (P10, REM-FIX RF1-1).
+    "cli/main.py": frozenset({
+        "pathlib",
+        "pathlib.Path",
+        "shepherd.core.clock",
+        "shepherd.core.clock.parse_date",
+        "shepherd.host.base.SocketPathTooLong",
+        "shepherd.toolsurface.rpc",
+        "shepherd.toolsurface.rpc.RPC_SOCKET_NAME",
+    }),
+    # `time`: qa6 BC-32's whole-body deadline (owner ruling 11; rulings P9 REM-FIX 1).
+    # `socket`, `threading`, `KeyRefused`: qa6 SD-05's keystroke reader (owner ruling 18,
+    # §3 D76, ADR-QR-4; rulings P12 + REM-FIX 1).
+    "web/server.py": frozenset({
+        "socket",
+        "threading",
+        "time",
+        "shepherd.toolsurface.tools_terminal.KeyRefused",
+    }),
+    # qa6 SD-05: `pump_input(read, deliver)`'s two callables (rulings P12, §3 D76).
+    "web/ws.py": frozenset({"collections.abc.Callable"}),
+}
 
 #: …and the post-M4 modules under `web/` or `cli/`, declared the same way.
 POST_M4_ADDED_MODULES: frozenset[str] = frozenset()

@@ -89,8 +89,9 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "future-schema refusal it asserts, so the test could no longer observe the rule it "
         "was written for. The rule itself is unchanged and is re-proved one version up by "
         "the named successor in the same module, "
-        "test_future_schema_refuses_to_start_at_five, which inserts version 5.",
-        "§7 rule 2, re-anchored by §3 D57's migration 004.",
+        "test_future_schema_refuses_to_start_at_six, which inserts version 6 (renamed from "
+        "…_at_five when §3 D73's migration 005 made 5 real).",
+        "§7 rule 2, re-anchored by §3 D57's migration 004; §3 D73",
     ),
     "tests/store/test_store_delegation.py::test_upsert_workspace_updates_a_moved_root_path": (
         "The test pinned upsert_workspace's middle arm — update a changed root_path — and "
@@ -212,6 +213,84 @@ RETIRED_NODE_IDS: Mapping[str, tuple[str, str]] = {
         "session view into the Flock's third pane, and §12 already placed D21's next_actions "
         "list in that view's header, which is why there is somewhere for the list to go.",
         "§12 (the Session view header already carries the list) with §3 D67",
+    ),
+    # ----- qa6 rulings (docs/plans/2026-09-27-qa6-rulings-plan.md), written by P13 from the
+    # phase ledgers in docs/plans/qa6-rulings-blockers/ --------------------------------------
+    "tests/orchestration/test_spawn.py::test_an_unknown_trust_verdict_stays_unknown": (
+        "Owner ruling 27 (L5) makes session.spawned.trusted a boolean answer to 'will a trust "
+        "dialog block this session?': an unknown verdict now publishes false, while trust_source "
+        "still names the unknown and trust.py's reader keeps None. The old name asserts None on "
+        "the frame, which the ruling reverses, so it is retired rather than inverted. Re-proved "
+        "by the named successor in the same file, "
+        "test_an_unknown_trust_verdict_is_published_as_not_trusted, with the positive control "
+        "test_a_known_trusted_directory_is_published_as_trusted (qa6 rulings P4 ledger).",
+        "§3 D78 (owner ruling 27, L5)",
+    ),
+    "tests/test_core_stops.py::test_stop_reason_has_twenty_members": (
+        "Owner ruling 9 (BC-28) adds `refused` as the 21st stop reason, admitted by migration "
+        "005's CHECK list, so a name stating a count of twenty is no longer true of the "
+        "vocabulary. The set is re-proved, plus `refused`, by the named successor in the same "
+        "file, test_stop_reason_has_twenty_one_members (16 mechanical + 4 completeness + 1 "
+        "declared, spelled as migrations 002 and 005 list them; qa6 rulings P4 ledger).",
+        "§3 D73 (owner ruling 9, BC-28; ADR-QR-6)",
+    ),
+    "tests/toolsurface/test_tools_m3.py::test_send_to_a_row_with_no_pane_is_queued_not_lost": (
+        "Owner ruling 20 (SD-07, RD-5) refuses a send to a pane-less row (runner_handle IS NULL: "
+        "attached rows and T12's orphans) at send time and writes no mailbox_message row, so "
+        "'queued, not lost' is now false. The named successor in the same file, "
+        "test_send_to_a_row_with_no_pane_is_refused_with_no_row, pins the refusal and the empty "
+        "mailbox for an owned handle-less row and a real attached row, and keeps the unknown-id "
+        "half unchanged (qa6 rulings P7 ledger).",
+        "§3 D74 (owner ruling 20, RD-5)",
+    ),
+    "tests/daemons/test_controld.py::test_the_registry_is_frozen_before_the_server_binds": (
+        "D71 amends ADR-7 §4: controld now binds its port before it opens the store, so the "
+        "registry is frozen before the server SERVES, no longer before it binds, and the old "
+        "name states a start order the daemon no longer has. The amended property is proved by "
+        "the named successor "
+        "tests/daemons/test_controld_start_order.py::test_the_registry_is_frozen_before_the_server_serves: "
+        "a request queued between the bind and serve_forever is answered by the frozen registry "
+        "(qa6 rulings P8 ledger).",
+        "§3 D71 (owner ruling 8, BC-21 C7; ADR-7 §4 as amended)",
+    ),
+    "tests/daemons/test_controld.py::test_the_root_still_wires_exactly_three_threads": (
+        "Owner ruling 1 (BC-05, ADR-QR-1) gives the CLI an owner-only RPC listener, a fourth "
+        "controld thread named `rpc`, so the pinned tuple is ('ingest', 'rpc', 'scan', 'http') "
+        "and 'exactly three threads' is false. Re-proved by the named successor in the same "
+        "file, test_the_root_wires_exactly_four_threads (qa6 rulings P10 ledger).",
+        "§3 D68 (owner ruling 1, BC-05; ADR-QR-1)",
+    ),
+    "tests/daemons/test_controld.py::test_no_new_socket_is_bound": (
+        "Owner ruling 1 (BC-05, ADR-QR-1): controld now binds exactly two sockets of its own, "
+        "controld.sock and rpc.sock, both unlinked on stop, so 'no new socket' is false. The "
+        "named successor in the same file, test_controld_binds_exactly_its_control_and_rpc_sockets, "
+        "still catches a third listener (qa6 rulings P10 ledger).",
+        "§3 D68 (owner ruling 1, BC-05; ADR-QR-1)",
+    ),
+    "tests/boundaries/test_ws_read_path.py::test_the_ws_parser_has_no_caller_anywhere_in_src": (
+        "Owner ruling 18 (SD-05, ADR-QR-4) built the browser-to-pane keystroke read loop, so "
+        "ws.parse_frame now has one caller in src and 'no caller anywhere' is false. The named "
+        "successor in the same file, test_the_ws_parser_has_exactly_one_caller_the_input_pump, "
+        "asserts that caller is only ws.pump_input, run only by FleetHandler._read_keys, started "
+        "only by FleetHandler._terminal (qa6 rulings P12 ledger).",
+        "§3 D76 (owner ruling 18, SD-05; ADR-QR-4)",
+    ),
+    "tests/web/test_session_page.py::test_the_keystroke_path_is_absent_and_says_so": (
+        "Owner ruling 18 (SD-05) wires keystrokes over the terminal WebSocket, reversing T19-c: "
+        "the emulator now takes input, and the 'input is not wired yet' sentence the old test "
+        "required is false and removed. The surviving half (no POST route for terminal_write) is "
+        "asserted by the named successor in the same file, "
+        "test_the_keystroke_path_is_wired_and_the_page_says_nothing_false (qa6 rulings P12 ledger).",
+        "§3 D76 (owner ruling 18, SD-05)",
+    ),
+    "tests/web/test_ws.py::test_every_test_of_the_uncalled_parser_says_it_is_uncalled": (
+        "Owner ruling 18 (SD-05) gave ws.parse_frame its one caller, ws.pump_input, so a test "
+        "named for an uncalled parser became false. Not in the plan's list; the phase forced it "
+        "and P12's ledger records it. The named successor in the same file, "
+        "test_every_parser_test_says_the_pump_is_its_one_caller, keeps the fourteen-test "
+        "registry and the independent AST cross-check, under a decorator that says the pump "
+        "calls the parser.",
+        "§3 D76 (owner ruling 18, SD-05; ADR-QR-4)",
     ),
 }
 
