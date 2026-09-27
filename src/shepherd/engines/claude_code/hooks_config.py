@@ -53,6 +53,9 @@ class InstallResult:
 
     `backup_path` equals `settings_path` when **nothing was written** — a
     refusal or a dry run — so "no backup exists" is a value rather than a lie.
+    Otherwise it names `<file>.shepherd-backup`, which holds the **first**
+    pre-install image and is never overwritten by a later install or uninstall
+    (BC-20). A backup already there, the user's own included, is kept.
     For `uninstall_hooks`, `events_installed` counts the events our entries were
     removed from.
     """
@@ -277,6 +280,20 @@ def _pre_image(path: Path) -> bytes | None:
         return None
 
 
+def _keep_first_backup(backup_path: Path, pre_image: bytes) -> None:
+    """Write the backup only if none exists (BC-20, ruling 7).
+
+    The first pre-install image is the one worth keeping: every later image
+    already holds our entries. `"xb"` makes "never overwritten" atomic, and a
+    backup the user made themselves is kept for the same reason.
+    """
+    try:
+        with backup_path.open("xb") as handle:
+            handle.write(pre_image)
+    except FileExistsError:
+        return
+
+
 def _refusal(settings_path: Path, reason: str, warnings: tuple[str, ...] = ()) -> InstallResult:
     return InstallResult(
         settings_path=settings_path,
@@ -298,7 +315,7 @@ def _commit(
     pre_image = _pre_image(settings_path)
     backup_path = settings_path.with_name(settings_path.name + BACKUP_SUFFIX)
     if pre_image is not None:
-        backup_path.write_bytes(pre_image)
+        _keep_first_backup(backup_path, pre_image)
     try:
         write_bytes(settings_path, _serialise(merged))
         problems = _written_problems(settings_path, entry, installed)
@@ -368,7 +385,7 @@ def uninstall_hooks(settings_path: Path) -> InstallResult:
     pre_image = _pre_image(settings_path)
     backup_path = settings_path.with_name(settings_path.name + BACKUP_SUFFIX)
     if pre_image is not None:
-        backup_path.write_bytes(pre_image)
+        _keep_first_backup(backup_path, pre_image)
     try:
         write_bytes(settings_path, _serialise(merged))
         settings_after, refusal_after = _load(settings_path)
