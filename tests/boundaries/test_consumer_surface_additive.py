@@ -60,6 +60,18 @@ T24_ADDED_IMPORTS: Mapping[str, frozenset[str]] = {}
 #: which are not Python and are Gate A's business.
 T24_ADDED_MODULES: frozenset[str] = frozenset()
 
+#: **Post-M4 declared additions** (ruling 11, extended from bytes to imports):
+#: the imports and modules a consumer gained *after* M4 closed, when a ruling
+#: authorised the move. T24's tables above stay T24's; these are a second,
+#: separate declaration, and every module path named here must also carry a
+#: `post_milestone.edits` entry in the consumer manifest, so an import cannot
+#: arrive without the same named reason a byte change needs. Filled by the
+#: rulings plan's P13, from the phase ledgers.
+POST_M4_ADDED_IMPORTS: Mapping[str, frozenset[str]] = {}
+
+#: …and the post-M4 modules under `web/` or `cli/`, declared the same way.
+POST_M4_ADDED_MODULES: frozenset[str] = frozenset()
+
 
 def frozen_surface() -> dict[str, object]:
     loaded = json.loads(FROZEN.read_text(encoding="utf-8"))
@@ -129,12 +141,45 @@ def import_drift(
     return gone, dropped, added
 
 
+def flattened(table: Mapping[str, frozenset[str]]) -> list[str]:
+    return sorted(f"{module}: {name}" for module, names in table.items() for name in sorted(names))
+
+
 def declared_additions() -> list[str]:
-    return sorted(
-        f"{module}: {name}"
-        for module, names in T24_ADDED_IMPORTS.items()
-        for name in sorted(names)
+    return flattened(T24_ADDED_IMPORTS)
+
+
+def addition_violations(
+    added: list[str],
+    new_modules: frozenset[str],
+    post_m4_imports: Mapping[str, frozenset[str]],
+    post_m4_modules: frozenset[str],
+    manifest: Mapping[str, object],
+) -> list[str]:
+    """Gate B's additive-only rule, as a function so the controls drive it.
+
+    `added` must equal T24's declared additions plus the post-M4 ones, and
+    `new_modules` T24's declared modules plus the post-M4 ones — equalities, so
+    a declaration that never arrived fails as surely as an arrival nobody
+    declared. Every post-M4 module path must also carry a `post_milestone`
+    entry in `manifest`: the named reason a byte change needs (ruling 11).
+    """
+    found: list[str] = []
+    declared = set(declared_additions()) | set(flattened(post_m4_imports))
+    modules = T24_ADDED_MODULES | post_m4_modules
+    for label, names in (
+        ("undeclared", set(added) - declared),
+        ("declared but absent", declared - set(added)),
+        ("undeclared modules", new_modules - modules),
+        ("declared modules absent", modules - new_modules),
+    ):
+        if names:
+            found.append(f"{label}: {sorted(names)}")
+    unexplained = (set(post_m4_imports) | post_m4_modules) - boundary.post_milestone_paths(manifest)
+    found.extend(
+        f"{path}: a post-M4 addition with no post_milestone entry" for path in sorted(unexplained)
     )
+    return found
 
 
 def scope_violations(frozen: Mapping[str, object]) -> list[str]:
@@ -222,11 +267,14 @@ def test_the_consumer_import_sets_are_additive_only() -> None:
     gone, dropped, added = import_drift(was, live)
     assert gone == [], f"a consumer module disappeared: {gone}"
     assert dropped == [], f"a consumer module lost an import: {dropped}"
-    assert added == declared_additions(), {
-        "undeclared": sorted(set(added) - set(declared_additions())),
-        "declared but absent": sorted(set(declared_additions()) - set(added)),
-    }
-    assert set(live) - set(was) == T24_ADDED_MODULES, sorted(set(live) - set(was))
+    new_modules = frozenset(set(live) - set(was))
+    assert addition_violations(
+        added,
+        new_modules,
+        POST_M4_ADDED_IMPORTS,
+        POST_M4_ADDED_MODULES,
+        boundary.consumer_manifest(),
+    ) == []
 
 
 def test_the_widened_reader_is_the_one_the_gate_runs_on() -> None:
@@ -277,21 +325,108 @@ def test_the_import_comparison_bites() -> None:
     assert import_drift(was, narrowed) == ([], ["web/server.py: shepherd.web.routes"], [])
 
 
+SERVER_PATH = "web/server.py"
+
+
+def server_digest_violations(
+    live: str, recorded: str, manifest: Mapping[str, object]
+) -> list[str]:
+    """The `server.py` digest pin, as a function so the controls drive it.
+
+    Passes when `live` is the pinned digest, **or** (ruling 11) when `manifest`
+    declares a `post_milestone.edits` entry for `web/server.py` and its `files`
+    block holds exactly `live`. The pin stays: an undeclared edit, or a
+    declaration whose `files` digest is stale, still fails.
+    """
+    if live == recorded:
+        return []
+    if SERVER_PATH not in boundary.post_milestone_paths(manifest):
+        return [f"{SERVER_PATH} moved from the pinned digest with no post_milestone entry"]
+    files = manifest.get("files")
+    declared = files.get(SERVER_PATH) if isinstance(files, dict) else None
+    if declared != live:
+        return [f"{SERVER_PATH} is declared but files holds {declared}, not the live {live}"]
+    return []
+
+
 def test_web_server_is_byte_unchanged() -> None:
     """T24's Exit Criteria as a digest. `server.py` gains nothing: the chat page
     is a route table and static assets, and a handler body in `web/` is the
-    drift ADR-M4-7 names."""
+    drift ADR-M4-7 names.
+
+    *Amended by owner ruling 11 (qa6 BC-32) and ADR-M4-7's 2026-09-27
+    amendment:* a **declared** `post_milestone.edits` entry for `web/server.py`
+    is accepted when the manifest `files` digest equals the live one. The pin
+    itself (`server_sha256`, and the never-rewritten `baseline`) is unchanged.
+    """
     frozen = frozen_surface()
     recorded = frozen["server_sha256"]
     assert isinstance(recorded, str) and len(recorded) == 64, recorded
     live = boundary.SRC_ROOT / "web" / "server.py"
     assert live.is_file(), live
-    assert hashlib.sha256(live.read_bytes()).hexdigest() == recorded
+    digest = hashlib.sha256(live.read_bytes()).hexdigest()
+    assert server_digest_violations(digest, recorded, boundary.consumer_manifest()) == []
 
     # …and it is the same digest Gate A's never-rewritten baseline holds, so the
     # two gates cannot disagree about which bytes they were frozen on.
     baseline = boundary.manifest_block(boundary.consumer_manifest(), "baseline")
     assert baseline["web/server.py"] == recorded
+
+
+#: Two literal digests, each the 64-hex shape of a real one.
+PINNED = "a" * 64
+EDITED = "b" * 64
+
+
+def manifest_with(edits: list[dict[str, str]], files: Mapping[str, str]) -> dict[str, object]:
+    return {"files": dict(files), "post_milestone": {"rule": "literal", "edits": edits}}
+
+
+def declared_edit(path: str) -> dict[str, str]:
+    return {"path": path, "at": "2026-09-27T00:00:00Z", "by": "a control", "why": "a literal"}
+
+
+def test_an_undeclared_server_edit_is_caught() -> None:
+    """Ruling 11 keeps the pin: an edit with no `post_milestone` entry fails,
+    even when `files` already holds the new digest."""
+    assert server_digest_violations(PINNED, PINNED, manifest_with([], {})) == []
+    undeclared = manifest_with([declared_edit("web/sse.py")], {SERVER_PATH: EDITED})
+    assert server_digest_violations(EDITED, PINNED, undeclared) != []
+    assert server_digest_violations(EDITED, PINNED, {"files": {SERVER_PATH: EDITED}}) != []
+
+
+def test_a_declared_server_edit_with_a_stale_files_digest_is_caught() -> None:
+    """A declaration is not a blank cheque: `files` must hold the live digest."""
+    stale = manifest_with([declared_edit(SERVER_PATH)], {SERVER_PATH: PINNED})
+    assert server_digest_violations(EDITED, PINNED, stale) != []
+    missing = manifest_with([declared_edit(SERVER_PATH)], {})
+    assert server_digest_violations(EDITED, PINNED, missing) != []
+
+
+def test_a_declared_server_edit_with_its_live_digest_is_accepted() -> None:
+    """The arrival half of ruling 11: declared, and `files` holds the live bytes."""
+    declared = manifest_with([declared_edit(SERVER_PATH)], {SERVER_PATH: EDITED})
+    assert server_digest_violations(EDITED, PINNED, declared) == []
+
+
+def test_a_post_m4_import_without_a_manifest_entry_is_caught() -> None:
+    """A post-M4 import table entry needs a `post_milestone` entry for its path."""
+    imports = {"cli/main.py": frozenset({"shepherd.toolsurface.rpc"})}
+    added = ["cli/main.py: shepherd.toolsurface.rpc"]
+    bare = manifest_with([], {})
+    messages = addition_violations(added, frozenset(), imports, frozenset(), bare)
+    assert any("no post_milestone entry" in m and "cli/main.py" in m for m in messages), messages
+
+    module_only = manifest_with([declared_edit("cli/main.py")], {})
+    new = frozenset({"cli/new.py"})
+    messages = addition_violations([], new, {}, new, module_only)
+    assert any("no post_milestone entry" in m and "cli/new.py" in m for m in messages), messages
+
+    declared = manifest_with([declared_edit("cli/main.py")], {})
+    assert addition_violations(added, frozenset(), imports, frozenset(), declared) == []
+    # …and an import the table does not name is still undeclared, manifest or not.
+    stray = [*added, "cli/main.py: shepherd.store.db"]
+    assert addition_violations(stray, frozenset(), imports, frozenset(), declared) != []
 
 
 def test_the_scope_controls_refuse_a_freeze_that_points_at_nothing() -> None:
