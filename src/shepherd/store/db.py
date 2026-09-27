@@ -477,6 +477,10 @@ class Store:
             lambda c: writes.apply_stop_verdict(c, session_id, verdict, ended_at, exit_code)
         )
 
+    def end_refused(self, session_id: str, verdict: Verdict, ended_at: str) -> Session:
+        """§3 D73: a refused start's `stopped` fold and stop verdict, one transaction."""
+        return self._write(lambda c: writes.end_refused(c, session_id, verdict, ended_at))
+
     def stop_verdict_counts(self) -> StopCounts:
         return reads.stop_verdict_counts(self._read())
 

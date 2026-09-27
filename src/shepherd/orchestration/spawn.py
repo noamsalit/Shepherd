@@ -56,6 +56,7 @@ from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL,
 from shepherd.orchestration.declared_verdicts import refused_verdict
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
+from shepherd.store.models import StoreError
 
 #: Re-exported because `SpawnRefused` is what a caller of *this* module catches:
 #: `spawn_owned_session` is the published entry point and its refusal type must
@@ -172,8 +173,8 @@ def _record(
     """The row's side of step 7, and the unknown's count.
 
     A `stopped` row gets the state and nothing more: the exit code reaches it
-    through T12's `observe_exit`, and the stop **verdict** has exactly one writer
-    (`apply_stop_verdict`, M2's lane). A spawn decides neither.
+    through T12's `observe_exit`, and its stop **verdict** through M2's lane.
+    The poll decides neither; only a refused start declares one (`end_refused`).
     """
     if found.state is SessionState.NEEDS_YOU:
         store.apply_fold_delta(
@@ -256,10 +257,10 @@ def spawn_owned_session(
         ensure_server()
         handle = runner.start(spec)
     except RunnerRefusal as refusal:
-        stamp = now()
-        ended = FoldDelta(state=SessionState.STOPPED, last_event_at=stamp)
-        store.apply_fold_delta(session_id, ended)
-        store.apply_stop_verdict(session_id, refused_verdict(refusal.reason), stamp, None)
+        try:  # one transaction: the row ends whole or stays as it was (T12 reconciles it)
+            store.end_refused(session_id, refused_verdict(refusal.reason), now())
+        except StoreError:
+            pass  # the runner's refusal is the answer; a failed ending does not replace it
         return SpawnRefused(refusal.reason, None)
     store.set_runner_handle(session_id, handle)
 

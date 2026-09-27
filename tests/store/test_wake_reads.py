@@ -243,13 +243,17 @@ def test_the_wake_set_hands_back_sessions_and_never_a_row(
 def test_a_refused_start_is_not_a_wake_candidate(store: Store) -> None:
     """§3 D73 (E-QR-17, PP17): a master-origin row ended `refused`/`error` is
     exactly D31's population and is still excluded — the master already holds
-    the refusal as its tool result. The positive control differs from it by
-    its verdict alone: same origin, same `ended_at`, `killed`/`unfinished`.
-    Both with a `since` and without one."""
+    the refusal as its tool result. Two positive controls, same origin and
+    `ended_at`: `killed`/`unfinished`, and `crashed`/`error` — the second
+    differs from the refused row by its **reason alone**, so an exclusion that
+    widened to the whole `error` bucket goes red. Both with a `since` and
+    without one."""
     refused, control = sid("01WAKEREFUSED"), sid("01WAKEKILLED")
+    crashed = sid("01WAKECRASHED")
     for session_id, reason, bucket in (
         (refused, StopReason.REFUSED, Bucket.ERROR),
         (control, StopReason.KILLED, Bucket.UNFINISHED),
+        (crashed, StopReason.CRASHED, Bucket.ERROR),
     ):
         spawn(store, session_id, Origin.ORCHESTRATOR)
         store.apply_stop_verdict(
@@ -273,6 +277,7 @@ def test_a_refused_start_is_not_a_wake_candidate(store: Store) -> None:
     for since in (SINCE, None):
         woken = {found.id for found in store.wake_candidates(since)}
         assert control in woken, since
+        assert crashed in woken, since
         assert refused not in woken, since
 
 

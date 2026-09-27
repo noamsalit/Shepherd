@@ -329,15 +329,26 @@ def test_005_leaves_foreign_keys_enforced(tmp_path: Path) -> None:
 
 
 def test_005_leaves_no_stash_table_behind(tmp_path: Path) -> None:
+    """`session_new` is read from the file's catalogue. The stash is TEMP, and
+    TEMP objects are per-connection — a second connection's `sqlite_temp_master`
+    is empty whatever 005 did — so its drop is asserted on 005's own body: the
+    last statement, after the re-insert that reads it."""
     db_path = build_004_database(tmp_path)
     migrate(db_path)
     with connect(db_path) as connection:
-        for catalogue in ("sqlite_master", "sqlite_temp_master"):
-            names = {
-                str(row["name"]) for row in connection.execute(f"SELECT name FROM {catalogue}")
-            }
-            assert "mailbox_stash" not in names, catalogue
-            assert "session_new" not in names, catalogue
+        names = {str(row["name"]) for row in connection.execute("SELECT name FROM sqlite_master")}
+    assert "mailbox_stash" not in names and "session_new" not in names
+
+    sql = (MIGRATIONS_DIR / MIGRATION_005).read_text(encoding="utf-8")
+    body = "\n".join(line.split("--", 1)[0] for line in sql.splitlines())
+    statements = [" ".join(part.split()) for part in body.split(";") if part.strip()]
+    reads_stash = [i for i, text in enumerate(statements) if "FROM mailbox_stash" in text]
+    drops = [i for i, text in enumerate(statements) if text == "DROP TABLE mailbox_stash"]
+    assert len(reads_stash) == 1 and statements[reads_stash[0]].startswith(
+        "INSERT INTO mailbox_message"
+    ), reads_stash
+    assert drops == [len(statements) - 1], "the stash is dropped once, last"
+    assert reads_stash[0] < drops[0]
 
 
 def test_a_v5_database_refuses_a_v4_binary_by_rule_2(

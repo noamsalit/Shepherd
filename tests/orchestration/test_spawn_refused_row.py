@@ -12,13 +12,18 @@ publisher). Both refusal sites are driven: `runner.start` and `ensure_server`.
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
+import pytest
+
 from shepherd.core.states import SessionState
-from shepherd.core.stops import Bucket, DecidedBy, NextActionKind, StopReason
+from shepherd.core.stops import Bucket, DecidedBy, NextActionKind, StopReason, Verdict
 from shepherd.orchestration.spawn import SPAWN_EVENT, SpawnRefused
 from shepherd.signals.ordering import bucket_of
+from shepherd.store import writes
 from shepherd.store.db import Store
+from shepherd.store.models import StoreError
 
 from .test_spawn import (  # noqa: F401 — `store`, `root` and `workspace_id` are fixtures
     ExplodingRunner,
@@ -126,3 +131,66 @@ def test_a_refused_start_publishes_no_spawn_event(
         assert isinstance(result, SpawnRefused), result
         assert [event.kind for event in world.events if event.kind == SPAWN_EVENT] == []
         assert world.events == []
+
+
+def test_a_failed_refused_ending_still_returns_the_runners_refusal(
+    store: Store, workspace_id: str, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """REM-FIX 1: the ending is ONE store verb, and a `StoreError` from it is
+    still a `SpawnRefused` carrying the runner's own words — never a raise out
+    of `spawn_owned_session` (its "every failure is a `SpawnRefused`" contract).
+    """
+    calls: list[str] = []
+
+    def failing(session_id: str, verdict: Verdict, ended_at: str) -> None:
+        calls.append(session_id)
+        raise StoreError("disk I/O error")
+
+    monkeypatch.setattr(store, "end_refused", failing, raising=False)
+    result, _ = spawn(
+        store=store,
+        runner=ExplodingRunner(),
+        workspace_id=workspace_id,
+        cwd=str(root / "repo"),
+        world=Spawned(),
+    )
+
+    assert len(calls) == 1, "the refused ending is written through `end_refused`, once"
+    assert isinstance(result, SpawnRefused), result
+    assert result.reason == START_REFUSAL
+    (row,) = store.list_sessions(workspace_id=workspace_id)
+    assert row.state is SessionState.STARTING, "untouched: no half of the ending landed"
+    assert row.stop_reason is None
+
+
+def test_the_refused_ending_is_all_or_nothing(
+    store: Store, workspace_id: str, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Atomicity: a failure injected *inside* the verb's transaction, after the
+    state fold and at the stop write, rolls the fold back too. The row is
+    either fully ended or untouched — never `stopped` with no verdict."""
+
+    def stop_write_fails(
+        connection: sqlite3.Connection,
+        session_id: str,
+        verdict: Verdict,
+        ended_at: str,
+        exit_code: int | None,
+    ) -> None:
+        raise StoreError("database is locked")
+
+    monkeypatch.setattr(writes, "apply_stop_verdict", stop_write_fails)
+    result, _ = spawn(
+        store=store,
+        runner=ExplodingRunner(),
+        workspace_id=workspace_id,
+        cwd=str(root / "repo"),
+        world=Spawned(),
+    )
+
+    assert isinstance(result, SpawnRefused), result
+    assert result.reason == START_REFUSAL
+    (row,) = store.list_sessions(workspace_id=workspace_id)
+    assert row.state is SessionState.STARTING, "the fold rolled back with the stop write"
+    assert row.stop_reason is None
+    assert row.ended_at is None
