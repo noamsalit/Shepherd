@@ -85,7 +85,7 @@ from .test_wave6_0_uikit import (
 )
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page, WebSocket
+    from playwright.sync_api import Locator, Page, WebSocket
 
 TARGET_NAME = "QA6-U-TARGET"
 #: (key, event, capture dir, substitution) — D12's rows for the buckets U7/U11/U12 need.
@@ -232,6 +232,33 @@ def rgb(hex_colour: str) -> str:
     return f"rgb({int(value[0:2], 16)}, {int(value[2:4], 16)}, {int(value[4:6], 16)})"
 
 
+#: Ruling 15 (SD-02, 2026-09-27): the legend label keeps the AA-adjusted tint `--b-text`
+#: (app.css `.legend-key`, U16 as corrected), which is this mix of the bucket colour.
+LEGEND_TEXT_MIX = "color-mix(in srgb, {hex} 78%, var(--text))"
+
+
+#: The colour of the span the probe sits in. A mix that fails to resolve makes the probe inherit
+#: this, never the `.legend-key`'s own colour, so the clause cannot compare that colour with itself.
+PROBE_SENTINEL = "rgb(1, 2, 3)"
+
+PROBE_JS = (
+    "(e, c) => { const s = document.createElement('span'); s.style.color = '" + PROBE_SENTINEL + "';"
+    " const p = document.createElement('span'); p.style.color = c; s.appendChild(p); e.appendChild(s);"
+    " const v = getComputedStyle(p).getPropertyValue('color'); s.remove(); return v; }"
+)
+
+
+def mixed_text_colour(key: Locator, hex_colour: str) -> str:
+    """The browser's own computed colour for the AA mix, from a probe inside the same `.legend-key`.
+
+    A probe rather than arithmetic: the expected value then comes from the page's `--text` and the
+    browser's colour-mix, spelled independently of the `--b-text` declarations under test. The probe
+    sits in a `PROBE_SENTINEL` span, so an unresolved mix reads as the sentinel (refused by U7).
+    """
+    value = key.evaluate(PROBE_JS, LEGEND_TEXT_MIX.format(hex=hex_colour))
+    return str(value).strip()
+
+
 # ----- U7 --------------------------------------------------------------------------------
 
 
@@ -261,7 +288,10 @@ def test_u7_bucket_colours_glyphs_and_the_new_vocabulary(flock: Flock, browser_s
             bucket = str(key.get_attribute("data-bucket"))
             style = PALETTE[Bucket(bucket)]
             labels.append((key.locator(".legend-label").text_content() or "").strip())
-            rec.equal(f"ui.legend_text_colour.{bucket}", rgb(style.colour), computed(key, "color"))
+            probe = mixed_text_colour(key, style.colour)
+            rec.check(f"ui.legend_probe_resolved.{bucket}", probe != PROBE_SENTINEL,
+                      f"the AA mix resolved (not the sentinel {PROBE_SENTINEL})", probe)
+            rec.equal(f"ui.legend_text_colour.{bucket}", probe, computed(key, "color"))
             rec.equal(f"ui.legend_glyph_colour.{bucket}", rgb(style.colour), computed(key.locator(".legend-mark"), "color"))
         rec.equal("ui.visible_labels", ["needs you", "error", "stranded", "running", "limit exceeded", "blocked", "finished",
                                         "unknown"], labels)
@@ -295,7 +325,9 @@ def test_u8_a_card_carries_exactly_four_things_relative_time(flock: Flock, brows
     add_repo(flock.client, times, repo)
     before = malformed(flock.client)
     ages = {"now": 0.0, "2 min": 120.0, "11 days": 11 * 86400.0, "400 days": 400 * 86400.0}
-    expected = {"now": "just now", "2 min": "2 minutes ago", "11 days": "11 days ago", "400 days": "1 year ago"}
+    # Ruling 16 (SD-03, 2026-09-27): U8 keeps its week and month units (flock.js SCALE), so 11 days reads
+    # "1 week ago"; the design doc's old example "11 days ago" was the error.
+    expected = {"now": "just now", "2 min": "2 minutes ago", "11 days": "1 week ago", "400 days": "1 year ago"}
     seeded: dict[str, Attached] = {}
     for label, age in ages.items():
         seeded[label] = attach(flock.pool, flock.controld, repo, f"QA6 U8 {label}", status_age_s=age, started_age_s=age)

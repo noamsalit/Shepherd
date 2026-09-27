@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from shepherd.signals.verdict import WHY_NO_ENDING, WHY_UNREADABLE
+
 from .. import hostprobe, paths
 from ..hookrig import captured, copy_transcript, dispatch_argv, frame, last_event_at, send, start_ready_sessiond
 from ..httpclient import Client, as_dict
@@ -91,20 +93,51 @@ D12_CASES: tuple[tuple[str, str, str, dict[str, object], str | None, str | None]
     ("server_error", "StopFailure", "S08_mock_http500", {}, "server_error", "error"),
     ("max_output_tokens", "StopFailure", "S08_mock_max_tokens", {}, "truncated", "unfinished"),
     ("unknown", "StopFailure", "S08_mock_http400", {}, "unknown", None),
-    ("verification_required", "StopFailure", "S08_mock_http429", {"error": "verification_required"}, "unknown", None),
-    ("cloud_credential_error", "StopFailure", "S08_mock_http429", {"error": "cloud_credential_error"}, "unknown", None),
+    ("verification_required", "StopFailure", "S08_mock_http429", {"error": "verification_required"}, "auth_failed", "error"),
+    ("cloud_credential_error", "StopFailure", "S08_mock_http429", {"error": "cloud_credential_error"}, "auth_failed", "error"),
     ("prompt_input_exit", "SessionEnd", "S06_clear", {"reason": "prompt_input_exit"}, "user_exited", "unfinished"),
     ("clear", "SessionEnd", "S06_clear", {}, "cleared", "unfinished"),
     ("resume", "SessionEnd", "S06_clear", {"reason": "resume"}, "resumed_elsewhere", "unfinished"),
     ("logout", "SessionEnd", "S06_clear", {"reason": "logout"}, "logged_out", "error"),
-    ("other", "SessionEnd", "S01_startup_tools", {}, "unknown", None),
+    ("other", "SessionEnd", "S01_startup_tools", {}, None, None),
     ("stop_completed", "Stop", "S01_startup_tools", {}, None, "finished"),
 )
 SUBSTITUTED = frozenset(name for name, _e, _d, sub, _r, _b in D12_CASES if sub)
+#: Ruling 14 (SD-01, 2026-09-27): the code's stop map is kept and §8 now says so. Three rows above
+#: moved with it: `verification_required` / `cloud_credential_error` -> auth_failed/error, and
+#: SessionEnd `other` defers (DP8), so its reason is recorded, not asserted. The cases below are
+#: the ones not decided at "mechanical, 1.0": the engine's `unknown` is a rule's answer at 0.0
+#: (verdict.py UNKNOWN_CONFIDENCE), and `other` and a completed `Stop` reach the heuristic lane
+#: (report §4b: §8 has no `completed` row).
+D12_UNKNOWN_DECISION = (0.0, "mechanical")
+D12_HEURISTIC_OTHER = "other"
+D12_HEURISTIC_BELOW_1 = "stop_completed"
+#: Every stop publishes two frames (stop_lane.py, A3 r3): the fold's `session_stopped`, then the
+#: verdict's `session.classified`. None publishes `session.state` (report §4b).
+D12_STOP_KINDS = frozenset({"session_stopped", "session.classified"})
 
 
 def verdict_of(client: Client, session_id: str) -> dict[str, object]:
     return as_dict(client.session(session_id).get("session"))
+
+
+def check_decision(rec: Recorder, name: str, got: dict[str, object]) -> None:
+    """One case's (confidence, decided_by) against §8 as amended 2026-09-27 (ruling 14)."""
+    confidence, decided_by = got.get("confidence"), got.get("decided_by")
+    if name == "unknown":
+        rec.equal("verdict.unknown.mechanical_0_0", D12_UNKNOWN_DECISION, (confidence, decided_by))
+        # The classifier's own fallbacks are also (0.0, "mechanical"); only `why` says a rule answered.
+        why = got.get("why")
+        rec.check("verdict.unknown.a_rule_answered", why not in (WHY_UNREADABLE, WHY_NO_ENDING),
+                  "a rule's why, not the unreadable/no-ending fallback", why)
+    elif name == D12_HEURISTIC_OTHER:
+        rec.equal(f"verdict.{name}.heuristic", "heuristic", decided_by)
+    elif name == D12_HEURISTIC_BELOW_1:
+        below = isinstance(confidence, (int, float)) and confidence < 1.0
+        rec.check(f"verdict.{name}.heuristic_below_1_0", decided_by == "heuristic" and below,
+                  "decided_by heuristic, confidence < 1.0", (confidence, decided_by))
+    else:
+        rec.equal(f"verdict.{name}.mechanical_1_0", (1.0, "mechanical"), (confidence, decided_by))
 
 
 @scenario("D12")
@@ -154,7 +187,7 @@ def test_d12_mechanical_stop_evidence_maps_to_spec_reason_and_bucket(hooks: Hook
             rec.equal(f"verdict.{name}.bucket", bucket, got.get("bucket"))
         else:
             rec.record(f"verdict.{name}.bucket", got.get("bucket"))
-        rec.equal(f"verdict.{name}.mechanical_1_0", (1.0, "mechanical"), (got.get("confidence"), got.get("decided_by")))
+        check_decision(rec, name, got)
         rec.note(f"{name} ({source}): {got.get('stop_reason')}/{got.get('bucket')} in {elapsed:.2f}s — {got.get('why')}")
     rec.equal("proc.every_dispatch_rc_0", len(D12_CASES), sent_ok)
     buckets: Counter[str] = Counter()
@@ -190,9 +223,8 @@ def test_d12_mechanical_stop_evidence_maps_to_spec_reason_and_bucket(hooks: Hook
     rec.equal("files.stop_log_record_per_session", [], missing)
     control = run_control(hooks.stream, hooks.client, "D12", mark)
     no_stop_frame = [name for name, (_h, _e, sid) in sessions.items()
-                     if not any(f.session_id == sid and f.kind == "session.state" and f.data.get("state") == "stopped"
-                                for f in control.interior)]
-    rec.equal("stream.session_state_stopped_per_session", [], no_stop_frame)
+                     if not D12_STOP_KINDS <= {f.kind for f in control.interior if f.session_id == sid}]
+    rec.equal("stream.session_stopped_per_session", [], no_stop_frame)
     arrived = sorted({f.kind for name, (_h, _e, sid) in sessions.items() for f in control.interior if f.session_id == sid})
     rec.record("stream.kinds_that_did_arrive_for_the_19", arrived)
     hooks.manager.stop(sd)

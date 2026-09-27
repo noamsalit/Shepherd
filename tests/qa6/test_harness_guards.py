@@ -1588,8 +1588,9 @@ def test_proof_tmuxctl() -> None:
 # ----- the settings guard (U2, INC-3) ------------------------------------------------------------
 
 #: Independent source for U2: the value the owner named, spelled here from the plan (env-plan §3 / U2)
-#: rather than read back from `paths`, so a drifted constant cannot agree with itself.
-U2_OWNER_SHA = "28067dc4591aaaa659aea971845be01717abadbd078ad1651d926311bef61b4c"
+#: rather than read back from `paths`, so a drifted constant cannot agree with itself. Re-named by the
+#: owner on 2026-09-27 (INC-3 accepted, ruling 28): the value below replaced 28067dc4…1b4c.
+U2_OWNER_SHA = "f99112b6db8b5adb5014792c84e75cac806ec12ecb73a2dee3a1ef95a7f1c52b"
 _SHA_A = "a" * 64
 _SHA_B = "b" * 64
 
@@ -1667,7 +1668,7 @@ def test_proof_settings_owner_mismatch_warns() -> None:
     problems: list[str] = []
     rows = settings_checks(_SHA_B, _SHA_B, U2_OWNER_SHA)
     warned = [row for row in rows if row.warn]
-    expected_line = f"owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    expected_line = f"owner-named sha (U2) differs: expected f99112b6…, actual {_SHA_B} — INC-3"
     if not warned or warned[0].warn != expected_line or warned[0].as_json().get("result") != "warn" \
             or not warnings(rows) or expected_line not in warnings(rows)[0]:
         problems.append(f"proof_settings.owner_mismatch_warns: {[row.as_json() for row in rows]}")
@@ -1692,7 +1693,7 @@ def test_proof_preflight_warn_is_published(monkeypatch: pytest.MonkeyPatch) -> N
 
     for name in ("_copy_ledgers", "_remove_worktree", "_post_teardown_checks", "_teardown"):
         monkeypatch.setattr(runner, name, lambda *_a: None)
-    line = f"preflight T1 real settings sha (U2): owner-named sha (U2) differs: expected 28067dc4…, actual {_SHA_B} — INC-3"
+    line = f"preflight T1 real settings sha (U2): owner-named sha (U2) differs: expected f99112b6…, actual {_SHA_B} — INC-3"
     problems: list[str] = []
     with tempfile.TemporaryDirectory(prefix="qa6warn-", dir="/tmp") as scratch:
         report_dir = Path(scratch) / "runs"
@@ -1716,6 +1717,46 @@ def test_proof_preflight_warn_is_published(monkeypatch: pytest.MonkeyPatch) -> N
         if statuses["qa6-guard-warn"] != statuses["qa6-guard-nowarn"]:
             problems.append(f"proof_settings.warn_does_not_change_status: {statuses}")
     assert not problems, f"preflight WARN publication: {problems}"
+
+
+# ----- oracle self-checks (qa6-rulings P1 REM-FIX 1) -----------------------------------------------
+
+
+def test_guard_d12_unknown_is_not_a_classifier_fallback() -> None:
+    """D12's `unknown` case passes only on a rule's answer, never on the classifier's own fallbacks.
+
+    `verdict.py` answers `(0.0, "mechanical")` for a rule's `unknown` AND for an unreadable record
+    or a turn with no ending; only `why` tells them apart.
+    """
+    from shepherd.signals.verdict import WHY_NO_ENDING, WHY_UNREADABLE
+
+    from .sub.test_wave3_3_hooks import check_decision
+
+    def failed(why: str) -> list[str]:
+        rec = Recorder("D12-guard")
+        check_decision(rec, "unknown", {"confidence": 0.0, "decided_by": "mechanical", "why": why})
+        return [clause.name for clause in rec.failed]
+
+    assert failed("the engine reported this stop as unknown") == []
+    assert failed(WHY_UNREADABLE), "an unreadable stop record passed as a rule's unknown"
+    assert failed(WHY_NO_ENDING), "a turn with no ending passed as a rule's unknown"
+
+
+def test_guard_u7_legend_probe_cannot_compare_with_itself() -> None:
+    """U7's legend-text probe sits inside a sentinel-coloured span, and the oracle refuses the sentinel.
+
+    Inside the `.legend-key` alone, a mix that fails to resolve inherits the key's own colour and the
+    clause compares the value under test with itself. The sentinel breaks that inheritance.
+    """
+    from .sub import test_wave6_2_flock as flock
+
+    assert flock.PROBE_SENTINEL == "rgb(1, 2, 3)"
+    wrapper = f"s.style.color = '{flock.PROBE_SENTINEL}'"
+    assert wrapper in flock.PROBE_JS, "the probe is not wrapped in the sentinel span"
+    assert "s.appendChild(p)" in flock.PROBE_JS and "e.appendChild(s)" in flock.PROBE_JS
+    source = Path(flock.__file__).read_text(encoding="utf-8")
+    assert "ui.legend_probe_resolved." in source and "!= PROBE_SENTINEL" in source, \
+        "no clause refuses a probe that kept the sentinel colour"
 
 
 # ----- the mutation drivers ------------------------------------------------------------------------

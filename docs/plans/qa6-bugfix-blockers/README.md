@@ -146,17 +146,25 @@ Plan rev 4:
 ## Owner decisions (unchanged from the plan, plus BC-32)
 
 - **BC-05** (C1–C5): the CLI↔daemon transport, plus a declared `cli/` edit.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-06 rendering half:** one step or two for a call and its result; how `turn_ended` and
   `rate_limit` appear; whether the final `result` text is rendered.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-14** (M12): what level 3's unprompted wake sends, and its queueing and cap.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-15** (M14): whether a master retry is declared (`retry_of`) or inferred.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-20 backup / byte-reversible uninstall** (H4): whether to keep the first or the latest
   pre-image, and whether to restore it byte-for-byte or re-serialise.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-21 (C7):** whether ADR-7 §4 can say "frozen before the server *serves*", so the port binds
   before the DB opens.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-28** (O4): delete the pre-written row on a refused start, or keep it with a verdict.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-37 residual:** the verdict for a kill after a finished turn, and what marks "a session end
   arrived during the kill".
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 - **BC-32** (plan rev 4): the body read timeout needs `web/server.py`, which
   `tests/boundaries/test_consumer_surface_additive.py::test_web_server_is_byte_unchanged` pins by
   digest (in `pre_m4_routes.json` and in the manifest's never-rewritten `baseline`) under ADR-M4-7.
@@ -164,6 +172,7 @@ Plan rev 4:
   **`fix/qa6-P10-bc32-owner` @ `9aa9f11`** and are not merged. The options are: (a) re-pin, with
   the test comparing the manifest `files` entry; (b) the test accepts a declared
   `post_milestone.edits` entry; (c) withdraw BC-32.
+  Ruled 2026-09-27 → `docs/plans/2026-09-27-qa6-rulings-plan.md`.
 
 ## Residual E16 (accepted, not fixed; P9)
 

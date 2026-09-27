@@ -485,6 +485,11 @@ def test_m8_a_level_change_between_two_calls_of_one_turn_applies_to_the_second(m
 
 # ----- M9 ------------------------------------------------------------------------------
 
+#: Ruling 24 (M9, 2026-09-27): a HUMAN call is `claimed_human` only where the policy would otherwise
+#: ask (destructive or external, K23, toolsurface/policy.py). A read and a fleet write the policy
+#: allows on its own are `policy`, the same as the master's.
+HUMAN_APPROVED_BY = {"fleet_summary": "policy", "rename_project": "policy", "create_project": "claimed_human"}
+
 
 @scenario("M9")
 def test_m9_the_gate_matrix_every_reachable_cell(m: Master, rec: Recorder) -> None:
@@ -527,8 +532,9 @@ def test_m9_the_gate_matrix_every_reachable_cell(m: Master, rec: Recorder) -> No
         for tool, response in human.items():
             correlation = str(response.json().get("correlation_id"))
             rows = rows_for(m, amark, tool, correlation)
+            by = HUMAN_APPROVED_BY[tool]
             rec.check(f"logs.human_{tool}_l{level}", len(rows) == 1 and rows[0].get("decision") == "allow"
-                      and rows[0].get("approved_by") == "claimed_human", "allow / claimed_human",
+                      and rows[0].get("approved_by") == by, f"allow / {by}",
                       shape(rows, "decision", "approved_by"))
             if tool == "create_project" and response.status == 200:
                 created.append(str(as_dict(response.data().get("project")).get("project_id")))

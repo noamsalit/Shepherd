@@ -30,6 +30,8 @@ shipped name. See `docs/design/ui-decisions.md`.)*
 
 ### D-H1 — The stop-reason vocabulary stays closed. 7 outward, 20 inward.
 
+*Amended 2026-09-27 (orchestrator-platform §3 D73):* 21 inward; `refused` added by migration 005. Still closed.
+
 `core/stops.py` holds **20 `StopReason` values**; migration 002 has a `CHECK`
 listing exactly those. They are **not** a UI vocabulary — the UI shows 7
 buckets plus unknown. The two lists do different jobs:

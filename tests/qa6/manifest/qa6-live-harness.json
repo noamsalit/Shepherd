@@ -347,7 +347,7 @@
   {
    "name": "full run: all nine waves in order, then teardown and the publish gate",
    "mode": "proof",
-   "given": "the host baseline matches setup.md (settings sha measured at run start and unchanged at every check; a run-start sha other than the owner-named 28067dc4…1b4c is a published non-stopping WARN, INC-3; 8787 owned by WatchTower, no shq6 state)",
+   "given": "the host baseline matches setup.md (settings sha measured at run start and unchanged at every check; a run-start sha other than the owner-named f99112b6…c52b is a published non-stopping WARN, INC-3, accepted by the owner 2026-09-27; 8787 owned by WatchTower, no shq6 state)",
    "when": "the runner runs every wave with its stop-ifs, then removes the run roots and leak-checks",
    "then": "an immutable runs/<run_id>.json, report.md, and qa6-latest.json carrying the history",
    "command": ".venv/bin/python tests/qa6/run.py",

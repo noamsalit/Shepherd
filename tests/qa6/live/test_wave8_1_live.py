@@ -1541,8 +1541,11 @@ def test_l4_real_claude_fires_installed_hooks(live: Live, rec: Recorder) -> None
     listed = fleet_tree_ids(a.client)
     view = {k: row.get(k) for k in ("id", "ephemeral", "ownership", "state")} if row is not None else None
     in_fleet = row is not None and str(row.get("id")) in listed
-    rec.check("db.row_ephemeral_or_absent", row is None or row.get("ephemeral") == 1 or not in_fleet,
-              "the hooked -p session's row is ephemeral or absent from the fleet", {"row": view, "in_fleet": in_fleet})
+    # Ruling 26 (L4, 2026-09-27): a hooked `-p` session may also leave a stopped, non-ephemeral row.
+    stopped_row = row is not None and row.get("ephemeral") == 0 and row.get("state") == "stopped"
+    rec.check("db.row_ephemeral_or_absent", row is None or row.get("ephemeral") == 1 or not in_fleet or stopped_row,
+              "the hooked -p session's row is ephemeral, absent from the fleet, or stopped (non-ephemeral)",
+              {"row": view, "in_fleet": in_fleet})
     rec.record("files.real_claude_writes", real_delta(before, real_claude_state()))
     rec.finish()
 

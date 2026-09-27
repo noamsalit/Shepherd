@@ -46,12 +46,14 @@ REAL_CLAUDE_BIN: Final[Path] = REAL_HOME / ".local" / "bin" / "claude"
 REAL_SHEPHERD_DATA: Final[Path] = REAL_HOME / "Library" / "Application Support" / "Shepherd"
 BROWSERS_PATH: Final[Path] = REAL_HOME / "Library" / "Caches" / "ms-playwright"
 
-#: U2: the owner named this exact value. A mismatch before a run stops the run.
-#: (Since INC-3 the real file differs from it without any harness run having
-#: written it; a difference is now a visible, non-stopping preflight WARN, and
-#: the stopping invariant is `expected_settings_sha()`: unchanged since run start.)
+#: U2: the owner named this exact value. A difference from it is a visible,
+#: non-stopping preflight WARN; the stopping invariant is `expected_settings_sha()`:
+#: unchanged since run start. INC-3: the real file moved from the first owner-named
+#: value (28067dc4…1b4c) without any harness run having written it, and on 2026-09-27
+#: the owner accepted the moved value as the new owner-named sha (ruling 28,
+#: docs/plans/2026-09-27-qa6-owner-rulings.md).
 OWNER_SETTINGS_SHA: Final[str] = (
-    "28067dc4591aaaa659aea971845be01717abadbd078ad1651d926311bef61b4c"
+    "f99112b6db8b5adb5014792c84e75cac806ec12ecb73a2dee3a1ef95a7f1c52b"
 )
 
 #: The real settings sha the runner measured ONCE at run start, before preflight

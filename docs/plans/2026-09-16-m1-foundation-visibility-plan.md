@@ -1204,9 +1204,18 @@ cannot touch any of this, and C-2's "one writer" is about **processes**, not thr
 3. **One lock on the ring.** `toolsurface/stream.py`'s ring and its `seq` counter are guarded by a
    single `threading.Lock` held across append-and-increment and across a subscriber's snapshot.
 4. **A registry frozen before serving.** `toolsurface.register()` raises after
-   `freeze_registry()` is called, and the composition root calls it before the server binds. The
+   `freeze_registry()` is called, and the composition root calls it before the server **serves**
+   (~~before the server binds~~). The
    module-global registry is therefore written by exactly one thread, at startup, and read-only
    thereafter.
+
+   *Amended 2026-09-27 (spec D71; qa6 BC-21 C7, owner ruling 8).* The original text read "the
+   composition root calls it before the server binds". `controld` now binds its port **before**
+   it opens the store, so a busy port refuses the start having written nothing, and
+   `serve_forever` still starts only after the registry is frozen. The property this mechanism
+   exists for — one writer thread at start-up, read-only afterwards — is about when requests are
+   served: `HTTPServer.__init__` binds and listens, and a request that arrives before
+   `serve_forever` waits in the backlog until the registry is frozen.
 
 **Rejected.** (a) A connection shared across threads with `check_same_thread=False` and a coarse
 lock — it serialises reads behind writes for no benefit, and the flag silently disables the one
