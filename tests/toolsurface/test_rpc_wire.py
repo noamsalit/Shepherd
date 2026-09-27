@@ -18,7 +18,7 @@ from collections.abc import Mapping
 import pytest
 from chokepoint_fixture import install_test_chokepoint
 
-from shepherd.toolsurface.registry import register
+from shepherd.toolsurface.registry import install_chokepoint, register
 from shepherd.toolsurface.rpc import (
     MAX_REQUEST_BYTES,
     RPC_CALLER_ID,
@@ -30,6 +30,7 @@ from shepherd.toolsurface.rpc import (
 from shepherd.toolsurface.types import (
     ActorKind,
     Audience,
+    AuthzOutcome,
     BlastClass,
     CallerContext,
     Failure,
@@ -246,3 +247,56 @@ def test_a_reply_that_does_not_decode_is_a_value_error(raw: bytes) -> None:
     `call_remote` turns that into a FAILED result (the socket tests)."""
     with pytest.raises(ValueError):
         decode_reply(raw)
+
+
+# --- REM-FIX 1: the wire is total ---------------------------------------------
+
+#: `json.loads` raises `RecursionError` (not a `ValueError`) on nesting this deep.
+DEEP_REQUEST = b"[" * 200_000
+
+
+def nested(depth: int) -> object:
+    value: object = []
+    for _ in range(depth):
+        value = [value]
+    return value
+
+
+def test_a_request_nested_past_the_recursion_limit_is_refused_not_raised() -> None:
+    reply = reply_of(answer_request(DEEP_REQUEST))
+
+    assert reply["ok"] is False and reply["failure"] == "refused", reply
+
+
+def test_a_reply_nested_past_the_recursion_limit_is_a_value_error() -> None:
+    with pytest.raises(ValueError):
+        decode_reply(DEEP_REQUEST)
+
+
+def test_data_nested_past_the_recursion_limit_is_not_transportable() -> None:
+    register(a_tool("deep", lambda args, ctx: nested(200_000), frozenset({Audience.HUMAN})))
+
+    reply = reply_of(answer_request(request(tool="deep")))
+
+    assert reply == {"v": 1, "ok": False, "data": None, "error": "not transportable", "failure": "failed"}
+
+
+def raising_authorizer(tool: ToolDef, args: ToolArgs, ctx: CallerContext) -> AuthzOutcome:
+    raise RuntimeError("secret detail from the traceback")
+
+
+def test_an_exception_from_invokes_own_path_is_a_failed_reply_with_its_id() -> None:
+    """H-1: `answer_request` is total. A corrupt row read by the authorizer or a
+    `sqlite3.Error` from the audit write escapes `invoke`; the reply is FAILED,
+    generic, and carries the correlation id — never the traceback."""
+    seen = Seen()
+    register(a_tool("echo", seen.handler, frozenset({Audience.HUMAN})))
+    install_chokepoint(raising_authorizer, lambda record: None)
+
+    reply = reply_of(answer_request(request()))
+
+    assert reply["ok"] is False and reply["failure"] == "failed", reply
+    error = reply["error"]
+    assert isinstance(error, str) and error.endswith(f"(correlation_id={CORRELATION_ID})"), error
+    assert "secret" not in error and "RuntimeError" not in error
+    assert seen.calls == []

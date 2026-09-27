@@ -28,6 +28,7 @@ from pathlib import Path
 
 from shepherd.daemons import controld
 from shepherd.daemons.control_ingest import ClaimFailed, SocketInUse
+from shepherd.daemons.control_rpc import BindFailed
 from shepherd.daemons.sessiond import install_shutdown_handlers
 from shepherd.host.base import SocketPathTooLong
 from shepherd.host.mac import MacHost
@@ -47,7 +48,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     host = MacHost(environ={"HOME": str(args.shepherd_home), "TMPDIR": str(args.shepherd_tmpdir)})
     try:
         running = controld.start(host, args.port, args.discovery_config_dir)
-    except (SocketPathTooLong, SocketInUse, ClaimFailed) as refused:  # D72: a held or unclaimable socket is not a port
+    except (SocketPathTooLong, SocketInUse, ClaimFailed, BindFailed) as refused:  # D72: a held or unclaimable socket is not a port
         sys.stdout.write(f"controld refuses to start: {refused}\n")
         return controld.EXIT_REFUSED
     except OSError as refused:

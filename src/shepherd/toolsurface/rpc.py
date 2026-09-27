@@ -14,6 +14,10 @@ JSON object back.
 * **A malformed request reaches nothing.** Bad JSON, too big, the wrong `v`, a
   missing or ill-typed field: the reply is `refused`, and `invoke` is not
   called, so no audit row is written for a call nobody made.
+* **It never raises.** `json` raises `RecursionError` (no `ValueError`) on a
+  request nested past the interpreter's limit, and `invoke`'s own path — the
+  gate reading a corrupt row, the audit write — can raise too. Either would kill
+  the listener thread and unlink its socket, so each is a reply instead.
 * **Nothing is logged.** `src/` has no logger and D25 keeps `toolsurface/` from
   importing `shepherd.logs`: a refusal is the reply's returned value. A call
   that is invoked is audited by `invoke`, exactly as the web UI's are.
@@ -31,7 +35,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from shepherd.toolsurface.registry import invoke
+from shepherd.toolsurface.registry import GENERIC_ERROR, invoke
 from shepherd.toolsurface.types import Audience, CallerContext, Failure, ToolResult
 
 #: The socket's name under the runtime dir. PP15: no longer than
@@ -45,6 +49,8 @@ MAX_TOOL_NAME = 128
 BAD_REQUEST = "bad request"
 NOT_TRANSPORTABLE = "not transportable"
 NO_ANSWER = "the daemon did not answer"
+#: A failure before any byte left: nothing ran, so nothing can be half done.
+NOT_SENT = f"{NO_ANSWER}: not sent"
 
 _CORRELATION_ID = re.compile(r"[0-9a-f]{32}")
 _FAILURES = frozenset(member.value for member in Failure)
@@ -68,7 +74,7 @@ class RpcRequest:
 def _decode_json(raw: bytes) -> object:
     try:
         return json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, ValueError):
+    except (UnicodeDecodeError, ValueError, RecursionError):
         return None
 
 
@@ -116,7 +122,7 @@ def encode_result(result: ToolResult) -> bytes:
     `TerminalStream`, say) is a `failed` reply, never a half-written one."""
     try:
         return _encode_reply(result.ok, result.data, result.error, result.failure)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, RecursionError):
         return _encode_reply(False, None, NOT_TRANSPORTABLE, Failure.FAILED)
 
 
@@ -129,7 +135,16 @@ def answer_request(raw: bytes) -> bytes:
     ctx = CallerContext(
         audience=Audience.HUMAN, caller_id=RPC_CALLER_ID, correlation_id=request.correlation_id
     )
-    return encode_result(invoke(request.tool, request.args, ctx))
+    return encode_result(_invoked(request, ctx))
+
+
+def _invoked(request: RpcRequest, ctx: CallerContext) -> ToolResult:
+    """`invoke`'s result, or a generic FAILED one if its own path raised."""
+    try:
+        return invoke(request.tool, request.args, ctx)
+    except Exception:  # noqa: BLE001 - the listener outlives any one call; no traceback crosses
+        error = f"{GENERIC_ERROR} (correlation_id={ctx.correlation_id})"
+        return ToolResult(ok=False, data=None, error=error, failure=Failure.FAILED)
 
 
 # --- the client half ----------------------------------------------------------
@@ -173,8 +188,11 @@ def _read_reply(conn: socket.socket) -> bytes:
     return b"".join(chunks)
 
 
-def _no_answer(error: Exception) -> ToolResult:
-    message = f"{NO_ANSWER}: {type(error).__name__}"
+def _no_answer(error: Exception, *, sent: bool) -> ToolResult:
+    """FAILED, naming the class **and** its message; worded "not sent" when the
+    failure came before any byte left."""
+    detail = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+    message = f"{NO_ANSWER}: {detail}" if sent else f"{NOT_SENT} — {detail}"
     return ToolResult(ok=False, data=None, error=message, failure=Failure.FAILED)
 
 
@@ -188,10 +206,16 @@ def call_remote(
     """The daemon's answer, or `None` when there is no daemon to ask.
 
     Only "nothing is listening" is `None` — no socket file, or a stale one — so
-    the caller falls back to its own `invoke`. Every failure after the connect
-    is a `FAILED` result naming its class: a daemon that took the call and then
-    went quiet may have half done it, and a silent local answer would hide that.
+    the caller falls back to its own `invoke`. Every other failure is a `FAILED`
+    result naming its class and message. One before any byte left (a request
+    that does not encode, a connect this uid may not make) is `NOT_SENT`: nothing
+    ran. One after is not: a daemon that took the call and then went quiet may
+    have half done it, and a silent local answer would hide that.
     """
+    try:
+        request = encode_request(name, args, ctx.correlation_id)
+    except (TypeError, ValueError, RecursionError) as error:
+        return _no_answer(error, sent=False)
     conn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     with conn:
         conn.settimeout(timeout_s)
@@ -200,10 +224,10 @@ def call_remote(
         except (FileNotFoundError, ConnectionRefusedError):
             return None
         except OSError as error:
-            return _no_answer(error)
+            return _no_answer(error, sent=False)
         try:
-            conn.sendall(encode_request(name, args, ctx.correlation_id))
+            conn.sendall(request)
             conn.shutdown(socket.SHUT_WR)
             return decode_reply(_read_reply(conn))
-        except (OSError, ValueError, TypeError) as error:
-            return _no_answer(error)
+        except (OSError, ValueError, TypeError, RecursionError) as error:
+            return _no_answer(error, sent=True)

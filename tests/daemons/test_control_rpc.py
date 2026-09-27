@@ -12,6 +12,7 @@ same uid is the same trust** as the loopback page — nothing here claims more.
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import stat
@@ -28,11 +29,12 @@ from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME
 from shepherd.engines.claude_code.ingest_socket import bind_listener, release_claim
 from shepherd.host.base import SocketPlan
 from shepherd.host.linux import LINUX_SOCKET_PATH_BUDGET, SOCKET_DIR_MODE, SOCKET_MODE
-from shepherd.toolsurface.registry import register, reset_registry
+from shepherd.toolsurface.registry import install_chokepoint, register, reset_registry
 from shepherd.toolsurface.rpc import RPC_SOCKET_NAME, call_remote, encode_request
 from shepherd.toolsurface.types import (
     ActorKind,
     Audience,
+    AuthzOutcome,
     BlastClass,
     CallerContext,
     Failure,
@@ -250,3 +252,133 @@ def test_two_listeners_binding_at_once_leave_the_process_umask_alone(tmp_path: P
 
     assert errors == []
     assert after == 0o022, oct(after)
+
+
+# --- REM-FIX 1: the listener outlives any one request -------------------------
+
+
+def send_raw(path: Path, raw: bytes) -> bytes:
+    """One raw request, one reply read to EOF — what a hostile peer can send."""
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
+        conn.settimeout(CEILING_S)
+        conn.connect(str(path))
+        conn.sendall(raw)
+        conn.shutdown(socket.SHUT_WR)
+        chunks = []
+        while chunk := conn.recv(65_536):
+            chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def test_a_request_nested_past_the_recursion_limit_leaves_the_listener_serving(
+    tmp_path: Path,
+) -> None:
+    """`json.loads` raises `RecursionError` on `[` × 200000; it used to escape
+    `answer_request`, kill the thread and unlink `rpc.sock`."""
+    register_whoami()
+    plan = rpc_plan(tmp_path)
+    with serving(plan) as thread:
+        refused = json.loads(send_raw(plan.path, b"[" * 200_000))
+        after = call_remote(plan.path, "whoami", {}, CLIENT_CTX)
+        assert thread.is_alive()
+
+    assert refused["ok"] is False and refused["failure"] == "refused", refused
+    assert after is not None and after.ok is True, after
+
+
+def test_an_authorizer_that_raises_is_answered_failed_and_the_listener_keeps_serving(
+    tmp_path: Path,
+) -> None:
+    """H-1: an exception out of `invoke`'s own path (a corrupt `app_state` row
+    the gate reads, a `sqlite3.Error` from the audit write) is a FAILED reply
+    carrying the correlation id — and the next call on the same listener answers."""
+
+    def authorizer(tool: ToolDef, args: ToolArgs, ctx: CallerContext) -> AuthzOutcome:
+        if tool.name == "boom":
+            raise RuntimeError("secret detail from the traceback")
+        return AuthzOutcome(allowed=True, approved_by=None, approval_id=None, reason=None)
+
+    register_whoami()
+    register(
+        ToolDef(
+            name="boom",
+            description="its gate raises",
+            input_schema={"type": "object", "properties": {}},
+            blast_class=BlastClass.LOCAL_READ,
+            handler=whoami,
+            audiences=frozenset({Audience.HUMAN}),
+        )
+    )
+    install_chokepoint(authorizer, lambda record: None)
+    plan = rpc_plan(tmp_path)
+    with serving(plan) as thread:
+        failed = call_remote(plan.path, "boom", {}, CLIENT_CTX)
+        after = call_remote(plan.path, "whoami", {}, CLIENT_CTX)
+        assert thread.is_alive()
+
+    assert failed is not None and failed.failure is Failure.FAILED, failed
+    assert failed.error is not None and failed.error.endswith(f"(correlation_id={CORRELATION_ID})")
+    assert "secret" not in failed.error
+    assert after is not None and after.ok is True, after
+
+
+def test_a_failure_after_sending_keeps_its_detail_not_only_its_class(tmp_path: Path) -> None:
+    """M-4: `ReplyMalformed("not a version-1 reply")` says more than `ReplyMalformed`."""
+    plan = rpc_plan(tmp_path)
+    plan.path.parent.mkdir(parents=True)
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(str(plan.path))
+    listener.listen(1)
+
+    def garbage() -> None:
+        conn, _ = listener.accept()
+        with conn:
+            conn.recv(65_536)
+            conn.sendall(b"this is no reply")
+
+    server = threading.Thread(target=garbage, daemon=True)
+    server.start()
+    try:
+        result = call_remote(plan.path, "whoami", {}, CLIENT_CTX, timeout_s=CEILING_S)
+    finally:
+        server.join(CEILING_S)
+        listener.close()
+
+    assert result is not None and result.error is not None
+    assert result.error == "the daemon did not answer: ReplyMalformed: not a version-1 reply", result
+
+
+def test_a_connect_that_fails_is_worded_not_sent(tmp_path: Path) -> None:
+    """M-4: a failure before any byte left is "not sent" — nothing ran, so the
+    caller is not told the call may be half done."""
+    plan = rpc_plan(tmp_path)
+    plan.path.parent.mkdir(parents=True)
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(str(plan.path))
+    listener.listen(1)
+    plan.path.parent.chmod(0o000)  # the socket is there; this uid may not reach it
+    try:
+        result = call_remote(plan.path, "whoami", {}, CLIENT_CTX, timeout_s=CEILING_S)
+    finally:
+        plan.path.parent.chmod(0o700)
+        listener.close()
+
+    assert result is not None and result.failure is Failure.FAILED, result
+    assert result.error is not None
+    assert result.error.startswith("the daemon did not answer: not sent — PermissionError: "), result
+
+
+def test_a_request_that_cannot_be_encoded_is_not_sent(tmp_path: Path) -> None:
+    deep: object = []
+    for _ in range(200_000):
+        deep = [deep]
+    plan = rpc_plan(tmp_path)
+    register_whoami()
+    with serving(plan):
+        result = call_remote(plan.path, "whoami", {"n": deep}, CLIENT_CTX)
+        after = call_remote(plan.path, "whoami", {}, CLIENT_CTX)
+
+    assert result is not None and result.failure is Failure.FAILED, result
+    assert result.error is not None
+    assert result.error.startswith("the daemon did not answer: not sent — RecursionError: "), result
+    assert after is not None and after.ok is True

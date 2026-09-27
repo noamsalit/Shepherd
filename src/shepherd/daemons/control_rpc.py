@@ -27,7 +27,14 @@ from shepherd.engines.claude_code.ingest_socket import (
 from shepherd.host.base import SocketPlan
 from shepherd.toolsurface.rpc import RPC_SOCKET_NAME, answer_request
 
-__all__ = ["RPC_SOCKET_NAME", "serve_control_rpc"]
+__all__ = ["RPC_SOCKET_NAME", "BindFailed", "serve_control_rpc"]
+
+
+class BindFailed(RuntimeError):
+    """A listener thread never reported its socket bound (qa6 P10 REM-FIX M-3).
+
+    Deliberately no `OSError`: `controld.main` reads an `OSError` out of `start`
+    as a busy port, and a socket that never bound is not one."""
 
 
 def serve_control_rpc(
@@ -51,7 +58,8 @@ def serve_control_rpc(
                 try:
                     conn.sendall(answer_request(read_to_eof(conn)))
                 except OSError:
-                    # A probe, or a client that left before its reply.
+                    # A probe, or a client that left before its reply. Nothing
+                    # else can escape: `answer_request` is total (REM-FIX H-1).
                     continue
     finally:
         listener.close()

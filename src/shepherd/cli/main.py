@@ -161,6 +161,18 @@ def since_problem(since: str | None) -> str:
     return f"{SINCE_FLAG} {since} is an invalid date (expected YYYY-MM-DD)"
 
 
+def absolute_settings(path: str | None) -> tuple[str | None, str]:
+    """`(path, problem)`: `--settings` made absolute once, against this process's
+    cwd and HOME, before any call (qa6 P10 REM-FIX C-1). The tools run in the
+    daemon, whose working directory is not this one."""
+    if path is None:
+        return None, ""
+    try:
+        return str(Path(path).expanduser().absolute()), ""
+    except RuntimeError:  # `~user/…` for a user this host does not have
+        return None, f"{SETTINGS_FLAG} {path} names a home directory this host cannot find"
+
+
 def rpc_socket(host: HostPlatform) -> Path | None:
     """Where the daemon's RPC socket would be; `None` if the path cannot fit."""
     try:
@@ -186,6 +198,10 @@ def main(
     if problem := since_problem(options.since):  # one sentence, no usage text (C5)
         err.write(f"shepherd: {problem}\n")
         return EXIT_USAGE
+    settings_path, problem = absolute_settings(options.settings_path)
+    if problem:
+        err.write(f"shepherd: {problem}\n")
+        return EXIT_USAGE
     platform = detect_host() if host is None else host
     cli = Cli(
         host=platform,
@@ -203,16 +219,16 @@ def main(
     if options.command == "status":
         return run_status(cli)
     if options.command == "doctor":
-        return run_doctor(cli, options.settings_path)
+        return run_doctor(cli, settings_path)
     if options.command == "install-hooks":
         return run_install_hooks(
             cli,
-            options.settings_path,
+            settings_path,
             dry_run=options.dry_run,
             assume_yes=options.assume_yes,
         )
     if options.command == "uninstall-hooks":
-        return run_uninstall_hooks(cli, options.settings_path, assume_yes=options.assume_yes)
+        return run_uninstall_hooks(cli, settings_path, assume_yes=options.assume_yes)
     return run_replay(cli, options.since, options.apply)
 
 

@@ -251,13 +251,13 @@ class ListenerDouble:
     """A socket at the RPC path that records every connect and answers each
     with one canned reply. Not a daemon: it proves what the CLI **sent**."""
 
-    def __init__(self, path: Path, reply: Mapping[str, object]) -> None:
+    def __init__(self, path: Path, reply: Mapping[str, object] | bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.listener.bind(str(path))
         self.listener.listen(8)
         self.listener.settimeout(0.05)
-        self.reply = json.dumps(reply).encode("utf-8")
+        self.reply = reply if isinstance(reply, bytes) else json.dumps(reply).encode("utf-8")
         self.requests: list[dict[str, object]] = []
         self.connects = 0
         self.stopping = threading.Event()
@@ -335,3 +335,98 @@ def test_a_valid_since_date_is_forwarded(
     assert double.requests == [
         {"v": 1, "tool": "replay", "args": {"apply": False, "since": "2026-09-17"}, "correlation_id": CID}
     ]
+
+
+# --- REM-FIX 1 ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("argv", "tool"),
+    [
+        (["install-hooks", "--dry-run"], "install_hooks"),
+        (["install-hooks", "--yes"], "install_hooks"),
+        (["uninstall-hooks"], "inspect_hooks"),
+        (["uninstall-hooks", "--yes"], "uninstall_hooks"),
+        (["doctor"], "inspect_hooks"),
+    ],
+)
+@pytest.mark.parametrize("given", ["rel/settings.json", "~/rel/settings.json"])
+def test_a_relative_settings_path_is_sent_absolute(
+    listener_double: tuple[ListenerDouble, ScriptedHost],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+    tool: str,
+    given: str,
+) -> None:
+    """C-1: the daemon's cwd is not the caller's, so the CLI resolves the path
+    once — against its own cwd and HOME, both throwaway dirs here — before any
+    call. The listener double only records; no settings file is touched."""
+    double, host = listener_double
+    cwd, home = tmp_path / "cwd", tmp_path / "home"
+    cwd.mkdir()
+    home.mkdir()
+    monkeypatch.chdir(cwd)
+    monkeypatch.setenv("HOME", str(home))
+    expected = (home if given.startswith("~") else cwd) / "rel" / "settings.json"
+
+    run([argv[0], "--settings", given, *argv[1:]], host)
+
+    sent = [r["args"] for r in double.requests if r["tool"] == tool]
+    assert sent != [], double.requests
+    assert all(isinstance(a, dict) and a["settings_path"] == str(expected) for a in sent), sent
+    assert list(cwd.iterdir()) == [] and list(home.iterdir()) == []
+
+
+@pytest.fixture()
+def garbage_double(tmp_path: Path) -> Iterator[tuple[ListenerDouble, ScriptedHost]]:
+    host = scripted_host(runtime_dir=tmp_path / "run")
+    double = ListenerDouble(host.control_socket(RPC_SOCKET_NAME).path, b"this is no reply")
+    try:
+        yield double, host
+    finally:
+        double.close()
+
+
+def test_doctor_names_a_daemon_that_did_not_answer_and_exits_1(
+    garbage_double: tuple[ListenerDouble, ScriptedHost],
+) -> None:
+    """H-2: a transport failure is not "start the control daemon" with exit 0.
+    It is a problem naming the socket, and the two read-only lines this process
+    can answer for itself (`schema_status`, `engine_version`) still answer."""
+    double, host = garbage_double
+    host.dirs().data_dir.mkdir(parents=True)
+    rpc_path = host.control_socket(RPC_SOCKET_NAME).path
+
+    code, out, err = run(["doctor"], host)
+
+    assert code == 1, (out, err)
+    assert f"shepherd: the control daemon at {rpc_path} did not answer: " in err, err
+    lines = {line.split(":", 1)[0]: line for line in out.splitlines() if ":" in line}
+    assert "schema version" in lines["database"], lines["database"]
+    assert lines["engine"].startswith("engine: ") and "unknown" not in lines["engine"].split("·")[0], lines
+    assert {r["tool"] for r in double.requests} >= {"fleet_summary", "schema_status", "engine_version"}
+
+
+def test_a_call_that_could_not_be_sent_is_not_called_half_done(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M-4: a connect that fails sent nothing, so nothing can be half done."""
+    host = scripted_host(runtime_dir=tmp_path / "run")
+    rpc_path = host.control_socket(RPC_SOCKET_NAME).path
+    rpc_path.parent.mkdir(parents=True)
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(str(rpc_path))
+    listener.listen(1)
+    target = tmp_path / "hooks" / "settings.json"
+    rpc_path.parent.chmod(0o000)
+    try:
+        code, out, err = run(["install-hooks", "--settings", str(target), "--dry-run"], host)
+    finally:
+        rpc_path.parent.chmod(0o700)
+        listener.close()
+
+    assert code == 1, (out, err)
+    assert "install_hooks was not sent to the control daemon" in err, err
+    assert "half done" not in err
+    assert not target.parent.exists()

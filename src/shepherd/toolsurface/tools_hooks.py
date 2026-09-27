@@ -9,7 +9,9 @@ route the consumer boundary leaves open — `cli/` may not import `engines/`.
 
 **The settings path is always an argument** (K3). Nothing in this module points
 at `~/.claude`, and the schema marks it required, so a call that omits it fails
-at `invoke()` before a handler sees it.
+at `invoke()` before a handler sees it. **And it is absolute** (qa6 P10
+REM-FIX C-1): these handlers run in the daemon, whose working directory is not
+the caller's, so a relative path is refused before anything is read or written.
 """
 
 from __future__ import annotations
@@ -28,6 +30,8 @@ from shepherd.toolsurface.registry import register
 from shepherd.toolsurface.types import (
     Audience,
     BlastClass,
+    ToolArgs,
+    ToolArgumentRefused,
     ToolDef,
     arg_bool,
     arg_str,
@@ -46,6 +50,17 @@ _INSTALL_SCHEMA = {
     "properties": {"settings_path": {"type": "string"}, "dry_run": {"type": "boolean"}},
     "required": ["settings_path"],
 }
+
+
+def settings_path_of(args: ToolArgs) -> Path:
+    """The named settings file, refused unless absolute."""
+    path = Path(arg_str(args, "settings_path"))
+    if not path.is_absolute():
+        raise ToolArgumentRefused(
+            f"settings_path {str(path)!r} is not absolute: this tool runs in the daemon,"
+            " whose working directory is not yours, so a relative path would name another file"
+        )
+    return path
 
 
 def project_install_result(result: InstallResult) -> dict[str, object]:
@@ -79,7 +94,7 @@ def build_hook_tools(entry: HookEntry) -> tuple[ToolDef, ...]:
             blast_class=BlastClass.LOCAL_DESTRUCTIVE,
             handler=lambda args, ctx: project_install_result(
                 install_hooks(
-                    Path(arg_str(args, "settings_path")),
+                    settings_path_of(args),
                     entry,
                     dry_run=arg_bool(args, "dry_run"),
                 )
@@ -92,7 +107,7 @@ def build_hook_tools(entry: HookEntry) -> tuple[ToolDef, ...]:
             input_schema=_SETTINGS_PATH_SCHEMA,
             blast_class=BlastClass.LOCAL_DESTRUCTIVE,
             handler=lambda args, ctx: project_install_result(
-                uninstall_hooks(Path(arg_str(args, "settings_path")))
+                uninstall_hooks(settings_path_of(args))
             ),
             audiences=_HUMAN_ONLY,
         ),
@@ -102,7 +117,7 @@ def build_hook_tools(entry: HookEntry) -> tuple[ToolDef, ...]:
             input_schema=_SETTINGS_PATH_SCHEMA,
             blast_class=BlastClass.LOCAL_DESTRUCTIVE,
             handler=lambda args, ctx: project_inspection(
-                inspect_hooks(Path(arg_str(args, "settings_path")), entry)
+                inspect_hooks(settings_path_of(args), entry)
             ),
             audiences=_HUMAN_ONLY,
         ),

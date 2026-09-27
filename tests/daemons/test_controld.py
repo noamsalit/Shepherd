@@ -916,3 +916,52 @@ def test_the_process_prints_what_shutdown_found(
     assert started != []
     # …and the line a human reads names the count, not nothing.
     assert "4 threads exited · store closed" in printed, printed  # D68: the fourth thread, `rpc`
+
+
+def test_an_rpc_socket_that_never_binds_is_not_called_a_busy_port(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """REM-FIX M-3: the bind wait used to raise `TimeoutError` — an `OSError` —
+    so `main` printed "port N is not available" for a socket that never bound.
+    It is `BindFailed` now, which is no `OSError`, and `main` names it as such.
+
+    The stand-in listener never binds; it keeps the `shutdown` event so the test
+    can stop the three real threads the failed start left running."""
+    handed: list[threading.Event] = []
+    servers: list[object] = []
+    stores: list[object] = []
+    real_server, real_store = controld.create_server, controld.open_store
+
+    def never_binds(plan: SocketPlan, shutdown: threading.Event, bound: threading.Event) -> None:
+        handed.append(shutdown)
+
+    def spy_server(*args: object, **kwargs: object) -> object:
+        servers.append(real_server(*args, **kwargs))  # type: ignore[arg-type]
+        return servers[-1]
+
+    def spy_store(path: Path) -> object:
+        stores.append(real_store(path))
+        return stores[-1]
+
+    monkeypatch.setattr(controld, "serve_control_rpc", never_binds)
+    monkeypatch.setattr(controld, "create_server", spy_server)
+    monkeypatch.setattr(controld, "open_store", spy_store)
+    monkeypatch.setattr(controld, "BIND_TIMEOUT_S", 0.2)
+    monkeypatch.setattr(controld, "install_shutdown_handlers", lambda shutdown: None)
+    try:
+        code = controld.main(["--port", "0", "--engine-config-dir", str(world.engine_config_dir)])
+    finally:
+        for event in handed:
+            event.set()
+        for server in servers:
+            assert isinstance(server, controld.ThreadingHTTPServer)
+            server.shutdown()
+            server.server_close()
+        for store in stores:
+            assert isinstance(store, controld.Store)
+            store.close()
+
+    printed = capsys.readouterr().out
+    assert code == controld.EXIT_REFUSED
+    assert "controld refuses to start: a control socket was never bound" in printed, printed
+    assert "is not available" not in printed, printed

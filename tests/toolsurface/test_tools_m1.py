@@ -24,7 +24,7 @@ from shepherd.store.models import UNASSIGNED_PROJECT_ID, Session
 from shepherd.toolsurface.registry import invoke, registered_tools
 from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
-from shepherd.toolsurface.types import Audience, BlastClass, CallerContext
+from shepherd.toolsurface.types import Audience, BlastClass, CallerContext, Failure
 
 NOW = "2026-09-16T10:00:30Z"
 
@@ -521,3 +521,27 @@ def test_fleet_summary_shows_an_anomaly_it_did_not_expect(store: Store) -> None:
     assert anomalies["a_kind_from_a_newer_build"] == 1
     # …and every kind this build *does* know is still present, at zero.
     assert anomalies["malformed_payload"] == 0
+
+
+@pytest.mark.parametrize(
+    ("name", "extra"),
+    [("install_hooks", {"dry_run": False}), ("uninstall_hooks", {}), ("inspect_hooks", {})],
+)
+@pytest.mark.parametrize("relative", ["settings.json", "nested/settings.json", "~/settings.json"])
+def test_a_relative_settings_path_is_refused_and_touches_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str, extra: dict[str, object], relative: str
+) -> None:
+    """REM-FIX C-1: a relative path would be resolved in the **daemon's** working
+    directory, not the caller's — so the tool refuses it before any read or write.
+    The cwd and HOME are throwaway dirs under `tmp_path`; nothing may appear in them."""
+    cwd, home = tmp_path / "cwd", tmp_path / "home"
+    cwd.mkdir()
+    home.mkdir()
+    monkeypatch.chdir(cwd)
+    monkeypatch.setenv("HOME", str(home))
+
+    result = invoke(name, {"settings_path": relative, **extra}, HUMAN)
+
+    assert result.ok is False and result.failure is Failure.REFUSED, result
+    assert result.error is not None and "absolute" in result.error, result.error
+    assert list(cwd.iterdir()) == [] and list(home.iterdir()) == []
