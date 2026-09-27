@@ -145,7 +145,12 @@ def test_a_wake_turn_that_fails_to_open_counts_once_and_frees_the_slot(
     log = FailureLog(store)
     driver = a_driver(store, recorder, log, OSError(SECRET))
 
-    assert driver.wake_turn() is None
+    # REM-FIX 1 (4): a failed open is told apart from "busy" (`None`), so the
+    # waker can refuse to retry the same set every pass.
+    from shepherd.orchestration import wake
+
+    failed = driver.wake_turn()
+    assert isinstance(failed, wake.WakeOpenFailed), failed
     assert not driver.is_running(), "a failed wake kept the slot"
     assert counted(store) == 1
     assert [error_class for _, error_class in log.calls] == ["OSError"]

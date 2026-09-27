@@ -64,7 +64,7 @@ from shepherd.signals.replay import DIFF_DIRNAME
 from shepherd.store.db import Store
 from shepherd.toolsurface.approvals import ApprovalStore, build_authorizer
 from shepherd.toolsurface.client import bind_master_client
-from shepherd.toolsurface.registry import audit_master_failure
+from shepherd.toolsurface.registry import master_failure_recorder
 from shepherd.toolsurface.registry import freeze_registry, install_chokepoint, reset_registry
 from shepherd.toolsurface.stream import publish, reset_stream, stream_seq_base
 from shepherd.toolsurface.tools_engine import register_engine_tools
@@ -487,7 +487,7 @@ def compose_tool_surface(
         publish=publish,
         withdraw_turn_approvals=approvals.withdraw_all,
         now=utc_now,
-        record_failure=_master_failure_recorder(store),
+        record_failure=master_failure_recorder(lambda: _bump(store, AnomalyKind.MASTER_FAILED)),
     )
     waker = LevelThreeWaker(store, level=lambda: int(autonomy_level(store)),
                             open_wake=driver.wake_turn, bump=store.bump_anomaly)
@@ -516,28 +516,24 @@ def compose_tool_surface(
     )
     _install_plane(_MasterPlane(driver=driver, approvals=approvals))
     freeze_registry()
-    sweep = sweep_and_wake(mailbox_sweep(store, runner), waker.tick)
+    sweep = sweep_and_wake(mailbox_sweep(store, runner), waker.tick, store)
     return M4Wiring(runner=runner, sweep=sweep, approvals=approvals)
 
 
 def sweep_and_wake(
-    sweep: Callable[[], MailboxCounts], tick: Callable[[], bool]
+    sweep: Callable[[], MailboxCounts], tick: Callable[[], bool], store: Store
 ) -> Callable[[], MailboxCounts]:
-    """One 2 s pass (D69, ADR-QR-5: no thread): the mailbox sweep, then the waker."""
+    """One 2 s pass (D69, ADR-QR-5: no thread): the mailbox sweep, then the waker.
+    The scan loop calls this unguarded, so a raising tick is counted, not raised."""
 
     def run() -> MailboxCounts:
         counts = sweep()
-        tick()
+        try:
+            tick()
+        except Exception:
+            _bump(store, AnomalyKind.WAKE_TICK_FAILED)
         return counts
     return run
-
-
-def _master_failure_recorder(store: Store) -> Callable[[str, str], None]:
-    """D79 / ADR-QR-3: count a failed turn, then audit it via `audit_master_failure`."""
-    def record_failure(turn_id: str, error_class: str) -> None:
-        _bump(store, AnomalyKind.MASTER_FAILED)
-        audit_master_failure(turn_id, error_class)
-    return record_failure
 
 
 def _install_plane(plane: _MasterPlane) -> None:

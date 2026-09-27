@@ -90,9 +90,13 @@ MASTER_TOOL_NAMES = frozenset(
 #: nothing else: `fleet_summary` seeds a zero row per `AnomalyKind` member, and
 #: the appended `MASTER_FAILED` adds `"master_failed":0,` (18 bytes). Measured by
 #: this check's own failure message on P6's tree (12945), recorded in
-#: `docs/plans/qa6-rulings-blockers/P6.md`. The tree budget is unchanged.
+#: `docs/plans/qa6-rulings-blockers/P6.md`. P6's REM-FIX 1 appended
+#: `WAKE_TICK_FAILED` the same way: `"wake_tick_failed":0,` (21 bytes, 12966).
+#: The tree budget is unchanged.
 FLEET_SIZE = 200
-FLEET_SUMMARY_BYTES_AT_200 = 12927 + len('"master_failed":0,')
+FLEET_SUMMARY_BYTES_AT_200 = (
+    12927 + len('"master_failed":0,') + len('"wake_tick_failed":0,')
+)
 FLEET_TREE_BYTES_AT_200 = 139323
 
 

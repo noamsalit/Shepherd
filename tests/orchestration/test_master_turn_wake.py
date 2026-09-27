@@ -31,7 +31,7 @@ from shepherd.core.stops import (
     Verdict,
 )
 from shepherd.orchestration import wake
-from shepherd.orchestration.master_turn import TurnDriver, TurnStarted
+from shepherd.orchestration.master_turn import TurnDriver, TurnRefused, TurnStarted
 from shepherd.store.db import Store
 
 from .test_master_turn import (  # noqa: F401 — `recorder` and `store` are fixtures
@@ -60,6 +60,7 @@ TITLE = "QA6-P6 lineage head"
 
 #: The anomaly counter's wire values, typed from the spec (D31, D79).
 CAP_REACHED = "wake_retry_cap_reached"
+MASTER_FAILED = "master_failed"
 
 
 def sid(label: str) -> str:
@@ -367,3 +368,128 @@ def test_needs_you_never_wakes_the_master_at_level_3(store: Store, recorder: Rec
     assert tick_many(rig.waker) == [False] * 5
     assert rig.built == []
     assert store.list_anomaly_counts().get(CAP_REACHED, 0) == 0
+
+
+# ----- REM-FIX 1: shutdown, a failed wake, a mixed set ------------------------
+
+
+def test_a_closed_driver_opens_no_wake_turn_and_leaves_the_set(
+    store: Store, recorder: Recorder
+) -> None:
+    """REM-FIX 1 (1): once `close()` has run, `_claim` refuses. A wake offered
+    by a sweep that raced the shutdown builds no runtime and drains nothing,
+    and a user turn is refused readably rather than opened."""
+    master = RecordingMaster(events=(an_event("turn_ended"),))
+    rig = a_rig(store, recorder, master)
+    rig.driver.close()
+    waking = plant_a_stop(store, "01P6CLOSED", T1)
+    rig.clock.now = T2
+    assert peeked(store) == [waking], "arrival: there is something to wake for"
+
+    assert rig.driver.wake_turn() is None
+    assert rig.built == [], "a closed driver built a runtime for a wake"
+    assert peeked(store) == [waking], "a closed driver consumed the wake set"
+    refused = rig.driver.send_turn("after shutdown")
+    assert isinstance(refused, TurnRefused)
+    assert "shutting down" in refused.reason
+    assert rig.built == []
+
+
+def test_a_wake_turn_that_fails_while_running_leaves_the_set_for_the_next_turn(
+    store: Store, recorder: Recorder
+) -> None:
+    """REM-FIX 1 (3): the runtime opened and then failed inside `send()` (an
+    SDK connect, say). The drain had already moved the stamp; the failure puts
+    the pre-drain stamp back, so the set is re-peekable and the next user turn
+    is handed it — the stop is not lost to a turn that never ran."""
+    waking = plant_a_stop(store, "01P6RUNFAIL", T1)
+    boom = RecordingMaster(raises=ConnectionError("QA6-P6 the SDK did not connect"))
+    user_turn = RecordingMaster(events=(an_event("turn_ended"),))
+    rig = a_rig(store, recorder, boom, user_turn)
+    rig.clock.now = T2
+    assert store.get_app_state(wake.MASTER_LAST_TURN_KEY) is None, "arrival: no stamp yet"
+    try:
+        started = rig.driver.wake_turn()
+        assert isinstance(started, TurnStarted)
+        ended(rig)
+        assert len(boom.sent) == 1, "arrival: the wake turn really ran"
+
+        assert rig.failures == [(started.turn_id, "ConnectionError")]
+        assert store.get_app_state(wake.MASTER_LAST_TURN_KEY) is None
+        assert peeked(store) == [waking], "a wake that failed while running consumed the set"
+
+        rig.clock.now = T3
+        assert isinstance(rig.driver.send_turn("what happened?"), TurnStarted)
+        ended(rig)
+    finally:
+        finish(rig.driver)
+    assert WHY in user_turn.sent[0], "the next user turn was not handed the stop"
+
+
+def test_a_wake_that_cannot_open_is_not_retried_until_the_set_changes(
+    store: Store, recorder: Recorder
+) -> None:
+    """REM-FIX 1 (4): a deterministic open failure is one failure, not one per
+    2 s pass. The waker remembers the set it failed on and re-opens only when
+    that set changes — here, a second stop arrives."""
+    plant_a_stop(store, "01P6NOOPEN1", T1)
+    attempts: list[str] = []
+
+    def never_opens(turn_id: str) -> MasterRuntime:
+        attempts.append(turn_id)
+        raise OSError("QA6-P6 the runtime cannot start")
+
+    driver = TurnDriver(
+        store=store,
+        build_master=never_opens,
+        publish=recorder.publish,
+        withdraw_turn_approvals=recorder.withdraw,
+        now=lambda: T2,
+        record_failure=lambda _turn_id, _error_class: store.bump_anomaly(MASTER_FAILED),
+    )
+    waker = wake.LevelThreeWaker(
+        store, level=lambda: 3, open_wake=driver.wake_turn, bump=store.bump_anomaly
+    )
+
+    assert tick_many(waker, 6) == [False] * 6
+    assert len(attempts) == 1, "a deterministic open failure was retried every pass"
+    assert store.list_anomaly_counts().get(MASTER_FAILED) == 1
+
+    plant_a_stop(store, "01P6NOOPEN2", T3)
+    assert tick_many(waker, 3) == [False] * 3
+    assert len(attempts) == 2, "a changed set was not offered again"
+    assert store.list_anomaly_counts().get(MASTER_FAILED) == 2
+    assert not driver.is_running()
+
+
+def test_a_capped_stop_rides_along_with_an_eligible_one_and_opens_nothing_alone(
+    store: Store, recorder: Recorder
+) -> None:
+    """REM-FIX 1 (6): the drain is all-or-nothing by stamp, so a capped stop in
+    the same set as an eligible one is handed to the wake turn with it — the
+    capped one opens no turn on its own, and admission is what refuses a
+    capped retry. Counted once, and the counted set is pruned once drained."""
+    head, capped = sid("01P6MIXHEAD"), sid("01P6MIXCAP")
+    plant_session(store, head, "the first attempt, still running")
+    plant_session(store, capped, "QA6-P6 the capped retry")
+    store.link_retry(session_id=capped, retry_of=head)
+    stop(store, capped, Bucket.UNFINISHED, "QA6-P6 capped why", T1)
+    eligible = plant_a_stop(store, "01P6MIXOK", T1)
+    assert sorted(peeked(store)) == sorted([capped, eligible]), "arrival: a mixed set"
+
+    master = RecordingMaster(events=(an_event("turn_ended"),))
+    rig = a_rig(store, recorder, master)
+    rig.clock.now = T2
+    try:
+        assert rig.waker.tick() is True
+        ended(rig)
+        assert "QA6-P6 capped why" in master.sent[0] and WHY in master.sent[0]
+        assert store.list_anomaly_counts().get(CAP_REACHED) == 1
+        assert peeked(store) == []
+
+        assert tick_many(rig.waker) == [False] * 5
+        assert rig.waker.declined == set(), "a drained capped stop was never pruned"
+    finally:
+        finish(rig.driver)
+    assert len(rig.built) == 1
+    assert store.list_anomaly_counts().get(CAP_REACHED) == 1

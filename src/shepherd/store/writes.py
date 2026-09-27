@@ -209,6 +209,21 @@ def set_app_state(connection: sqlite3.Connection, key: str, value: object) -> No
     )
 
 
+def compare_and_set_app_state(
+    connection: sqlite3.Connection, key: str, expected: object, value: object
+) -> bool:
+    """Write `value` only over `expected`, in one statement (qa6 P6 REM-FIX 1).
+
+    `False` when the key holds anything else or is absent, and nothing moves:
+    a caller putting an earlier value back must never overwrite a later one.
+    """
+    cursor = connection.execute(
+        "UPDATE app_state SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+        (json.dumps(value), _now(), key, json.dumps(expected)),
+    )
+    return cursor.rowcount == 1
+
+
 def bump_anomaly(connection: sqlite3.Connection, kind: str) -> None:
     """Principle 5: an unknown is counted, never hidden."""
     key = f"{ANOMALY_KEY_PREFIX}{kind}"

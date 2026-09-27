@@ -191,6 +191,11 @@ class AnomalyKind(StrEnum):
     only to someone watching at that moment. Bumped once per failed turn by the
     composition's recorder, which also writes the turn's audit record."""
 
+    WAKE_TICK_FAILED = "wake_tick_failed"
+    """D69 / D79 (REM-FIX 1) — the level-3 waker raised inside the 2 s sweep.
+    The scan loop calls the sweep unguarded, so the raise is counted here and
+    swallowed; otherwise one bad tick ends discovery for the process."""
+
 
 @dataclass(frozen=True)
 class Anomaly:

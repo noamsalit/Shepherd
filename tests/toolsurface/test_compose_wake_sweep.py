@@ -26,7 +26,7 @@ from shepherd.toolsurface.audit import read_audit_records
 from shepherd.toolsurface.policy import AutonomyLevel
 from shepherd.toolsurface.registry import invoke
 from shepherd.toolsurface.tools_master import AUTONOMY_LEVEL_KEY
-from shepherd.toolsurface.types import Audience, CallerContext
+from shepherd.toolsurface.types import Audience, AuditRecord, CallerContext, ToolResult
 
 from orchestration.test_master_turn import plant_a_waking_stop
 
@@ -34,6 +34,10 @@ from .test_compose_m4 import ARRIVAL_TIMEOUT_S, World, world  # noqa: F401 — `
 
 #: A message only this file could have produced; it must reach no record.
 SECRET = "QA6-P6-COMPOSED-SECRET-the-prompt"
+
+#: The anomaly counters' wire values, typed from the spec (D79, REM-FIX 1).
+MASTER_FAILED = "master_failed"
+WAKE_TICK_FAILED = "wake_tick_failed"
 
 
 def the_plane() -> compose._MasterPlane:
@@ -51,7 +55,7 @@ def shepherd_project(world: World) -> Iterator[Store]:
 # ----- the adapter ------------------------------------------------------------
 
 
-def test_the_sweep_still_returns_the_mailbox_counts_and_ticks_the_waker() -> None:
+def test_the_sweep_still_returns_the_mailbox_counts_and_ticks_the_waker(world: World) -> None:
     """`sweep_and_wake` hands the loop the mailbox counts unchanged and ticks the
     waker once per pass — after the mailbox sweep, never instead of it."""
     counts = MailboxCounts(pending=3, delivered=2, deferred=1)
@@ -65,11 +69,36 @@ def test_the_sweep_still_returns_the_mailbox_counts_and_ticks_the_waker() -> Non
         order.append("tick")
         return True
 
-    combined = compose.sweep_and_wake(sweep, tick)
+    combined = compose.sweep_and_wake(sweep, tick, world.store)
 
     assert combined() is counts
     assert combined() is counts
     assert order == ["sweep", "tick", "sweep", "tick"]
+    assert world.store.list_anomaly_counts().get(WAKE_TICK_FAILED, 0) == 0
+
+
+def test_a_raising_tick_is_counted_and_the_next_pass_still_runs(world: World) -> None:
+    """REM-FIX 1 (2): `run_discovery_loop` calls the sweep unguarded, so a
+    tick that raised used to end the scan thread. It is counted as
+    `wake_tick_failed`, the mailbox counts still come back, and the next pass
+    runs both halves again."""
+    counts = MailboxCounts(pending=1, delivered=0, deferred=0)
+    order: list[str] = []
+
+    def sweep() -> MailboxCounts:
+        order.append("sweep")
+        return counts
+
+    def tick() -> bool:
+        order.append("tick")
+        raise RuntimeError("QA6-P6 the waker fell over")
+
+    combined = compose.sweep_and_wake(sweep, tick, world.store)
+
+    assert combined() is counts
+    assert combined() is counts, "the pass after a raising tick did not run"
+    assert order == ["sweep", "tick", "sweep", "tick"]
+    assert world.store.list_anomaly_counts().get(WAKE_TICK_FAILED) == 2
 
 
 def test_the_waker_reads_level_3_as_the_policy_spells_it() -> None:
@@ -138,3 +167,66 @@ def test_the_composed_driver_counts_and_audits_a_failed_turn(world: World) -> No
     assert isinstance(args, dict) and args["error_class"] == "RuntimeError"
     assert args["turn_id"] == failed[0]["correlation_id"]
     assert SECRET not in json.dumps(list(records), default=str)
+
+
+def _is_the_failure_record(record: AuditRecord) -> bool:
+    return record.tool == "master_send" and "error_class" in dict(record.args)
+
+
+def test_a_raising_audit_sink_still_counts_and_refuses_readably(world: World) -> None:
+    """REM-FIX 1 (5): the recorder audits first and bumps second, each on its
+    own, and never raises — so a sink that fails on the failure record still
+    leaves the count, and the caller still sees the open failure it caused."""
+    sink = plane.audit_sink(world.store, world.host)
+
+    def failing_on_the_failure_record(record: AuditRecord) -> None:
+        if _is_the_failure_record(record):
+            raise OSError("QA6-P6 the audit disk is full")
+        sink(record)
+
+    def build(store: Store, turn_id: str) -> MasterRuntime:
+        raise RuntimeError(SECRET)
+
+    compose.compose_tool_surface(
+        world.store, world.host, world.db_path, world.ingest, build,
+        failing_on_the_failure_record,
+    )
+    answered = a_user_send()
+
+    assert answered.ok is True and isinstance(answered.data, dict), answered
+    assert answered.data["started"] is False
+    assert "could not be opened" in str(answered.data), answered.data
+    assert world.store.list_anomaly_counts().get(MASTER_FAILED) == 1
+
+
+def test_a_raising_counter_still_audits_and_refuses_readably(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """REM-FIX 1 (5), the other half: a counter that raises still leaves the
+    audit record, because the audit is written first and on its own."""
+    records: list[AuditRecord] = []
+
+    def build(store: Store, turn_id: str) -> MasterRuntime:
+        raise RuntimeError(SECRET)
+
+    compose.compose_tool_surface(
+        world.store, world.host, world.db_path, world.ingest, build, records.append
+    )
+
+    def no_counter(kind: str) -> None:
+        raise OSError("QA6-P6 the counter cannot write")
+
+    monkeypatch.setattr(world.store, "bump_anomaly", no_counter)
+    answered = a_user_send()
+
+    assert answered.ok is True and isinstance(answered.data, dict), answered
+    assert answered.data["started"] is False
+    assert len([r for r in records if _is_the_failure_record(r)]) == 1
+
+
+def a_user_send() -> ToolResult:
+    return invoke(
+        "master_send",
+        {"text": "hello"},
+        CallerContext(audience=Audience.HUMAN, caller_id="you", correlation_id="c-p6-rf1"),
+    )

@@ -32,8 +32,13 @@ the existing 2 s sweep — no thread is added — and at level 3, with an item w
 `retry_of` lineage is below `MAX_MASTER_ATTEMPTS` (the plan's RD-3), it calls
 the injected `open_wake`, which is `TurnDriver.wake_turn`. A turn holding the
 slot makes that return `None` and drains nothing, so the next tick offers the
-wake again. A stop in a lineage already at the cap opens nothing, is counted
-once per session as `wake_retry_cap_reached`, and waits for the next user turn.
+wake again. A stop in a lineage already at the cap opens no turn **on its own**:
+it is counted once per session as `wake_retry_cap_reached` and waits for the
+next user turn — unless an eligible stop opens a wake first, in which case the
+drain, all-or-nothing by stamp, hands it over too and admission is what refuses
+a capped retry (REM-FIX 1). A set whose wake could not open, or failed while
+running, is not offered again until the set changes: a deterministic failure is
+one `master_failed`, not one per 2 s pass.
 
 `needs_you` is absent for the same reason D31 gives: that is the human's rail,
 and routing it to an agent would hide the one thing the platform exists to show
@@ -57,6 +62,7 @@ __all__ = [
     "MASTER_LAST_TURN_KEY",
     "WAKE_LEVEL",
     "LevelThreeWaker",
+    "WakeOpenFailed",
     "WakeItem",
     "WakeSummary",
     "drain",
@@ -107,6 +113,14 @@ class WakeSummary:
 
     items: tuple[WakeItem, ...]
     drained_at: str
+
+
+@dataclass(frozen=True)
+class WakeOpenFailed:
+    """`TurnDriver.wake_turn`'s answer when the turn could not open — distinct
+    from `None` ("busy, not now"), so the waker does not retry the same set."""
+
+    turn_id: str
 
 
 def _since(store: Store) -> str | None:
@@ -188,7 +202,9 @@ class LevelThreeWaker:
     on the next sweep), the opener (`TurnDriver.wake_turn`, whose `None` means
     "not now") and the counter. `declined` remembers the sessions already
     counted at the cap, so the anomaly is bumped once per session rather than
-    once per 2 s pass.
+    once per 2 s pass, and is pruned to the sessions still in the set.
+    `_attempted` is the eligible set the last wake opened on: a failure leaves
+    that set in place (see module docstring), and it is not re-opened.
     """
 
     def __init__(
@@ -204,18 +220,26 @@ class LevelThreeWaker:
         self._open_wake = open_wake
         self._bump = bump
         self.declined: set[str] = set()
+        self._attempted: frozenset[str] = frozenset()
 
     def tick(self) -> bool:
         """One sweep's look: open a wake turn if level 3 has something to act on."""
         if self._level() != WAKE_LEVEL:
             return False
-        if not self._eligible(peek(self._store)):
+        items = peek(self._store)
+        self.declined &= {item.session_id for item in items}
+        eligible = frozenset(item.session_id for item in self._eligible(items))
+        if not eligible or eligible == self._attempted:
             return False
-        return self._open_wake() is not None
+        opened = self._open_wake()
+        if opened is not None:
+            self._attempted = eligible
+        return opened is not None and not isinstance(opened, WakeOpenFailed)
 
     def _eligible(self, items: tuple[WakeItem, ...]) -> tuple[WakeItem, ...]:
         """RD-3: the items whose lineage the master could still retry. A capped
-        item is counted once and left in the set for the next user turn."""
+        item is counted once; it opens nothing by itself, and stays in the set
+        for the next turn of either kind."""
         eligible: list[WakeItem] = []
         for item in items:
             if self._store.retry_chain_depth(item.session_id) < MAX_MASTER_ATTEMPTS:

@@ -42,9 +42,10 @@ property of one composition root instead of a property of this function.
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from shepherd.core.clock import utc_now
@@ -482,6 +483,22 @@ def audit_master_failure(turn_id: str, error_class: str) -> None:
             duration_ms=0,
         )
     )
+
+
+def master_failure_recorder(bump: Callable[[], None]) -> Callable[[str, str], None]:
+    """`TurnDriver`'s `record_failure` (D79, ADR-QR-3): audit the failed turn,
+    then `bump` its counter — each on its own, so one failing still leaves the
+    other. It never raises: it runs inside the driver's own failure path, and a
+    raise here would replace the error the caller is owed (REM-FIX 1).
+    """
+
+    def record_failure(turn_id: str, error_class: str) -> None:
+        with contextlib.suppress(Exception):
+            audit_master_failure(turn_id, error_class)
+        with contextlib.suppress(Exception):
+            bump()
+
+    return record_failure
 
 
 def _run(tool: ToolDef, args: Mapping[str, object], ctx: CallerContext) -> ToolResult:

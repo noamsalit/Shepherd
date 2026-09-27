@@ -424,7 +424,7 @@ def test_every_anomaly_member_is_unique_and_appended() -> None:
 
     # qa6 rulings P6 (D79): the post-M4 members, typed from the plan, and they
     # are the tail of what sits below M4's marker.
-    assert post_m4 == ["MASTER_FAILED"]
+    assert post_m4 == ["MASTER_FAILED", "WAKE_TICK_FAILED"]
     assert below_m4[len(m4) :] == post_m4
 
     # Written out from the plan's own table — an independent source of truth,
