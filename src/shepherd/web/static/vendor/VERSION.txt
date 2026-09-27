@@ -70,15 +70,18 @@ That xterm.js **renders** anything. There is no browser, no node and no npm on
 this host, so "xterm.js draws the snapshot and the stream identically" is
 **unverified** and stays recorded as G-M3-6 (acceptance clause 11).
 
-**Not "every" byte, and one claim this file used to make is not on this path at
-all.** An earlier revision listed the browser->pane keystroke — `send-keys -H`
-byte-exactness — among the things asserted here. There is **no** such path in
-this tree — `POST_ROUTES` carries no `terminal_write`, `web/server.py` never
-reads the upgraded socket, `terminal.js` ships `disableStdin: true` and renders
-the reason, and
-`tests/web/test_session_page.py::test_the_keystroke_path_is_absent_and_says_so`
-asserts the absence. That is blocker **T19-c**, and it is a missing capability
-said out loud rather than a shortfall hidden.
+**Not "every" byte, and one claim this file used to make is not this file's to
+make.** An earlier revision listed the browser->pane keystroke — `send-keys -H`
+byte-exactness — among the things asserted here. When it was retracted there was
+no such path at all (blocker **T19-c**). Since D76 (owner ruling 18) there is
+one: the emulator's keys go out on the terminal WebSocket, `web/server.py` reads
+them and hands them to the pane through the audited open's handle, and
+`tests/web/test_terminal_input_server.py::test_a_typed_frame_reaches_runner_write`
+and `tests/web/test_terminal_input_live.py::test_keystrokes_in_the_emulator_are_sent_on_the_socket`
+are its proofs. None of that is proved by vendoring xterm.js, so it is still
+not a claim of this file; the path is asserted to exist, and `POST_ROUTES` to
+carry no `terminal_write`, by
+`tests/web/test_session_page.py::test_the_keystroke_path_is_wired_and_the_page_says_nothing_false`.
 
 Where `send-keys -H` byte-exactness *is* proved, which is a different seam
 ------------------------------------------------------------------------

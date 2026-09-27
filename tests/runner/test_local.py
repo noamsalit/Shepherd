@@ -1047,10 +1047,16 @@ def test_the_module_is_within_its_line_budget() -> None:
     next line added to it has to come back here and say why. Thirty-two of the
     forty are the docstring for the rule and for the residual it does not close;
     the rule itself is three lines and a message.
+
+    **And from 500 to 508 when `write` learned tmux's message ceiling** (qa6
+    P12 REM-FIX 1 #1, a router decision): one `send-keys -H` per
+    `WRITE_CHUNK_BYTES`, because a single argv over ~5.4 KB is `command too
+    long`. Four lines are the constant and its reason, two the loop, two the
+    docstring; `tests/runner/test_local_write_chunks.py` holds the proof.
     """
     source = Path(local_module.__file__).read_text(encoding="utf-8").splitlines()
     assert len(source) <= 600
-    assert 350 < len(source) <= 500, len(source)
+    assert 350 < len(source) <= 508, len(source)
 
 
 # ----- REMFIX-1 #5: a hung multiplexer call is bounded -------------------------

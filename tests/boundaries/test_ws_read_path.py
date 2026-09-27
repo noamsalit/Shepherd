@@ -1,28 +1,24 @@
-"""BLOCKER-T19-c, made mechanical: `src/` contains **no caller** of the parser.
+"""The WebSocket read path has exactly one caller, and it is the input pump.
 
-`web/ws.py` is a complete, unit-tested RFC 6455 framer. Half of it is a *reader*
-— `parse_frame`, `Frame`, `WebSocketClosed`, `close_code` — and this build never
-reads a byte from an upgraded socket: `web/server.py::_terminal` writes the 101,
-the snapshot frame, the live chunks and a close frame, and then hangs up. There
-is no browser→pane keystroke path in M3 **by decision** (BLOCKER-T19-c: adding
-one would mean a POST route outside T18's closed set, which clause 11's
-route-closure test asserts as closed).
+**History (BLOCKER-T19-c, reversed by D76).** Until P12 `src/` contained **no**
+caller of the parser: `web/server.py::_terminal` wrote the 101, the snapshot,
+the live chunks and a close frame and never read a byte back, because the
+browser→pane keystroke path was out of scope by decision. This module asserted
+that absence, so that the day a read loop arrived it would have to bring its own
+tests rather than inherit `tests/web/test_ws.py`'s unit tests of the framer.
 
-So the reader's fourteen tests in `tests/web/test_ws.py` assert a contract with
-no implementer — `test_a_partial_frame_asks_for_more_bytes_instead_of_guessing`
-says the caller "reads more and asks again", and there is no caller. That is
-T19's dead `session.js` one layer down: a test whose seam is a function,
-asserting quality for code nothing runs. The parser is real and correct and is
-exactly what a future read loop will use, so **nothing here deletes anything**.
-
-What this rule does is stop the vacuity being **inherited silently**. It is the
-absence written down where it fails loudly: the day someone wires a read loop,
-this test goes red, and the red says that the read loop must bring its own
-tests rather than inherit the parser's.
+It arrived in P12 (owner ruling 18, SD-05; D76; ADR-QR-4), with its own tests —
+`tests/web/test_ws_input_pump.py` at the loop's seam and
+`tests/web/test_terminal_input_server.py` on the wire — and the rule became
+the stronger positive one: `ws.parse_frame` is called by **one** function in
+the product, `ws.pump_input`; `ws.pump_input` is called by **one** method,
+`FleetHandler._read_keys`; and `_read_keys` is started by **one** method,
+`FleetHandler._terminal`, after the origin check, the handshake and the audited
+open. A second read loop anywhere in `src/` is red here.
 
 Seam: the source text of `src/`, by AST with origin resolution — the seam every
-rule in this package uses, because "nothing calls this" is a property of the
-tree and not of a running process.
+rule in this package uses, because "nothing else calls this" is a property of
+the tree and not of a running process.
 
 **Arrival before absence.** Three separate ways this rule could pass while
 measuring nothing, each asserted against:
@@ -31,7 +27,7 @@ measuring nothing, each asserted against:
   **property, not filename** (B2), so the module may be renamed and the rule
   still follows it;
 * the scan might resolve no `ws` name whatsoever (a renamed module, a broken
-  walker, an unread file) — so the **reached** half of the same module
+  walker, an unread file) — so the write half of the same module
   (`handshake_response`, `build_frame`, `close_frame`) is asserted to have real
   callers in `src/` by this very scan;
 * the scan might never open a file — `MISSING_MODULE` must raise.
@@ -39,11 +35,13 @@ measuring nothing, each asserted against:
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
 from _imports import (
     MISSING_MODULE,
+    REPO_ROOT,
     Module,
     fixture,
     iter_modules,
@@ -51,11 +49,17 @@ from _imports import (
     resolved_identifiers,
 )
 
-#: The read half. `parse_frame` is the entry point and the one T19-c is about;
-#: the other three are its vocabulary and cannot be used without it, so a name
-#: from this tuple appearing anywhere in `src/` means the read path has arrived.
+#: The read half. `parse_frame` is the entry point; the other three are its
+#: vocabulary. Outside the framer's own module, only `pump_input` may be used —
+#: so a name from this tuple appearing anywhere else in `src/` is a second
+#: read loop.
 READ_PATH_NAMES: tuple[str, ...] = ("parse_frame", "Frame", "WebSocketClosed", "close_code")
 PARSER_NAME = "parse_frame"
+PUMP_NAME = "pump_input"
+
+#: Where the one read loop is allowed to live, and who may start it (ADR-QR-4).
+PUMP_CALLER = "FleetHandler._read_keys"
+READER_STARTER = "FleetHandler._terminal"
 
 #: The write half, which the product really does call. Not a rule — the arrival
 #: assertion that keeps the rule above from being a scan of nothing.
@@ -94,30 +98,67 @@ def scan(names: tuple[str, ...]) -> list[str]:
     ]
 
 
-def test_the_ws_parser_has_no_caller_anywhere_in_src() -> None:
-    """T19-c: nothing in the product reads a client frame, and that is the plan.
+def callers_in(path: Path, callee: str) -> set[str]:
+    """`Class.method` / `function` names in `path` whose body names `callee`.
 
-    If this is red for you: you have wired the read loop. Do not delete this
-    test and do not point it at the new code — `tests/web/test_ws.py`'s parser
-    tests are **unit** tests of a framer and prove nothing about a loop that
-    reads a socket, decides on a `(None, 0)`, and fails a connection. Write the
-    read loop's own tests, then retire this rule with them in the tree.
+    Names, not just calls: `threading.Thread(target=self._read_keys)` starts a
+    function without calling it, and a rule that saw only calls would miss the
+    thread that runs the loop. Qualified by the enclosing class, so two methods
+    of the same name in two classes are two answers.
     """
-    # Arrival 1: the parser exists and this rule is pointed at it. The module
-    # is *found* by property, so a rename cannot switch the rule off — but it is
-    # also named here, so a rename is reported rather than absorbed. If you
-    # renamed `ws.py`, the fix is this line and the fixture's imports.
-    assert modules_defining(PARSER_NAME) != []
-    assert parser_module().endswith(".ws"), f"{PARSER_NAME} moved to {parser_module()}"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    found: set[str] = set()
 
-    # Arrival 2: the scan really does resolve names from this module — the
-    # write half has callers, found by the same walk that reports the read half.
+    def visit(node: ast.AST, owner: str | None) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, ast.ClassDef):
+                visit(child, child.name)
+            elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                named = {
+                    sub.attr if isinstance(sub, ast.Attribute) else sub.id
+                    for sub in ast.walk(child)
+                    if isinstance(sub, (ast.Attribute, ast.Name))
+                }
+                if callee in named:
+                    found.add(child.name if owner is None else f"{owner}.{child.name}")
+
+    visit(tree, None)
+    return found
+
+
+def test_the_ws_parser_has_exactly_one_caller_the_input_pump() -> None:
+    """D76 / ADR-QR-4: one read loop, reached one way.
+
+    Successor of `test_the_ws_parser_has_no_caller_anywhere_in_src` (T19-c),
+    retired in P12 when the loop it guarded against was built with its own
+    tests. If this is red for you: a second place reads a client frame. Route it
+    through `ws.pump_input`, or retire this rule with a decision that says why.
+    """
+    # Arrival 1: the parser exists and this rule is pointed at it.
+    defining = modules_defining(PARSER_NAME)
+    assert defining != []
+    assert parser_module().endswith(".ws"), f"{PARSER_NAME} moved to {parser_module()}"
+    ws_path = defining[0].path
+
+    # Arrival 2: the scan really does resolve names from this module.
     reached = scan(REACHED_NAMES)
     assert reached != [], "the scan resolved no ws name at all: it is measuring nothing"
     assert any("shepherd.web uses" in message for message in reached), reached
 
-    # …and only then, the absence.
+    # The read half is used by no module but its own.
     assert scan(READ_PATH_NAMES) == []
+    # Inside it, `parse_frame` has exactly one caller: the pump.
+    assert callers_in(ws_path, PARSER_NAME) == {PUMP_NAME}
+
+    # The pump is used by exactly one module, and in it by exactly one method,
+    # which exactly one method starts.
+    pump_users = scan((PUMP_NAME,))
+    assert pump_users == [f"shepherd.web uses {parser_module()}.{PUMP_NAME}"], pump_users
+    users = [found.path for found in iter_modules() if ws_name_users(found.path, found.package, (PUMP_NAME,))]
+    assert [path.name for path in users] == ["server.py"], users
+    server = users[0]
+    assert callers_in(server, PUMP_NAME) == {PUMP_CALLER}
+    assert callers_in(server, PUMP_CALLER.split(".")[1]) == {READER_STARTER}
 
     # Arrival 3: a scan that cannot raise on a missing path never opened one (B1).
     with pytest.raises(FileNotFoundError):
@@ -128,8 +169,8 @@ def test_the_rule_fires_on_a_module_that_does_read_the_socket() -> None:
     """The self-check: a read loop is detected, in every spelling it has.
 
     Without this the rule above is an assertion that an empty list is empty.
-    The fixture is `web/server.py::_terminal` as it would look the day the
-    browser→pane path is built, and it is never shipped.
+    The fixture is a read loop written *outside* `ws.pump_input` — a second
+    reader, the thing the rule above forbids — and it is never shipped.
     """
     leak = fixture("web_reads_the_upgraded_socket.py")
 
@@ -147,14 +188,28 @@ def test_the_rule_fires_on_a_module_that_does_read_the_socket() -> None:
 
 
 def test_the_parser_tests_outnumber_the_parsers_callers() -> None:
-    """The measurement BLOCKER-T19-c records, kept live rather than quoted.
+    """The measurement T19-c recorded, kept live after D76 gave it a caller.
 
-    `tests/web/test_ws.py` marks each of its parser tests with
-    `parser_has_no_caller_in_src`, and that decorator's registry is asserted
-    there against an independent AST derivation. What is asserted here is the
-    half that makes the count *mean* something: the callers are zero.
+    `tests/web/test_ws.py` exercises `parse_frame` and its vocabulary directly;
+    since P12 the product calls it from exactly one place. The count of unit
+    tests of the framer still exceeds the count of its callers, and the one
+    caller — the pump — has a test module of its own.
     """
-    assert scan(READ_PATH_NAMES) == []
-
+    ws_tests = REPO_ROOT / "tests" / "web" / "test_ws.py"
+    pump_tests = REPO_ROOT / "tests" / "web" / "test_ws_input_pump.py"
+    parser_tests = {
+        node.name
+        for node in ast.parse(ws_tests.read_text(encoding="utf-8")).body
+        if isinstance(node, ast.FunctionDef)
+        and node.name.startswith("test_")
+        and any(
+            (isinstance(sub, ast.Attribute) and sub.attr in READ_PATH_NAMES)
+            for sub in ast.walk(node)
+        )
+    }
     definitions: list[Module] = modules_defining(PARSER_NAME)
     assert [module.package for module in definitions] == ["shepherd.web"]
+    callers = callers_in(definitions[0].path, PARSER_NAME)
+    assert callers == {PUMP_NAME}
+    assert len(parser_tests) > len(callers), sorted(parser_tests)
+    assert "def test_" in pump_tests.read_text(encoding="utf-8")

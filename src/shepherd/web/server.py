@@ -26,6 +26,9 @@ structurally.
 from __future__ import annotations
 
 import json
+import socket
+import threading
+import time
 import uuid
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,7 +36,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from shepherd.toolsurface.registry import GENERIC_ERROR, invoke
-from shepherd.toolsurface.tools_terminal import TerminalStream
+from shepherd.toolsurface.tools_terminal import KeyRefused, TerminalStream
 from shepherd.toolsurface.types import Audience, CallerContext
 from shepherd.web import routes, sse, ws
 
@@ -59,10 +62,76 @@ JSON_TYPE = "application/json"
 #: bounds what one `Content-Length` header can make this process allocate.
 MAX_BODY_BYTES = 1 << 20
 
+#: BC-32: how long a declared body may take to arrive, in total — a deadline for
+#: the whole body, not an idle window per `recv`. A client that claims a
+#: `Content-Length` and stops short (or trickles) used to hold a handler thread
+#: in `read()` forever; past this window the body is refused (400) and the
+#: connection closed.
+BODY_READ_TIMEOUT_S = 2.0
+
 #: The tool the WebSocket path resolves to. It is **not** in `API_ROUTES`: an
 #: upgrade is not a call, so the name is spelled once, here, beside the one
 #: handler that may use it.
 TERMINAL_TOOL = "terminal_stream"
+
+#: D76: the name of the one reader thread per terminal connection, and how long
+#: the handler waits for it once the socket is shut. A bound, not a hope — and
+#: longer than one tmux call (`runner/local.py`'s `TMUX_CALL_TIMEOUT_S`, 10 s),
+#: so a key write in flight at the end finishes inside it. `web/` may not import
+#: `runner/`; `test_the_input_join_outlasts_one_tmux_call` pins the relation.
+INPUT_THREAD_NAME = "shepherd-terminal-input"
+INPUT_JOIN_S = 12.0
+
+#: RFC 6455 §7.4.1's 1011: input ended on something other than the pane or the
+#: client ending — the pane refused a key, or the reader itself failed. The page
+#: tells it from 1000 (the pane ended) and says which (`terminal.js`).
+CLOSE_INPUT_FAILED = 1011
+KEY_REFUSED_REASON = "a key was refused"
+READER_FAILED_REASON = "the input reader failed"
+
+
+class _InputEnded(Exception):
+    """The connection has ended, so the pump stops before another key is written."""
+
+
+class _Ending:
+    """How one terminal connection ended, and the **one** close of its stream.
+
+    Two threads can end a connection — the writer when the pane's stream stops,
+    the reader when the client closes or a key is refused (D76) — and the stream
+    is released once, whichever is first. The first close's code and reason are
+    recorded under the same lock, so the writer's close frame carries them.
+    """
+
+    def __init__(self, stream: TerminalStream) -> None:
+        self.stream = stream
+        self.code = ws.CLOSE_NORMAL
+        self.reason = ""
+        self._lock = threading.Lock()
+        self._closed = False
+
+    @property
+    def closed(self) -> bool:
+        with self._lock:
+            return self._closed
+
+    def close(self, code: int = ws.CLOSE_NORMAL, reason: str = "") -> None:
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            self.code, self.reason = code, reason
+        self.stream.close()
+
+    def deliver(self, keys: bytes) -> None:
+        """One frame's keys to the pane — never after the end, never after a refusal."""
+        if self.closed:
+            raise _InputEnded
+        try:
+            self.stream.write(keys)
+        except KeyRefused:
+            self.close(CLOSE_INPUT_FAILED, KEY_REFUSED_REASON)
+            raise _InputEnded from None
 
 
 class BindAddressRefused(ValueError):
@@ -139,14 +208,22 @@ class FleetHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_json(self, status: int, payload: Mapping[str, object]) -> None:
-        self._send(status, json.dumps(payload).encode("utf-8"), JSON_TYPE)
+    def _send_json(
+        self,
+        status: int,
+        payload: Mapping[str, object],
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
+        self._send(status, json.dumps(payload).encode("utf-8"), JSON_TYPE, headers)
 
-    def _fail(self, status: int, correlation_id: str) -> None:
+    def _fail(
+        self, status: int, correlation_id: str, headers: Mapping[str, str] | None = None
+    ) -> None:
         """§13 Errors: one generic literal and an id, whatever went wrong."""
         self._send_json(
             status, {"ok": False, "data": None, "error": GENERIC_ERROR,
-                     "correlation_id": correlation_id}
+                     "correlation_id": correlation_id},
+            headers,
         )
 
     # ----- the origin check (§13) -------------------------------------------
@@ -194,7 +271,10 @@ class FleetHandler(BaseHTTPRequestHandler):
             return
         body = self._json_body()
         if body is None:
-            self._fail(400, correlation_id)
+            # BC-32: a short body has already decided the connection closes;
+            # say so, so a keep-alive client does not queue a request behind it.
+            closing = {"Connection": "close"} if self.close_connection else None
+            self._fail(400, correlation_id, closing)
             return
         resolved = routes.resolve_post(urlparse(self.path).path, body)
         if resolved is None:
@@ -217,13 +297,54 @@ class FleetHandler(BaseHTTPRequestHandler):
             return None
         if length == 0:
             return {}
+        raw = self._read_body(length)
+        if raw is None:
+            return None
         try:
-            decoded: object = json.loads(self.rfile.read(length).decode("utf-8"))
+            decoded: object = json.loads(raw.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             return None
         if not isinstance(decoded, dict):
             return None
         return {str(key): value for key, value in decoded.items()}
+
+    def _read_body(self, length: int) -> bytes | None:
+        """Exactly `length` bytes within `BODY_READ_TIMEOUT_S`, or `None` (BC-32).
+
+        The window is a whole-body deadline, not a per-`recv` idle timeout: each
+        pass re-arms the socket timeout to what is left of it, so a client that
+        trickles bytes, each inside the window, is still cut off when it ends.
+        A short or stalled body closes the connection: whatever the client sends
+        after it cannot be framed as the next request.
+        """
+        deadline = time.monotonic() + BODY_READ_TIMEOUT_S
+        try:
+            raw = self._read_until(length, deadline)
+        finally:
+            self.connection.settimeout(None)
+        if len(raw) != length:
+            self.close_connection = True
+            return None
+        return raw
+
+    def _read_until(self, length: int, deadline: float) -> bytes:
+        """Up to `length` bytes, stopping at EOF, an error or `deadline`."""
+        chunks: list[bytes] = []
+        received = 0
+        while received < length:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            self.connection.settimeout(remaining)
+            try:
+                chunk = self.rfile.read1(length - received)
+            except OSError:  # `TimeoutError` is one
+                break
+            if not chunk:
+                break
+            chunks.append(chunk)
+            received += len(chunk)
+        return b"".join(chunks)
 
     def _call(self, resolved: routes.Resolved, correlation_id: str) -> None:
         """The whole of `web/`'s access to the system (D19, D35)."""
@@ -283,6 +404,12 @@ class FleetHandler(BaseHTTPRequestHandler):
         showed. It is written as it came back: this module does not decode,
         escape or re-encode a pane byte, which is what T19's
         `test_the_first_frame_is_the_snapshot_byte_for_byte` holds.
+
+        **D76: after the snapshot, one reader thread carries keystrokes** from
+        this socket to `stream.write` — the handle this audited open returned,
+        so input reaches only this session and no key is a tool call (ADR-QR-4).
+        The close frame is written here, carrying the code the reader ended on;
+        the socket is then shut, which ends a reader blocked on a silent client.
         """
         if not self._origin_is_allowed():
             self._fail(403, correlation_id)
@@ -307,19 +434,59 @@ class FleetHandler(BaseHTTPRequestHandler):
             return
         stream = result.data
         self.close_connection = True
+        ending = _Ending(stream)
+        reader = threading.Thread(
+            target=self._read_keys, args=(ending,), name=INPUT_THREAD_NAME, daemon=True
+        )
         try:
             self.wfile.write(accepted)
             self.wfile.write(ws.build_frame(stream.snapshot, opcode=ws.OP_BINARY))
             self.wfile.flush()
+            reader.start()
             for chunk in stream.chunks():
                 self.wfile.write(ws.build_frame(chunk, opcode=ws.OP_BINARY))
                 self.wfile.flush()
-            self.wfile.write(ws.close_frame(ws.CLOSE_NORMAL))
+            self.wfile.write(ws.close_frame(ending.code, ending.reason))
             self.wfile.flush()
         except OSError:  # a closed tab, from in here, is a write that fails
             pass
         finally:
-            stream.close()
+            ending.close()
+            self._stop_reading(reader)
+
+    def _read_keys(self, ending: _Ending) -> None:
+        """The reader: frames to `stream.write` until the client stops (D76).
+
+        Ending it ends the stream, so `chunks()` returns and the writer's close
+        frame goes out carrying the reader's code (1009 for an oversize frame,
+        1011 for a refused key). A reader that dies on anything else still ends
+        the connection, with 1011, on its way out.
+        """
+        code, reason = CLOSE_INPUT_FAILED, READER_FAILED_REASON
+        try:
+            code, reason = ws.pump_input(lambda size: self._keys(ending, size), ending.deliver), ""
+        except _InputEnded:
+            pass  # already ended; the first close's code stands
+        finally:
+            ending.close(code, reason)
+
+    def _keys(self, ending: _Ending, size: int) -> bytes:
+        """Up to `size` bytes from the client; `b""` once the connection has ended."""
+        if ending.closed:
+            return b""
+        try:
+            return self.rfile.read1(size)
+        except (OSError, ValueError):  # shut under a blocked read; a closed `rfile`
+            return b""
+
+    def _stop_reading(self, reader: threading.Thread) -> None:
+        """Shut the socket so a blocked read returns, then join, bounded."""
+        try:
+            self.connection.shutdown(socket.SHUT_RDWR)
+        except OSError:  # already gone
+            pass
+        if reader.ident is not None:
+            reader.join(INPUT_JOIN_S)
 
     def _static(self, path: str, correlation_id: str) -> None:
         """`/` and `/static/*`, served from the package — no build step (D51)."""

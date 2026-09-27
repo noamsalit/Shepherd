@@ -136,6 +136,11 @@ STREAM_LIVENESS_S = 0.5
 #: one wedged call would otherwise hold every delivery; `_run` refuses it (REMFIX-1).
 TMUX_CALL_TIMEOUT_S = 10.0
 
+#: The most payload bytes one `send-keys -H` carries. Each byte is a hex word of three wire
+#: bytes, and tmux refuses a message over `MAX_IMSGSIZE` as `command too long` (~5.4 KB
+#: here on 3.6a); 4096 keeps a call under `TMUX_COMMAND_LIMIT_B` with room for its frame.
+WRITE_CHUNK_BYTES = 4096
+
 
 @dataclass(frozen=True)
 class CommandResult:
@@ -396,10 +401,13 @@ class LocalRunner:
         """`send-keys -H`, one hex word per byte — byte-exact, and never the tty.
 
         A2: writing to `#{pane_tty}` delivers **zero** bytes to the program and
-        prints the text on the screen instead.
+        prints the text on the screen instead. A long paste is sent in order, as
+        `WRITE_CHUNK_BYTES` per call; a refused call refuses the rest.
         """
         spot = target(handle.session_name)
-        self._checked("send-keys", "-H", "-t", spot, *[f"{byte:02x}" for byte in data])
+        for start in range(0, len(data), WRITE_CHUNK_BYTES):
+            chunk = data[start : start + WRITE_CHUNK_BYTES]
+            self._checked("send-keys", "-H", "-t", spot, *[f"{byte:02x}" for byte in chunk])
 
     def attached_clients(self, handle: RunnerHandle) -> int:
         """`list-clients` for this one session: one line per client, counted.
