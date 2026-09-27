@@ -379,7 +379,8 @@ def test_c4_uninstall_replay_recompute_from_the_cli(hooks: Hooks, rec: Recorder)
         rec.equal(f"proc.{label}_exit_0", 0, ran.returncode)
         rec.equal(f"logs.{label}_stderr_empty", "", ran.stderr)
         if label != "replay_apply":
-            count = next((line for line in ran.stdout.splitlines() if line.startswith("read ") and " records" in line), "")
+            count = next((line.strip() for line in ran.stdout.splitlines()
+                          if line.strip().startswith("read ") and " records" in line), "")
             number = int(count.split()[1]) if count.split()[1:2] and count.split()[1].isdigit() else 0
             rec.check(f"proc.{label}_read_n_records", number > 0, "'read N records' with N > 0", count or ran.stdout[:120])
             rec.check(f"proc.{label}_changed_no_column",

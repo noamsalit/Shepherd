@@ -106,7 +106,7 @@ def test_c2_doctor_reports_engine_schema_database_discovery(fleet: Fleet, qa6_ru
     rec.check("logs.database_schema_current", str(fleet.controld.root.data_dir) in database and schema in database,
               f"the sandbox DB at {schema}", database)
     discovery = lines.get("discovery", "")
-    rec.check("logs.discovery_reports_the_daemon", "registry sessions 2" in discovery or "2 registry" in discovery,
+    rec.check("logs.discovery_reports_the_daemon", "registry 2 sessions" in discovery,
               "the running daemon's discovery (registry sessions 2)", discovery)
     artifact = qa6_run.artifacts / "h1-settings.json"
     if not artifact.exists():
@@ -115,7 +115,7 @@ def test_c2_doctor_reports_engine_schema_database_discovery(fleet: Fleet, qa6_ru
         with_settings = cli(fleet.controld, "doctor", "--settings", str(artifact))
         rec.note(f"doctor --settings rc={with_settings.returncode}\n{with_settings.stdout}")
         hooks_line = next((line for line in with_settings.stdout.splitlines() if line.startswith("hooks:")), "")
-        rec.check("logs.hooks_reports_managed_entries", "managed" in hooks_line and "not inspected" not in hooks_line,
+        rec.check("logs.hooks_reports_managed_entries", " of our entries" in hooks_line and "not inspected" not in hooks_line,
                   "the file's managed entries", hooks_line)
     fleet_data = as_dict(fleet.controld.client.fleet())
     rec.record("api.fleet_session_count", fleet_data.get("session_count"))
