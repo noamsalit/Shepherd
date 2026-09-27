@@ -30,7 +30,7 @@ def test_every_stop_reason_has_a_bucket_and_actions() -> None:
         assert reason in BUCKET_OF, reason
         assert reason in DEFAULT_ACTIONS, reason
         assert isinstance(BUCKET_OF[reason], Bucket)
-    assert len(BUCKET_OF) == len(list(StopReason)) == 20
+    assert len(BUCKET_OF) == len(list(StopReason)) == 21
 
 
 def test_the_bucket_map_is_section_8s_outcome_class_column() -> None:

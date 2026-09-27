@@ -8,7 +8,9 @@ connection, reads a clock, starts a process or spells a multiplexer word.
 
 **The row exists before the process does (C-M3-7).** `create_owned_session` is
 step 4 and `runner.start` is step 5, so a spawn that dies between them leaves a
-handle-less row for T12's reconcile — never a live `claude` with no row.
+handle-less row for T12's reconcile — never a live `claude` with no row. A start
+the runner *refuses* ends that row `refused` (§3 D73): the attempt stays visible
+and is no longer live.
 
 **A spawn answers no dialog, ever (clause 3, C-M3-5).** This module calls
 `start` and `pane` and no other member, so it sends no key by construction. A
@@ -51,6 +53,7 @@ from shepherd.core.states import Origin, SessionState
 from shepherd.core.stream import StreamEvent
 from shepherd.engines.claude_code.trust import TrustState, trust_state
 from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, admit
+from shepherd.orchestration.declared_verdicts import refused_verdict
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
 
@@ -253,6 +256,10 @@ def spawn_owned_session(
         ensure_server()
         handle = runner.start(spec)
     except RunnerRefusal as refusal:
+        stamp = now()
+        ended = FoldDelta(state=SessionState.STOPPED, last_event_at=stamp)
+        store.apply_fold_delta(session_id, ended)
+        store.apply_stop_verdict(session_id, refused_verdict(refusal.reason), stamp, None)
         return SpawnRefused(refusal.reason, None)
     store.set_runner_handle(session_id, handle)
 
@@ -272,7 +279,7 @@ def spawn_owned_session(
                 # `unreadable` when the window closed with nothing decisive: a
                 # value, never a blank (principle 5).
                 "pane_kind": (found.kind or PaneKind.UNREADABLE).value,
-                "trusted": trust.trusted,
+                "trusted": trust.trusted is True,  # §3 D78: unknown is not trusted
                 "trust_source": trust.source,
             },
         )

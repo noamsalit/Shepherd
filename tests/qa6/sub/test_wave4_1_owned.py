@@ -443,13 +443,19 @@ def brief_over_limit(env: Owned, over: int) -> str:
     raise Blocked("O4 sizing: the over-limit brief is not refused by the product's own spawn_argv")
 
 
+def live_count(fleet: dict[str, object]) -> int:
+    """The fleet summary's live rows: every effective state but `stopped`."""
+    counts = as_dict(fleet.get("counts"))
+    return sum(value for key, value in counts.items() if key != "stopped" and isinstance(value, int))
+
+
 @scenario("O4")
 def test_o4_a_spawn_the_runner_refuses_leaves_no_session_behind(mod: Mod, rec: Recorder) -> None:
     env = mod.env
     brief = brief_over_limit(env, 1)
     rec.record("given.brief_bytes", len(brief))
     before_rows = {str(r["id"]) for r in db_rows(env.controld.db, "SELECT id FROM session")}
-    before_count = env.client.fleet().get("session_count")
+    before_fleet = env.client.fleet()
     panes = owned_panes(env)
     mark = env.stream.mark()
     made = spawn(env, brief=brief)
@@ -458,9 +464,19 @@ def test_o4_a_spawn_the_runner_refuses_leaves_no_session_behind(mod: Mod, rec: R
               and str(TMUX_COMMAND_LIMIT_B + 1) in refusal and str(TMUX_COMMAND_LIMIT_B) in refusal,
               f"spawned:false, the refusal naming {TMUX_COMMAND_LIMIT_B + 1} and {TMUX_COMMAND_LIMIT_B} bytes",
               (made.status, {k: v for k, v in made.data.items() if k != "refusal"}, refusal[:300]))
-    after_rows = {str(r["id"]) for r in db_rows(env.controld.db, "SELECT id FROM session")}
-    rec.equal("db.no_new_session_row", [], sorted(after_rows - before_rows))
-    rec.equal("api.session_count_unchanged", before_count, env.client.fleet().get("session_count"))
+    # Ruling 9 (§3 D73): the pre-written row is kept and ended `refused`, never left live.
+    new_rows = [r for r in db_rows(env.controld.db, "SELECT id, state, stop_reason, runner_handle FROM session")
+                if str(r["id"]) not in before_rows]
+    rec.check("db.refused_row_is_ended", len(new_rows) == 1 and new_rows[0]["state"] == "stopped"
+              and new_rows[0]["stop_reason"] == "refused" and new_rows[0]["runner_handle"] is None,
+              "one new row: state stopped, stop_reason refused, runner_handle NULL", new_rows)
+    after_fleet = env.client.fleet()
+    live = (live_count(before_fleet), live_count(after_fleet))
+    counts = (before_fleet.get("session_count"), after_fleet.get("session_count"))
+    rec.check("api.session_count_rises_by_1_with_no_live_row",
+              isinstance(counts[0], int) and counts[1] == counts[0] + 1 and live[1] == live[0],
+              "session_count +1, and the live (starting/running/needs_you) count unchanged",
+              {"session_count": counts, "live": live})
     rec.equal("tmux.no_new_pane", panes, owned_panes(env))
     control = run_control(env.stream, env.client, "O4", mark)
     rec.equal("stream.no_session_spawned", [], [f.kind for f in control.interior if f.kind == "session.spawned"])

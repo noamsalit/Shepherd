@@ -179,11 +179,12 @@ def test_migrate_expected_version_matches_the_highest_file() -> None:
     `sessiond` waiting for a version `controld` never reports.
 
     Goes red on 004 landing without the constant moving — and on the constant
-    moving without the file.
+    moving without the file — and on 005 (§3 D73). This is the one literal head
+    pin; every other test that means "the current version" reads the constant.
     """
     versions = sorted(int(path.name.split("_", 1)[0]) for path in MIGRATIONS_DIR.glob("*.sql"))
-    assert versions == [1, 2, 3, 4]
-    assert EXPECTED_SCHEMA_VERSION == 4
+    assert versions == [1, 2, 3, 4, 5]
+    assert EXPECTED_SCHEMA_VERSION == 5
     assert (MIGRATIONS_DIR / "003_m3_mailbox.sql").is_file()
 
 
@@ -192,6 +193,9 @@ def test_003_applies_over_002_and_changes_nothing_that_was_there(tmp_path: Path)
 
     Goes red if 003 ever touches `session` — a rebuild, a widened `CHECK`, an
     added column — and goes red if the pre-existing row or either index is lost.
+    The chain now also runs 005, which rebuilds `session` to widen a `CHECK`:
+    the column spec and index spec compared here carry no `CHECK` text, so they
+    must still hold, and holding them is a bonus guard that 005 preserves both.
     """
     db_path = build_002_database(tmp_path)
 
@@ -200,8 +204,8 @@ def test_003_applies_over_002_and_changes_nothing_that_was_there(tmp_path: Path)
         before_indexes = index_spec(connection, "session")
     assert len(before_columns) == len(FULL_SESSION)  # 52 columns, all of them written above
 
-    assert migrate(db_path) == 4
-    assert read_schema_version(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
+    assert read_schema_version(db_path) == EXPECTED_SCHEMA_VERSION
 
     with connect(db_path) as connection:
         assert session_column_spec(connection) == before_columns
@@ -224,8 +228,11 @@ def test_003_applies_over_002_and_changes_nothing_that_was_there(tmp_path: Path)
             )
 
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
-        # four applied migrations, and 001/002's bookkeeping rows untouched
-        assert connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 4
+        # every applied migration, and 001/002's bookkeeping rows untouched
+        assert (
+            connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0]
+            == EXPECTED_SCHEMA_VERSION
+        )
 
 
 def test_003_leaves_every_session_default_alone(tmp_path: Path) -> None:
@@ -406,7 +413,7 @@ def test_checksum_mismatch_on_003_refuses_to_start(tmp_path: Path) -> None:
     directory = tmp_path / "migrations"
     shutil.copytree(MIGRATIONS_DIR, directory)
     db_path = tmp_path / "shepherd.db"
-    assert migrate(db_path, migrations_dir=directory) == 4
+    assert migrate(db_path, migrations_dir=directory) == EXPECTED_SCHEMA_VERSION
 
     target = directory / "003_m3_mailbox.sql"
     target.write_text(target.read_text(encoding="utf-8") + "\n-- edited\n", encoding="utf-8")
@@ -417,9 +424,9 @@ def test_checksum_mismatch_on_003_refuses_to_start(tmp_path: Path) -> None:
     assert "003" in str(excinfo.value)
 
 
-def test_future_schema_refuses_to_start_at_five(tmp_path: Path) -> None:
-    """§7 rule 2, re-anchored one version up — a database at 5 against a binary
-    at 4.
+def test_future_schema_refuses_to_start_at_six(tmp_path: Path) -> None:
+    """§7 rule 2, re-anchored one version up — a database at 6 against a binary
+    at 5.
 
     The successor to `test_future_schema_refuses_to_start_at_four`, retired by
     §3 D57's migration 004. That test built its impossible sentinel by
@@ -427,21 +434,22 @@ def test_future_schema_refuses_to_start_at_five(tmp_path: Path) -> None:
     `schema_migration.version` is `INTEGER PRIMARY KEY` (`001:22`), so the
     insert became a primary-key collision instead of the refusal it asserted.
     The rule itself is unchanged, which is why this is a rename-with-successor
-    rather than a deletion.
+    rather than a deletion. §3 D73's migration 005 did the same to `…_at_five`,
+    so the sentinel is version **6** and the name moved with it.
     """
     db_path = tmp_path / "shepherd.db"
     migrate(db_path)
     with connect(db_path) as connection:
         connection.execute(
             "INSERT INTO schema_migration (version, name, checksum, applied_at)"
-            " VALUES (5, '005_from_the_future', 'x', '2026-09-17T00:00:00Z')"
+            " VALUES (6, '006_from_the_future', 'x', '2026-09-17T00:00:00Z')"
         )
 
     with pytest.raises(MigrationRefused) as excinfo:
         migrate(db_path)
     message = str(excinfo.value)
-    assert "5" in message and "4" in message
-    assert read_schema_version(db_path) == 5
+    assert "6" in message and "5" in message
+    assert read_schema_version(db_path) == 6
 
 
 def test_001_and_002_are_untouched_by_m3(tmp_path: Path) -> None:
@@ -455,7 +463,7 @@ def test_001_and_002_are_untouched_by_m3(tmp_path: Path) -> None:
     forbids, and the fix is a new numbered file rather than a new digest here.
     """
     assert build_002_database(tmp_path) is not None
-    assert migrate(tmp_path / "shepherd.db") == 4
+    assert migrate(tmp_path / "shepherd.db") == EXPECTED_SCHEMA_VERSION
 
     digests = {
         "001_m1_foundation.sql": (

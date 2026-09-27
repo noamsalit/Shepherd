@@ -49,6 +49,7 @@ from shepherd.core.runner import (
 from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.core.stream import StreamEvent
 from shepherd.engines.claude_code.spawn import spawn_argv as engine_spawn_argv
+from shepherd.engines.claude_code.trust import trust_state
 from shepherd.host.base import DetachedLaunch
 from shepherd.orchestration.spawn import (
     CAP_CHILDREN,
@@ -735,8 +736,14 @@ def test_an_ensure_server_that_refuses_is_a_refusal_not_a_traceback(
     assert "start" not in runner.calls, "nothing may be started when the server is not there"
     rows = store.list_sessions(workspace_id=workspace_id)
     assert len(rows) == 1 and rows[0].runner_handle is None, (
-        "the row still exists first (C-M3-7): T12's reconcile is what adopts it"
+        "the row still exists first (C-M3-7), and is ended rather than left live"
     )
+    # §3 D73: the refusal is the row's declared verdict, not a ghost session.
+    assert rows[0].state is SessionState.STOPPED
+    assert rows[0].stop_reason == "refused"
+    assert rows[0].outcome == "error"
+    assert rows[0].decided_by == "declared"
+    assert rows[0].ended_at is not None
 
 
 def test_a_host_with_no_pane_driver_cannot_spawn_and_says_so(
@@ -943,20 +950,48 @@ def test_a_known_untrusted_directory_is_named_before_the_spawn(
     assert cwd in str(world.events[0].payload["trust_source"])
 
 
-def test_an_unknown_trust_verdict_stays_unknown(
-    store: Store, workspace_id: str, root: Path
+def test_an_unknown_trust_verdict_is_published_as_not_trusted(
+    store: Store, workspace_id: str, root: Path, tmp_path: Path
 ) -> None:
-    """No config home named: `trusted` is `None` and says why (principle 5)."""
+    """§3 D78: trust is not *known* to be granted, so the frame says `false`.
+    The unknown is not flattened away: `trust_source` still names it (principle
+    5), and the reader underneath still says `None`. Successor of
+    `test_an_unknown_trust_verdict_stays_unknown` (owner ruling 27).
+
+    The unknown is a throwaway config home holding no config file, rather than
+    `None`: `None` falls back to the user's real `~/.claude.json` (T10-R1), and
+    whether that names this directory is the host's fact, not the test's."""
+    home = tmp_path / "engine-home-empty"
+    home.mkdir()
     result, world = spawn(
         store=store,
         runner=scripted(panes=[ready_pane()]),
         workspace_id=workspace_id,
         cwd=str(root / "repo"),
-        engine_config_home=None,
+        engine_config_home=home,
     )
     assert isinstance(result, SpawnOutcome)
-    assert world.events[0].payload["trusted"] is None
-    assert world.events[0].payload["trust_source"] != ""
+    assert trust_state(str(root / "repo"), home).trusted is None, "the reader keeps the unknown"
+    assert world.events[0].payload["trusted"] is False
+    assert str(world.events[0].payload["trust_source"]).startswith("absent: ")
+
+
+def test_a_known_trusted_directory_is_published_as_trusted(
+    store: Store, workspace_id: str, root: Path, tmp_path: Path
+) -> None:
+    """D78's positive control: `true` is still reachable, for exactly the
+    directory the engine's config records as accepted."""
+    cwd = str(root / "repo")
+    result, world = spawn(
+        store=store,
+        runner=scripted(panes=[ready_pane()]),
+        workspace_id=workspace_id,
+        cwd=cwd,
+        engine_config_home=trusted_home(tmp_path, cwd, trusted=True),
+    )
+    assert isinstance(result, SpawnOutcome)
+    assert world.events[0].payload["trusted"] is True
+    assert cwd in str(world.events[0].payload["trust_source"])
 
 
 def test_the_engine_config_home_is_required_at_the_call_site() -> None:

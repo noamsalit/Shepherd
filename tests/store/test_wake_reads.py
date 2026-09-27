@@ -240,6 +240,42 @@ def test_the_wake_set_hands_back_sessions_and_never_a_row(
         assert candidate.outcome in {Bucket.UNFINISHED.value, Bucket.ERROR.value}
 
 
+def test_a_refused_start_is_not_a_wake_candidate(store: Store) -> None:
+    """§3 D73 (E-QR-17, PP17): a master-origin row ended `refused`/`error` is
+    exactly D31's population and is still excluded — the master already holds
+    the refusal as its tool result. The positive control differs from it by
+    its verdict alone: same origin, same `ended_at`, `killed`/`unfinished`.
+    Both with a `since` and without one."""
+    refused, control = sid("01WAKEREFUSED"), sid("01WAKEKILLED")
+    for session_id, reason, bucket in (
+        (refused, StopReason.REFUSED, Bucket.ERROR),
+        (control, StopReason.KILLED, Bucket.UNFINISHED),
+    ):
+        spawn(store, session_id, Origin.ORCHESTRATOR)
+        store.apply_stop_verdict(
+            session_id,
+            Verdict(
+                stop_reason=reason,
+                bucket=bucket,
+                why="the row's own sentence",
+                confidence=1.0,
+                decided_by=DecidedBy.DECLARED,
+                next_actions=(),
+                waiting_on=None,
+                missing=(),
+            ),
+            AFTER,
+            None,
+        )
+    ended = store.get_session(refused)
+    assert ended is not None and ended.outcome == Bucket.ERROR.value, "arrival first"
+
+    for since in (SINCE, None):
+        woken = {found.id for found in store.wake_candidates(since)}
+        assert control in woken, since
+        assert refused not in woken, since
+
+
 # ----- the retry chain -------------------------------------------------------
 
 

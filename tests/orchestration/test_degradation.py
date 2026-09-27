@@ -70,6 +70,7 @@ from shepherd.core.stops import Bucket
 from shepherd.orchestration import (
     admission,
     ask,
+    declared_verdicts,
     dialog_keys,
     dialogs,
     lifecycle,
@@ -142,6 +143,8 @@ POPULATION: frozenset[tuple[str, str]] = frozenset(
     {
         ("admission", "admit"),
         ("ask", "ask_session"),
+        # §3 D73's refused-start verdict: a pure builder over the refusal's words.
+        ("declared_verdicts", "refused_verdict"),
         ("dialog_keys", "is_the_captured_permission_dialog"),
         ("dialog_keys", "is_the_captured_trust_dialog"),
         ("dialogs", "answer_permission"),
@@ -341,6 +344,9 @@ def drivers(world: World, workspace_id: str, index: int) -> dict[tuple[str, str]
             can_fork=True,
             session_id=OWNED_ID,
             question=world.text,
+        ),
+        ("declared_verdicts", "refused_verdict"): lambda: declared_verdicts.refused_verdict(
+            world.text
         ),
         ("dialog_keys", "is_the_captured_permission_dialog"): (
             lambda: dialog_keys.is_the_captured_permission_dialog(world.text)
@@ -550,8 +556,8 @@ def test_the_enumerated_population_is_the_one_this_suite_drives(
         "gone": sorted(POPULATION - enumerated),
     }
     # Arrival: the rule really walked the package and really found functions…
-    assert len(orchestration_modules()) == 11
-    assert len(enumerated) == 26
+    assert len(orchestration_modules()) == 12
+    assert len(enumerated) == 27
 
     # …and every one of them has a driver, keyed by the same pair.
     place_sidecar(config_dir, degradations()[0])

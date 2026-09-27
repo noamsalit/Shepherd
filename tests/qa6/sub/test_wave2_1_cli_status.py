@@ -19,6 +19,8 @@ from dataclasses import dataclass
 
 import pytest
 
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
+
 from .. import paths
 from ..httpclient import as_dict
 from ..instance import Controld
@@ -100,8 +102,9 @@ def test_c2_doctor_reports_engine_schema_database_discovery(fleet: Fleet, qa6_ru
     rec.check("logs.host_unverified", "MacHost · UNVERIFIED" in lines.get("host", ""), "MacHost · UNVERIFIED",
               lines.get("host", "")[:120])
     database = lines.get("database", "")
-    rec.check("logs.database_schema_4", str(fleet.controld.root.data_dir) in database and "schema version 4" in database,
-              "the sandbox DB at schema 4", database)
+    schema = f"schema version {EXPECTED_SCHEMA_VERSION}"
+    rec.check("logs.database_schema_current", str(fleet.controld.root.data_dir) in database and schema in database,
+              f"the sandbox DB at {schema}", database)
     discovery = lines.get("discovery", "")
     rec.check("logs.discovery_reports_the_daemon", "registry sessions 2" in discovery or "2 registry" in discovery,
               "the running daemon's discovery (registry sessions 2)", discovery)

@@ -49,7 +49,7 @@ def _capped(text: str, limit: int) -> str:
 
 class StopReason(StrEnum):
     """Why a session stopped. Values are §8's spellings verbatim, because
-    migration 002's `CHECK` lists exactly these twenty.
+    migrations 002 and 005's `CHECK` list exactly these twenty-one.
 
     **`StopReason.CLEARED` is not `core.fold_types.CLEARED`** — the latter is
     the fold's empty-string clear sentinel. Different namespaces; a module that
@@ -85,6 +85,12 @@ class StopReason(StrEnum):
     DERAILED = "derailed"
     """Unreachable at M2 (G-M2-6): no mechanical detector exists."""
     BLOCKED_EXTERNAL = "blocked_external"
+
+    # the one declared reason (D73)
+    REFUSED = "refused"
+    """The runner refused the start (`runner.start` or its server raised). A
+    spawn declares it on the row it wrote first, so the attempt is ended rather
+    than left live, and D31's wake set excludes it: the master already holds it."""
 
 
 class Bucket(StrEnum):
@@ -289,12 +295,6 @@ PALETTE: Mapping[Bucket, BucketStyle] = MappingProxyType(
 #: **`blocked` below `running` is deliberate** and *is* verbatim from §12 — it
 #: is real, it is visible, and it is not yours to act on.
 BUCKET_ORDER: tuple[Bucket, ...] = (
-    Bucket.NEEDS_YOU,
-    Bucket.ERROR,
-    Bucket.UNFINISHED,
-    Bucket.RUNNING,
-    Bucket.PAUSED,
-    Bucket.BLOCKED,
-    Bucket.FINISHED,
-    Bucket.UNCLASSIFIED,
+    Bucket.NEEDS_YOU, Bucket.ERROR, Bucket.UNFINISHED, Bucket.RUNNING,
+    Bucket.PAUSED, Bucket.BLOCKED, Bucket.FINISHED, Bucket.UNCLASSIFIED,
 )
