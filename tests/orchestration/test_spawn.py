@@ -225,6 +225,7 @@ def spawn(
     brief: str | None = "ship it",
     title: str | None = None,
     origin: Origin = Origin.ORCHESTRATOR,
+    retry_of: str | None = None,
 ) -> tuple[SpawnOutcome | SpawnRefused, Spawned]:
     here = world if world is not None else Spawned()
     result = spawn_owned_session(
@@ -243,6 +244,7 @@ def spawn(
         effort=None,
         parent_session_id=parent_session_id,
         origin=origin,
+        retry_of=retry_of,
     )
     return result, here
 

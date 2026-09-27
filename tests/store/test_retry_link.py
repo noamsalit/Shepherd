@@ -267,3 +267,22 @@ def test_link_retry_is_the_only_writer_of_the_lineage_column(store: Store) -> No
     attempt(store, ROOT)
     attempt(store, SECOND)
     assert store.link_retry(session_id=SECOND, retry_of=ROOT).retry_of == ROOT
+
+
+def test_retried_by_names_the_one_retry_an_attempt_has(store: Store) -> None:
+    """RD-2's read: which session, if any, already declared itself a retry of this one.
+
+    `retry_chain_depth` walks **up**, so two retries both "of ROOT" are each depth
+    2 and neither is refused by D31. This verb is the downward read that lets the
+    spawn refuse the sibling. `None` for an attempt with no retry, and for a
+    session that does not exist; the earliest retry when a hand edit planted two.
+    """
+    attempt(store, ROOT)
+    attempt(store, SECOND)
+    assert store.retried_by(ROOT) is None
+    assert store.retried_by(THIRD) is None
+
+    store.link_retry(session_id=SECOND, retry_of=ROOT)
+
+    assert store.retried_by(ROOT) == SECOND
+    assert store.retried_by(SECOND) is None, "the retry itself has not been retried"

@@ -15,7 +15,7 @@ the harness kills them over HTTP, which is how a session stops `killed` /
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping, Sequence
 
 import pytest
 
@@ -25,7 +25,7 @@ from .. import tmuxctl
 from ..httpclient import as_dict
 from ..inp import Inp
 from ..inproc import master as master_module
-from ..inproc.master import BOOK, CallResult, Turn
+from ..inproc.master import BOOK, Call, CallResult, Turn
 from ..sandbox import RunContext
 from ..scenario import scenario
 from ..instance import db_rows, start_helper
@@ -38,6 +38,7 @@ from .test_wave5_1_support import (
     await_end,
     await_stopped,
     drain,
+    earlier,
     kill_http,
     last_turn_at,
     open_master,
@@ -50,6 +51,7 @@ from .test_wave5_1_support import (
     session_row,
     set_level,
     shape,
+    slot_free,
     spawn_call,
     spawn_user,
     turn_frames,
@@ -240,37 +242,84 @@ def session_row_by_engine(m: Master, engine: str) -> dict[str, object] | None:
 # ----- M14 -----------------------------------------------------------------------------
 
 
+RETRY_BRIEF = "QA6 retry brief"
+
+
+def retry_call(m: Master, title: str, retry_of: Callable[[Sequence[CallResult]], str]) -> Call:
+    """A master `spawn_session` that **declares** what it retries (§3 D70); the target may be
+    an earlier call's answer in the same turn, so the args are computed when the call runs."""
+    def args(results: Sequence[CallResult]) -> Mapping[str, object]:
+        return {"workspace_id": m.project_id, "cwd": str(m.alpha), "title": title, "brief": RETRY_BRIEF,
+                "retry_of": retry_of(results)}
+    return Call("spawn_session", args)
+
+
+def r1_of(results: Sequence[CallResult]) -> str:
+    return str(result_json(earlier(results, 0)).get("session_id"))
+
+
+def kill_through_the_wake(m: Master, sid: str, rec: Recorder) -> None:
+    """Kill `sid` at level 3 with the wake it opens **scripted, not raced** (B5b).
+
+    The kill ends `killed` / `unfinished`, so level 3 opens an unprompted turn for it, which
+    pops the book like any turn. The no-op wake turn is pushed first, and the scenario waits
+    until it ran and the slot is free, so the retry script cannot be taken by the wake. A wake
+    that never arrives is BLOCKED here, never a FAIL: M12 owns that clause.
+    """
+    if BOOK.pending():
+        raise Blocked(f"harness: {BOOK.pending()} scripted turn(s) left in the book before M14's wake")
+    BOOK.push(Turn(says="QA6 M14 wake"))
+    before = last_turn_at(m)
+    kill_and_wait(m, sid)
+    await_env(lambda: (BOOK.pending() == 0 and slot_free() and (last_turn_at(m) or "") > (before or "")) or None,
+              M12_BOUND_S, "X's level-3 wake turn opened and ended")
+    woke = BOOK.records[-1] if BOOK.records else None
+    rec.record("stream.x_stop_woke_the_master", {"last_turn_at": last_turn_at(m),
+                                                 "wake_input": woke.text[:300] if woke is not None else None})
+
+
 @scenario("M14")
 def test_m14_the_retry_cap_refuses_a_third_master_retry_end_to_end(w: Master, rec: Recorder) -> None:
-    rec.note("M14: spawn_session's schema has no retry field (C-3), so the 'retries' are the master spawning X's "
-             "brief and cwd again, which is the only production shape available")
+    rec.note("M14: a retry is declared with spawn_session's retry_of (§3 D70). The cap counts attempts including the "
+             "original (t10.md §T10-2), so X and its retry r1 fill the lineage and a retry of r1 is the refused third; "
+             "a second retry of X is refused by RD-2, naming r1, with no cap anomaly")
+    drain(w, "before-M14")
     set_level(w, 3)
     spawned: list[str] = []
     amark = w.audit.mark()
     try:
         cap_before = anomaly(w, "wake_retry_cap_reached")
-        x = master_spawn(w, "QA6 X", "QA6 retry brief")
+        x = master_spawn(w, "QA6 X", RETRY_BRIEF)
         spawned.append(x)
-        kill_and_wait(w, x)
-        retries = Turn(says="QA6 M14 retries", calls=[spawn_call(w, f"QA6 X retry {i}", "QA6 retry brief") for i in (1, 2, 3)])
+        kill_through_the_wake(w, x, rec)
+        retries = Turn(says="QA6 M14 retries", calls=[retry_call(w, "QA6 X retry 1", lambda _results: x),
+                                                      retry_call(w, "QA6 X retry of r1", r1_of),
+                                                      retry_call(w, "QA6 X retry 2", lambda _results: x)])
         _turn, done = run_turn(w, retries, "QA6 M14 retries")
-        answers = [result_json(r) for r in done.results]
-        spawned.extend(str(a.get("session_id")) for a in answers if a.get("spawned") is True)
-        third = answers[2] if len(answers) == 3 else {}
-        rec.check("api.third_retry_refused", third.get("spawned") is False and third.get("cap") == "retry_cap_reached",
-                  "{spawned:false, cap:'retry_cap_reached'}", third)
+        answers = [result_json(r) for r in done.results] + [{}, {}, {}]
+        first, capped, sibling = answers[0], answers[1], answers[2]
+        spawned.extend(str(a.get("session_id")) for a in answers[:3] if a.get("spawned") is True)
+        r1 = first.get("session_id")
+        rec.check("api.retry_of_the_retry_refused_at_the_cap",
+                  capped.get("spawned") is False and capped.get("cap") == "retry_cap_reached",
+                  "{spawned:false, cap:'retry_cap_reached'}", capped)
         rec.equal("api.anomaly_retry_cap_plus_one", cap_before + 1, anomaly(w, "wake_retry_cap_reached"))
-        links = [session_row(w, str(a.get("session_id"))).get("retry_of") for a in answers if a.get("session_id")]
-        rec.check("db.retries_link_to_x", bool(links) and all(link is not None for link in links),
-                  "the retries carry retry_of links to X's lineage", links)
+        refusal = str(sibling.get("refusal"))
+        rec.check("api.second_retry_of_x_refused_naming_r1",
+                  sibling.get("spawned") is False and sibling.get("cap") is None and isinstance(r1, str)
+                  and "already retried" in refusal and r1 in refusal,
+                  "{spawned:false, cap:null}, a reason naming r1 ('already retried')", {"r1": r1, "answer": sibling})
+        r1_link = session_row(w, r1).get("retry_of") if isinstance(r1, str) else None
+        rec.equal("db.r1_retry_of_is_x", x, r1_link)
         spawn_rows = rows_for(w, amark, "spawn_session")
         rec.check("logs.spawns_audited", len(spawn_rows) == 4 and all(r.get("actor_kind") == "master" for r in spawn_rows),
-                  "four master spawn_session rows (X and three retries)", shape(spawn_rows, "actor_kind", "result"))
+                  "four master spawn_session rows (X plus three)", shape(spawn_rows, "actor_kind", "result"))
     finally:
-        set_level(w, 2)
+        set_level(w, 2)  # before the kills: r1's stop at level 2 opens no wake and bumps nothing (RD-3)
         for sid in spawned:
             if pane_alive(w, sid):
                 kill_and_wait(w, sid)
+        BOOK.clear()
     drain(w, "after-M14")
     rec.finish()
 

@@ -522,6 +522,20 @@ def retry_chain_depth(connection: sqlite3.Connection, session_id: str) -> int:
     return len(seen)
 
 
+def retried_by(connection: sqlite3.Connection, session_id: str) -> str | None:
+    """The session that declared itself a retry of this one, or `None` (RD-2).
+
+    The downward read `retry_chain_depth` cannot make: two retries both "of X"
+    each walk up to the same depth, so D31 alone never refuses the sibling.
+    """
+    rows = _rows(
+        connection,
+        "SELECT id FROM session WHERE retry_of = ? ORDER BY started_at, id LIMIT 1",
+        (session_id,),
+    )
+    return str(rows[0]["id"]) if rows else None
+
+
 # ----- the stop group (M2, T2) ----------------------------------------------
 
 

@@ -464,6 +464,7 @@ def drivers(world: World, workspace_id: str, index: int) -> dict[tuple[str, str]
             effort=None,
             parent_session_id=None,
             origin=Origin.USER_UI,
+            retry_of=None,
         ),
         # T9's wake set. `drain` and `peek` are driven against the degraded
         # world's store; `render_wake_text` is driven against the degraded

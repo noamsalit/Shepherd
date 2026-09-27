@@ -52,7 +52,7 @@ from shepherd.core.runner import (
 from shepherd.core.states import Origin, SessionState
 from shepherd.core.stream import StreamEvent
 from shepherd.engines.claude_code.trust import TrustState, trust_state
-from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, admit
+from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, Retry, admit
 from shepherd.orchestration.declared_verdicts import refused_verdict
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
@@ -204,15 +204,23 @@ def spawn_owned_session(
     effort: str | None,
     parent_session_id: str | None,
     origin: Origin,
+    retry_of: str | None,
     ephemeral: bool = False,
 ) -> SpawnOutcome | SpawnRefused:
     """Start one owned session. Every failure is a `SpawnRefused`, never a raise."""
+    if retry_of is not None and store.get_session(retry_of) is None:
+        return SpawnRefused(f"no session {retry_of!r} to retry: start it afresh instead", None)
+    existing = None if retry_of is None else store.retried_by(retry_of)
+    if existing is not None:  # RD-2: a sibling retry would walk past D31's cap (§3 D70)
+        why = f"{retry_of!r} was already retried as {existing!r}; retry that one instead"
+        return SpawnRefused(why, None)
     admitted = admit(
         store=store,
         runner=runner,
         workspace_id=workspace_id,
         cwd=cwd,
         parent_session_id=parent_session_id,
+        retry=None if retry_of is None else Retry(of=retry_of, initiated_by=origin),
     )
     if isinstance(admitted, SpawnRefused):
         return admitted
@@ -240,6 +248,8 @@ def spawn_owned_session(
         model=model,
         effort=effort,
     )
+    if retry_of is not None:  # the lineage the cap walks (§3 D70); admission already capped it
+        store.link_retry(session_id, retry_of)
 
     spec = SessionSpec(
         session_id=session_id,
