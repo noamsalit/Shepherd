@@ -333,6 +333,56 @@ def read_baseline(path: Path) -> dict[str, object]:
 # ----- pure comparisons Z1/Z3 make between the baseline and the after-teardown snapshot (H7) ---------
 
 
+SESSION_NAME = re.compile(r"^(\d+)\.")
+
+
+def session_pid(name: str) -> int | None:
+    """The pid a `~/.claude/sessions` entry (`<pid>.json`, `<pid>.<hash>.key`) is named for."""
+    match = SESSION_NAME.match(name)
+    return int(match.group(1)) if match else None
+
+
+def claude_session_changes(start: Mapping[str, object], now: Mapping[str, object],
+                           user_pids: set[int]) -> tuple[dict[str, object], dict[str, object]]:
+    """(changes, attributed) between two `~/.claude/sessions` listings.
+
+    An entry named for a pid in `user_pids` (a live claude the run did not
+    start) is the user's own session writing its state file, and is
+    `attributed`; every other difference is a change.
+    """
+    changes: dict[str, object] = {}
+    attributed: dict[str, object] = {}
+    for name in sorted(set(start) | set(now)):
+        was, is_now = start.get(name), now.get(name)
+        if was == is_now:
+            continue
+        if session_pid(name) in user_pids:
+            attributed[name] = {"before": was, "after": is_now, "why": "the user's own live session"}
+            continue
+        changes[name] = {"before": was, "after": is_now}
+    return changes, attributed
+
+
+def user_session_pids(names: set[str], run_root: str) -> set[int]:
+    """Pids named in `names` that are alive with a readable env outside `run_root`.
+
+    A pid whose env cannot be read, or whose HOME / CLAUDE_CONFIG_DIR sits
+    under the run root, is not the user's and stays a change.
+    """
+    found: set[int] = set()
+    for pid in {pid for pid in map(session_pid, names) if pid is not None}:
+        try:
+            env = process_env(pid)
+        except ProbeUnknown:
+            continue
+        if not env:
+            continue
+        homes = [os.path.realpath(env[key]) for key in ("HOME", "CLAUDE_CONFIG_DIR") if env.get(key)]
+        if homes and not any(home.startswith(run_root) for home in homes):
+            found.add(pid)
+    return found
+
+
 def listing_delta(before: Mapping[str, object], after: Mapping[str, object]) -> dict[str, object]:
     """Names added, names removed, and names whose mtime moved, between two `listing`s."""
     added = sorted(set(after) - set(before))

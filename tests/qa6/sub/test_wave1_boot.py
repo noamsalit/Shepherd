@@ -180,7 +180,13 @@ def test_w2_instance_is_isolated(boot: Boot, qa6_run: RunContext, rec: Recorder)
         now = hostprobe.snapshot()
         rec.equal("files.real_shepherd_data_unchanged", baseline.get("shepherd_data"), now.shepherd_data)
         rec.equal("files.real_tmpdir_shepherd_unchanged", baseline.get("real_tmpdir_shepherd"), now.real_tmpdir_shepherd)
-        rec.equal("files.real_claude_sessions_unchanged", baseline.get("claude_sessions"), now.claude_sessions)
+        start_sessions = baseline.get("claude_sessions")
+        start_sessions = start_sessions if isinstance(start_sessions, dict) else {}
+        user_pids = hostprobe.user_session_pids(set(start_sessions) | set(now.claude_sessions), run_root + "-")
+        changes, attributed = hostprobe.claude_session_changes(start_sessions, now.claude_sessions, user_pids)
+        rec.check("files.real_claude_sessions_unchanged", not changes,
+                  "no ~/.claude/sessions entry changed, except a live user session's own state file", changes)
+        rec.record("files.real_claude_sessions_attributed", attributed)
     else:
         rec.block("files.real_dirs_vs_baseline", "no run baseline.json (standalone run without the runner)")
     workspaces = [str(row["id"]) for row in db_rows(controld.db, "SELECT id FROM workspace ORDER BY id")]

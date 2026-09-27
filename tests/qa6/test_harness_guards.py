@@ -969,6 +969,30 @@ def test_proof_local_tree_guard() -> None:
     assert not problems, f"local tree guard: {problems}"
 
 
+def test_proof_claude_sessions_guard() -> None:
+    """Round 7: a live user session rewriting its own `<pid>.json` is attributed, not a change;
+    any other added, removed or moved entry is a change. Pure (planted listings)."""
+    from .hostprobe import claude_session_changes
+
+    start: dict[str, object] = {"100.json": 1.0, "100.ab.key": 2.0, "200.json": 3.0}
+    problems: list[str] = []
+    if claude_session_changes(start, dict(start), set())[0]:
+        problems.append("proof_sessions.unchanged_is_not_a_change")
+    user_moved = {**start, "100.json": 9.0}
+    changes, attributed = claude_session_changes(start, user_moved, {100})
+    if changes or "100.json" not in attributed:
+        problems.append("proof_sessions.user_session_state_is_attributed")
+    if "100.json" not in claude_session_changes(start, user_moved, set())[0]:
+        problems.append("proof_sessions.non_user_move_is_a_change")
+    added = {**start, "300.json": 4.0}
+    if "300.json" not in claude_session_changes(start, added, {100, 200})[0]:
+        problems.append("proof_sessions.new_foreign_pid_is_a_change")
+    removed = {k: v for k, v in start.items() if k != "200.json"}
+    if "200.json" not in claude_session_changes(start, removed, {100})[0]:
+        problems.append("proof_sessions.removed_non_user_is_a_change")
+    assert not problems, f"claude sessions guard: {problems}"
+
+
 def test_proof_host_field_deltas() -> None:
     """H7: the baseline vs after-teardown comparators Z1/Z3 use see an added name, a moved mtime and a gone pid."""
     from .hostprobe import listing_delta, pid_delta
