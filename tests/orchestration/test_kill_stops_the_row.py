@@ -6,11 +6,12 @@ which by its own contract does not touch `state` (`ask.py:_finish`'s note), so
 before BC-37 nothing set it: qa6 O6's killed row read `starting` with
 `stop_reason: killed`, and the fleet page bucketed it `unknown`.
 
-**The residual is asserted as it is, not as it should be.** A session that
-finished a turn before it was killed keeps that turn's verdict: G-M3-9's guard
-reads `ended_at`, every turn end stamps it (`signals/fold.py`), and whether the
-kill should overrule it is an owner question (plan, "Owner decisions"). The row
-still ends `stopped` — the kill itself is the hard signal.
+**The residual was decided by the owner (ruling 10, 2026-09-27).** A session
+that finished a turn before it was killed used to keep that turn's verdict:
+G-M3-9's guard read `ended_at`, and every turn end stamps it (`signals/fold.py`).
+The guard now compares `ended_at` across the kill, so an older turn ending no
+longer blocks `killed`. The row ends `stopped` either way — the kill itself is
+the hard signal.
 """
 
 from __future__ import annotations
@@ -141,7 +142,10 @@ def test_a_kill_after_a_turn_leaves_the_row_stopped(store: Store) -> None:
 
     `ended_at` is still the turn's (nothing clears it) and the state is
     `running` again, so the kill is the only thing that can say `stopped`.
-    The verdict is the turn's — BC-37's residual, recorded as today's behaviour.
+    Ruling 10 (BC-37 residual, 2026-09-27): the turn's older ending is not a
+    session end during the kill (`ended_at` did not change across it), so the
+    verdict is `killed` at the kill's time. This pin used to record the turn's
+    `completed` surviving the kill, as the pre-ruling behaviour.
     """
     owned_row(store, SessionState.RUNNING)
     store.apply_fold_delta(
@@ -159,6 +163,6 @@ def test_a_kill_after_a_turn_leaves_the_row_stopped(store: Store) -> None:
     row = store.get_owned_session(SESSION_ID)
     assert row is not None
     assert row.state is SessionState.STOPPED
-    # The residual (owner item): the turn's verdict and ending survive the kill.
-    assert row.stop_reason == "completed"
-    assert row.ended_at == TURN_ENDED
+    # Ruling 10: the kill, not the finished turn, is this session's end.
+    assert row.stop_reason == "killed"
+    assert row.ended_at == KILLED_AT

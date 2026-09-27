@@ -36,7 +36,7 @@ import ast
 import dataclasses
 import inspect
 import typing
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 
 import pytest
@@ -199,16 +199,21 @@ class Driver:
     the kill, which is the exact defect the ordering rule exists to prevent.
 
     `terminate_refusal` is the crash between the record and the kill.
+    `during_kill` is whatever arrives *while* the kill runs — a session-ending
+    hook that lands before `kill-session` returns (ruling 10, E-QR-13).
     """
 
     inner: ScriptedRunner
     terminate_refusal: str | None = None
+    during_kill: Callable[[], None] | None = None
     killed: list[str] = dataclasses.field(default_factory=list)
 
     # the two members that carry this double's own behaviour
     def terminate(self, handle: RunnerHandle) -> None:
         if self.terminate_refusal is not None:
             raise RunnerRefusal(self.terminate_refusal)
+        if self.during_kill is not None:
+            self.during_kill()
         self.killed.append(handle.session_name)
         self.inner.terminate(handle)
 
@@ -256,13 +261,18 @@ def driver(
     exit_code: int | None = 143,
     panes: Sequence[PaneRef] = (),
     terminate_refusal: str | None = None,
+    during_kill: Callable[[], None] | None = None,
+    alive: bool = False,
 ) -> Driver:
+    """`alive=True` makes the default pane live before the kill — a session
+    between turns (ruling 10); the default is a dead pane that kept its status.
+    `ScriptedRunner.probe` reads liveness from the pane, not from `proc`."""
     live = tuple(panes) or (
         PaneRef(
             session_name=HANDLE.session_name,
             session_id=SESSION_ID,
             pane_pid=4041880,
-            dead=True,
+            dead=not alive,
         ),
     )
     return Driver(
@@ -270,6 +280,7 @@ def driver(
             panes=(), proc=proc(exit_code), screen=b"", owned_panes=live
         ),
         terminate_refusal=terminate_refusal,
+        during_kill=during_kill,
     )
 
 
@@ -372,12 +383,20 @@ def test_an_owned_exit_code_reaches_the_row(
 def test_a_kill_whose_session_end_never_followed_is_counted(
     store: Store, workspace_id: str
 ) -> None:
-    """G-M3-9's count, in both directions.
+    """G-M3-9's count, in three directions (ruling 10, REM-FIX 1 re-drew the
+    second and third).
 
-    A row that already carries its own ending is **not** counted and keeps the
-    verdict the stop lane wrote: `apply_stop_verdict` stays the one stop writer
-    and this is not a second one. A row with no ending is counted, because the
-    verdict then came from the record rather than from a hook.
+    `killed` is written — and counted — only for a kill of a session that was
+    live between turns: no verdict arrived during the kill **and** either the
+    row had no ending or the pre-kill probe saw a live pane. A row with no ending
+    is counted, because the verdict then came from the record rather than from a
+    hook. A row whose **dead** pane already has an ending keeps it and is not
+    counted (declared reason: ruling 10 is about a live session between turns;
+    P7's pin re-killed a session that had already ended). A liveness sweep that
+    stamps `ended_at` during a mid-turn kill carries no verdict, so it is not a
+    session end and the kill is counted (declared reason: REM-FIX 1 decision 2;
+    P7's pin read the sweep's stamp as an ending). `apply_stop_verdict` stays the
+    one stop writer and this is not a second one.
     """
     owned_row(store, workspace_id)
     assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 0
@@ -391,7 +410,8 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
     )
     assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 1
 
-    # The other direction: the ending arrived first, so nothing is counted.
+    # The second direction: a dead pane whose ending arrived first — the kill
+    # ends nothing, so nothing is counted and the row keeps its ending.
     second = "01JBQ8Z9XKME5RT3VWNY6P0D02"
     owned_row(
         store,
@@ -414,6 +434,36 @@ def test_a_kill_whose_session_end_never_followed_is_counted(
         publish=lambda event: None,
     )
     assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 1, "counted twice"
+    ended_first = store.get_owned_session(second)
+    assert ended_first is not None and ended_first.stop_reason is None
+    assert ended_first.ended_at == NOW
+
+    # The third direction: the liveness sweep stamps `ended_at` during a mid-turn
+    # kill, with no verdict — not a session end, so the kill is counted.
+    third = "01JBQ8Z9XKME5RT3VWNY6P0D03"
+    owned_row(
+        store, workspace_id, session_id=third, engine_session_id="6f1e2d3c-4b5a-4987-8a6b-5c4d3e2f1a09"
+    )
+    handle = RunnerHandle(runner=RUNNER_NAME, socket=SOCKET, session_name=session_name(third))
+    pane = PaneRef(session_name=handle.session_name, session_id=third, pane_pid=None, dead=True)
+
+    def session_end() -> None:
+        store.apply_fold_delta(
+            third, FoldDelta(state=SessionState.STOPPED, ended_at=NOW, observed_at=NOW)
+        )
+
+    record_and_terminate(
+        store=store,
+        runner=runner_of(driver(panes=(pane,), during_kill=session_end)),
+        handle=handle,
+        session_id=third,
+        now=lambda: LATER,
+        publish=lambda event: None,
+    )
+    assert anomaly(store, AnomalyKind.KILL_WITHOUT_SESSION_END) == 2, "a sweep is no ending"
+    swept = store.get_owned_session(third)
+    assert swept is not None and swept.stop_reason == str(StopReason.KILLED.value)
+    assert swept.ended_at == LATER
 
 
 # ----- 3. G-M2-2, both directions ---------------------------------------------

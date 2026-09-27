@@ -1245,7 +1245,10 @@ def test_l8_ask_forks_the_real_engine(live: Live, rec: Recorder) -> None:
         rec.check("api.text_contains_4", False, "text contains 4", {"text": text, "refusal": data.get("refusal")})
     else:
         rec.block("api.text_contains_4", f"BLOCKED(model): the fork answered {text!r}")
-    rec.equal("api.from_fork_of_engine_id", target.engine_session_id, data.get("from_fork_of"))
+    # Ruling 21 (SD-08, D75, 2026-09-27): from_fork_of is Shepherd's id; the engine id travels beside it.
+    rec.equal("api.from_fork_of_is_the_session", target.session_id, data.get("from_fork_of"))
+    rec.equal("api.engine_id_carried_separately", target.engine_session_id,
+              data.get("from_fork_of_engine_session_id"))
     duration = data.get("duration_ms")
     rec.check("api.duration_ms_positive", isinstance(duration, int) and duration > 0, "> 0", duration)
     children = db_rows(a.controld.db, "SELECT id, ephemeral, parent_session_id, origin FROM session WHERE origin = 'ask_fork'")

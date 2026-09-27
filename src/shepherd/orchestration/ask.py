@@ -65,13 +65,14 @@ from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.clock import parse_stamp
 from shepherd.core.ids import new_ulid
 from shepherd.core.mailbox import MailboxOrigin
-from shepherd.core.runner import RunnerRefusal
+from shepherd.core.runner import RunnerRefusal, WriteDecision
 from shepherd.core.states import Origin, SessionState
 from shepherd.core.stops import DecidedBy, StopReason, Verdict
 from shepherd.core.fold_types import FoldDelta
 from shepherd.engines.claude_code.fork import ForkResult, fork_argv, parse_fork_result
 from shepherd.engines.claude_code.transcript import locate_transcript
 from shepherd.orchestration.mailbox import queue_message
+from shepherd.orchestration.write_policy import refusal_text
 from shepherd.runner.local import CommandResult
 from shepherd.signals.stop_rules import BUCKET_OF, default_actions
 from shepherd.store.db import Store
@@ -91,6 +92,9 @@ _MAILBOX_REFUSAL = (
     "for the session to answer at its next turn boundary instead of forked"
 )
 _NO_TARGET = "there is no owned, engine-bound session {!r} to fork from"
+#: D74's family (`tools_messaging._refuse_no_pane`): a row with no pane of ours
+#: would hold a queued question for a delivery that never comes.
+_NO_PANE = "{}: no pane of ours — can_fork is False and the question was refused, nothing queued"
 _ASK_CONFIDENCE = 1.0
 
 
@@ -101,11 +105,17 @@ class AskResult:
     `method` has no absent value: principle 5 at the return type, so a downgrade
     to the mailbox can never be silent. `text` is `None` whenever the answer did
     not arrive, and `refusal` then says why in words a caller can act on.
+
+    `from_fork_of` is **Shepherd's** id for the asked session, the one every
+    other surface names it by, and `from_fork_of_engine_session_id` is the
+    engine's id the fork ran from (D75, ruling 21). Both are `""` when there
+    was no such row, and the engine id is `""` when the row was never bound.
     """
 
     text: str | None
     method: Literal["fork", "mailbox"]
     from_fork_of: str
+    from_fork_of_engine_session_id: str
     duration_ms: int
     refusal: str | None
 
@@ -189,15 +199,26 @@ def ask_session(
         return AskResult(
             text=None,
             method="fork",
-            from_fork_of="",
+            from_fork_of="" if row is None else row.id,
+            from_fork_of_engine_session_id="",
             duration_ms=_elapsed(started, now()),
             refusal=_NO_TARGET.format(session_id),
         )
     # E-M3-33: the parent link is **our** row's column. The engine writes no
     # `forkedFrom` field; its only trace of a parent is the original `sessionId`
     # left on copied entries, which is the transcript — and this never reads it.
-    from_fork_of = row.engine_session_id
+    # D75: the reply names the target by our id; the fork runs from the engine's.
+    from_fork_of, target_engine_id = row.id, row.engine_session_id
 
+    if not can_fork and row.runner_handle is None:
+        return AskResult(
+            text=None,
+            method="mailbox",
+            from_fork_of=from_fork_of,
+            from_fork_of_engine_session_id=target_engine_id,
+            duration_ms=_elapsed(started, now()),
+            refusal=f"{refusal_text(WriteDecision.REFUSE_NO_PTY)} {_NO_PANE.format(session_id)}",
+        )
     if not can_fork:
         queue_message(
             store=store,
@@ -211,6 +232,7 @@ def ask_session(
             text=None,
             method="mailbox",
             from_fork_of=from_fork_of,
+            from_fork_of_engine_session_id=target_engine_id,
             duration_ms=_elapsed(started, now()),
             refusal=_MAILBOX_REFUSAL,
         )
@@ -239,7 +261,7 @@ def ask_session(
 
     argv = fork_argv(
         binary=binary,
-        engine_session_id=from_fork_of,
+        engine_session_id=target_engine_id,
         question=question,
         fork_session_id=fork_session_id,
     )
@@ -256,7 +278,7 @@ def ask_session(
 
     parsed = None if completed is None else parse_fork_result(completed.stdout)
     reported = () if parsed is None else (parsed.session_id,)
-    left = _residue(projects_root, (fork_session_id, *reported), from_fork_of)
+    left = _residue(projects_root, (fork_session_id, *reported), target_engine_id)
     if left is not None:
         store.bump_anomaly(str(AnomalyKind.ASK_FORK_RESIDUE.value))
 
@@ -288,6 +310,7 @@ def ask_session(
         text=text,
         method="fork",
         from_fork_of=from_fork_of,
+        from_fork_of_engine_session_id=target_engine_id,
         duration_ms=_elapsed(started, finished),
         refusal=refusal,
     )
