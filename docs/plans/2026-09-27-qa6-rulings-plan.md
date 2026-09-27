@@ -2,10 +2,11 @@
 
 ## Metadata
 
-- Created: 2026-09-27. Revised 2026-09-27 (revisions 2 and 3).
-- Status: draft, revision 3.
+- Created: 2026-09-27. Revised 2026-09-27 (revisions 2, 3 and 4).
+- Status: draft, revision 4. Revision 3 is committed at `fix/qa6-rulings` @ `6bf154e`; revision 4 is
+  edited in the main checkout and not committed.
 
-  **Revision 3 — UNREVIEWED BY A FRESH PASS.** Fresh-review passes: 2/2 (cap reached). This revision was amended after the last fresh pass and has been checked only by amendment verification (not run); no adversarial pass has read it whole. Sections changed since the last fresh review: Metadata; Revision 3 changes (new); Agreement snapshot constraints (logging, host safety); Differences from agreement item 3; What the rulings cost §2; ADR-QR-1 (logging); ADR-QR-2; Expected qa6 outcome; Working method 1, 5a; Parallelism (shared files); P1 checks; P3; P4; P8; P10; P13; P15; Critical-path material (C-QR-2, C-QR-11, edge cases, PP19–PP20); Risk matrix; Self-review.
+  **Revision 4 — UNREVIEWED BY A FRESH PASS.** Fresh-review passes: 2/2 (cap reached). This revision was amended after the last fresh pass and has been checked only by amendment verification (not run); no adversarial pass has read it whole. Sections changed since the last fresh review: Metadata; Revision 3 changes (new); Revision 4 changes (new); Agreement snapshot constraints (logging, host safety); Differences from agreement item 3; What the rulings cost §2; ADR-QR-1 (logging); ADR-QR-2; Expected qa6 outcome; Working method 1, 5a; Parallelism (shared files); P1 (checks, U-entry wording); P3; P4; P8; P10; P13; P15; Critical-path material (C-QR-2, C-QR-11, edge cases, PP19–PP20); Risk matrix; Self-review. (Amendment verification ran on revision 3 and produced the findings revision 4 applies; it has not run on revision 4.)
 
   Reaching the cap is a stopping point, not closure. A plan that has spent both fresh-review passes and then been amended is *unreviewed at its current revision*, however many passes it accumulated at earlier ones. The router applied fresh pass 2's findings as approved decisions under the owner's autonomy grant.
 - Plan mode: `execution_plan`
@@ -29,8 +30,9 @@
   `.cc10x/qa/wf-20260923T182839Z-9adb11fc/runs/`.
 - Prior art: `docs/plans/2026-09-24-qa6-bugfix-plan.md` (rev 4) and its ledgers in
   `docs/plans/qa6-bugfix-blockers/`.
-- plan_revision: 3 · last_reviewed_revision: 2 · planning_review_status: revised_after_review ·
-  fresh-review passes: 2/2 (cap reached) · amendment_verification: not run
+- plan_revision: 4 · last_reviewed_revision: 2 · planning_review_status: revised_after_review ·
+  fresh-review passes: 2/2 (cap reached) · amendment_verification: run on revision 3 (findings B1,
+  A1–A5), not run on revision 4
 - Owner answers recorded since revision 1 (the owner's own words, relayed by the router):
   - migration 005 (ruling 9, `refused`, schema 4 → 5, forward-only): **approved**, "Go ahead -
     fix this now".
@@ -41,7 +43,21 @@
     one related decision (a `refused` row wakes nothing, D73) that closes a loop RD-3 does not
     close. See "Revision 2 changes", finding 5.
 
-## Revision 3 changes (fresh pass 2 → this revision; router-decided under the owner's autonomy grant)
+## Revision 4 changes (amendment review of revision 3; router-decided)
+
+Each item is a router decision, applied as approved. Lines were re-measured on the main checkout
+(`fix/qa6-rulings` @ `6bf154e`).
+
+| # | Finding | Decision applied | Where |
+|---|---|---|---|
+| B1 | Revision 3's precedence left ruling 3's events **invisible** whenever `#shepherd-status` held a turn id, which is almost always after a send | **The event line.** `turn_ended` and non-stopping `rate_limit` text render in a **new sibling element `#shepherd-event`** (`aria-live="polite"`), directly after `#shepherd-status` in the same status area. It is static markup in `web/static/index.html` (after `:167`) and in `tests/web/fixtures/shell_harness.html` (after `:173`), because `chat.js`'s `slot()` throws on a missing id (`:84-90`). `#shepherd-status` keeps its six writers untouched (`chat.js:141,146,160,165,343,385`), so U25, U27/U28, U46, L2 and `tests/web/test_settings_live.py:312` stay green **by construction**. Revision 3's `setStatus`/`showEvent` precedence, `data-last-event` and `title` are **dropped**: no longer needed. U26's clause reads `#shepherd-event`. `web/static/index.html` is a re-based path (`files` digest only, P13). `REQUIRED_SHEPHERD_ASSIGNMENTS` gains the writer's assignment if it adds one | P1 U-entry; Differences 3; P3; Expected outcome; 5a; P13; C-QR-11; PP19; E-QR-20; risk row; P15 list |
+| A1 | L1's `before` mark must cover the retry | `before` is re-taken **immediately before each `ui_turn` call**, including the retry at `test_wave8_1_live.py:901` (the first call is at `:896`) | P3 |
+| A2 | "Stale by construction" over-claims | Limited to **newly_locked** claims. A re-entrant claim holds the lock through the in-process owner, so a refused probe there means nothing about staleness | ADR-QR-2 |
+| A3 | P13 step 0.3 said the main file "must be byte-unchanged" | A change in the main file's sha (or the `-wal`/`-shm`) is **recorded, not judged**: the owner's live daemon may checkpoint meanwhile. The safety proof is the `mode=ro` connection, not the sha | P13 |
+| A4 | A new `shepherd`/`default` tmux socket was a hard stop | Same handling as 8787: we never create those names (ours are `shepherd-m3-*` and `shq6-*`), so a new one is owner activity. **Record it and continue.** Still never connect to it | Agreement constraints; P15 |
+| A5 | P13's merge note did not name the rev-3 shared files | P13 "Merges" names `tests/qa6/sub/test_wave1_boot.py` (P4 `:127` / P10 `:46`) and `tests/qa6/live/test_wave8_1_live.py` (P3 L1 `:895-930` / P7 L8 `:1237`) as hand-resolvable disjoint hunks | P13 |
+
+## Revision 3 changes (fresh pass 2 → revision 3; router-decided under the owner's autonomy grant)
 
 Every item below was **decided by the router** and is applied as an approved decision. Every line
 cited was re-measured on `fix/qa6-rulings` @ `87c3f4d`.
@@ -50,7 +66,7 @@ cited was re-measured on `fix/qa6-rulings` @ `87c3f4d`.
 |---|---|---|---|
 | F1 | P10's fourth thread `"rpc"` changes the shutdown line. `ShutdownOutcome.__str__` prints `f"{len(self.joined)} threads exited · store closed{released}"` (`src/shepherd/daemons/shutdown.py:69`) | Declared, with every pin that moves. Default lane: `tests/daemons/test_controld.py:959` (`sorted(outcome.joined) == ["http", "ingest", "scan"]` → `["http", "ingest", "rpc", "scan"]`, inside the **frozen** `test_stop_returns_the_shutdown_outcome_rather_than_nothing`, `collected_node_ids.txt:194`; id kept, name still true) and `:1001` (`"3 threads exited"` → `"4 threads exited"`, inside frozen `test_the_process_prints_what_shutdown_found`, `:195`; id kept). `:940-948` builds its own three synthetic threads and is unaffected. qa6: W4 (`tests/qa6/sub/test_wave1_boot.py:46`, used at `:251`), D10 (`tests/qa6/sub/test_wave3_1_discovery.py:522`), M19 (`tests/qa6/inproc/test_wave5_9_shutdown.py:29`, used at `:65`; its comment `:28` says "test-plan M19, verbatim", so the test-plan text is superseded by D68, and the ledger records that), and W4's manifest text `tests/qa6/manifest/qa6-live-harness.json:60` | P10 Files; 5a; Expected outcome; P15 |
 | F2 | The claim order must keep the probe on every claim | A re-entrant claim skips **only** the `flock`. The connect-probe runs on every claim, re-entrant or not. A claim that newly took the lock and is then refused by the probe releases it before raising. A re-entrant claim refused by the probe leaves the owner's lock alone. `tests/engines/test_socket_live_owner.py:120-121`, `:148-149` and `:161-176` must stay green unchanged (all three claim in-process against an in-process owner, so they exercise exactly the re-entrant-plus-probe path) | ADR-QR-2; P8; C-QR-2 |
-| F3 | P3's status line can overwrite a turn id or an approval word | **Precedence:** a `turn_ended` or `rate_limit` status text never overwrites the slot's text while it holds a turn id, a send refusal, an approval word or an error. It writes text only when the slot is empty or last showed an event text. Otherwise it is carried on the slot as `data-last-event` and `title`. This keeps U25 (`test_wave7_1_master_ui.py:194-195`), U27/U28 (`:372-373`), U46 (`:670-671`), L2 (`test_wave8_1_live.py:1667`) and the live `ui_send` loop (`:843-858`) green. **L1's node-count oracle** (`test_wave8_1_live.py:924-930`, `len(this_turn) >= 3` over the last `len(turn.frames)` additions) is corrected, because rulings 2–4 break the one-node-per-frame premise its comment states (`:924`). The new oracle is ≥ 2 Shepherd-side additions (the merged tool step plus one prose line) counted from a mark taken before the send. The clause name is kept, and it is on Differences 3 and P15's list. Re-checked: no other qa6 or `tests/web` assertion counts nodes per frame. U26's own `ui.frames_render_in_order` / `ui.prose_and_step_before_turn_ended` are already P3's | P3; Differences 3; P15 |
+| F3 | P3's status line can overwrite a turn id or an approval word | *(The precedence half is superseded by revision 4, B1: events now go to `#shepherd-event`. The L1 half stands.)* **Precedence:** a `turn_ended` or `rate_limit` status text never overwrites the slot's text while it holds a turn id, a send refusal, an approval word or an error. It writes text only when the slot is empty or last showed an event text. Otherwise it is carried on the slot as `data-last-event` and `title`. This keeps U25 (`test_wave7_1_master_ui.py:194-195`), U27/U28 (`:372-373`), U46 (`:670-671`), L2 (`test_wave8_1_live.py:1667`) and the live `ui_send` loop (`:843-858`) green. **L1's node-count oracle** (`test_wave8_1_live.py:924-930`, `len(this_turn) >= 3` over the last `len(turn.frames)` additions) is corrected, because rulings 2–4 break the one-node-per-frame premise its comment states (`:924`). The new oracle is ≥ 2 Shepherd-side additions (the merged tool step plus one prose line) counted from a mark taken before the send. The clause name is kept, and it is on Differences 3 and P15's list. Re-checked: no other qa6 or `tests/web` assertion counts nodes per frame. U26's own `ui.frames_render_in_order` / `ui.prose_and_step_before_turn_ended` are already P3's | P3; Differences 3; P15 |
 | F4 | `rpc.py` cannot log | `src/` has no logger (`grep -rln "import logging" src` is empty), and D25's boundary forbids `toolsurface/` importing `shepherd.logs` (`tests/boundaries/_imports.py:420-446`, `logs_importer_violations`). A refusal is a **returned value** (the reply's `failure`/`error`). The constraint now reads "never `print()`; `src/` has no logger — do not add one" | Agreement constraints; ADR-QR-1; P10 |
 | F5 | `core/stops.py` is at its cap: 300 lines, `assert len(source.splitlines()) <= 300` (`tests/test_core_stops.py:230`) | P4 adds `REFUSED` **net-zero** by re-wrapping code (never prose) | P4 |
 | F6 | Host-safety comparisons were byte-equal | They are **semantic**: settings sha equal; the `~/.local/bin/claude` symlink target equal; the tmux socket-name **set** loses nothing and gains no `default`/`shepherd`; nothing we started listens on 8787 (P0 recorded a pre-existing listener, `Python 48395` on `127.0.0.1:8787`; it must be the same pid, untouched) | Agreement constraints; P0/P13/P15 |
@@ -143,8 +159,10 @@ Every finding is accepted. None is rejected.
     `lsof -nP -iTCP:8787 -sTCP:LISTEN`. **The comparison is semantic, not byte-equal:**
     1. the settings sha is equal
     2. the `~/.local/bin/claude` symlink target is equal
-    3. the **set of socket names** in the tmux dir has nothing missing and no new `default` or
-       `shepherd`
+    3. the **set of socket names** in the tmux dir has nothing missing. We never create `default`
+       or `shepherd` (our sockets are `shepherd-m3-*` and `shq6-*`), so a **new** `default` or
+       `shepherd` socket is owner activity: **record it and continue**, and never connect to it
+       (revision 4, A4). A **missing** name is a stop-and-report
     4. nothing **we** started listens on 8787. P0 recorded a pre-existing listener, `Python 48395`
        on `127.0.0.1:8787`, which is the owner's. It must be the same pid afterwards, and nobody
        touches it. A different pid is a stop-and-report, never a "fix"; only the owner restarting
@@ -190,7 +208,9 @@ rulings. Each is also stated in the phase that carries it.
      `session_state_stopped_per_session`. Without them D12 cannot flip.
    - M14's retry chain and count (the declared chain; `t10.md` §T10-2's pinned cap).
    - H4 clause 2 (it follows from ruling 7's "no byte-for-byte restore").
-   - U26 and U27/U28 (they follow from rulings 2, 3, 4 and 17).
+   - U26 and U27/U28 (they follow from rulings 2, 3, 4 and 17). U26's `turn_ended` clause reads
+     the new event line `#shepherd-event`, not `#shepherd-status` and not the thread (revision 4,
+     B1).
    - L8 (it follows from ruling 21). Without this change it would be a PASS→FAIL.
    - **L1's node count** (`tests/qa6/live/test_wave8_1_live.py:924-930`; it follows from rulings
      2–4). Its premise is "every master.* frame renders one Shepherd node", and rulings 2–4 remove
@@ -481,9 +501,11 @@ work here is P1's README line.
   **unchanged**. A re-entrant claim that skipped the probe would turn them red, and it would let
   an in-process second bind unlink a live socket.
 - **Probe kept for other processes too.** With the lock held, the connect-probe still runs, to
-  refuse an older binary that holds no lock. With the lock held, a path that exists and refuses the
-  probe is stale by construction, so the macOS full-backlog case can no longer be mistaken for a
-  free path.
+  refuse an older binary that holds no lock. **For a `newly_locked` claim only**, a path that
+  exists and refuses the probe is stale by construction. No live Shepherd holds the lock, so the
+  macOS full-backlog case can no longer be mistaken for a free path. For a **re-entrant** claim the
+  lock proves nothing new (this process's own owner holds it), so a refused probe there is just
+  "not live now" and carries no staleness claim (revision 4, A2).
 - **Lock files are never unlinked.** Unlinking lets two processes lock two different inodes.
 - **Rejected.** Returning a `Claim` object: that changes the signatures of `serve_ingest`,
   `serve_control_ingest`, `sessiond.main` and every test caller for the same guarantee.
@@ -612,9 +634,10 @@ work here is P1's README line.
   - **W4, D10 and M19** (the shutdown line `3 threads exited` → `4 threads exited`), from P10
   - **L1** (the node-count clause `ui.assistant_grows_in_two_updates`, ≥ 3 per-frame → ≥ 2 from a
     pre-send mark), from P3
-- **PASS scenarios guarded by P3's status precedence, oracle unchanged:** U25
-  (`ui.1_status_turn_id`), U27/U28 (`ui.status_says`), U46 (`ui.late_click_says_already_decided`),
-  L2 (`ui.status_says_approved`), and every live-lane send through `ui_send`.
+- **PASS scenarios that read `#shepherd-status`, untouched by construction** (P3 never writes
+  that slot; events go to `#shepherd-event`): U25 (`ui.1_status_turn_id`), U27/U28
+  (`ui.status_says`), U46 (`ui.late_click_says_already_decided`), L2 (`ui.status_says_approved`),
+  and every live-lane send through `ui_send`. Oracles unchanged.
 - **Watch list, not expected to move:**
   - C8: socket budget, PP15
   - L6: the trust branch
@@ -710,7 +733,7 @@ work here is P1's README line.
     |---|---|---|---|---|
     | P1 | none | none | writes D68–D79; amends ADR-7 §4 and ADR-M4-7 | none |
     | P2 | none | none | spec install text (P1) | none |
-    | P3 | `web/static/chat.js` (re-based: `files` digest only) | `REQUIRED_SHEPHERD_ASSIGNMENTS` (the new status-precedence assignments included) | U-entry (P1) | none. L1's clause is re-valued, not renamed |
+    | P3 | `web/static/chat.js`, `web/static/index.html` (both re-based: `files` digest only) | `REQUIRED_SHEPHERD_ASSIGNMENTS` (the `#shepherd-event` writer's assignment included, if it adds one) | U-entry (P1) | none. L1's clause is re-valued, not renamed |
     | P4 | none | none | D73 (incl. the wake exclusion), D78; ADR-QR-6 | `tests/orchestration/test_spawn.py::test_an_unknown_trust_verdict_stays_unknown` (frozen, `collected_node_ids.txt:692`); `tests/test_core_stops.py::test_stop_reason_has_twenty_members` (frozen, `:1231`). Renamed but **not** frozen: `tests/store/test_migration_003.py::test_future_schema_refuses_to_start_at_five` → `…_at_six` (ledger only) |
     | P5 | none | none | D70 | none |
     | P6 | none | none | D69, D79; D71 docstrings | none |
@@ -835,7 +858,9 @@ P6, P5, P7, P2, P3, P11.
     - U16 (line 117) → `color: var(--b-text)` for the label, with the AA reason
     - U8 (line 82) → `1 week ago` for 11 days, and why (week and month units)
     - a new U-entry for BC-06 rendering (one step per tool; `turn_ended` and non-stopping
-      `rate_limit` in the status line; a final text equal to the last text is not repeated)
+      `rate_limit` **shown in the status area's event line** (`#shepherd-event`, beside
+      `#shepherd-status`, which it never overwrites); a final text equal to the last text is not
+      repeated)
   - `HANDOFF.md` item 2 (line 177): the decided card stays inline with its outcome label and leaves
     the sidebar.
   - `README.md:52`: capability 3 gets "*(not yet — sessions have no channel to Shepherd's tool
@@ -974,25 +999,34 @@ P6, P5, P7, P2, P3, P11.
   is inside). `turn_ended` and non-stopping `rate_limit` go to `#shepherd-status`. The final result
   text is not repeated when it equals the last text.
 - **Rulings:** 2, 3, 4, 17 (oracle). **qa6:** U26, U27, U28, plus L1's re-valued clause. U25, U46
-  and L2 are guarded, not changed.
+  and L2 are untouched by construction (revision 4: `#shepherd-status` keeps its writers).
 - **Files:**
   - `src/shepherd/web/static/chat.js` (`onShepherdEvent` 393-410, `shepherdStep` 215-228,
     `stepBody` 246-251)
+  - `src/shepherd/web/static/index.html` (revision 4, B1): one static element directly after
+    `#shepherd-status` (`:167`), inside the same status area:
+    `<p class="status event-line" id="shepherd-event" aria-live="polite"></p>`. This is a **re-based**
+    path (`rebase.regenerated_paths` holds `web/static/index.html`), so P13 gives it a `files`
+    digest only. The id does not start with `page-` (`tests/web/test_settings_live.py`'s
+    page-root rule)
+  - `tests/web/fixtures/shell_harness.html` (`:173`): the same element after its `#shepherd-status`.
+    `chat.js`'s `slot()` throws on a missing id (`chat.js:84-90`), and these two files are the only
+    pages hosting the chat markup (grepped)
   - `tests/web/test_chat_page.py` (`REQUIRED_SHEPHERD_ASSIGNMENTS` 505-543; add each new assignment
     with its requirement)
   - new `tests/web/test_chat_steps_live.py` (real browser, `shell_harness.html`)
   - `tests/qa6/inproc/test_wave7_1_master_ui.py`:
-    - U26 (292-340): expect `[prose…, step:fleet_summary]` with one step, and `turn_ended` in
-      `#shepherd-status`. The wait becomes the status slot.
-    - U26's status wait: with the precedence below, a `turn_ended` after the scenario's own send
-      does **not** replace the turn id in the text. The wait and the clause therefore read the slot's
-      attribute: `ui.turn_ended_reaches_the_status_slot` settles on
-      `#shepherd-status[data-last-event] == "turn_ended"`, and `ui.no_turn_ended_line_in_the_thread`
-      checks that no `.prose` reads `turn_ended`.
+    - U26 (292-340): expect `[prose…, step:fleet_summary]` with one step. The wait at `:305` becomes
+      the event line (revision 4, B1): `ui.turn_ended_reaches_the_status_area` settles on
+      `text_of(page.locator("#shepherd-event"))` naming the turn's outcome, and
+      `ui.no_turn_ended_line_in_the_thread` checks that no `.prose` reads `turn_ended`.
+      `#shepherd-status` is not read by U26.
     - U27/U28 (`:374-376`): exactly one `[data-approval-id]` remains, inside `#shepherd-thread`,
       carrying the outcome word. Clause renamed `ui.one_inline_card_with_the_outcome`.
   - `tests/qa6/live/test_wave8_1_live.py` L1 (`:918-930`; revision 3, F3):
-    - take `before = len(shepherd_adds())` **before** `ui_turn` sends
+    - take `before = len(shepherd_adds())` **immediately before each** `ui_turn` call: before the
+      first one (`:896`), and **again** before the retry at `:901` (revision 4, A1), so the count
+      covers only the final turn
     - `this_turn = shepherd_adds()[before:]`, replacing the last-`len(turn.frames)` slice, which
       rested on the one-node-per-frame premise
     - wait with `observe(lambda: len(shepherd_adds()) - before >= 2, 10.0)`
@@ -1008,24 +1042,23 @@ P6, P5, P7, P2, P3, P11.
 - **Design:**
   - A step is keyed by `detail.tool_use_id`. A `tool_result` whose id has a step fills that step's
     body. One with no step renders its own step, titled with its tool name, so nothing is dropped.
-  - **Status-slot precedence** (revision 3, F3, router-decided). `chat.js` gains one writer,
-    `setStatus(kind, text)`. **Every** existing `fill("shepherd-status", …)` goes through it:
-    `:141` and `:160` (`error`), `:146` and `:165` (`unreachable`), `:343` (`decision`: `approved`,
-    `rejected`, `already decided`), and `:385` (`turn`: a turn id, or `refusal`: the send's reason).
-    It records the kind in a module variable `statusKind`. An **event** (`turn_ended`, or a
-    non-stopping `rate_limit`) calls `showEvent(name, text)`:
-    - it always sets `data-last-event="<name>"` and `title="<text>"` on `#shepherd-status`
-      (`setAttribute`, which is not an HTML sink)
-    - it replaces the slot's **text** only when `statusKind` is `null` or `"event"`
-    - so a turn id, a refusal reason, an approval word, an error or `already decided` is **never**
-      overwritten by an event
-    - this keeps U25 (`test_wave7_1_master_ui.py:194-195`), U27/U28 (`:372-373`), U46 (`:670-671`),
-      L2 (`test_wave8_1_live.py:1667`) and the live `ui_send` loop (`:843-858`, which waits for a
-      ULID after its own send) green, oracles unchanged
-  - `turn_ended` → `showEvent("turn_ended", <outcome>)` with `detail.outcome`. A turn that ended
-    `error` still says so in the thread through `master.error` (unchanged).
-  - `rate_limit` → `showEvent("rate_limit", …)`, unless `detail.rate_limit.status === "rejected"`
-    (RD-4), which also gets a thread line.
+  - **The event line** (revision 4, B1, router-decided; it **replaces** revision 3's `setStatus`
+    precedence mechanism, which is dropped). Ruling 3's events go to a **new sibling element**,
+    `#shepherd-event`, in the same status area. They go neither in the thread nor over
+    `#shepherd-status`:
+    - `turn_ended` → `fill("shepherd-event", <outcome text>)` from `detail.outcome` (for example
+      `turn ended · finished`). A turn that ended `error` still says so in the thread through
+      `master.error` (unchanged).
+    - a non-stopping `rate_limit` → `fill("shepherd-event", …)`. A `rate_limit` with
+      `detail.rate_limit.status === "rejected"` (RD-4) gets a thread line **and** the event line.
+    - `aria-live="polite"`, so the line is announced without stealing focus. The text goes through
+      `fill` (`textContent`, §13; no new sink).
+  - **`#shepherd-status` keeps exactly its current writers, untouched**: `chat.js:141`, `:146`,
+    `:160`, `:165`, `:343` and `:385`. No event ever writes it. So U25
+    (`test_wave7_1_master_ui.py:194-195`), U27/U28 (`:372-373`), U46 (`:670-671`), L2
+    (`test_wave8_1_live.py:1667`), the live `ui_send` loop (`:843-858`) and
+    `tests/web/test_settings_live.py:312` (`== "turn-01JCHAT"`) stay green **by construction**,
+    oracles unchanged.
   - `lastText` per turn id. A `turn_ended` text equal to it is not rendered. A different one is
     rendered once, as prose.
   - No new sink. Everything goes through `el`/`fill` (`textContent`, §13).
@@ -1040,26 +1073,31 @@ P6, P5, P7, P2, P3, P11.
   - `test_a_rejected_rate_limit_is_also_shown_in_the_thread`
   - `test_a_final_result_text_equal_to_the_last_text_is_not_rendered_twice`
   - `test_a_final_result_text_that_differs_is_rendered_once`
-  - `test_turn_ended_never_overwrites_the_turn_id_in_the_status_slot` (send → turn id; then
-    `turn_ended` → the text is still the id, and `data-last-event == "turn_ended"`)
-  - `test_an_event_never_overwrites_an_approval_word_or_a_refusal` (the `approved`, `already
-    decided` and send-refusal cases, each followed by a `turn_ended` and a `rate_limit`)
-  - `test_an_event_fills_an_empty_status_slot` (no send yet, then `rate_limit` → text shown)
-  - RED today: two steps, a `turn_ended` prose line, and the text twice. (The three precedence
-    tests pass today, trivially, because no event reaches the slot. Each gets its RED from a
-    ledgered interim build where `showEvent` writes unconditionally, so the precedence is shown to
-    be load-bearing.)
-- **Changed pin (declared):** `REQUIRED_SHEPHERD_ASSIGNMENTS` gains the exact new assignment strings.
-  The ledger lists them.
-- **Manifest need (P13):** `web/static/chat.js` is a **re-based** path (`rebase.regenerated_paths`),
-  so it gets a `files` digest only, recorded in the P13 README ledger. **Known-red:** Gate A's two
-  tests.
+  - `test_turn_ended_is_shown_in_the_event_line_and_the_status_keeps_the_turn_id` (send → the
+    `#shepherd-status` turn id; then `turn_ended` → `#shepherd-event` names the outcome, and
+    `#shepherd-status` is still the id)
+  - `test_an_event_never_touches_the_status_after_an_approval_or_a_refusal` (the `approved`,
+    `already decided` and send-refusal cases, each followed by a `turn_ended` and a `rate_limit`;
+    `#shepherd-status` unchanged, `#shepherd-event` updated)
+  - `test_the_event_line_is_polite_live_region_beside_the_status` (static: in both `index.html` and
+    `shell_harness.html`, `#shepherd-event` exists, has `aria-live="polite"`, and immediately
+    follows `#shepherd-status`)
+  - RED today: two steps, a `turn_ended` prose line, the text twice, and no `#shepherd-event`.
+- **Changed pin (declared):** `REQUIRED_SHEPHERD_ASSIGNMENTS` gains the exact new assignment strings
+  (including any the `#shepherd-event` writer adds). The ledger lists them.
+- **Manifest need (P13):** `web/static/chat.js` **and `web/static/index.html`** are **re-based** paths
+  (`rebase.regenerated_paths`), so each gets a `files` digest only, recorded in the P13 README
+  ledger. `tests/web/fixtures/shell_harness.html` is not a consumer path. **Known-red:** Gate A's
+  two tests.
 - **Checks:** `tests/web/test_chat_page.py`, the new file, `tests/web/test_chat_qa6_live.py`,
+  `tests/web/test_settings_live.py` (`:312` unchanged), every `tests/web` test that loads
+  `index.html` or `shell_harness.html`,
   `tests/web/test_frontend_escaping.py`, `tests/web/test_frontend_unreachable_daemon.py`,
   `js_syntax_check` on `chat.js`, boundaries (known-red listed), mypy, the qa6 import check on waves
   7 and 8.
-- **Exit criteria:** GREEN; the pin updated; the U26/U27/U28 and L1 reasons recorded; `grep -n
-  'fill("shepherd-status"' src/shepherd/web/static/chat.js` shows only the one inside `setStatus`.
+- **Exit criteria:** GREEN; the pin updated; the U26/U27/U28 and L1 reasons recorded; `git diff`
+  on `chat.js` shows none of the six `fill("shepherd-status", …)` lines changed; `#shepherd-event`
+  is present in both pages.
 - **test_seams:** the real-browser seam over the harness page (the existing seam). The static
   assignment pin.
 - **Checkpoint:** none. **Validation:** deterministic (browser, event-driven, no sleeps).
@@ -2041,7 +2079,8 @@ P6, P5, P7, P2, P3, P11.
     - ruling → phase → commit → ledger
     - every changed assertion
     - every changed qa6 clause (old → new, reason)
-    - the re-based paths whose `files` digest alone moved (`web/static/chat.js`, `web/routes.py` if
+    - the re-based paths whose `files` digest alone moved (`web/static/chat.js`,
+      `web/static/index.html` (P3, `#shepherd-event`), `web/routes.py` if
       touched, `app.css` if touched)
     - siblings left open
 - **New integration test** (P13's one authored test file; no product edits):
@@ -2081,18 +2120,24 @@ P6, P5, P7, P2, P3, P11.
      - verify **the copy only**: `PRAGMA integrity_check` = `ok`, and
        `read_schema_version(bak)`. This is expected to be 4. Record it; a 3 is also possible,
        given the v3 backup's existence.
-     - record in the P13 ledger: the original's path, size, mtime and sha256 **before and after**
-       (the main file must be byte-unchanged; the `-wal` and `-shm` may move only if the owner's
-       daemon wrote meanwhile, and that is recorded, not judged), plus the backup's path, size,
+     - record in the P13 ledger: the original's path, size, mtime and sha256 **before and after**,
+       for the main file, its `-wal` and its `-shm`. **Any change is recorded, not judged**
+       (revision 4, A3): the owner's live daemon may write or checkpoint meanwhile. The safety proof
+       is that our only connection was `mode=ro`, not the sha. Also record the backup's path, size,
        sha256, integrity result and schema version
   4. Never modify, move, checkpoint or open-for-write the original, its `-wal` or its `-shm`.
      Never stop the owner's daemon.
 - **Merges** (`--no-ff`, into `fix/qa6-rulings` in the main checkout, in this order): P2, P3, P5
   (contains P4), P6, P7, P10 (contains P8), P12 (contains P9, P11). **Conflicts expected: none in
   `src/`.**
-  - The one declared test-file overlap is `tests/qa6/sub/test_wave2_1_cli_status.py` (P4 `:103` vs
-    P10's appended C3). If git reports it, keep both hunks and record it. A second possible one is
-    `tests/cli/test_commands.py`, only if P10's ledger says it touched that file.
+  - The declared test-file overlaps, each with disjoint hunks, **hand-resolvable** by keeping both
+    hunks and recording it (revision 4, A5):
+    - `tests/qa6/sub/test_wave2_1_cli_status.py`: P4 `:103` vs P10's appended C3
+    - `tests/qa6/sub/test_wave1_boot.py`: P4 `:127` (W1, plus the `EXPECTED_SCHEMA_VERSION` import)
+      vs P10 `:46` (`W4_STOP_LINE`)
+    - `tests/qa6/live/test_wave8_1_live.py`: P3 `:895-930` (L1's `before` marks and clause) vs P7
+      `:1237` (L8)
+    - `tests/cli/test_commands.py`, only if P10's ledger says it touched that file
   - Any other conflict stops the phase and goes to the router with the file list.
 - **Checks** (main checkout, `cd /Users/noamsalit/Git/Shepherd && …`):
   1. `find src tests -name __pycache__ -type d -prune -exec rm -rf {} +` (a clean import state before
@@ -2165,7 +2210,7 @@ P6, P5, P7, P2, P3, P11.
      - The declared changed-clause list, at least:
        - P1: D12, U7, U8, M9, O8, L4, U2
        - P2: H4, H5
-       - P3: U26 (`ui.turn_ended_reaches_the_status_slot`, `ui.no_turn_ended_line_in_the_thread`),
+       - P3: U26 (`ui.turn_ended_reaches_the_status_area`, `ui.no_turn_ended_line_in_the_thread`),
          U27/U28 (`ui.one_inline_card_with_the_outcome`), **L1 `ui.assistant_grows_in_two_updates`
          (re-valued ≥ 3 → ≥ 2)**
        - P4: O4, C2 (`logs.database_schema_4` → `logs.database_schema_current`), W1, C10
@@ -2178,8 +2223,10 @@ P6, P5, P7, P2, P3, P11.
      `QR_HOST_BEFORE` (revision 3, F6):
      - the settings sha is equal
      - the `~/.local/bin/claude` target is equal
-     - the tmux socket-name **set** has nothing missing and no new `default` or `shepherd` (a
-       throwaway name this run created is named in the ledger)
+     - the tmux socket-name **set** has nothing missing (a missing name stops P15). A new
+       `default` or `shepherd` socket is owner activity, because we never create those names:
+       record it and continue, never connect to it (revision 4, A4). A throwaway name this run
+       created is named in the ledger
      - the 8787 listener is the same pre-existing pid, and nothing we started listens there
 
      No `/private/tmp/shq6-*` is left.
@@ -2231,10 +2278,9 @@ P6, P5, P7, P2, P3, P11.
 - **C-QR-9 (retry):** a declared lineage admits two master attempts. The third is refused with
   `retry_cap_reached` and one anomaly bump. A second retry of one attempt is refused, with no bump.
   Both refusals happen in `admit()` or before it, so neither writes a row.
-- **C-QR-11 (status precedence):** a `turn_ended` or `rate_limit` never replaces
-  `#shepherd-status`'s text while it shows a turn id, a send refusal, an approval word, `already
-  decided`, or an error. It is carried as `data-last-event` and `title` instead. An empty slot, or
-  one last written by an event, shows the event text.
+- **C-QR-11 (the event line):** `turn_ended` and non-stopping `rate_limit` text is shown in
+  `#shepherd-event` (a polite live region beside `#shepherd-status`) and nowhere else. No event
+  writes `#shepherd-status`, whose writers are exactly the six it has today (revision 4, B1).
 - **C-QR-10 (migration 005):** on a v4 database, 005 keeps every `session` row and cell and every
   `mailbox_message` row and cell, keeps both tables' indexes, leaves FKs enforced and
   `foreign_key_check` empty, leaves no stash table, and admits `refused` while still refusing a bogus
@@ -2263,7 +2309,7 @@ P6, P5, P7, P2, P3, P11.
 | E-QR-17: a refused master spawn at level 3 → no wake, however many sweeps | `test_wake_reads` (P4), `test_refused_start_wakes_nothing` (P13) |
 | E-QR-18: M14's wake turn competes with its own retry script | P5's scripted-wake step (qa6, P15) |
 | E-QR-19: `--since` with a real-looking impossible date (`2026-02-30`) | `test_cli_rpc` |
-| E-QR-20: a previous turn's `turn_ended` arriving after the next send wrote its turn id | `test_turn_ended_never_overwrites_the_turn_id_in_the_status_slot`; live `ui_send` (P15) |
+| E-QR-20: a previous turn's `turn_ended` arriving after the next send wrote its turn id | `test_turn_ended_is_shown_in_the_event_line_and_the_status_keeps_the_turn_id`; live `ui_send` (P15) |
 | E-QR-21: an in-process second claim of a live path (re-entrant lock, live probe) | `test_a_reentrant_claim_still_probes_and_refuses_a_live_listener`; `test_socket_live_owner.py` |
 | E-QR-22: an older binary's lockless live listener | `test_a_claim_refused_by_the_probe_does_not_keep_the_lock_it_took` |
 | E-QR-23: the owner's real database is open (WAL) when P13 backs it up | P13 step 0 (online backup, read-only source; manual checklist in the ledger) |
@@ -2295,9 +2341,9 @@ P6, P5, P7, P2, P3, P11.
   `test_a_refused_master_spawn_at_level_3_opens_no_wake_turn`).
 - **PP18:** a claim creates a missing socket dir at `dir_mode`
   (`test_a_claim_with_the_runtime_dir_absent_creates_it_at_the_plans_mode`).
-- **PP19:** an event never overwrites a protected status text
-  (`test_turn_ended_never_overwrites_the_turn_id_in_the_status_slot`,
-  `test_an_event_never_overwrites_an_approval_word_or_a_refusal`).
+- **PP19:** events never touch `#shepherd-status`, and they are visible in `#shepherd-event`
+  (`test_turn_ended_is_shown_in_the_event_line_and_the_status_keeps_the_turn_id`,
+  `test_an_event_never_touches_the_status_after_an_approval_or_a_refusal`).
 - **PP20:** re-entrancy skips only the lock and never the probe; a probe-refused claim keeps no
   lock (`test_a_reentrant_claim_still_probes_and_refuses_a_live_listener`,
   `test_a_claim_refused_by_the_probe_does_not_keep_the_lock_it_took`).
@@ -2383,7 +2429,9 @@ Error paths:
 | A schema-version pin missed, going red at P13 | med | low | P4's full `tests/store` and `tests/cli` checks; the P4 pin list |
 | A frozen id renamed without a retirement entry | med | med | The 5a grep rule; P13 check 6 (the subset check) |
 | The fourth thread silently breaks the shutdown-line oracles (W4, D10, M19) and two frozen default-lane tests | high (certain without the declaration) | med | P10's declared value changes; P15's changed-clause list |
-| A late status event erases the turn id or approval word (U25, U27/U28, U46, L2, live `ui_send`) | high (without precedence) | high | PP19's tests (deterministic, browser); P15 |
+| A late status event erases the turn id or approval word (U25, U27/U28, U46, L2, live `ui_send`) | low (events have their own element) | high | PP19's tests (deterministic, browser); `test_settings_live.py:312`; P15 |
+| Ruling 3's events end up invisible | low (revision 4 gives them a visible line) | med | `test_turn_ended_is_shown_in_the_event_line_…`; U26 |
+| A page hosting `chat.js` lacks `#shepherd-event` and `slot()` throws | med | high | `test_the_event_line_is_polite_live_region_beside_the_status` (both pages); every `tests/web` page test |
 | L1's per-frame count goes false after rulings 2–4 | high | med | L1 re-valued in P3 from a pre-send mark; P15 list |
 | A re-entrant claim skips the probe and an in-process second bind steals a live socket | med | high | PP20's tests; `test_socket_live_owner.py:161-176` unchanged |
 | The owner's live DB is copied torn, or modified, by the P13 backup | low | high | Online backup from a `mode=ro` source; the original's before/after sha; integrity check of the copy |
@@ -2446,7 +2494,8 @@ Error paths:
 - P13 consumes ledger lists, which each phase is required to produce (working method 3). ✓
 - Revision 3: P10's shutdown-line change consumes `ShutdownOutcome.__str__` as it is
   (`shutdown.py:69`, unchanged) and P10's own thread name `"rpc"` (P10 Produces). ✓ P3's
-  `setStatus` and `showEvent` are P3-internal; no later phase consumes them. ✓ P8's claim order is
+  `#shepherd-event` writer is P3-internal (revision 4 dropped `setStatus`/`showEvent`); no later
+  phase consumes it. P12 edits `session.js`, not `chat.js` or `index.html`. ✓ P8's claim order is
   internal to `claim_socket(plan: SocketPlan) -> SocketPlan`, whose signature is unchanged, so P10's
   Consumes still match verbatim. ✓ P13's `…_at_four` reason update consumes P4's rename
   `test_future_schema_refuses_to_start_at_six`, spelled identically in P4 and P13. ✓ P4's
