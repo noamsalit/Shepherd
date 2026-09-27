@@ -519,7 +519,7 @@ def test_d10_liveness_survives_a_controld_restart(pool: InstancePool, qa6_run: R
     if running is None:
         raise Blocked("D10's session never reached running")
     first.stop()
-    rec.equal("logs.first_stop_line", "controld stopped: 3 threads exited · store closed", first.stop_line)
+    rec.equal("logs.first_stop_line", "controld stopped: 4 threads exited · store closed", first.stop_line)
     helper.end()
     second = pool.start(first.root, name="controld-restart")
     try:

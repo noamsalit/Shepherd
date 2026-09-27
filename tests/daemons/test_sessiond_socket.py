@@ -14,6 +14,7 @@ import signal
 import socket
 import stat
 import subprocess
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -28,6 +29,7 @@ from shepherd.daemons.control_ingest import serve_control_ingest
 from shepherd.daemons.sessiond import INGEST_SOCKET_NAME
 from shepherd.engines.claude_code.ingest_socket import (
     SHUTDOWN_DRAIN_S,
+    claim_socket,
     serve_ingest,
 )
 from shepherd.engines.claude_code.relay import RELAY_BUFFER_MAX, Relay
@@ -316,6 +318,41 @@ def test_sigterm_unlinks_the_socket(tmp_path: Path, monkeypatch: pytest.MonkeyPa
             process.wait(timeout=5)
     assert process.returncode == 0, f"exit {process.returncode}: {stdout}{stderr}"
     assert not socket_path.exists(), "SIGTERM left the socket behind"
+
+
+#: Tries `<socket>.lock` once from another process: exit 0 taken, 3 held.
+TRY_LOCK = (
+    "import fcntl, os, sys\n"
+    "fd = os.open(sys.argv[1], os.O_RDWR | os.O_CREAT, 0o600)\n"
+    "try:\n"
+    "    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
+    "except BlockingIOError:\n"
+    "    sys.exit(3)\n"
+    "sys.exit(0)\n"
+)
+
+
+def another_process_can_lock(path: Path) -> bool:
+    done = subprocess.run(
+        [sys.executable, "-c", TRY_LOCK, str(path)], capture_output=True, timeout=10.0
+    )
+    assert done.returncode in (0, 3), done.stderr
+    return done.returncode == 0
+
+
+def test_sessiond_holds_its_claim_until_shutdown(tmp_path: Path) -> None:
+    """D72, in `sessiond`'s own shape: `main` claims, `serve_ingest` binds on
+    the same claim, and the lock on `<socket>.lock` is held until the listener
+    returns — then released for the next owner. No signal: the shutdown event
+    is the one `SIGTERM`'s handler sets."""
+    plan = claim_socket(plan_for(tmp_path))
+    lock = plan.path.with_name(plan.path.name + ".lock")
+    collector = Collector()
+    with listening(plan, collector):
+        assert not another_process_can_lock(lock), "a running sessiond's claim was taken"
+        dispatch(plan.path, CORPUS_PAYLOAD)
+        await_true(lambda: collector.count() == 1, "the claimed listener accepted nothing")
+    assert another_process_can_lock(lock), "sessiond's claim outlived its shutdown"
 
 
 @pytest.mark.skipif(

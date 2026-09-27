@@ -15,12 +15,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TextIO
 
 from shepherd.core.anomalies import AnomalyKind
 from shepherd.core.states import FLEET_STATE_ORDER
 from shepherd.host.base import HostPlatform, SocketPathTooLong
 from shepherd.toolsurface.registry import invoke
+from shepherd.toolsurface.rpc import NO_ANSWER, NOT_SENT, call_remote
 from shepherd.toolsurface.types import CallerContext, Failure, ToolResult
 
 EXIT_OK = 0
@@ -32,16 +34,32 @@ NO_TITLE = "(no title yet)"
 
 UNKNOWN = "unknown"
 
+#: The read-only projections this process registers for itself
+#: (`main.register_local_reads`). A daemon that did not answer one of them still
+#: leaves it answerable here, so `doctor` keeps those lines (qa6 P10 REM-FIX H-2).
+LOCAL_READS = frozenset({"schema_status", "engine_version"})
+
+
+def is_no_answer(result: ToolResult) -> bool:
+    """A transport failure of the RPC hop — not an answer from any tool."""
+    return result.failure is Failure.FAILED and (result.error or "").startswith(NO_ANSWER)
+
 
 @dataclass(frozen=True)
 class Cli:
-    """One command's world: where to write, who is asking, what host this is."""
+    """One command's world: where to write, who is asking, what host this is.
+
+    `remote` is the running daemon's RPC socket (D68), or `None` when this host
+    cannot even name one; a daemon that is not listening there is found out per
+    call, and the call then falls back to this process's own `invoke`.
+    """
 
     host: HostPlatform
     out: TextIO
     err: TextIO
     ctx: CallerContext
     socket_name: str
+    remote: Path | None = None
 
     def say(self, line: str) -> None:
         print(line, file=self.out)
@@ -50,6 +68,12 @@ class Cli:
         print(f"shepherd: {line}", file=self.err)
 
     def call(self, name: str, args: Mapping[str, object]) -> ToolResult:
+        """The daemon's answer when one is running, else this process's (D68) —
+        and this process's too for a `LOCAL_READS` tool the daemon did not answer."""
+        if self.remote is not None:
+            answered = call_remote(self.remote, name, args, self.ctx)
+            if answered is not None and not (name in LOCAL_READS and is_no_answer(answered)):
+                return answered
         return invoke(name, args, self.ctx)
 
     def read(self, name: str, args: Mapping[str, object]) -> Mapping[str, object] | None:
@@ -72,6 +96,12 @@ class Cli:
         if result.failure is Failure.REFUSED:
             self.complain(f"{name}: {result.error}")
             return EXIT_USAGE
+        if result.failure is Failure.FAILED and (result.error or "").startswith(NOT_SENT):
+            self.complain(
+                f"{name} was not sent to the control daemon at {self.remote}: {result.error}."
+                " Nothing ran, so it is safe to re-run once the daemon answers."
+            )
+            return EXIT_FAILURE
         if result.failure is Failure.FAILED:
             self.complain(
                 f"{name} failed while running: {result.error}. The capability is"
@@ -433,6 +463,9 @@ def run_doctor(cli: Cli, settings_path: str | None) -> int:
     problems: list[str] = []
     summary_result = cli.call("fleet_summary", {})
     summary = as_mapping(summary_result.data) if summary_result.ok else None
+    if is_no_answer(summary_result):  # H-2: a daemon that is there and silent needs a human
+        detail = (summary_result.error or "").removeprefix(f"{NO_ANSWER}: ")
+        problems.append(f"the control daemon at {cli.remote} did not answer: {detail}")
     lines = (
         describe_host(cli),
         describe_dirs(cli),

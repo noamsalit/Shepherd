@@ -120,3 +120,35 @@ def test_c2_doctor_reports_engine_schema_database_discovery(fleet: Fleet, qa6_ru
     fleet_data = as_dict(fleet.controld.client.fleet())
     rec.record("api.fleet_session_count", fleet_data.get("session_count"))
     rec.finish()
+
+
+# --- C3, moved here from the no-daemon CLI lane (qa6 rulings P10, RD-1) ------
+#
+# D68: the CLI reaches a running `controld` over its owner-only RPC socket, so
+# C3's install-hooks runs in the daemon that registered the tool. The clauses
+# are C3's own, unchanged; only the process that answers them moved.
+
+from .. import hostprobe  # noqa: E402 - appended with C3 (P10), below P4's hunk
+
+@scenario("C3")
+def test_c3_install_hooks_dry_run_then_yes(fleet: Fleet, qa6_run: RunContext, rec: Recorder) -> None:
+    directory = qa6_run.run0 / "hooks" / "c3"  # the path C3 used in the CLI lane
+    directory.mkdir(parents=True)
+    target = directory / "settings.json"
+    dry = cli(fleet.controld, "install-hooks", "--settings", str(target), "--dry-run")
+    rec.note(f"dry run: rc={dry.returncode} stdout={dry.stdout!r} stderr={dry.stderr!r}")
+    rec.equal("proc.dry_run_exit", 0, dry.returncode)
+    rec.check("proc.dry_run_would_install", "would install" in dry.stdout, "stdout contains 'would install'", dry.stdout[:300])
+    rec.check("proc.dry_run_changed_nothing", "this run changed nothing. Pass --yes to apply it." in dry.stdout,
+              "the dry-run sentence", dry.stdout[:300])
+    rec.check("files.absent_after_dry_run", not target.exists(), "absent", target.exists())
+    rec.equal("logs.dry_run_stderr_empty", "", dry.stderr)
+    applied = cli(fleet.controld, "install-hooks", "--settings", str(target), "--yes")
+    rec.note(f"--yes: rc={applied.returncode} stdout={applied.stdout!r} stderr={applied.stderr!r}")
+    rec.equal("proc.yes_exit", 0, applied.returncode)
+    rec.check("proc.yes_installed", "installed" in applied.stdout, "stdout contains 'installed'", applied.stdout[:300])
+    rec.check("files.managed_entries_after_yes", target.exists() and "_shepherd_managed" in target.read_text(encoding="utf-8"),
+              "the managed entries (H1's shape)", target.exists())
+    rec.equal("logs.yes_stderr_empty", "", applied.stderr)
+    rec.equal("files.real_settings_sha", paths.expected_settings_sha(), hostprobe.sha256(paths.REAL_SETTINGS))
+    rec.finish()

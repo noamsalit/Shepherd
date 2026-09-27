@@ -57,7 +57,7 @@
     "W1 stdout start line while Popen alive; socket 0600/0700 under TMPDIR; /api/fleet ok; app_state.discovery_status.last_scan_at advances >=2.0s; runner_socket; schema 4; SSE ': open'",
     "W2 ps eww env under run root, no TMUX/CLAUDE*; lsof open files never under real ~/.claude or real Shepherd data; real dirs == baseline",
     "W3 one root visible; #stream-status 'live' (FAIL(bound) only with /api/events 200); 0 console errors; one EventSource",
-    "W4 'controld stopped: 3 threads exited · store closed'; exit 0; socket gone; PRAGMA integrity_check ok",
+    "W4 'controld stopped: 4 threads exited · store closed'; exit 0; socket gone; PRAGMA integrity_check ok",
     "W5 product read_pane: shim PROMPT_READY, bare cat UNREADABLE, dialog mode recorded",
     "S0 LIVE_AUTH_MODE bound by the 3x3 table; real settings sha unchanged after every sub-probe"
    ]

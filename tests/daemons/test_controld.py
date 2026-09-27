@@ -12,7 +12,8 @@ host's real one.
 
 What each test is the acceptance evidence for:
 
-* ADR-7 — the registry is frozen before the server binds;
+* ADR-7 — the registry is frozen before the server serves (§4 as amended by
+  D71; the test is `test_controld_start_order.py`'s);
 * §12 — an update reaches a subscriber over SSE with no polling anywhere;
 * D37 — `controld` is the only writer, and a restart drains `sessiond`'s buffer
   **in order**, which is the entire reason the two-process split exists;
@@ -29,7 +30,6 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -51,10 +51,10 @@ from shepherd.testkit.scripted_host import ScriptedHost
 from shepherd.toolsurface import compose
 from shepherd.host.detect import detect_host
 from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
-from shepherd.toolsurface.registry import RegistryFrozen, register, registered_tools
-from shepherd.toolsurface.types import Audience, BlastClass, ToolDef
+from shepherd.toolsurface.rpc import RPC_SOCKET_NAME
 
 from shepherd.core.runner import ProcState
+from world_fixture import World, world  # noqa: F401 - the shared fixture, imported by name
 
 ENGINE_SESSION_ID = "5d1202ea-3765-459d-8299-8630c710c50d"
 CEILING_S = 10.0
@@ -94,79 +94,6 @@ def payload_for(cwd: str, engine_session_id: str = ENGINE_SESSION_ID) -> bytes:
             }
         ).encode("utf-8")
         + b"\n"
-    )
-
-
-@dataclass(frozen=True)
-class World:
-    """A throwaway host: XDG dirs, an engine config dir with no sessions in it."""
-
-    data_dir: Path
-    runtime_dir: Path
-    engine_config_dir: Path
-    cwd: Path
-
-
-#: Every environment variable any `HostPlatform` driver reads to place its
-#: directories. All of them are redirected, not just the ones the platform this
-#: was written on happens to read: `LinuxHost` takes `XDG_*`, `MacHost` takes
-#: `HOME` and `TMPDIR`, and a fixture that sets only one family silently hands
-#: the *other* platform the developer's real home. That is not hypothetical —
-#: it is what this fixture did, and `~/Library/Application Support/Shepherd`
-#: had a real `shepherd.db` in it to prove the point.
-HOST_DIR_ENV: tuple[str, ...] = (
-    "XDG_DATA_HOME",
-    "XDG_CONFIG_HOME",
-    "XDG_STATE_HOME",
-    "XDG_CACHE_HOME",
-    "XDG_RUNTIME_DIR",
-    "HOME",
-    "TMPDIR",
-)
-
-
-@pytest.fixture()
-def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> World:
-    """A throwaway host — for **whichever** driver `detect_host()` returns.
-
-    `data_dir` and `runtime_dir` are read back from the seam rather than spelled
-    here, because the two drivers place them differently
-    (`.local/share/shepherd` vs `Library/Application Support/Shepherd`) and a
-    test that spells one platform's layout is asserting about the wrong machine
-    on the other.
-    """
-    targets = {
-        "XDG_DATA_HOME": tmp_path / "xdg_data_home",
-        "XDG_CONFIG_HOME": tmp_path / "xdg_config_home",
-        "XDG_STATE_HOME": tmp_path / "xdg_state_home",
-        "XDG_CACHE_HOME": tmp_path / "xdg_cache_home",
-        "XDG_RUNTIME_DIR": tmp_path / "run",
-        "HOME": tmp_path / "home",
-        "TMPDIR": tmp_path / "run",
-    }
-    # The list and the redirect cannot drift apart: adding a variable to
-    # HOST_DIR_ENV without redirecting it fails here rather than in whichever
-    # test first reads the developer's real home.
-    assert tuple(targets) == HOST_DIR_ENV
-    for name, target in targets.items():
-        monkeypatch.setenv(name, str(target))
-
-    engine_config_dir = tmp_path / "engine-config"
-    (engine_config_dir / "sessions").mkdir(parents=True)
-    work = tmp_path / "work"
-    work.mkdir()
-
-    dirs = detect_host().dirs()
-    # Arrival, not trust: the driver really did follow the redirect. Without
-    # this the fixture is happy to hand back the real user's directories.
-    for directory in (dirs.data_dir, dirs.runtime_dir):
-        assert tmp_path in directory.parents, f"{directory} escaped the throwaway host"
-
-    return World(
-        data_dir=dirs.data_dir,
-        runtime_dir=dirs.runtime_dir,
-        engine_config_dir=engine_config_dir,
-        cwd=work,
     )
 
 
@@ -283,26 +210,6 @@ def relay_to(started: controld.Controld, frames: list[bytes]) -> None:
             relay.send(Frame(payload=raw, received_at=f"2026-09-16T10:00:{index:02d}Z", peer_pid=None))
     finally:
         relay.close(5.0)
-
-
-def test_the_registry_is_frozen_before_the_server_binds(world: World) -> None:
-    """ADR-7: written by one thread at startup, read-only thereafter."""
-    with running(world) as started:
-        assert started.port != 0
-        assert {"fleet_summary", "fleet_tree", "schema_status", "engine_version"} <= set(
-            registered_tools()
-        )
-        with pytest.raises(RegistryFrozen):
-            register(
-                ToolDef(
-                    name="too_late",
-                    description="registered after the bind",
-                    input_schema={"type": "object", "properties": {}},
-                    blast_class=BlastClass.LOCAL_READ,
-                    handler=lambda args, ctx: None,
-                    audiences=frozenset({Audience.HUMAN}),
-                )
-            )
 
 
 def test_the_page_and_its_tools_are_served_on_loopback(world: World) -> None:
@@ -702,9 +609,10 @@ def scripted_host(tmp_path: Path) -> ScriptedHost:
 def test_the_mailbox_sweep_runs_on_the_existing_loop(tmp_path: Path) -> None:
     """T14's `sweep_pending` rides the 2.0 s cadence `run_discovery_loop` owns.
 
-    Goes red if a fourth thread appears to carry it: the sweep is asserted to run
+    Goes red if a fifth thread appears to carry it: the sweep is asserted to run
     on **the loop's own thread**, which is this one, and `threads` in `start()`
-    is asserted to stay three in `test_the_root_still_wires_exactly_three_threads`.
+    is asserted to be exactly four, none of them a sweep, in
+    `test_the_root_wires_exactly_four_threads`.
 
     Arrival before absence: the call count is asserted non-zero before the thread
     identity is read, so a sweep that never ran cannot pass the identity check.
@@ -744,36 +652,45 @@ def test_the_mailbox_sweep_runs_on_the_existing_loop(tmp_path: Path) -> None:
     assert ran_on == [threading.get_ident()]
 
 
-def test_the_root_still_wires_exactly_three_threads(world: World) -> None:
-    """Out-of-Scope Drift, as a check: M3 buys no fourth thread and no second
-    socket. The ingest listener, the discovery loop and the HTTP server are the
-    three the root has had since T18; the mailbox sweep rides the second."""
+def test_the_root_wires_exactly_four_threads(world: World) -> None:
+    """Out-of-Scope Drift, as a check, re-valued by D68: the fourth thread is
+    the CLI's RPC listener and nothing else. The ingest listener, the RPC
+    listener, the discovery loop and the HTTP server; the mailbox sweep still
+    rides the discovery loop. Successor of the retired
+    `test_the_root_still_wires_exactly_three_threads` (qa6 rulings P10)."""
     with running(world) as started:
         names = tuple(thread.name for thread in started.threads)
 
-        assert names == ("ingest", "scan", "http")
+        assert names == ("ingest", "rpc", "scan", "http")
         assert all(thread.is_alive() for thread in started.threads)
 
 
-def test_no_new_socket_is_bound(world: World) -> None:
-    """DP4/§13: the terminal is served over the HTTP server's own upgrade, so
-    `controld` still binds exactly **one** socket of its own — the control
-    socket. (The ingest socket is `sessiond`'s; no file for it appears here
-    because no `sessiond` runs in this test.)
+def test_controld_binds_exactly_its_control_and_rpc_sockets(world: World) -> None:
+    """DP4/§13 and D68: the terminal is served over the HTTP server's own
+    upgrade, so `controld` binds exactly **two** sockets of its own — the
+    control socket and the CLI's RPC socket. (The ingest socket is `sessiond`'s;
+    no file for it appears here because no `sessiond` runs in this test.)
+    Successor of the retired `test_no_new_socket_is_bound` (qa6 rulings P10).
 
-    Goes red if a second listener appears — which is what a terminal daemon or a
+    Goes red if a third listener appears — which is what a terminal daemon or a
     second control channel would look like from here.
     """
     with running(world) as started:
-        bound = sorted(path.name for path in world.runtime_dir.iterdir())
+        # Sockets only: each claim's `<socket>.lock` sits beside its socket (D72).
+        bound = sorted(path.name for path in world.runtime_dir.iterdir() if path.is_socket())
 
         # Arrival: the directory really is the one `start()` bound into…
         assert started.control_socket_path.parent == world.runtime_dir
-        assert started.control_socket_path.exists()
-        # …and the one socket in it is that one, by name.
-        assert bound == [started.control_socket_path.name]
-        assert bound[0].startswith(CONTROL_SOCKET_NAME)
-        assert INGEST_SOCKET_NAME not in bound
+        assert started.rpc_socket_path.parent == world.runtime_dir
+        assert started.control_socket_path.exists() and started.rpc_socket_path.exists()
+        # …and the two sockets in it are those two, by name.
+        assert bound == sorted([started.control_socket_path.name, started.rpc_socket_path.name])
+        assert bound == [f"{CONTROL_SOCKET_NAME}.sock", f"{RPC_SOCKET_NAME}.sock"]
+        assert f"{INGEST_SOCKET_NAME}.sock" not in bound
+
+    # F15: both are unlinked on the way out.
+    assert not started.control_socket_path.exists()
+    assert not started.rpc_socket_path.exists()
 
 
 def test_the_composition_builds_the_runner_and_the_root_never_names_it() -> None:
@@ -806,7 +723,7 @@ def test_the_reconcile_runs_before_the_registry_freezes(
 
     An orphaned pane fills one of §11's total-cap slots whether or not anything
     knows of it, and the cap is asked on the first spawn — which cannot happen
-    before the registry is frozen and the server binds. So the observation is
+    before the registry is frozen and the server serves. So the observation is
     taken at the freeze itself: the anomaly the reconcile counts is asserted to
     be **already in the store** at the moment `freeze_registry()` is called.
 
@@ -956,7 +873,7 @@ def test_stop_returns_the_shutdown_outcome_rather_than_nothing(world: World) -> 
     outcome = controld.stop(started)
 
     assert outcome.hung == ()
-    assert sorted(outcome.joined) == ["http", "ingest", "scan"]
+    assert sorted(outcome.joined) == ["http", "ingest", "rpc", "scan"]  # D68: the fourth thread
     assert outcome.store_closed is True
     assert started.store.writer_is_alive() is False
 
@@ -998,4 +915,53 @@ def test_the_process_prints_what_shutdown_found(
     # Arrival before the claim: the run really did reach shutdown…
     assert started != []
     # …and the line a human reads names the count, not nothing.
-    assert "3 threads exited · store closed" in printed, printed
+    assert "4 threads exited · store closed" in printed, printed  # D68: the fourth thread, `rpc`
+
+
+def test_an_rpc_socket_that_never_binds_is_not_called_a_busy_port(
+    world: World, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """REM-FIX M-3: the bind wait used to raise `TimeoutError` — an `OSError` —
+    so `main` printed "port N is not available" for a socket that never bound.
+    It is `BindFailed` now, which is no `OSError`, and `main` names it as such.
+
+    The stand-in listener never binds; it keeps the `shutdown` event so the test
+    can stop the three real threads the failed start left running."""
+    handed: list[threading.Event] = []
+    servers: list[object] = []
+    stores: list[object] = []
+    real_server, real_store = controld.create_server, controld.open_store
+
+    def never_binds(plan: SocketPlan, shutdown: threading.Event, bound: threading.Event) -> None:
+        handed.append(shutdown)
+
+    def spy_server(*args: object, **kwargs: object) -> object:
+        servers.append(real_server(*args, **kwargs))  # type: ignore[arg-type]
+        return servers[-1]
+
+    def spy_store(path: Path) -> object:
+        stores.append(real_store(path))
+        return stores[-1]
+
+    monkeypatch.setattr(controld, "serve_control_rpc", never_binds)
+    monkeypatch.setattr(controld, "create_server", spy_server)
+    monkeypatch.setattr(controld, "open_store", spy_store)
+    monkeypatch.setattr(controld, "BIND_TIMEOUT_S", 0.2)
+    monkeypatch.setattr(controld, "install_shutdown_handlers", lambda shutdown: None)
+    try:
+        code = controld.main(["--port", "0", "--engine-config-dir", str(world.engine_config_dir)])
+    finally:
+        for event in handed:
+            event.set()
+        for server in servers:
+            assert isinstance(server, controld.ThreadingHTTPServer)
+            server.shutdown()
+            server.server_close()
+        for store in stores:
+            assert isinstance(store, controld.Store)
+            store.close()
+
+    printed = capsys.readouterr().out
+    assert code == controld.EXIT_REFUSED
+    assert "controld refuses to start: a control socket was never bound" in printed, printed
+    assert "is not available" not in printed, printed

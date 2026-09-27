@@ -25,8 +25,8 @@ from ..scenario import scenario
 from ..verdict import Blocked, Recorder
 from .test_wave5_1_support import Master, audit_file_view, card, open_master, send, set_level, spawn_user
 
-#: test-plan M19, verbatim.
-EXPECTED_LINE = "3 threads exited · store closed · 1 approvals withdrawn"
+#: test-plan M19, re-valued by D68 (a fourth thread, `rpc`).
+EXPECTED_LINE = "4 threads exited · store closed · 1 approvals withdrawn"
 STOP_BOUND_S = 10.0  # plan M19: "stop returns within 10 s" (the product's join timeout, JOIN_TIMEOUT_S)
 
 
