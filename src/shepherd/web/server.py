@@ -59,6 +59,11 @@ JSON_TYPE = "application/json"
 #: bounds what one `Content-Length` header can make this process allocate.
 MAX_BODY_BYTES = 1 << 20
 
+#: BC-32: how long a declared body may take to arrive. A client that claims a
+#: `Content-Length` and stops short used to hold a handler thread in `read()`
+#: forever; past this window the body is refused (400) and the connection closed.
+BODY_READ_TIMEOUT_S = 2.0
+
 #: The tool the WebSocket path resolves to. It is **not** in `API_ROUTES`: an
 #: upgrade is not a call, so the name is spelled once, here, beside the one
 #: handler that may use it.
@@ -217,13 +222,34 @@ class FleetHandler(BaseHTTPRequestHandler):
             return None
         if length == 0:
             return {}
+        raw = self._read_body(length)
+        if raw is None:
+            return None
         try:
-            decoded: object = json.loads(self.rfile.read(length).decode("utf-8"))
+            decoded: object = json.loads(raw.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             return None
         if not isinstance(decoded, dict):
             return None
         return {str(key): value for key, value in decoded.items()}
+
+    def _read_body(self, length: int) -> bytes | None:
+        """Exactly `length` bytes within `BODY_READ_TIMEOUT_S`, or `None` (BC-32).
+
+        A short or stalled body closes the connection: whatever the client sends
+        after it cannot be framed as the next request.
+        """
+        self.connection.settimeout(BODY_READ_TIMEOUT_S)
+        try:
+            raw = self.rfile.read(length)
+        except OSError:  # `TimeoutError` is one
+            raw = b""
+        finally:
+            self.connection.settimeout(None)
+        if len(raw) != length:
+            self.close_connection = True
+            return None
+        return raw
 
     def _call(self, resolved: routes.Resolved, correlation_id: str) -> None:
         """The whole of `web/`'s access to the system (D19, D35)."""
