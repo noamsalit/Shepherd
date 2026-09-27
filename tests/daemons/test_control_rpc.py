@@ -176,7 +176,10 @@ def test_a_reply_the_client_cannot_read_is_a_failed_result(tmp_path: Path) -> No
     def garbage() -> None:
         conn, _ = listener.accept()
         with conn:
-            conn.recv(65_536)
+            # Read to the client's EOF first: a single recv can close before the request is
+            # all in, and the client then fails on send, not on the reply (flaked 2 in 20).
+            while conn.recv(65_536):
+                pass
             conn.sendall(b"this is no reply")
 
     server = threading.Thread(target=garbage, daemon=True)
@@ -333,7 +336,10 @@ def test_a_failure_after_sending_keeps_its_detail_not_only_its_class(tmp_path: P
     def garbage() -> None:
         conn, _ = listener.accept()
         with conn:
-            conn.recv(65_536)
+            # Read to the client's EOF first: a single recv can close before the request is
+            # all in, and the client then fails on send, not on the reply (flaked 2 in 20).
+            while conn.recv(65_536):
+                pass
             conn.sendall(b"this is no reply")
 
     server = threading.Thread(target=garbage, daemon=True)
