@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "report.py",
+ "old": "    if runner_crash is not None:\n        return Decision(\"INCOMPLETE\", (*crashed_first, *reasons), dict(counts))",
+ "new": "    if runner_crash is not None and False:\n        return Decision(\"INCOMPLETE\", (*crashed_first, *reasons), dict(counts))",
+ "proof": "test_proof_gate_harness_error_and_crash",
+ "expect": "proof_gate.runner_crash_is_incomplete",
+ "why": "hunter H6: a crashed runner's report is decided as if the run had finished"
+}

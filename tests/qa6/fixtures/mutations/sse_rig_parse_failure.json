@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sse_rig.py",
+ "old": "            if self.parse_failures:\n                raise AssertionError",
+ "new": "            if self.parse_failures and False:\n                raise AssertionError",
+ "proof": "test_proof_sse_rig_fails_closed",
+ "expect": "proof_sse_rig.unparseable_frame_is_fail",
+ "why": "hunter H5: a product frame that does not parse is dropped silently and every 'no frame' clause passes"
+}

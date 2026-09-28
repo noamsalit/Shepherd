@@ -3,9 +3,10 @@
 A composition root (ADR-1): it wires `bind_listener`, `read_lines` and the
 `relay_wire` codec together and holds no logic of its own. `controld` creates
 and owns this socket, under the same rules as the ingest socket — umask before
-bind, unlink stale, unlink on exit (E20, F15) — and greets every connection
-with the schema version it was started with, because §7 migration rule 3 says
-`sessiond` waits for that line before it relays anything.
+bind, unlink stale, unlink on exit (E20, F15), hold the claim's lock until the
+listener returns (D72) — and greets every connection with the schema version it
+was started with, because §7 migration rule 3 says `sessiond` waits for that
+line before it relays anything.
 """
 
 from __future__ import annotations
@@ -16,10 +17,15 @@ from collections.abc import Callable
 
 from shepherd.core.frames import Frame
 from shepherd.engines.claude_code.ingest_socket import (
+    ClaimFailed,
+    SocketInUse,
     accept_next,
     bind_listener,
+    claim_socket,
+    owned_inode,
     read_lines,
-    unlink_socket,
+    release_claim,
+    unlink_owned_socket,
 )
 from shepherd.engines.claude_code.relay_wire import (
     Hello,
@@ -29,7 +35,7 @@ from shepherd.engines.claude_code.relay_wire import (
 )
 from shepherd.host.base import SocketPlan
 
-__all__ = ["serve_control_ingest"]
+__all__ = ["ClaimFailed", "SocketInUse", "claim_socket", "serve_control_ingest"]
 
 
 def serve_control_ingest(
@@ -45,6 +51,7 @@ def serve_control_ingest(
     readiness loop of its own). Defaulted, so every existing call site is
     unchanged."""
     listener = bind_listener(plan)
+    inode = owned_inode(plan.path)
     if bound is not None:
         bound.set()
     try:
@@ -53,7 +60,12 @@ def serve_control_ingest(
             if conn is None:
                 continue
             with conn:
-                conn.sendall(encode_hello(Hello(schema_version=schema_version, pid=os.getpid())))
+                try:
+                    conn.sendall(encode_hello(Hello(schema_version=schema_version, pid=os.getpid())))
+                except OSError:
+                    # A peer that closed before the greeting (a liveness probe,
+                    # qa6 BC-16) loses its connection, never the daemon.
+                    continue
                 try:
                     for line in read_lines(conn, shutdown):
                         on_frame(decode_frame(line))
@@ -63,4 +75,7 @@ def serve_control_ingest(
                     continue
     finally:
         listener.close()
-        unlink_socket(plan.path)
+        try:
+            unlink_owned_socket(plan.path, inode)
+        finally:
+            release_claim(plan.path)  # after the unlink, so nobody binds before it (D72)

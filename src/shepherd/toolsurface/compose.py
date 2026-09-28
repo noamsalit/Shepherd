@@ -13,9 +13,10 @@ composition root", and the file sat at exactly 150 lines with nothing to spare,
 so the next wiring change could not be additive. The ledger's own second option
 was this: move tool registration into `toolsurface/`, where capabilities live.
 
-`controld` keeps the *order*, which is the part that is a contract: compose,
-then freeze, then bind (ADR-7 — the registry is written by one thread at
-startup and read-only from the moment the server can serve a request).
+`controld` keeps the *order*, which is the part that is a contract: bind the
+port before the store is opened (D71), then compose, then freeze, then serve
+(ADR-7 §4 as amended — the registry is written by one thread at startup and
+read-only from the moment the server can serve a request).
 
 `ingest` is a parameter rather than something composed here: the socket's name
 belongs to `daemons/sessiond.py`, and L4 does not import L6.
@@ -55,6 +56,7 @@ from shepherd.orchestration.dialog_keys import SidecarState
 from shepherd.orchestration.lifecycle import reconcile_owned_panes
 from shepherd.orchestration.mailbox import sweep_pending
 from shepherd.orchestration.master_turn import TurnDriver
+from shepherd.orchestration.wake import LevelThreeWaker
 from shepherd.runner.base import Runner
 from shepherd.runner.local import RUNNER_NAME, CommandResult, LocalRunner, make_run_argv
 from shepherd.runner.tmux_cmd import DEFAULT_SOCKET, permitted_commands, permitted_sockets
@@ -63,8 +65,9 @@ from shepherd.signals.replay import DIFF_DIRNAME
 from shepherd.store.db import Store
 from shepherd.toolsurface.approvals import ApprovalStore, build_authorizer
 from shepherd.toolsurface.client import bind_master_client
+from shepherd.toolsurface.registry import master_failure_recorder
 from shepherd.toolsurface.registry import freeze_registry, install_chokepoint, reset_registry
-from shepherd.toolsurface.stream import publish, reset_stream
+from shepherd.toolsurface.stream import publish, reset_stream, stream_seq_base
 from shepherd.toolsurface.tools_engine import register_engine_tools
 from shepherd.toolsurface.tools_hooks import register_hook_tools
 from shepherd.toolsurface.tools_m1 import register_read_tools
@@ -96,6 +99,7 @@ __all__ = [
     "run_fork",
     "runner_socket",
     "sidecar_reader",
+    "sweep_and_wake",
     "transcript_root",
 ]
 
@@ -189,35 +193,36 @@ def close_master(timeout_s: float) -> int:
     `shutdown.py` is not a composition root, so it has lines to spend and
     `controld.py` does not have to grow one.
 
-    **Two withdrawals, and the second is not the first repeated.**
-    `interrupt_master()` withdraws by *that turn's* id and then interrupts
-    (ADR-M4-3, in that order because P2 measured that the interrupt frees
-    nothing); `wait_for_turn` is the driver's own bounded wait for the worker,
-    handed shutdown's timeout rather than the driver's 30 s default, so the
-    runtime's `close()` has run by the time this returns. What is left after it
-    is every card raised by a caller that is not the master — §12's rail, a
-    page, the CLI — and a worker parked in front of one of those would wait its
-    full 600 s while the process it is waiting for exits (P2: no cancellation
-    reaches a running handler, so our own compare-and-set is the only release).
-    So the sweep is by turn, over what is still pending, and it returns how many
-    it freed — a number, because "shutdown left somebody blocked" must be a fact
-    the exit line can say rather than a silence.
+    **Withdraw, interrupt, wait, withdraw again — and count both sweeps.**
+    The first sweep frees every pending card by turn — the master's own and
+    every card raised by a caller that is not the master (§12's rail, a page,
+    the CLI) — *before* `interrupt_master()`, so ADR-M4-3's withdraw-then-
+    interrupt order holds (P2 measured that the interrupt frees nothing, and no
+    cancellation reaches a running handler, so our own compare-and-set is the
+    only release). BC-30: `interrupt_master()` withdraws its turn's cards too,
+    but discards the count, so letting it go first left the stop line saying
+    `0` for the master's own card. `wait_for_turn` is the driver's own bounded
+    wait for the worker, handed shutdown's timeout rather than the driver's
+    30 s default, so the runtime's `close()` has run by the time this returns;
+    the second sweep frees anything raised meanwhile. The total is a number
+    because "shutdown left somebody blocked" must be a fact the exit line can
+    say rather than a silence.
 
     A process that never composed has nothing to close, and says so with `0`.
     """
     plane = _PLANE
     if plane is None:
         return 0
+    withdrawn = _withdraw_pending(plane.approvals)
     plane.driver.interrupt_master()
     plane.driver.wait_for_turn(timeout_s)
-    return sum(
-        plane.approvals.withdraw_all(turn_id)
-        for turn_id in {
-            approval.turn_id
-            for approval in plane.approvals.pending()
-            if approval.turn_id is not None
-        }
-    )
+    return withdrawn + _withdraw_pending(plane.approvals)
+
+
+def _withdraw_pending(approvals: ApprovalStore) -> int:
+    """Withdraw every pending card, by turn, and say how many were freed."""
+    turn_ids = {a.turn_id for a in approvals.pending() if a.turn_id is not None}
+    return sum(approvals.withdraw_all(turn_id) for turn_id in turn_ids)
 
 
 #: Where the engine keeps per-project transcripts, under its own config dir
@@ -382,7 +387,7 @@ def compose_tool_surface(
     Order, and why it is this one: the reconcile runs **before** the freeze
     because an orphaned pane holds one of §11's total-cap slots whether or not
     anything knows of it, and the cap is asked on the first spawn — which cannot
-    arrive before the server binds, which cannot happen before the freeze.
+    arrive before the server serves, which cannot happen before the freeze.
 
     **The two M4 parameters are the two things L4 may not say** (ADR-M4-6).
     `build_master` is `shepherd.master`, which is L5 and upward; `audit_sink` is
@@ -397,7 +402,7 @@ def compose_tool_surface(
     process loud rather than silently ungated.
     """
     reset_registry()
-    reset_stream()
+    reset_stream(seq_base=stream_seq_base())
     reset_master_plane()
     # Built **before** the read tools register, because `fleet_summary` is
     # handed its `pending` (D2 of the M1-M4 QA pass): §12's rail has three
@@ -483,7 +488,12 @@ def compose_tool_surface(
         publish=publish,
         withdraw_turn_approvals=approvals.withdraw_all,
         now=utc_now,
+        record_failure=master_failure_recorder(
+            lambda: _bump(store, AnomalyKind.MASTER_FAILED), level=lambda: int(autonomy_level(store))
+        ),
     )
+    waker = LevelThreeWaker(store, level=lambda: int(autonomy_level(store)),
+                            open_wake=driver.wake_turn, bump=store.bump_anomaly)
     register_master_tools(
         store=store,
         approvals=approvals,
@@ -509,9 +519,24 @@ def compose_tool_surface(
     )
     _install_plane(_MasterPlane(driver=driver, approvals=approvals))
     freeze_registry()
-    return M4Wiring(
-        runner=runner, sweep=mailbox_sweep(store, runner), approvals=approvals
-    )
+    sweep = sweep_and_wake(mailbox_sweep(store, runner), waker.tick, store)
+    return M4Wiring(runner=runner, sweep=sweep, approvals=approvals)
+
+
+def sweep_and_wake(
+    sweep: Callable[[], MailboxCounts], tick: Callable[[], bool], store: Store
+) -> Callable[[], MailboxCounts]:
+    """One 2 s pass (D69, ADR-QR-5: no thread): the mailbox sweep, then the waker.
+    The scan loop calls this unguarded, so a raising tick is counted, not raised."""
+
+    def run() -> MailboxCounts:
+        counts = sweep()
+        try:
+            tick()
+        except Exception:
+            _bump(store, AnomalyKind.WAKE_TICK_FAILED)
+        return counts
+    return run
 
 
 def _install_plane(plane: _MasterPlane) -> None:

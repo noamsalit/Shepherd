@@ -54,6 +54,7 @@ one of the six instead would lose the reason the column exists for.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
@@ -66,10 +67,13 @@ from shepherd.orchestration.write_policy import decide_write
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
 
-__all__ = ["Delivery", "coalesce", "deliver_now", "queue_message", "sweep_pending", "turn_state"]
+__all__ = ["DELIVERY_LOCK", "Delivery", "coalesce", "deliver_now", "queue_message", "sweep_pending", "turn_state"]
 
 #: What joins the bullets: one note per line, in queue order.
 COALESCE_SEPARATOR = "\n"
+
+#: One delivery at a time, whichever trigger fires (BC-02); `send` re-enters it.
+DELIVERY_LOCK = threading.RLock()
 
 
 @dataclass(frozen=True)
@@ -144,9 +148,7 @@ def queue_message(
     )
 
 
-def _defer(
-    store: Store, ids: tuple[str, ...], reason: str, *, count: AnomalyKind | None
-) -> Delivery:
+def _defer(store: Store, ids: tuple[str, ...], reason: str, *, count: AnomalyKind | None) -> Delivery:
     """Leave the rows pending, say why on each, and count the named member."""
     store.record_refusal(ids, reason)
     if count is not None:
@@ -166,44 +168,44 @@ def deliver_now(
     now: Callable[[], str],
 ) -> Delivery:
     """One attempt at one session's mailbox: sends once, or defers with a reason."""
-    pending = store.pending_for(session_id)
-    if not pending:
-        return Delivery(decision=None, reason=None, delivered=0, deferred=0)
-    ids = tuple(one.id for one in pending)
+    with DELIVERY_LOCK:
+        pending = store.pending_for(session_id)
+        if not pending:
+            return Delivery(decision=None, reason=None, delivered=0, deferred=0)
+        ids = tuple(one.id for one in pending)
 
-    if runner.attached_clients(handle) > 0:
-        return _defer(
-            store,
-            ids,
-            AnomalyKind.MAILBOX_CLIENT_ATTACHED.value,
-            count=AnomalyKind.MAILBOX_CLIENT_ATTACHED,
-        )
-
-    pane = runner.pane(handle)
-    decision = decide_write(turn_state(state, pane, ownership), pane, ownership)
-
-    if decision is WriteDecision.CLEAR_THEN_SEND:
-        runner.clear_input(handle)
-        pane = runner.pane(handle)
-        decision = decide_write(turn_state(state, pane, ownership), pane, ownership)
-        if decision is WriteDecision.CLEAR_THEN_SEND:
-            # The box is still drafted, so the clear did not work — which is
-            # indistinguishable from never having tried, and is why the re-read
-            # is here at all.
+        if runner.attached_clients(handle) > 0:
             return _defer(
-                store,
-                ids,
-                WriteDecision.REFUSE_INPUT_NOT_EMPTY.value,
-                count=AnomalyKind.MAILBOX_INPUT_NOT_EMPTY,
+                store, ids, AnomalyKind.MAILBOX_CLIENT_ATTACHED.value, count=AnomalyKind.MAILBOX_CLIENT_ATTACHED
             )
 
-    if decision is not WriteDecision.SEND_NOW:
-        return _defer(store, ids, decision.value, count=None)
+        pane = runner.pane(handle)
+        decision = decide_write(turn_state(state, pane, ownership), pane, ownership)
+        cleared = decision is WriteDecision.CLEAR_THEN_SEND
 
-    runner.write(handle, coalesce(pending).encode("utf-8"))
-    runner.write(handle, b"\r")
-    moved = store.mark_delivered(ids, now())
-    return Delivery(decision=decision, reason=None, delivered=moved, deferred=0)
+        if cleared:
+            runner.clear_input(handle)
+            pane = runner.pane(handle)
+            decision = decide_write(turn_state(state, pane, ownership), pane, ownership)
+            if decision is WriteDecision.CLEAR_THEN_SEND:
+                # The box is still drafted, so the clear did not work — which is
+                # indistinguishable from never having tried, and is why the re-read
+                # is here at all.
+                return _defer(
+                    store,
+                    ids,
+                    WriteDecision.REFUSE_INPUT_NOT_EMPTY.value,
+                    count=AnomalyKind.MAILBOX_INPUT_NOT_EMPTY,
+                )
+
+        if decision is not WriteDecision.SEND_NOW:
+            return _defer(store, ids, decision.value, count=None)
+
+        runner.write(handle, coalesce(pending).encode("utf-8"))
+        runner.write(handle, b"\r")
+        moved = store.mark_delivered(ids, now())
+        taken = WriteDecision.CLEAR_THEN_SEND if cleared else decision
+        return Delivery(decision=taken, reason=None, delivered=moved, deferred=0)
 
 
 def sweep_pending(
@@ -225,9 +227,7 @@ def sweep_pending(
         row = store.get_owned_session(session_id)
         if handle is None or row is None:
             ids = tuple(one.id for one in store.pending_for(session_id))
-            deferred += _defer(
-                store, ids, WriteDecision.REFUSE_NO_PTY.value, count=None
-            ).deferred
+            deferred += _defer(store, ids, WriteDecision.REFUSE_NO_PTY.value, count=None).deferred
             continue
         try:
             outcome = deliver_now(

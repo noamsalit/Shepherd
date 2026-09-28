@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sandbox.py",
+ "old": "HOST_SAFETY_ENV: Final[dict[str, str]] = {\"DISABLE_AUTOUPDATER\": \"1\"}",
+ "new": "HOST_SAFETY_ENV: Final[dict[str, str]] = {}",
+ "proof": "test_proof_host_safe_envs",
+ "expect": "proof_host_safe_envs.every_env_disables_autoupdater",
+ "why": "no env carries DISABLE_AUTOUPDATER=1 and the checker no longer requires it"
+}

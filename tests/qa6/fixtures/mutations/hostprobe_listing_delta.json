@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "    moved = {name: [before[name], after[name]] for name in sorted(set(before) & set(after)) if before[name] != after[name]}",
+ "new": "    moved: dict[str, object] = {}",
+ "proof": "test_proof_host_field_deltas",
+ "expect": "proof_host_deltas.moved_mtime_seen",
+ "why": "hunter H7: a write into the user's real Shepherd data dir (an mtime moving) goes unseen by Z1"
+}

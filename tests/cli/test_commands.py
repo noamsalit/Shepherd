@@ -23,6 +23,7 @@ from shepherd.core.fold_types import FoldDelta
 from shepherd.core.states import Origin, Ownership, SessionState
 from shepherd.cli.main import EXIT_FAILURE, EXIT_OK, EXIT_USAGE, main
 from shepherd.store.db import Store
+from shepherd.store.migrate import EXPECTED_SCHEMA_VERSION
 from shepherd.toolsurface.registry import reset_registry
 from shepherd.toolsurface.tools_engine import register_engine_tools
 from shepherd.store.models import Session
@@ -440,8 +441,8 @@ def test_doctor_reports_the_schema_version_when_a_tool_projects_it(
     database = next(
         line for line in out.getvalue().splitlines() if line.startswith("database:")
     )
-    assert "schema version 4" in database
-    assert "expects 4" in database
+    assert f"schema version {EXPECTED_SCHEMA_VERSION}" in database
+    assert f"expects {EXPECTED_SCHEMA_VERSION}" in database
     assert "unknown" not in database
 
 
@@ -699,7 +700,7 @@ def test_doctor_in_a_standalone_process_still_reports_real_facts(
     engine = next(line for line in lines if line.startswith("engine:"))
     # No database file has been written there yet — said as a fact, not a blank.
     assert "no database file" in database
-    assert "expects schema version 4" in database
+    assert f"expects schema version {EXPECTED_SCHEMA_VERSION}" in database
     # The engine version is discovered from the host, not from a constant.
     assert "schemas pinned 2.1.270" in engine
     assert "no registered tool" not in engine

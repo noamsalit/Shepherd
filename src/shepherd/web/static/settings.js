@@ -224,6 +224,14 @@ async function read(path) {
   }
 }
 
+//: BC-24. A refused write said nothing at all: `choose()` returned on the
+//: `null` and the only trace was a 400 on the console. The refusal is shown in
+//: the same slot and the same shape `projects.js` uses — the generic literal
+//: and the correlation id, which is all §13 gives a page and the one thing a
+//: person can quote. A later success clears the sentence, so it never
+//: outlives the change it was about.
+const NOT_MADE = "the change was not made";
+
 async function write(path, payload) {
   try {
     const response = await fetch(path, {
@@ -233,6 +241,7 @@ async function write(path, payload) {
     });
     const body = await response.json();
     if (!body.ok) {
+      fill("settings-note", `${NOT_MADE}: ${body.error} (${body.correlation_id})`);
       return null;
     }
     return body.data;
@@ -339,13 +348,56 @@ function facts(pairs) {
 
 // ----- Autonomy (D65, U12) -----------------------------------------------------
 
-async function choose(level) {
-  const data = await write(AUTONOMY, { level });
+//: BC-12 (R2). **The last click is the intent**, and it is recorded
+//: synchronously. Two clicks used to be two POSTs racing: the older one could
+//: land last, and the daemon then held the level the user had clicked away
+//: from. Now one write is in flight at a time; a click made while it is out
+//: only moves `intent`, and when the reply comes back for a click that has
+//: been superseded it paints nothing — the intent is sent next, because the
+//: daemon now holds the older value. A burst of clicks made while one write
+//: is out costs one more audited write, not one per click.
+const autonomy = { intent: null, sending: false };
+
+//:
+//: REMFIX-1 (hunter H4, M4): every confirmed reply is kept in `state.level`
+//: before the next write goes out, and the panel is repainted whether the
+//: last write landed or not — a write that lands and is then superseded by
+//: one that fails leaves the daemon on the landed level, and the panel must
+//: say so beside the refusal. A later success clears either failure note.
+async function sendIntent() {
+  const data = await write(AUTONOMY, { level: autonomy.intent });
   if (data === null) {
-    return;
+    return null;
   }
   state.level = data.level;
-  renderPanel();
+  if (data.level !== autonomy.intent) {
+    return sendIntent();
+  }
+  return data;
+}
+
+function clearFailureNote() {
+  const note = slot("settings-note");
+  if (note.textContent.startsWith(NOT_MADE) || note.textContent === UNREACHABLE) {
+    note.replaceChildren();
+  }
+}
+
+async function choose(level) {
+  autonomy.intent = level;
+  if (autonomy.sending) {
+    return;
+  }
+  autonomy.sending = true;
+  try {
+    const data = await sendIntent();
+    if (data !== null) {
+      clearFailureNote();
+    }
+    renderPanel();
+  } finally {
+    autonomy.sending = false;
+  }
 }
 
 function autonomyPanel() {

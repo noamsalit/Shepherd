@@ -28,9 +28,18 @@ buys nothing for a writer, and there is exactly one writer here.
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, date, datetime
 
-__all__ = ["DATE_EXAMPLE", "STAMP_EXAMPLE", "parse_date", "parse_stamp", "stamp", "utc_now"]
+__all__ = [
+    "DATE_EXAMPLE",
+    "STAMP_EXAMPLE",
+    "epoch_millis",
+    "parse_date",
+    "parse_stamp",
+    "stamp",
+    "utc_now",
+]
 
 #: A real stamp, for documentation and for a test that wants a shape to compare.
 STAMP_EXAMPLE = "2026-09-17T01:04:18.671Z"
@@ -48,6 +57,17 @@ def stamp(moment: datetime) -> str:
 def utc_now() -> str:
     """Now, in the one format. The only clock any writer in this system calls."""
     return stamp(datetime.now(UTC))
+
+
+def epoch_millis() -> int:
+    """Now, as whole milliseconds since the Unix epoch. Not a stamp — a number.
+
+    For a value that has to be *larger in a later process* rather than readable
+    by a person: the stream seeds its sequence from it (BC-03), so an id handed
+    out before a restart is below every id handed out after it. It lives here
+    because this is the only module allowed to read a wall clock (P22).
+    """
+    return time.time_ns() // 1_000_000
 
 
 def parse_date(text: str) -> tuple[int, int, int] | None:

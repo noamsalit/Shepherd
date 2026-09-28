@@ -197,6 +197,22 @@ def apply_stop_verdict(
     return session(row)
 
 
+
+def end_refused(
+    connection: sqlite3.Connection, session_id: str, verdict: Verdict, ended_at: str
+) -> Session:
+    """A refused start's whole ending (§3 D73) in the one transaction `_write`
+    opens: the `stopped` fold and the stop columns land together or not at all.
+
+    Not a second stop writer — the columns still go through `apply_stop_verdict`
+    (D37). A refusal started nothing, so there is no exit code.
+    """
+    apply_fold_delta(
+        connection, session_id, FoldDelta(state=SessionState.STOPPED, last_event_at=ended_at)
+    )
+    return apply_stop_verdict(connection, session_id, verdict, ended_at, None)
+
+
 # ----- app state -------------------------------------------------------------
 
 
@@ -207,6 +223,21 @@ def set_app_state(connection: sqlite3.Connection, key: str, value: object) -> No
         " updated_at = excluded.updated_at",
         (key, json.dumps(value), _now()),
     )
+
+
+def compare_and_set_app_state(
+    connection: sqlite3.Connection, key: str, expected: object, value: object
+) -> bool:
+    """Write `value` only over `expected`, in one statement (qa6 P6 REM-FIX 1).
+
+    `False` when the key holds anything else or is absent, and nothing moves:
+    a caller putting an earlier value back must never overwrite a later one.
+    """
+    cursor = connection.execute(
+        "UPDATE app_state SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+        (json.dumps(value), _now(), key, json.dumps(expected)),
+    )
+    return cursor.rowcount == 1
 
 
 def bump_anomaly(connection: sqlite3.Connection, kind: str) -> None:

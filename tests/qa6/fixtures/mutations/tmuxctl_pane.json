@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "        why = argv_violation(argv, env_value, run_pid)\n        if why is not None:",
+ "new": "        why = argv_violation(argv, env_value, run_pid)\n        if why is not None and why.startswith(\"contacts\"):",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.flags_user_socket_in_pane",
+ "why": "the in-pane judgement stops flagging a foreign effective socket, so an engine call naming the user's `shepherd` socket from inside a pane would pass (proved by predicate on planted dicts: no tmux is run)"
+}

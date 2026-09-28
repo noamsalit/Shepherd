@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "    return (effective_socket(argv, None) == default_socket and bool(parsed.command)\n            and parsed.command[0] == UNSEEDED_EXCUSED_VERB)",
+ "new": "    return effective_socket(argv, None) == default_socket",
+ "proof": "test_proof_unseeded_excuse_is_list_sessions_only",
+ "expect": "proof_unseeded.kill_session_on_default_runner_is_flagged",
+ "why": "review N3: the unseeded excuse ignores the verb, so a kill-session on the default runner socket passes (argv are data in a temp log; nothing is executed)"
+}

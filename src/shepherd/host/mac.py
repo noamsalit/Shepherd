@@ -144,6 +144,11 @@ MAC_LIVENESS_ARGV_HEAD = (  # VERIFIED (docs/probes/2026-09-20-macos-g1-capture.
     "lstart=",  # VERIFIED (docs/probes/…§5) — D55: the `=` suppresses the header
     "-p",  # VERIFIED (docs/probes/…§5) — D55
 )
+#: `ps` spells `lstart` in the caller's timezone, and the engine writes its
+#: sidecar's `procStart` as `lstart` read in UTC — so off UTC the two differed by
+#: the offset and every real session was judged dead (BC-01). The child `ps` is
+#: pinned to UTC; this process's own timezone is never touched.
+MAC_LIVENESS_TZ = "UTC"  # VERIFIED (docs/probes/2026-09-24-macos-procstart-utc.md) — D55
 MAC_OFF_PLATFORM_REASON = (  # UNVERIFIED (no capture) — D55
     "MacHost host probes refuse off-platform: running them here would answer "  # UNVERIFIED
     "about this Linux host, which is the failure D41 forbids"  # UNVERIFIED
@@ -163,6 +168,14 @@ def mac_liveness_argv(pid: int) -> tuple[str, ...]:
     `ps` reads a table.
     """
     return (*MAC_LIVENESS_ARGV_HEAD, str(pid))  # VERIFIED (docs/probes/…§5) — D55
+
+
+def mac_liveness_env(environ: Mapping[str, str]) -> dict[str, str]:
+    """`environ` with `TZ` pinned to UTC, for the liveness `ps` only. Pure."""
+    return {
+        **environ,
+        "TZ": MAC_LIVENESS_TZ,  # VERIFIED (docs/probes/2026-09-24-macos-procstart-utc.md) — D55
+    }
 
 
 def mac_dispatch_missing_reason(missing: tuple[str, ...]) -> str:
@@ -276,6 +289,11 @@ class MacHost:
         start token reports gone, which is the pid-reuse guard doing its job.
         4.1 ms median per call.
 
+        The token is `lstart` read in **UTC** (`mac_liveness_env`), because that
+        is how the engine spells `procStart`; `ps`'s default is local time, which
+        judged every real session dead on a Mac off UTC (BC-01,
+        `docs/probes/2026-09-24-macos-procstart-utc.md`).
+
         It reads a table and sends nothing, which is what makes it the answer
         the **tests** take as well — `os.kill(pid, 0)` is the idiom this repo
         refuses by name (CLAUDE.md, 2026-09-17).
@@ -291,6 +309,7 @@ class MacHost:
             text=True,
             timeout=2.0,  # VERIFIED (docs/probes/…§5) — D55: 4.1 ms median, 8.8 ms worst
             check=False,
+            env=mac_liveness_env(self.environ),
         )
         observed = completed.stdout.strip()
         # rc=1 for an impossible pid (`ps: process id too large`) and empty

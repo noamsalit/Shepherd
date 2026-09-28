@@ -287,7 +287,7 @@ def test_no_declared_field_shadows_a_path_parameter() -> None:
     assert shadowing(routes.QUERY_ARGS) == []
     # M3's seven, T24's three, and the Projects page's six.
     assert len(routes.BODY_ARGS) == 16
-    assert len(routes.QUERY_ARGS) == 3
+    assert len(routes.QUERY_ARGS) == 4  # M1's three, and BC-23's `/api/audit`.
     # The derivation is not vacuous: the templates it reads really do carry
     # path parameters, and one of them is the `approval_id` the enumeration
     # never covered.
@@ -621,3 +621,14 @@ def test_the_upgrade_helper_accepts_the_ending_the_server_actually_writes() -> N
     assert status == 101
     assert [opcode for opcode, _ in frames] == [ws.OP_BINARY, ws.OP_CLOSE]
     assert frames[0][1] == b"SCREEN"
+
+
+def test_every_required_body_field_is_a_declared_one() -> None:
+    """P13b: `REQUIRED_BODY_ARGS` names POST routes, and only fields their
+    `BODY_ARGS` forward — a required field the table drops could never arrive."""
+    from shepherd.web import routes
+
+    assert routes.REQUIRED_BODY_ARGS, "the permission answer's digest is required"
+    for template, required in routes.REQUIRED_BODY_ARGS.items():
+        assert template in routes.POST_ROUTES, template
+        assert set(required) <= set(routes.BODY_ARGS[template]), (template, required)

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "shims/tmux.sh.in",
+ "old": "    return \"<invalid: socket path '$path' is not absolute>\" if substr($path, 0, 1) ne '/';\n",
+ "new": "",
+ "proof": "test_proof_tmux_shim_refuses",
+ "expect": "proof_tmux_shim.refuses_without_exec",
+ "why": "review N2: the shim realpaths a relative -S from the client's cwd again and execs `-S ./<ours>` from the socket dir while the Python judge refuses it (FAKE tmux binary only)"
+}

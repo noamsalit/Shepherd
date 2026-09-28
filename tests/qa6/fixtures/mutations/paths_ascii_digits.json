@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "paths.py",
+ "old": "    return re.compile(rf\"^shepherd-m3-q6{pid}-[0-9]+$\")",
+ "new": "    return re.compile(rf\"^shepherd-m3-q6{pid}-\\d+$\")",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.refuses_unicode_digit_L",
+ "why": "review N2: `\\\\d` matches a Unicode digit, so the Python judge allows `-L shepherd-m3-q6<pid>-\u0663` the shim refuses (pure predicate)"
+}

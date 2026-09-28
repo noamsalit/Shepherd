@@ -231,6 +231,26 @@ def test_repo_root_path_is_unique(store: Store) -> None:
     assert [w.name for w in store.list_workspaces()] == ["Unassigned", "shepherd", "shepherd"]
 
 
+def test_app_state_compare_and_set_writes_only_over_the_expected_value(store: Store) -> None:
+    """qa6 rulings P6 REM-FIX 1 (3): a failed wake turn puts the stamp back only
+    if no later turn moved it. The swap is one statement on the writer thread,
+    so a later stamp is never overwritten by an earlier turn's restore."""
+    store.set_app_state("master_last_turn_at", "2026-09-27T09:20:00.000Z")
+
+    assert store.compare_and_set_app_state(
+        "master_last_turn_at", "2026-09-27T09:20:00.000Z", None
+    ) is True
+    assert store.get_app_state("master_last_turn_at") is None
+
+    store.set_app_state("master_last_turn_at", "2026-09-27T09:30:00.000Z")
+    assert store.compare_and_set_app_state(
+        "master_last_turn_at", "2026-09-27T09:20:00.000Z", "2026-09-27T09:10:00.000Z"
+    ) is False
+    assert store.get_app_state("master_last_turn_at") == "2026-09-27T09:30:00.000Z"
+    assert store.compare_and_set_app_state("never_set", "x", "y") is False
+    assert store.get_app_state("never_set") is None
+
+
 def test_app_state_roundtrips_json(store: Store) -> None:
     store.set_app_state("autonomy_level", 2)
     store.set_app_state("master_session_id", "01JABCDEF")

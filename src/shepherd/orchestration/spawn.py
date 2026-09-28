@@ -8,7 +8,9 @@ connection, reads a clock, starts a process or spells a multiplexer word.
 
 **The row exists before the process does (C-M3-7).** `create_owned_session` is
 step 4 and `runner.start` is step 5, so a spawn that dies between them leaves a
-handle-less row for T12's reconcile — never a live `claude` with no row.
+handle-less row for T12's reconcile — never a live `claude` with no row. A start
+the runner *refuses* ends that row `refused` (§3 D73): the attempt stays visible
+and is no longer live.
 
 **A spawn answers no dialog, ever (clause 3, C-M3-5).** This module calls
 `start` and `pane` and no other member, so it sends no key by construction. A
@@ -50,9 +52,12 @@ from shepherd.core.runner import (
 from shepherd.core.states import Origin, SessionState
 from shepherd.core.stream import StreamEvent
 from shepherd.engines.claude_code.trust import TrustState, trust_state
-from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, admit
+from shepherd.orchestration.admission import CAP_CHILDREN, CAP_DEPTH, CAP_TOTAL, Retry, admit
+from shepherd.orchestration.declared_verdicts import refused_verdict
+from shepherd.orchestration.retry_target import link, refuse_target
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
+from shepherd.store.models import StoreError
 
 #: Re-exported because `SpawnRefused` is what a caller of *this* module catches:
 #: `spawn_owned_session` is the published entry point and its refusal type must
@@ -169,8 +174,8 @@ def _record(
     """The row's side of step 7, and the unknown's count.
 
     A `stopped` row gets the state and nothing more: the exit code reaches it
-    through T12's `observe_exit`, and the stop **verdict** has exactly one writer
-    (`apply_stop_verdict`, M2's lane). A spawn decides neither.
+    through T12's `observe_exit`, and its stop **verdict** through M2's lane.
+    The poll decides neither; only a refused start declares one (`end_refused`).
     """
     if found.state is SessionState.NEEDS_YOU:
         store.apply_fold_delta(
@@ -200,15 +205,20 @@ def spawn_owned_session(
     effort: str | None,
     parent_session_id: str | None,
     origin: Origin,
+    retry_of: str | None,
     ephemeral: bool = False,
 ) -> SpawnOutcome | SpawnRefused:
     """Start one owned session. Every failure is a `SpawnRefused`, never a raise."""
+    target = None if retry_of is None else refuse_target(store, retry_of, workspace_id, origin)
+    if target is not None:  # before admission and any row: only a stopped attempt (§3 D70)
+        return target
     admitted = admit(
         store=store,
         runner=runner,
         workspace_id=workspace_id,
         cwd=cwd,
         parent_session_id=parent_session_id,
+        retry=None if retry_of is None else Retry(of=retry_of, initiated_by=origin),
     )
     if isinstance(admitted, SpawnRefused):
         return admitted
@@ -236,7 +246,6 @@ def spawn_owned_session(
         model=model,
         effort=effort,
     )
-
     spec = SessionSpec(
         session_id=session_id,
         engine_session_id=engine_session_id,
@@ -253,8 +262,15 @@ def spawn_owned_session(
         ensure_server()
         handle = runner.start(spec)
     except RunnerRefusal as refusal:
+        try:  # one transaction: the row ends whole or stays as it was (T12 reconciles it)
+            store.end_refused(session_id, refused_verdict(refusal.reason), now())
+        except StoreError:
+            pass  # the runner's refusal is the answer; a failed ending does not replace it
         return SpawnRefused(refusal.reason, None)
     store.set_runner_handle(session_id, handle)
+    linked = None if retry_of is None else link(store, session_id, retry_of, now)
+    if linked is not None:  # only a started attempt joins the lineage (§3 D70)
+        return linked
 
     found = _resolution(_poll(runner, handle, now, sleep), here)
     _record(store, session_id, found, now)
@@ -272,7 +288,7 @@ def spawn_owned_session(
                 # `unreadable` when the window closed with nothing decisive: a
                 # value, never a blank (principle 5).
                 "pane_kind": (found.kind or PaneKind.UNREADABLE).value,
-                "trusted": trust.trusted,
+                "trusted": trust.trusted is True,  # §3 D78: unknown is not trusted
                 "trust_source": trust.source,
             },
         )

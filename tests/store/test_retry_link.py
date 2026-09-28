@@ -50,7 +50,13 @@ def store(tmp_path: Path) -> typing.Iterator[Store]:
         opened.close()
 
 
-def attempt(store: Store, session_id: str, *, engine: str | None = None) -> str:
+def attempt(
+    store: Store,
+    session_id: str,
+    *,
+    engine: str | None = None,
+    started_at: str = "2026-09-17T12:00:00Z",
+) -> str:
     """One owned, master-spawned session row, created by the shipped verb."""
     workspace = next(w for w in store.list_workspaces() if w.name == "shepherd")
     store.create_owned_session(
@@ -59,7 +65,7 @@ def attempt(store: Store, session_id: str, *, engine: str | None = None) -> str:
         workspace_id=workspace.id,
         repo_id=None,
         cwd="/root/Shepherd",
-        started_at="2026-09-17T12:00:00Z",
+        started_at=started_at,
         origin=Origin.ORCHESTRATOR,
         parent_session_id=None,
         depth=0,
@@ -267,3 +273,36 @@ def test_link_retry_is_the_only_writer_of_the_lineage_column(store: Store) -> No
     attempt(store, ROOT)
     attempt(store, SECOND)
     assert store.link_retry(session_id=SECOND, retry_of=ROOT).retry_of == ROOT
+
+
+def test_retried_by_names_the_one_retry_an_attempt_has(store: Store) -> None:
+    """RD-2's read: which session, if any, already declared itself a retry of this one.
+
+    `retry_chain_depth` walks **up**, so two retries both "of ROOT" are each depth
+    2 and neither is refused by D31. This verb is the downward read that lets the
+    spawn refuse the sibling. `None` for an attempt with no retry, and for a
+    session that does not exist; the earliest retry when a hand edit planted two.
+    """
+    attempt(store, ROOT)
+    attempt(store, SECOND)
+    assert store.retried_by(ROOT) is None
+    assert store.retried_by(THIRD) is None
+
+    store.link_retry(session_id=SECOND, retry_of=ROOT)
+
+    assert store.retried_by(ROOT) == SECOND
+    assert store.retried_by(SECOND) is None, "the retry itself has not been retried"
+
+
+def test_retried_by_answers_the_earliest_of_two_planted_retries(store: Store) -> None:
+    """A hand edit (or a sibling race) can leave two rows both "of ROOT"; RD-2 names
+    the **earliest started**, not the smallest id. The later-started row's id sorts
+    first, so an `ORDER BY id` (or a dropped / reversed order) answers wrong."""
+    earlier_started, later_started = "01ZZEARLY000000000000000", "01AALATE0000000000000000"
+    attempt(store, ROOT)
+    attempt(store, later_started, started_at="2026-09-17T12:00:09Z")
+    attempt(store, earlier_started, started_at="2026-09-17T12:00:05Z")
+    store.link_retry(session_id=later_started, retry_of=ROOT)
+    store.link_retry(session_id=earlier_started, retry_of=ROOT)
+
+    assert store.retried_by(ROOT) == earlier_started

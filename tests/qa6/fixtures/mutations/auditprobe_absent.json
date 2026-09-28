@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "auditprobe.py",
+ "old": "            if absent_ok:\n                return []",
+ "new": "            if absent_ok or True:\n                return []",
+ "proof": "test_proof_auditprobe",
+ "expect": "proof_auditprobe.absent_dir_is_not_an_empty_audit",
+ "why": "hunter M8: a harness/product path mismatch makes every 'no audit row' clause vacuous"
+}

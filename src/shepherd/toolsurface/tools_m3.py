@@ -74,21 +74,11 @@ from shepherd.toolsurface.registry import register
 from shepherd.toolsurface.spawn_origin import spawn_origin
 from shepherd.toolsurface.tools_messaging import build_messaging_tools
 from shepherd.toolsurface.tools_terminal import (
-    TerminalStream,
-    build_terminal_tools,
-    handle_for,
-    no_pane,
+    TerminalStream, build_terminal_tools, handle_for, no_pane,
 )
 from shepherd.toolsurface.types import (
-    Audience,
-    BlastClass,
-    CallerContext,
-    ToolArgs,
-    ToolArgumentRefused,
-    ToolDef,
-    arg_bool,
-    arg_optional_str,
-    arg_str,
+    Audience, BlastClass, CallerContext, ToolArgs, ToolArgumentRefused, ToolDef,
+    arg_bool, arg_optional_str, arg_str,
 )
 
 __all__ = [
@@ -202,6 +192,7 @@ def spawn(
             effort=arg_optional_str(args, "effort"),
             parent_session_id=arg_optional_str(args, "parent_session_id"),
             origin=spawn_origin(ctx),
+            retry_of=arg_optional_str(args, "retry_of"),
             ephemeral=arg_bool(args, "ephemeral"),
         )
     )
@@ -235,10 +226,14 @@ def kill(
     session_id: str,
 ) -> dict[str, object]:
     """Records before killing — and that order is `lifecycle.py`'s, not repeated
-    here. A failed kill propagates its refusal rather than answering "killed"."""
+    here. A failed kill propagates its refusal rather than answering "killed"; a
+    pane the runner no longer lists is a refusal value, and `ended_at` is not that."""
     handle = handle_for(store, session_id)
     if handle is None:
         return no_pane(session_id)
+    if handle.session_name not in {pane.session_name for pane in runner.list_owned_panes()}:
+        reason = f"{session_id}: its pane is gone — nothing to kill"
+        return {"session_id": session_id, "ok": False, "killed": False, "reason": reason}
     observed = record_and_terminate(
         store=store, runner=runner, handle=handle, session_id=session_id, now=now, publish=publish
     )
@@ -259,6 +254,7 @@ def answer(
     read_sidecar: SidecarReader,
     session_id: str,
     choice: PermissionChoice,
+    dialog_sha256: str | None,
 ) -> dict[str, object]:
     """D44. Both sources are composed **inside** `answer_permission`: the pane
     kind, then the sidecar, then the option set, and only then a key."""
@@ -274,6 +270,7 @@ def answer(
             session_id=session_id,
             choice=choice,
             sidecar=read_sidecar(row.engine_session_id),
+            dialog_sha256=dialog_sha256,
         ),
         session_id,
     )
@@ -333,6 +330,11 @@ def build_m3_tools(
                     "effort": {"type": "string"},
                     "parent_session_id": {"type": "string"},
                     "ephemeral": {"type": "boolean"},
+                    "retry_of": {
+                        "type": "string",
+                        "description": "the id of the stopped session this spawn retries"
+                        " (D31 caps the lineage)",
+                    },
                 },
                 "required": ["workspace_id", "cwd"],
             },
@@ -386,6 +388,7 @@ def build_m3_tools(
                 "properties": {
                     "session_id": {"type": "string"},
                     "choice": {"type": "string"},
+                    "dialog_sha256": {"type": "string"},
                 },
                 "required": ["session_id", "choice"],
             },
@@ -396,6 +399,7 @@ def build_m3_tools(
                 read_sidecar=read_sidecar,
                 session_id=arg_str(args, "session_id"),
                 choice=_choice(args),
+                dialog_sha256=arg_optional_str(args, "dialog_sha256"),
             ),
             audiences=_HUMAN_ONLY,
         ),

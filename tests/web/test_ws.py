@@ -46,7 +46,7 @@ WS_MODULE = (
     Path(__file__).resolve().parents[2] / "src" / "shepherd" / "web" / "ws.py"
 )
 
-# ----- the reader this build does not call (BLOCKER-T19-c) --------------------
+# ----- the reader, and the one loop that calls it (D76) ----------------------
 
 #: `ws.py`'s read half. `parse_frame` is the entry point; the other three are
 #: the vocabulary it answers in.
@@ -56,16 +56,15 @@ READ_HALF = frozenset({"parse_frame", "Frame", "WebSocketClosed", "close_code"})
 #: test below that exercises the reader, so it is on the test pytest prints and
 #: on the test the next reader opens — not in a comment at the top of a file
 #: nobody scrolls to.
-PARSER_HAS_NO_CALLER = """
-**This exercises a parser the product does not yet call.** `src/` contains no
-caller of `ws.parse_frame`: `web/server.py::_terminal` writes the 101, the
-snapshot, the live chunks and a close frame, and never reads a byte back. There
-is no browser->pane keystroke path in M3 by decision (BLOCKER-T19-c), so the
-contract asserted here — including "read more and ask again" — has **no
-implementer in this build**. The test is correct, is kept, and is not weakened:
-the framer is real and a future read loop will use it. The absence is enforced
-at `tests/boundaries/test_ws_read_path.py`, which goes red the day a caller
-appears, so that read loop has to bring its own tests rather than inherit these.
+PARSER_CALLED_BY_THE_PUMP = """
+**This is a unit test of the framer, not of the loop that calls it.** Since D76
+(ruling 18, SD-05) `src/` has exactly one caller of `ws.parse_frame`:
+`ws.pump_input`, which `web/server.py` runs on every terminal connection to
+carry keystrokes to the pane. What this test proves about the parser is
+necessary for that loop and is not sufficient: the loop's own contract — "read
+more and ask again", a close ends it, an oversize frame ends it with 1009 — is
+asserted at `tests/web/test_ws_input_pump.py`, and the rule that it stays the
+only caller is `tests/boundaries/test_ws_read_path.py`.
 """
 
 #: Every test the decorator has been applied to. Asserted at the bottom of this
@@ -74,10 +73,10 @@ appears, so that read loop has to bring its own tests rather than inherit these.
 PARSER_TESTS: set[str] = set()
 
 
-def parser_has_no_caller_in_src(test: Callable[[], None]) -> Callable[[], None]:
+def parser_is_called_by_the_pump(test: Callable[[], None]) -> Callable[[], None]:
     """Say, once and in one place, what this test does and does not prove."""
     PARSER_TESTS.add(test.__name__)
-    test.__doc__ = f"{test.__doc__ or ''}\n{PARSER_HAS_NO_CALLER}"
+    test.__doc__ = f"{test.__doc__ or ''}\n{PARSER_CALLED_BY_THE_PUMP}"
     return test
 
 
@@ -196,7 +195,7 @@ def test_a_malformed_upgrade_is_refused() -> None:
 # ----- masking (RFC §5.1: a server must fail an unmasked client frame) --------
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_an_unmasked_client_frame_is_rejected() -> None:
     """The RFC's own unmasked examples, handed to the server's parser."""
     for frame in (RFC_TEXT_UNMASKED, RFC_PING_UNMASKED, RFC_FRAGMENT_1):
@@ -205,7 +204,7 @@ def test_an_unmasked_client_frame_is_rejected() -> None:
         assert raised.value.code == ws.CLOSE_PROTOCOL_ERROR
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_masked_client_frame_is_unmasked_the_way_the_capture_was() -> None:
     """`8183 b10402d1 aa5f43` → `\\x1b[A`, straight out of the probe."""
     captured = capture()
@@ -223,7 +222,7 @@ def test_a_masked_client_frame_is_unmasked_the_way_the_capture_was() -> None:
     assert frame.payload == expected.encode("utf-8")
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_the_rfc_masked_text_example_decodes_to_hello() -> None:
     frame, consumed = ws.parse_frame(RFC_TEXT_MASKED)
     assert frame is not None
@@ -234,7 +233,7 @@ def test_the_rfc_masked_text_example_decodes_to_hello() -> None:
 # ----- length classes ---------------------------------------------------------
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_frames_round_trip_for_every_length_class() -> None:
     """0, 1, 125, 126, 127, 65 535, 65 536 — the 7-bit/16-bit/64-bit boundaries.
 
@@ -277,7 +276,7 @@ def _masked_length(length: int) -> bytes:
     return bytes([0x80 | 127]) + length.to_bytes(8, "big")
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_partial_frame_asks_for_more_bytes_instead_of_guessing() -> None:
     """Cut at every byte, in all three length classes.
 
@@ -298,7 +297,7 @@ def test_a_partial_frame_asks_for_more_bytes_instead_of_guessing() -> None:
             assert frame is None and consumed == 0, (label, cut)
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_trailing_bytes_are_left_for_the_next_frame() -> None:
     buffer = RFC_TEXT_MASKED + b"\x99trailing"
     frame, consumed = ws.parse_frame(buffer)
@@ -310,7 +309,7 @@ def test_trailing_bytes_are_left_for_the_next_frame() -> None:
 # ----- the cap (§13: a client may not allocate without bound) -----------------
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_payload_over_the_cap_closes_with_1009() -> None:
     """Refused from the header alone — before a byte of the payload arrives."""
     oversized = bytes([0x82, 0x80 | 127]) + (ws.MAX_FRAME_BYTES + 1).to_bytes(8, "big")
@@ -332,7 +331,7 @@ def test_a_payload_over_the_cap_closes_with_1009() -> None:
 # ----- fragmentation ----------------------------------------------------------
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_fragmentation_follows_the_rfc_example() -> None:
     """RFC §5.7's "Hel"/"lo" pair: fin=0 opcode=1, then fin=1 opcode=0."""
     first, consumed_first = ws.parse_frame(masked(RFC_FRAGMENT_1))
@@ -343,7 +342,7 @@ def test_fragmentation_follows_the_rfc_example() -> None:
     assert consumed_first == 9 and consumed_second == 8
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_fragmented_control_frame_is_refused() -> None:
     """RFC §5.5: control frames may not be fragmented, and may not exceed 125."""
     unfinished_ping = masked(bytes([0x09, *RFC_PING_UNMASKED[1:]]))
@@ -357,7 +356,7 @@ def test_a_fragmented_control_frame_is_refused() -> None:
     assert raised.value.code == ws.CLOSE_PROTOCOL_ERROR
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_reserved_bit_is_refused() -> None:
     """No extension is negotiated (D51 rules out permessage-deflate)."""
     for rsv in (0x40, 0x20, 0x10):
@@ -367,7 +366,7 @@ def test_a_reserved_bit_is_refused() -> None:
         assert raised.value.code == ws.CLOSE_PROTOCOL_ERROR
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_an_unknown_opcode_is_refused() -> None:
     for opcode in (0x3, 0x7, 0xB, 0xF):
         frame = masked(bytes([0x80 | opcode, *RFC_TEXT_UNMASKED[1:]]))
@@ -388,14 +387,14 @@ def test_the_server_builds_the_rfc_ping_and_pong_bytes() -> None:
     )
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_masked_pong_is_read_as_the_rfc_says() -> None:
     frame, _ = ws.parse_frame(RFC_PONG_MASKED)
     assert frame is not None
     assert (frame.opcode, frame.payload) == (ws.OP_PONG, b"Hello")
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_close_frame_carries_a_two_byte_status_code() -> None:
     """RFC §5.5.1: the code is a 16-bit unsigned integer in network order."""
     assert ws.close_frame(ws.CLOSE_NORMAL, "bye") == bytes.fromhex("880503e8627965")
@@ -411,7 +410,7 @@ def test_a_close_frame_carries_a_two_byte_status_code() -> None:
     assert frame is not None and ws.close_code(frame) is None
 
 
-@parser_has_no_caller_in_src
+@parser_is_called_by_the_pump
 def test_a_one_byte_close_payload_is_refused() -> None:
     """RFC §5.5.1: a close payload of exactly one byte is a protocol error."""
     truncated = bytes([0x88, 0x80 | 1]) + bytes(4) + b"\x03"
@@ -777,7 +776,7 @@ def test_an_attached_session_is_refused_with_the_banner(
     assert READ_ONLY_BANNER in session_js
 
 
-# ----- what these tests do and do not prove (BLOCKER-T19-c) -------------------
+# ----- what these tests do and do not prove (D76) -----------------------------
 
 
 def functions_touching(names: frozenset[str] | None, path: Path) -> frozenset[str]:
@@ -804,10 +803,11 @@ def functions_touching(names: frozenset[str] | None, path: Path) -> frozenset[st
 def test_the_module_docstring_says_what_this_server_actually_does() -> None:
     """`ws.py` may not claim a behaviour the tree does not have.
 
-    It used to: *"an unmasked frame fails the connection with 1002"* is true of
-    `parse_frame` and false of this server, which never looks at a client frame
-    (BLOCKER-T19-c). The same defect shape as a test whose name promises more
-    than its body, in the place a reader trusts most.
+    It has done so twice. *"An unmasked frame fails the connection with 1002"*
+    was true of `parse_frame` and false of a server that never looked at a
+    client frame (BLOCKER-T19-c); then *"never reads"* became false the day D76
+    wired the read loop. The docstring now names the loop, and must not say the
+    server never reads.
     """
     docstring = ast.get_docstring(ast.parse(WS_MODULE.read_text(encoding="utf-8")))
 
@@ -816,25 +816,24 @@ def test_the_module_docstring_says_what_this_server_actually_does() -> None:
     assert "RFC 6455" in docstring
 
     # The claim, and where the claim is enforced.
-    assert "T19-c" in docstring, docstring
-    assert "never reads" in docstring, docstring
+    assert "never reads" not in docstring, docstring
+    assert "pump_input" in docstring, docstring
     assert "parse_frame" in docstring, docstring
+    assert "D76" in docstring, docstring
 
 
-def test_every_test_of_the_uncalled_parser_says_it_is_uncalled() -> None:
-    """The count BLOCKER-T19-c records, kept live instead of quoted.
+def test_every_parser_test_says_the_pump_is_its_one_caller() -> None:
+    """Successor of `test_every_test_of_the_uncalled_parser_says_it_is_uncalled`.
 
-    Fourteen of this module's tests exercise `parse_frame` and its vocabulary,
-    and **nothing in `src/` calls any of it**. They are all kept and none is
-    weakened; each one carries `@parser_has_no_caller_in_src`, which is the
-    single place that sentence is written.
+    Retired in P12: the parser is no longer uncalled (D76), so that name became
+    false. What survives is the discipline — fourteen of this module's tests
+    exercise `parse_frame` and its vocabulary, each carries
+    `@parser_is_called_by_the_pump`, and that decorator is the single place
+    the sentence about what they do and do not prove is written.
 
-    The fourteen is asserted below. The **total** is asserted only as a floor
-    (`>= 25`), and this sentence carries no total at all on purpose: it used to
-    say "twenty-five tests", the file now collects **27**, and the floor meant
-    the assertion could not catch its own docstring. A number in prose beside a
-    number in an assertion is the smaller of the two claims going stale in
-    silence — the milestone's own recurring defect, one line down.
+    The fourteen is asserted below; the total only as a floor (`>= 25`), and
+    this sentence carries no total on purpose — a number in prose beside a
+    number in an assertion is the smaller claim going stale in silence.
     """
     here = Path(__file__).resolve()
     derived = functions_touching(READ_HALF, here)

@@ -21,11 +21,14 @@ timing.
 and the socket file asserted gone. Never a signal to a pid this fixture did
 not create (CLAUDE.md, 2026-09-17), and never `kill -9`.
 
-*Lying implementations this now catches:* a `status` that answers from a stale
-in-process registry rather than saying it cannot see the fleet; a `status` that
-exits `0` while printing an unknown — the exit code and the text are asserted
-together; and the reverse — a build that fixes T18-1 by wiring a client, which
-turns every assertion here red and names what moved.
+*Lying implementations this now catches:* a `status` that exits `0` while
+printing an unknown — the exit code and the text are asserted together; a
+`status` that invents an empty fleet with no daemon to ask; and a client that
+reaches the daemon and takes it down.
+
+**T18-1 is closed by D68** (qa6 rulings P10): a `shepherd` process reaches the
+running `controld` over its owner-only RPC socket, so the two inability tests
+this file carried became their positive successors, as their docstrings asked.
 """
 
 from __future__ import annotations
@@ -45,7 +48,7 @@ from unittest import mock
 
 import pytest
 
-from shepherd.cli.commands import EXIT_FAILURE
+from shepherd.cli.commands import EXIT_FAILURE, EXIT_OK
 from shepherd.daemons.controld import DB_NAME
 from shepherd.daemons.sessiond import CONTROL_SOCKET_NAME
 from shepherd.host.base import HostDirs
@@ -215,6 +218,7 @@ def daemon(tmp_path: Path) -> Iterator[Daemon]:
         if value.startswith(str(home)):
             Path(value).mkdir(parents=True, exist_ok=True)
     port = a_free_port()
+    assert port != 8787, "a_free_port handed out the owner's daemon port"  # host safety: never 8787
 
     process = subprocess.Popen(
         [sys.executable, "-u", "-m", "shepherd.daemons.controld", "--port", str(port)],
@@ -313,37 +317,26 @@ def test_the_daemon_really_owns_a_database(daemon: Daemon) -> None:
 # ----- what a user actually sees ----------------------------------------------
 
 
-def test_shepherd_status_cannot_see_the_fleet_of_a_running_daemon(
-    daemon: Daemon,
-) -> None:
-    """**T18-1, observed from outside.** The user gets a failure and advice.
+def test_shepherd_status_sees_the_fleet_of_a_running_daemon(daemon: Daemon) -> None:
+    """**T18-1, closed by D68, observed from outside.** Successor of
+    `test_shepherd_status_cannot_see_the_fleet_of_a_running_daemon`, which its
+    own docstring said would go red "the day a `shepherd` process learns to
+    reach a running daemon" (qa6 rulings P10).
 
-    The exit code **and** the text, asserted together: a `status` that printed
-    an unknown and exited `0` would look fine to a person and be wrong to a
-    script, and a `status` that exited non-zero with no explanation would be the
-    reverse. `EXIT_FAILURE` is imported from the shipped module rather than
-    written as `1`.
-
-    Goes red the day a `shepherd` process learns to reach a running daemon —
-    which is T18-1 closing, and is the right moment for this to demand a
-    re-read.
+    The exit code **and** the text, asserted together: the daemon's fleet (no
+    session runs on this throwaway host, so zero of them) and nothing on stderr.
+    A `0 sessions` is now the daemon's answer, not a silence: the daemon-less
+    run below still fails and says so, so the two can be told apart.
     """
     answer = run_status(daemon)
-    combined = answer.stdout + answer.stderr
 
-    assert answer.returncode == EXIT_FAILURE, (
+    assert answer.returncode == EXIT_OK, (
         f"`shepherd status` exited {answer.returncode} beside a running daemon\n"
         f"stdout: {answer.stdout!r}\nstderr: {answer.stderr!r}"
     )
-    # Principle 5: the user is told the capability is absent *here* and what to
-    # do about it — never a blank, never a zero fleet that would read as "all
-    # quiet". The advice is asserted by its substance, not by its spelling.
-    assert "fleet_summary" in combined, combined
-    assert "daemon" in combined.lower(), combined
-    assert "0 sessions" not in combined, (
-        "`shepherd status` reported an empty fleet rather than an unknown one —"
-        " a silence read as good news, which is exactly what principle 5 forbids"
-    )
+    assert answer.stdout.startswith("fleet: 0 sessions · "), answer.stdout
+    assert answer.stderr == "", answer.stderr
+    assert "did not answer" not in answer.stdout + answer.stderr
 
 
 def test_the_same_process_can_answer_the_facts_it_registers_for_itself(
@@ -386,13 +379,13 @@ def test_the_daemon_is_still_serving_afterwards(daemon: Daemon) -> None:
         assert answer.status == 200
 
 
-def test_a_status_with_no_daemon_at_all_says_the_same_thing(tmp_path: Path) -> None:
-    """The other half of T18-1, and the one that makes it a finding.
+def test_a_status_with_no_daemon_at_all_says_it_cannot_see_the_fleet(tmp_path: Path) -> None:
+    """The other half, and what makes the one above a fix rather than a fake.
 
-    If `status` said the same thing with **no** daemon running as it does with
-    one, then the daemon is contributing nothing to what a user sees — which is
-    precisely the defect. Driven rather than argued: no daemon, same command,
-    same exit code, same advice.
+    Successor of `test_a_status_with_no_daemon_at_all_says_the_same_thing`
+    (qa6 rulings P10): with a daemon, `status` now answers; with **no** daemon
+    it still fails and names the capability it could not reach — so the daemon
+    is what changed the answer, not a `status` that invents an empty fleet.
     """
     home = tmp_path / "alone"
     env = isolated_env(home)

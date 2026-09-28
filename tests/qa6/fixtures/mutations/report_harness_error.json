@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "report.py",
+ "old": "if r.get(\"verdict\") == \"FAIL\" and r.get(\"fail_kind\") != \"harness_error\"]",
+ "new": "if r.get(\"verdict\") == \"FAIL\"]",
+ "proof": "test_proof_gate_harness_error_and_crash",
+ "expect": "proof_gate.harness_error_is_incomplete",
+ "why": "review 7: a FAIL(harness_error) makes the run RED as if the product failed"
+}

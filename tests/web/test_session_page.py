@@ -130,7 +130,13 @@ HTML_SINKS = (
 #: (`setHTMLUnsafe`) left the whole of `tests/web` green. `screen.` is the dot
 #: form on purpose: it names the property accesses on the degrade's `<pre>` and
 #: not the bare identifier in `const screen = …` or `refreshScreen(screen, …)`.
-PTY_TOKENS = ("event.data", "payload", "bytes", "body.data", "data.text", "screen.")
+#:
+#: **Widened at P12 (D76): `onData`.** The emulator's input callback is the one
+#: line where typed text enters this module; it is inspected so a sink planted
+#: on it trips the scan like one on the frame path would.
+PTY_TOKENS = (
+    "event.data", "payload", "bytes", "body.data", "data.text", "screen.", "onData",
+)
 
 #: Where pane bytes are allowed to go: the emulator, a `textContent` slot, a
 #: length, or a local binding on its way to one of those.
@@ -138,6 +144,7 @@ _ALLOWED_PTY_LINE = re.compile(
     r"""^\s*(?:
         (?:const|let)\s+\w+\s*=\s*[^=;]*;?            # binding it to a name
       | \w+\.write\(                                   # term.write(bytes)
+      | \w+\.onData\(\(\w+\)\s*=>\s*\w+\(             # term.onData((k) => send(…))
       | \w+\.(?:textContent|className)\s*=             # a text slot, or its class
       | (?:return|if|\}|//|\*|/\*)                     # control flow, comments
       | \w+\s*\(\s*\w                                  # handing it to a function
@@ -302,6 +309,10 @@ def test_pty_bytes_never_reach_innerHTML() -> None:
     inspected = pty_lines(text)
     assert any("term.write(" in line for line in inspected), inspected
     assert any("data.text" in line for line in inspected), inspected
+    # REMFIX-1: the snapshot's re-termination is on the frame path too. Its body
+    # is outside this scan (its parameter is `capture`), so it has a scan of its
+    # own below — and this line proves the frame path still reaches it.
+    assert any("snapshotForEmulator(" in line for line in inspected), inspected
 
     assert html_sink_findings(text) == []
     assert pty_path_findings(text) == []
@@ -458,21 +469,138 @@ def test_every_slot_the_scripts_fill_exists_in_the_markup() -> None:
     assert wanted <= ids, sorted(wanted - ids)
 
 
-def test_the_keystroke_path_is_absent_and_says_so() -> None:
-    """Principle 5: the browser cannot type into a pane yet, and it is shown.
+#: T19-c's sentence, which D76 made false. It may not come back on any page.
+RETIRED_INPUT_SENTENCE = "input is not wired yet"
 
-    `POST_ROUTES` carries no path for `terminal_write` and `web/server.py` never
-    **reads** the upgraded socket, so there is no browser→pane path in this tree
-    at all (blocker **T19-c**). A terminal that silently swallowed keystrokes
-    would be the "silent half-success" D29 forbids one page over, so input is
-    disabled in the emulator and the reason is rendered.
+
+def test_the_keystroke_path_is_wired_and_the_page_says_nothing_false() -> None:
+    """D76 (ruling 18, SD-05) — the successor of `test_the_keystroke_path_is_absent_and_says_so`.
+
+    Keystrokes typed into the emulator go out on the terminal socket the
+    snapshot came in on (ADR-QR-4); `web/server.py` reads them and hands them to
+    the handle the audited open returned. So the emulator accepts input, the
+    sentence that said it did not is gone from both modules, and — the half of
+    the old test that is still true — there is **no POST route** for
+    `terminal_write`: the socket is the only way a key reaches a pane.
     """
     text = source("terminal.js")
-    assert "disableStdin: true" in text
-    assert "INPUT_UNAVAILABLE" in text
+    opened = function_body(text, "openTerminal")
+    # REM-FIX 1 #4 (hunter M6): the emulator is built refusing keys and takes
+    # them only once the socket is open, so nothing typed before then is lost.
+    assert "disableStdin: true" in code_only(opened), opened
+    on_open = block_after(opened, "socket.onopen")
+    assert on_open is not None and "disableStdin = false" in on_open, on_open
+    # The emulator's keys go to the socket, and nowhere else.
+    wired = re.search(r"term\.onData\(\((\w+)\)\s*=>\s*sendKeys\(socket,\s*\1\)\)", opened)
+    assert wired is not None, opened
+    send = function_body(text, "sendKeys")
+    assert "socket.send(" in send, send
+    assert "WebSocket.OPEN" in send, "a key typed at a closed socket must not be sent"
+
+    # The pty-token scan inspects the input line, and a sink on it would trip.
+    inspected = pty_lines(text)
+    assert any("onData(" in line for line in inspected), inspected
+    planted = "  term.onData((keys) => { el.innerHTML = keys; });\n"
+    assert pty_path_findings(planted) != [], "the scan does not bite on the input line"
+
+    # Nothing false on the page: T19-c's sentence is in neither module.
+    for name in ("terminal.js", "session.js"):
+        assert RETIRED_INPUT_SENTENCE not in source(name), name
+        assert "INPUT_UNAVAILABLE" not in code_only(source(name)), name
+
     from shepherd.web import routes
 
     assert "terminal_write" not in set(routes.POST_ROUTES.values())
+
+
+def test_input_stops_with_the_stream_and_says_so() -> None:
+    """Where input is impossible the page still says why: once the socket has
+    closed, the emulator refuses keys again and `INPUT_CLOSED` is shown."""
+    text = source("terminal.js")
+    stop = function_body(text, "stopInput")
+    assert "disableStdin = true" in stop, stop
+    # REM-FIX 1 #4: the sentence is chosen by close code; `INPUT_CLOSED` is the
+    # plain case (`test_the_close_code_says_why_input_stopped`).
+    assert "inputClosedReason(" in stop, stop
+    assert "return INPUT_CLOSED;" in function_body(text, "inputClosedReason")
+    assert re.search(r"^export const INPUT_CLOSED\s*=", text, flags=re.MULTILINE)
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and "stopInput(" in close_handler, close_handler
+
+
+#: REM-FIX 1 #4 (hunter M5): the close codes the server ends input with, each
+#: with its own sentence. Spelled here, not read from the module under test.
+INPUT_CLOSE_CODES = {1009: "INPUT_CLOSED_TOO_LARGE", 1002: "INPUT_CLOSED_PROTOCOL",
+                     1011: "INPUT_CLOSED_KEY_REFUSED"}
+
+
+def test_the_close_code_says_why_input_stopped() -> None:
+    """A paste over the frame cap (1009), a protocol error (1002) and a refused
+    key (1011) each say so; any other close is `INPUT_CLOSED`. The sentence goes
+    to a `textContent` slot and nowhere else."""
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    # P13b: the reason rides along, because 1011 has two causes.
+    assert close_handler is not None and re.search(
+        r"stopInput\([^)]*\.code, [^)]*\.reason\)", close_handler
+    )
+    reason = function_body(text, "inputClosedReason")
+    for code, constant in INPUT_CLOSE_CODES.items():
+        named = re.search(rf"^const (\w+) = {code};", text, re.MULTILINE)
+        assert named is not None, f"no constant holds {code}"
+        branch = rf"=== {named.group(1)}\)\s*\{{\s*return {constant};"
+        assert re.search(branch, reason), (code, reason)
+    assert "INPUT_CLOSED;" in reason, "an unlisted code has no sentence"
+    sentences = {
+        name: re.search(rf"^export const {name}\s*=\s*\n?\s*\"([^\"]+)\"", text, re.MULTILINE)
+        for name in (*INPUT_CLOSE_CODES.values(), "INPUT_CLOSED")
+    }
+    assert all(match is not None for match in sentences.values()), sentences
+    said = [match.group(1) for match in sentences.values() if match is not None]
+    assert len(set(said)) == len(said), said
+    assert all(line.startswith("input is off: ") for line in said), said
+    stop = function_body(text, "stopInput")
+    assert "notice(el, inputClosedReason(" in stop, stop
+    notice_body = function_body(text, "notice")
+    assert "textContent = message" in notice_body and html_sink_findings(notice_body) == []
+
+
+def test_a_1011_from_a_failed_reader_is_not_told_as_a_refused_key() -> None:
+    """P13b (P12 sibling): the server closes 1011 for two things — a refused key
+    and a reader that died (`web/server.py`'s two reasons). The page branches on
+    the close reason, so a dead reader has its own sentence and is never told as
+    the pane refusing a key. The reason is compared against the server's own
+    constant, spelled once in each module."""
+    from shepherd.web import server
+
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and "event.reason" in close_handler, close_handler
+    reasons = dict(re.findall(r'^const (\w+_REASON) = "([^"]*)";', text, re.MULTILINE))
+    assert reasons.get("READER_FAILED_REASON") == server.READER_FAILED_REASON, reasons
+    reason = function_body(text, "inputClosedReason")
+    branch = r"reason === READER_FAILED_REASON\)\s*\{\s*return INPUT_CLOSED_READER_FAILED;"
+    assert re.search(branch, reason), reason
+    said = re.search(
+        r'^export const INPUT_CLOSED_READER_FAILED\s*=\s*\n?\s*"([^"]+)"', text, re.MULTILINE
+    )
+    assert said is not None and said.group(1).startswith("input is off: "), said
+    assert "refused" not in said.group(1), said.group(1)
+
+
+def test_a_failed_stream_is_reported_once() -> None:
+    """Hunter L1: a browser fires `error` then `close` for one failure, and both
+    handlers painted a notice — `STREAM_LOST` twice, or `STREAM_LOST` above
+    `STREAM_NEVER_ARRIVED`. The close handler is the one that says it."""
+    text = source("terminal.js")
+    opened = function_body(text, "openTerminal")
+    on_error = block_after(opened, "socket.onerror")
+    assert on_error is not None and "notice(" not in on_error, on_error
+    close_handler = block_after(opened, "socket.onclose")
+    assert close_handler is not None and close_handler.count("notice(") == 1, close_handler
 
 
 # ----- the failure paths the degrade and the socket each own ------------------
@@ -571,13 +699,13 @@ def test_the_vendor_record_claims_only_what_is_proved() -> None:
     """Review finding 8: `VERSION.txt` listed a proof that does not exist.
 
     It said that among the things "asserted" on the browser path is *"a
-    keystroke reaches the pane through `send-keys -H`"*. There is **no**
-    browser→pane keystroke path in this tree — `POST_ROUTES` carries no
-    `terminal_write`, `web/server.py` never reads the upgraded socket, and
-    `test_the_keystroke_path_is_absent_and_says_so` asserts the absence one
-    screen up. `send-keys -H` byte-exactness is real, at the `Runner` seam and
-    the contract and the write path; it is simply not on the path that
-    paragraph is about.
+    keystroke reaches the pane through `send-keys -H`"*. At the time there was
+    **no** browser→pane keystroke path at all (T19-c). Since D76 there is one —
+    the terminal socket, proved at `test_terminal_input_server.py` and
+    `test_terminal_input_live.py` — but it is still not something the
+    *vendoring* proves, so the record still may not list it. `send-keys -H`
+    byte-exactness is real, at the `Runner` seam and the contract and the
+    write path; it is simply not what that paragraph is about.
 
     A record that over-claims is the same defect as a test whose name promises
     more than its body, so it gets the same kind of gate.
@@ -586,8 +714,8 @@ def test_the_vendor_record_claims_only_what_is_proved() -> None:
     assert "G-M3-6" in manifest, "arrival: this is the section under test"
 
     assert "a keystroke reaches the pane through" not in manifest
-    # The blocker that explains *why* there is no such path, and the three
-    # seams where the byte-exactness claim is actually proved.
+    # The blocker that explains the retraction's history (T19-c, reversed by
+    # D76), and the three seams where the byte-exactness claim is proved.
     assert "T19-c" in manifest
     for proof in (
         "tests/runner/test_local.py",
@@ -822,10 +950,13 @@ def test_the_card_never_guesses_and_never_answers() -> None:
     card renders the ask and a sentence saying the choices could not be read —
     it does not synthesise approve/reject as though the engine had drawn them.
 
-    *Never answers*: nothing in this file posts to the permission route, and the
-    trust dialog is named so the card can say, in words, that Enter there
-    answers *"No, exit"*. A page that could answer the trust screen is the C15
-    incident with a mouse.
+    *Never answers the trust screen*: D77 (SD-06) made the permission dialog's
+    choices answer through `/permission`, and that is the only answer route this
+    file names — nothing here reaches `answer_trust`, and the trust dialog is
+    named so the card can say, in words, that Enter there answers *"No, exit"*.
+    A page that could answer the trust screen is the C15 incident with a mouse.
+    The browser half is `test_decision_live.py::test_the_trust_dialog_choices_
+    stay_inert_and_say_why`.
     """
     text = source("session.js")
     body = code_only(text)
@@ -833,7 +964,13 @@ def test_the_card_never_guesses_and_never_answers() -> None:
     assert "readable" in session_function("renderDecision") + session_function(
         "decisionCard"
     )
-    assert "/permission" not in body, "the card can answer a dialog"
+    # Quote-agnostic (P11 REM-FIX 1): a second copy in single quotes or a
+    # template literal is still a second answer route.
+    assert re.findall(r"""["'`](/api/[^"'`]*)["'`]""", body).count(
+        "/api/sessions/{session_id}/permission"
+    ) == 1, "the card names no answer route, or names it twice"
+    for trust_route in ("/trust", "answer_trust"):
+        assert trust_route not in body, f"the card can answer the trust dialog: {trust_route}"
     assert "trust_dialog" in body, "the trust dialog is not named"
     # Either quoting: the sentence carries `"No, exit"` in double quotes,
     # which is the whole reason the constant is single-quoted, and a scan that
@@ -914,3 +1051,61 @@ def test_the_stylesheet_owns_every_class_the_session_pane_wears() -> None:
     assert "session-view" in worn and "choice" in worn, sorted(worn)
     assert "bucket-needs_you" in styled, "the stylesheet scan found no rules"
     assert sorted(worn - styled) == [], sorted(worn - styled)
+
+
+#: What `snapshotForEmulator`'s body may never name (REMFIX-1, P15's blind spot):
+#: a DOM reach, a node write, or any HTML parser — the function is a pure
+#: bytes-in/bytes-out transform, and its one caller is `term.write`.
+SNAPSHOT_FORBIDDEN = (
+    "document",
+    "window",
+    ".append",
+    "textContent",
+    "HTML",
+    "DOMParser",
+    "createContextualFragment",
+    "Element",
+)
+
+_RETURN = re.compile(r"\breturn\b([^;]*);")
+_UINT8_RETURN = re.compile(r"^\s*(?:new\s+Uint8Array\(|Uint8Array\.from\()")
+
+
+def snapshot_findings(text: str) -> list[str]:
+    """Every way `snapshotForEmulator`'s body leaves the pure-transform shape.
+
+    The pty scan above does not reach this body: the parameter is `capture`,
+    not a `PTY_TOKENS` word, and a declaration header is no allowed shape. So
+    the body is read here — a forbidden name is a finding, and so is any
+    `return` whose value is not a fresh `Uint8Array`.
+    """
+    body = block_after(text, "function snapshotForEmulator")
+    assert body is not None, "arrival: snapshotForEmulator has no body to scan"
+    findings = [word for word in SNAPSHOT_FORBIDDEN if word in body]
+    returns = _RETURN.findall(body)
+    assert returns != [], "arrival: the body returns nothing the scan could read"
+    findings += [value.strip() for value in returns if not _UINT8_RETURN.match(value)]
+    return findings
+
+
+def test_the_snapshot_transform_has_no_sink_and_returns_bytes() -> None:
+    """REMFIX-1 (reviewer #4): close P15's scan blind spot.
+
+    A negative fixture first, so a scan that finds nothing is known to be a scan
+    that could find something: each forbidden shape, planted into an inert
+    string, is reported.
+    """
+    violating = """
+export function snapshotForEmulator(capture) {
+  const node = document.createElement("pre");
+  node.textContent = String(capture);
+  window.last = node;
+  return node.outerHTML;
+}
+"""
+    planted = snapshot_findings(violating)
+    for word in ("document", "window", "textContent", "HTML", "Element"):
+        assert word in planted, (word, planted)
+    assert "node.outerHTML" in planted, planted
+
+    assert snapshot_findings(source("terminal.js")) == []

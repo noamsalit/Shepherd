@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "report.py",
+ "old": "        \"warnings\": list(warnings),\n        \"counts\": decision.counts,\n",
+ "new": "        \"warnings\": [],\n        \"counts\": decision.counts,\n",
+ "proof": "test_proof_preflight_warn_is_published",
+ "expect": "proof_settings.report_publishes_warn",
+ "why": "INC-3 re-qa-build: the run file drops the preflight WARN lines, so the report is silent about the owner-value mismatch"
+}

@@ -242,6 +242,8 @@ def test_compose_publishes_every_event_of_a_fold_result(world: World) -> None:
     The adapter belongs beside the surface it publishes through, not in the
     daemon: the daemon owns the *order* things are wired in, and a loop over a
     result is not an order (T18-3 — the cap is a proxy for "no logic here").
+    BC-03: the composed ring starts above every earlier process's seqs, so
+    cursor 0 is behind it and the replay opens with `stream.gap`.
     """
     compose_world(world)
     result = FoldResult(
@@ -253,6 +255,7 @@ def test_compose_publishes_every_event_of_a_fold_result(world: World) -> None:
     compose.publish_result(result)
 
     assert [delivery.event.kind for delivery in subscribe(0)] == [
+        "stream.gap",
         "session.registered",
         "session.updated",
     ]

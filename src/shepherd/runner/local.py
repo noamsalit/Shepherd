@@ -65,6 +65,7 @@ from __future__ import annotations
 import re
 import subprocess
 import time
+from subprocess import TimeoutExpired
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -125,10 +126,20 @@ CLIENT_FORMAT = "#{client_tty}"
 #: confined to characters no shell re-reads.
 SINK_PATH_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
 
-#: How long a stopped `attach` stream waits before looking for more bytes. Not a
-#: clock: it spells no instant and `tests/boundaries/test_one_clock.py` is about
-#: who may write a stamp.
+#: How long an idle `attach` stream waits before looking for more bytes, and how
+#: often, at most, it asks whether its pane is still there (BC-09). Not clocks: they
+#: spell no instant and `tests/boundaries/test_one_clock.py` is about who may write a stamp.
 STREAM_POLL_S = 0.05
+STREAM_LIVENESS_S = 0.5
+
+#: How long one multiplexer call may run. `DELIVERY_LOCK` is held across runner calls, so
+#: one wedged call would otherwise hold every delivery; `_run` refuses it (REMFIX-1).
+TMUX_CALL_TIMEOUT_S = 10.0
+
+#: The most payload bytes one `send-keys -H` carries. Each byte is a hex word of three wire
+#: bytes, and tmux refuses a message over `MAX_IMSGSIZE` as `command too long` (~5.4 KB
+#: here on 3.6a); 4096 keeps a call under `TMUX_COMMAND_LIMIT_B` with room for its frame.
+WRITE_CHUNK_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -206,7 +217,8 @@ def make_run_argv(permitted: frozenset[str], commands: frozenset[str]) -> RunArg
         check_tmux_argv(argv, permitted=permitted, commands=commands)
         check_tmux_argv(_tmux_tail(argv), permitted=permitted, commands=commands)
         _names_the_binary(argv)
-        completed = subprocess.run(argv, capture_output=True, check=False)
+        completed = subprocess.run(argv, capture_output=True, check=False,
+                                   timeout=TMUX_CALL_TIMEOUT_S)
         return CommandResult(
             rc=completed.returncode, stdout=completed.stdout, stderr=completed.stderr
         )
@@ -219,18 +231,23 @@ class _PipeStream:
     """The tail of the file `pipe-pane` is appending to, and the way to stop it."""
 
     path: Path
-    stop: Callable[[], None]
+    stop: Callable[[], object]
+    alive: Callable[[], bool]
     closed: bool = False
 
     def chunks(self) -> Iterator[bytes]:
+        """Until closed, or until the pane is gone and its tail has been read (BC-09)."""
+        gone, idle = False, 0
         with self.path.open("rb") as handle:
             while True:
                 data = handle.read()
                 if data:
                     yield data
                     continue
-                if self.closed:
+                if self.closed or gone:
                     return
+                idle += 1
+                gone = idle % round(STREAM_LIVENESS_S / STREAM_POLL_S) == 0 and not self.alive()
                 time.sleep(STREAM_POLL_S)
 
     def close(self) -> None:
@@ -269,6 +286,8 @@ class LocalRunner:
         except FileNotFoundError as error:
             self._count(AnomalyKind.TMUX_UNAVAILABLE, f"the tmux binary is not on PATH: {error}")
             raise RunnerRefusal(f"tmux is not available on this host: {argv!r}") from error
+        except TimeoutExpired as error:
+            raise RunnerRefusal(f"tmux timed out after {TMUX_CALL_TIMEOUT_S}s: {argv!r}") from error
 
     def _checked(self, *words: str, prefix: tuple[str, ...] = ()) -> CommandResult:
         """`_run`, refusing a non-zero rc rather than reading a half answer."""
@@ -324,9 +343,7 @@ class LocalRunner:
         bootstrap = session_name(BOOTSTRAP_SESSION_ID)
         if self._run("has-session", "-t", target(bootstrap)).rc == 0:
             return
-        self._checked(
-            "new-session", "-d", "-s", bootstrap, prefix=self.launch.prefix
-        )
+        self._checked("new-session", "-d", "-s", bootstrap, prefix=self.launch.prefix)
         self._checked("set-option", "-g", "status", "off")
 
     def start(self, spec: SessionSpec) -> RunnerHandle:
@@ -363,11 +380,9 @@ class LocalRunner:
         sink.touch()
         spot = target(handle.session_name)
         self._checked("pipe-pane", "-o", "-t", spot, f"cat >> {sink}")
-
-        def stop() -> None:
-            self._checked("pipe-pane", "-t", spot)
-
-        return _PipeStream(path=sink, stop=stop)
+        # `_run`, not `_checked`: unpiping a pane tmux already removed is the normal end.
+        return _PipeStream(path=sink, stop=lambda: self._run("pipe-pane", "-t", spot),
+                           alive=lambda: self.probe(handle).alive)
 
     def snapshot(self, handle: RunnerHandle, scrollback: int) -> bytes:
         """That much scrollback **plus the visible pane**, ANSI intact (T9-1).
@@ -386,15 +401,13 @@ class LocalRunner:
         """`send-keys -H`, one hex word per byte — byte-exact, and never the tty.
 
         A2: writing to `#{pane_tty}` delivers **zero** bytes to the program and
-        prints the text on the screen instead.
+        prints the text on the screen instead. A long paste is sent in order, as
+        `WRITE_CHUNK_BYTES` per call; a refused call refuses the rest.
         """
-        self._checked(
-            "send-keys",
-            "-H",
-            "-t",
-            target(handle.session_name),
-            *[f"{byte:02x}" for byte in data],
-        )
+        spot = target(handle.session_name)
+        for start in range(0, len(data), WRITE_CHUNK_BYTES):
+            chunk = data[start : start + WRITE_CHUNK_BYTES]
+            self._checked("send-keys", "-H", "-t", spot, *[f"{byte:02x}" for byte in chunk])
 
     def attached_clients(self, handle: RunnerHandle) -> int:
         """`list-clients` for this one session: one line per client, counted.
@@ -427,9 +440,8 @@ class LocalRunner:
 
     def resize(self, handle: RunnerHandle, cols: int, rows: int) -> None:
         """E-M3-22: this forces `window-size=manual`, so a later human attach is clipped."""
-        self._checked(
-            "resize-window", "-t", target(handle.session_name), "-x", str(cols), "-y", str(rows)
-        )
+        spot = target(handle.session_name)
+        self._checked("resize-window", "-t", spot, "-x", str(cols), "-y", str(rows))
 
     def interrupt(self, handle: RunnerHandle) -> None:
         """Escape — never a signal to a pid (D43, N14)."""

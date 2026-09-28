@@ -114,13 +114,12 @@ def stream(since_seq: int | None, idle_timeout_s: float = IDLE_TIMEOUT_S) -> Ite
     yield OPENED
     cursor = since_seq
     while True:
-        delivered = False
         for delivery in subscribe(cursor, idle_timeout_s=idle_timeout_s):
             cursor = delivery.seq
-            delivered = True
             yield frame(envelope(delivery))
-        if not delivered:
-            yield KEEPALIVE
+        # BC-33: a subscription ends only after `idle_timeout_s` of silence, so
+        # its end *is* an idle period — after an event as much as after none.
+        yield KEEPALIVE
         # `cursor` stays `None` until the first event arrives, so an idle tail
         # subscriber re-subscribes at the tail rather than replaying the ring.
         # The instant between the two is the one window in which a tail client

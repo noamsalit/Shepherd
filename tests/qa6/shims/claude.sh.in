@@ -1,0 +1,49 @@
+#!/bin/sh
+# QA6 fake `claude` (test-plan Difference 4; env-plan §1 row "claude engine").
+# Rendered into <run0>/shims/claude by tests/qa6/shims.py. Contains no signal,
+# kill or teardown verb (CLAUDE.md mutation rule 3).
+#
+# Modes: the file "$HOME/.qa6-shim-mode" (HOME is the instance's sandbox home,
+# which the product's tmux server inherits) holds one of:
+#   default  marker line, the captured macOS prompt-ready frame, then `cat`
+#   dialog   U14: the frame, 2 s later clear-screen + the p4 permission dialog
+#   catv     O7: the frame, then `cat -v` so an Escape shows as ^[
+#   bare     W5(b) negative control: marker line then `cat` (no frame)
+/usr/bin/perl -MJSON::PP -e 'my $log = shift @ARGV; open(my $f, ">>", $log) or exit 0; print $f JSON::PP->new->canonical->encode({argv => ["claude", @ARGV], cwd => $ENV{PWD} // "", pid => getppid()}) . "\n"; close $f;' '@CLAUDE_LOG@' "$@"
+case "$1" in
+  --qa6-selftest) echo "QA6-FAKE-CLAUDE-SELFTEST"; exit 0 ;;
+  --version) echo "0.0.0-qa6 (QA6 fake claude)"; exit 0 ;;
+  agents) echo "[]"; exit 0 ;;
+esac
+# -p/--print (an option before `--`): the engine's `-p --output-format json`
+# result object, in the captured shape the product parses (fork.py
+# parse_fork_result; docs/probes/2026-09-17-m3-tmux/p2-fork-*/03-*.stdout.json):
+# type, subtype, is_error, result = QA6-FORK-ANSWER, session_id = the
+# --session-id it was given (as P2 measured).
+PRINT=0
+SID=""
+PREV=""
+for arg in "$@"; do
+  # Only options count: everything after `--` is the brief (spawn.py A11).
+  if [ "$arg" = "--" ]; then break; fi
+  if [ "$arg" = "-p" ] || [ "$arg" = "--print" ]; then PRINT=1; fi
+  if [ "$PREV" = "--session-id" ]; then SID="$arg"; fi
+  PREV="$arg"
+done
+if [ "$PRINT" = "1" ]; then
+  printf '{"type":"result","subtype":"success","is_error":false,"result":"QA6-FORK-ANSWER","session_id":"%s"}\n' "$SID"
+  exit 0
+fi
+MODE=default
+if [ -f "$HOME/.qa6-shim-mode" ]; then MODE=$(/bin/cat "$HOME/.qa6-shim-mode"); fi
+if [ -n "$QA6_SHIM_MODE" ]; then MODE="$QA6_SHIM_MODE"; fi
+printf 'QA6-FAKE-CLAUDE %s\n' "$*"
+if [ "$MODE" = "bare" ]; then exec /bin/cat; fi
+/bin/cat '@FRAME@'
+if [ "$MODE" = "dialog" ]; then
+  /bin/sleep 2
+  printf '\033[2J\033[H'
+  /bin/cat '@DIALOG@'
+fi
+if [ "$MODE" = "catv" ]; then exec /bin/cat -v; fi
+exec /bin/cat

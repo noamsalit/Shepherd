@@ -23,7 +23,7 @@ from pathlib import Path
 from shepherd.core.mailbox import MailboxOrigin
 from shepherd.core.runner import RunnerRefusal, WriteDecision
 from shepherd.orchestration.ask import AskResult, ForkRunner, ask_session
-from shepherd.orchestration.mailbox import Delivery, deliver_now, queue_message
+from shepherd.orchestration.mailbox import DELIVERY_LOCK, Delivery, deliver_now, queue_message
 from shepherd.orchestration.write_policy import refusal_text
 from shepherd.runner.base import Runner
 from shepherd.store.db import Store
@@ -105,6 +105,7 @@ def project_ask(result: AskResult) -> dict[str, object]:
         "text": result.text,
         "method": result.method,
         "from_fork_of": result.from_fork_of,
+        "from_fork_of_engine_session_id": result.from_fork_of_engine_session_id,
         "duration_ms": result.duration_ms,
         "refusal": result.refusal,
     }
@@ -118,6 +119,11 @@ def send(*, store: Store, runner: Runner, now: Clock, args: ToolArgs) -> dict[st
     call. So the row is written before the pane is looked at, and a caller that
     retries under the same `idempotency_key` gets its own first message back
     instead of a second id it would believe in.
+
+    **Except where no pane of ours exists (D74, RD-5).** A row with
+    `runner_handle IS NULL` — attached, or T12's orphan — has no delivery trigger
+    at all, so it is refused at send time and **no** row is written: a queued
+    message there waits for a pane that never comes.
     """
     session_id = arg_str(args, "session_id")
     row = store.get_owned_session(session_id)
@@ -135,43 +141,51 @@ def send(*, store: Store, runner: Runner, now: Clock, args: ToolArgs) -> dict[st
             "delivered": 0,
             "deferred": 0,
         }
-    message = queue_message(
-        store=store,
-        session_id=session_id,
-        body=arg_str(args, "body"),
-        origin=_origin(args),
-        idempotency_key=arg_str(args, "idempotency_key"),
-        now=now,
-    )
+    body, origin, key = arg_str(args, "body"), _origin(args), arg_str(args, "idempotency_key")
     handle = row.runner_handle
     if handle is None:
-        # A row with no pane of ours — attached, or T12's orphan. The message
-        # stays queued and says so with the policy's own member, not with a
-        # bespoke string a page cannot branch on.
-        return project_delivery(
-            Delivery(
-                decision=WriteDecision.REFUSE_NO_PTY,
-                reason=WriteDecision.REFUSE_NO_PTY.value,
-                delivered=0,
-                deferred=1,
-            ),
-            message.id,
-        )
-    try:
-        delivery = deliver_now(
+        return _refuse_no_pane(session_id)
+    # BC-02: held from the queueing through this attempt, so the sweep cannot
+    # deliver the message in between and have it typed twice.
+    with DELIVERY_LOCK:
+        message = queue_message(
             store=store,
-            runner=runner,
-            handle=handle,
             session_id=session_id,
-            state=row.state,
-            ownership=row.ownership,
+            body=body,
+            origin=origin,
+            idempotency_key=key,
             now=now,
         )
-    except RunnerRefusal as refusal:
-        return project_delivery(
-            Delivery(decision=None, reason=refusal.reason, delivered=0, deferred=1), message.id
-        )
+        try:
+            delivery = deliver_now(
+                store=store,
+                runner=runner,
+                handle=handle,
+                session_id=session_id,
+                state=row.state,
+                ownership=row.ownership,
+                now=now,
+            )
+        except RunnerRefusal as refusal:
+            return project_delivery(
+                Delivery(decision=None, reason=refusal.reason, delivered=0, deferred=1), message.id
+            )
     return project_delivery(delivery, message.id)
+
+
+def _refuse_no_pane(session_id: str) -> dict[str, object]:
+    """D74: a pane-less row, refused at send time with nothing queued. Named with
+    the policy's own member, not a bespoke string a page cannot branch on."""
+    decision = WriteDecision.REFUSE_NO_PTY
+    return {
+        "message_id": None,
+        "queued": False,
+        "decision": str(decision.value),
+        "decision_text": refusal_text(decision),
+        "reason": f"{session_id}: no pane of ours — refused, nothing queued",
+        "delivered": 0,
+        "deferred": 0,
+    }
 
 
 def list_mailbox(*, store: Store, session_id: str | None) -> dict[str, object]:
@@ -216,7 +230,10 @@ def build_messaging_tools(
     return (
         ToolDef(
             name="send_to_session",
-            description="Queue a message and try to deliver it; the result names the decision.",
+            description=(
+                "Queue a message and try to deliver it; the result names the decision. "
+                "A send to a session with no pane of ours is refused, nothing queued."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {

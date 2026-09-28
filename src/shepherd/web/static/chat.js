@@ -77,8 +77,16 @@ const ENTER = "Enter";
 // and the page says so rather than showing a history that looks complete.
 const GAP_NOTE = "the stream dropped events — this conversation is incomplete";
 
+// `steps` is BC-06a's pairing: a call's step body and its turn, by the
+// `tool_use_id` its result will name, until that result arrives or the turn
+// ends. `lastText` is BC-06c's: the
+// last thing each turn said, by turn id, so a final text equal to it is shown
+// once. Both are keyed rather than "the latest", because a result or an ending
+// that arrives for another turn must not be matched to this one.
 const state = {
   approvals: [],
+  steps: new Map(),
+  lastText: new Map(),
 };
 
 function slot(id) {
@@ -211,8 +219,9 @@ function shepherdSays(text) {
 // point: the conversation reads as prose and the mechanism is one click away.
 // A step with nothing to show still renders — *that the master called a tool*
 // is the fact, and a step that vanished when its detail was empty would be a
-// call the transcript silently omitted.
-function shepherdStep(toolName, detail) {
+// call the transcript silently omitted. The body is returned, because the
+// call's result lands inside it (BC-06a) rather than in a step of its own.
+function shepherdStep(toolName, body) {
   const turn = shepherdTurn();
   const step = el("details", "step");
   const head = el("summary", undefined);
@@ -220,9 +229,152 @@ function shepherdStep(toolName, detail) {
   head.appendChild(el("span", "step-tool", textOf(toolName)));
   head.appendChild(el("span", "step-time", UNKNOWN));
   step.appendChild(head);
-  step.appendChild(el("div", "step-body", textOf(detail)));
+  const content = el("div", "step-body", body);
+  step.appendChild(content);
   turn.appendChild(step);
   append(turn);
+  return content;
+}
+
+// What a step's body says, always a string (BC-06: `detail` is an object, and
+// an object handed to `textContent` is `[object Object]`). A call names its
+// argument **keys** and never their values — the same rule the approval card
+// keeps for raw arguments, which are not redacted. Anything else with a tool
+// name (a result) is its text, and says so when there was none.
+const TOOL_CALL = "tool_call";
+const TOOL_RESULT = "tool_result";
+const NO_ARGUMENTS = "(no arguments)";
+const NO_RESULT_TEXT = "(no result text)";
+
+function argumentKeys(detail) {
+  const input = detail !== null && typeof detail === "object" ? detail.input : undefined;
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return UNKNOWN;
+  }
+  const keys = Object.keys(input).sort();
+  return keys.length === 0 ? NO_ARGUMENTS : `arguments: ${keys.join(", ")}`;
+}
+
+// A failed result says so on its own line (the SDK's `is_error`), because a
+// step that reads like a success when the tool refused is a wrong transcript.
+const FAILED = "error · ";
+
+function stepBody(kind, data) {
+  if (kind === TOOL_CALL) {
+    return argumentKeys(data.detail);
+  }
+  const text = typeof data.text === "string" && data.text !== "" ? data.text : NO_RESULT_TEXT;
+  return detailOf(data).is_error === true ? `${FAILED}${text}` : text;
+}
+
+// The runtime's own payload, which `project_to_stream` nests under `detail`.
+// Anything that is not an object reads as empty, so a missing key is a missing
+// datum (principle 5) and never a throw.
+function detailOf(data) {
+  const detail = data.detail;
+  return detail !== null && typeof detail === "object" ? detail : {};
+}
+
+function useIdOf(data) {
+  const useId = detailOf(data).tool_use_id;
+  return typeof useId === "string" && useId !== "" ? useId : null;
+}
+
+// BC-06a (ruling 2): a call and its result are one step — the call is the
+// title, the result is inside, under the call's argument keys. A result whose
+// call this page never saw (it opened mid-turn, or the call had no id) is not
+// dropped: it renders as a step of its own, titled with its tool name.
+function fillStep(data) {
+  const useId = useIdOf(data);
+  if (useId === null || !state.steps.has(useId)) {
+    return false;
+  }
+  state.steps.get(useId).content.append("\n", stepBody(TOOL_RESULT, data));
+  state.steps.delete(useId);
+  return true;
+}
+
+function openStep(kind, data) {
+  const content = shepherdStep(data.tool_name, stepBody(kind, data));
+  const useId = useIdOf(data);
+  if (kind === TOOL_CALL && useId !== null) {
+    state.steps.set(useId, { content, turnId: data.turn_id });
+  }
+}
+
+// BC-06b (ruling 3): a turn's bookkeeping is not the conversation. It goes to
+// the event line beside the status slot — never into the thread, and never
+// over `#shepherd-status`, whose turn id, refusal or approval word a reader is
+// looking at (plan revision 4, B1). The line is a polite live region, so it is
+// announced without taking focus. BC-06c (ruling 4): every SDK ending carries
+// the final text, which is normally the turn's last text again; it enters the
+// thread only when it says something the turn has not. A turn that failed
+// (`error`) still says so in the thread: its kind word stands in for a
+// repeated text, so the failure is never only on the event line.
+const TEXT = "text";
+const TURN_ENDED = "turn_ended";
+const ERROR = "error";
+const RATE_LIMIT = "rate_limit";
+const RATE_LIMIT_STOPS = "rejected";
+
+// A result for a call whose turn is over is not this turn's any more.
+function closeSteps(turnId) {
+  for (const [useId, open] of state.steps) {
+    if (open.turnId === turnId) {
+      state.steps.delete(useId);
+    }
+  }
+}
+
+function newText(data, said) {
+  return typeof data.text === "string" && data.text !== "" && data.text !== said ? data.text : null;
+}
+
+function turnEnded(kind, data) {
+  const said = state.lastText.get(data.turn_id);
+  state.lastText.delete(data.turn_id);
+  closeSteps(data.turn_id);
+  const failed = kind === ERROR;
+  const outcome = failed ? ERROR : textOf(detailOf(data).outcome);
+  fill("shepherd-event", `turn ended · ${outcome}`);
+  const text = newText(data, said);
+  if (text !== null || failed) {
+    shepherdSays(text !== null ? text : ERROR);
+  }
+}
+
+// RD-4: the SDK's `rejected` is the rate limit that stops the turn, and a turn
+// that stopped is part of the conversation, so it is in the thread as well.
+function rateLimited(data) {
+  const limit = detailOf(data).rate_limit;
+  const status = limit !== null && typeof limit === "object" ? limit.status : undefined;
+  const line = `rate limit · ${textOf(status)}`;
+  fill("shepherd-event", line);
+  if (status === RATE_LIMIT_STOPS) {
+    shepherdSays(line);
+  }
+}
+
+function onMasterEvent(kind, data) {
+  if (kind === TOOL_RESULT && fillStep(data)) {
+    return;
+  }
+  if (typeof data.tool_name === "string" && data.tool_name !== "") {
+    openStep(kind, data);
+    return;
+  }
+  if (kind === TURN_ENDED || kind === ERROR) {
+    turnEnded(kind, data);
+    return;
+  }
+  if (kind === RATE_LIMIT) {
+    rateLimited(data);
+    return;
+  }
+  if (kind === TEXT && typeof data.text === "string") {
+    state.lastText.set(data.turn_id, data.text);
+  }
+  shepherdSays(eventText(kind, data));
 }
 
 // One `MasterEvent` kind is one line. `text` is what the master said; anything
@@ -277,6 +429,17 @@ function cardFrom(data) {
   };
 }
 
+// One card per approval (BC-26): the load read and the stream can both carry
+// the same one. Compared by `dataset` rather than by a built selector, so an id
+// is never interpreted as selector syntax.
+function shown(approvalId) {
+  if (state.approvals.some((known) => known.approval_id === approvalId)) {
+    return true;
+  }
+  const cards = thread().querySelectorAll("[data-approval-id]");
+  return [...cards].some((card) => card.dataset.approvalId === approvalId);
+}
+
 function without(approvals, approvalId) {
   return approvals.filter((approval) => approval.approval_id !== approvalId);
 }
@@ -317,7 +480,12 @@ function grow(input) {
   input.style.height = `${Math.min(input.scrollHeight, COMPOSER_MAX)}px`;
 }
 
+// BC-25: an Enter that commits an IME composition is the input method's, not a
+// send — posting then would send half-composed text.
 function onComposerKey(event) {
+  if (event.isComposing) {
+    return;
+  }
   if (event.key === ENTER && !event.shiftKey) {
     event.preventDefault();
     submit();
@@ -327,12 +495,17 @@ function onComposerKey(event) {
 async function submit() {
   const input = slot("shepherd-input");
   const text = input.value;
-  if (text === "") {
+  // BC-25: nothing to say is not a turn. The check is trimmed, the text is not —
+  // a multi-line message posts exactly as typed.
+  if (text.trim() === "") {
     return;
   }
   input.value = "";
   grow(input);
   youSays(text);
+  // The last turn's ending is not this turn's. Cleared before the POST, since a
+  // fast turn's own ending can arrive on the stream before the POST answers.
+  fill("shepherd-event", "");
   const data = await post(MASTER_SEND, { text });
   if (data === null) {
     return;
@@ -354,16 +527,15 @@ export function onShepherdEvent(envelope) {
     return;
   }
   if (envelope.type.startsWith(MASTER_PREFIX)) {
-    const kind = envelope.type.slice(MASTER_PREFIX.length);
-    if (typeof data.tool_name === "string" && data.tool_name !== "") {
-      shepherdStep(data.tool_name, data.detail);
-      return;
-    }
-    shepherdSays(eventText(kind, data));
+    onMasterEvent(envelope.type.slice(MASTER_PREFIX.length), data);
     return;
   }
   if (envelope.type === APPROVAL_CREATED) {
     const raised = cardFrom(data);
+    // BC-26: the first-paint read may already have painted this card.
+    if (shown(raised.approval_id)) {
+      return;
+    }
     state.approvals = [...state.approvals, raised];
     // U6: the card appears inline in the conversation at the blocked turn, and
     // nowhere else — the rail is gone and U2 keeps it gone.
@@ -386,8 +558,11 @@ export async function loadShepherd() {
   if (approvals === null) {
     return;
   }
+  // BC-26: an `approval.created` that arrived while this read was in flight
+  // already painted its card; the read must not paint it a second time.
+  const unseen = approvals.approvals.filter((approval) => !shown(approval.approval_id));
   state.approvals = approvals.approvals;
-  for (const approval of state.approvals) {
+  for (const approval of unseen) {
     append(approvalCard(approval));
   }
 }

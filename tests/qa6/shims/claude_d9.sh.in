@@ -1,0 +1,9 @@
+#!/bin/sh
+# QA6 counting `claude` for D9 only: appends one line per invocation to the
+# fork log and prints an empty agents list. Nothing else.
+printf '%s\n' "$*" >> '@FORKS_LOG@'
+case "$1" in
+  --qa6-selftest) echo "QA6-D9-CLAUDE-SELFTEST"; exit 0 ;;
+esac
+echo "[]"
+exit 0

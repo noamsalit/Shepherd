@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "paths.py",
+ "old": "    return source.get(ENV_RUN_SETTINGS_SHA) or OWNER_SETTINGS_SHA\n",
+ "new": "    return source.get(ENV_RUN_SETTINGS_SHA) or \"absent\"\n",
+ "proof": "test_proof_settings_env_unset_uses_owner",
+ "expect": "proof_settings.env_unset_uses_owner",
+ "why": "INC-3 re-qa-build: a bare pytest (no runner export) no longer expects the owner-named U2 value"
+}

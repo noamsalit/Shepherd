@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "                if letter == \"L\":\n                    label = value\n",
+ "new": "                if letter == \"L\":\n                    label = value if label is None else label\n",
+ "proof": "test_proof_pane_argv_effective_socket",
+ "expect": "proof_pane_argv.reviewer_last_L_wins",
+ "why": "review finding 1: the first -L wins (tmux keeps the LAST), so `-L <ours> -L default kill-server` is scored as ours (predicate only)"
+}

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "constants.py",
+ "old": "    \"herd\": re.compile(r\"@media\\s*\\(\\s*max-width:\\s*(\\d+)px\\s*\\)\\s*\\{\\s*\\.herd\\b\"),",
+ "new": "    \"herd\": re.compile(r\"@media\\s*\\(\\s*max-width:\\s*(\\d+)px\\s*\\)\\s*\\{\\s*\\.shell\\b\"),",
+ "proof": "test_proof_constants",
+ "expect": "proof_constants.breakpoints_match_the_plan",
+ "why": "the Flock breakpoint is read from the wrong @media block (qa5's D1 mechanism: a width bound to the wrong rule)"
+}

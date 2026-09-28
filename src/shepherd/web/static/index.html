@@ -27,7 +27,12 @@
       <!-- ===================== the side pane ============================ -->
       <nav class="pane" aria-label="Pages">
         <div class="pane-top">
-          <span class="mark" id="mark" title="Expand the side pane">
+          <!-- BC-19: `#mark` is the only control that expands a collapsed
+               rail, so it is a button to a keyboard too. `app.js` gives it a
+               tab stop only while the rail is collapsed — beside an open rail
+               it is decoration next to a reachable `#collapse`. -->
+          <span class="mark" id="mark" title="Expand the side pane" role="button"
+                tabindex="-1" aria-label="Expand the side pane">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 17V9a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v8" /><path d="M8 17v3" /><path d="M16 17v3" />
@@ -158,8 +163,12 @@
               </div>
             </div>
             <!-- Principle 5 / §13: a refusal, a failure or a decision says so
-                 here, with the correlation id and nothing else. -->
+                 here, with the correlation id and nothing else. The line after it
+                 is the event line (qa6 rulings 2-4, U19): `turn_ended` and a rate
+                 limit that does not stop the turn, announced politely and never
+                 written over the status slot's turn id or approval word. -->
             <p class="status" id="shepherd-status"></p>
+            <p class="status event-line" id="shepherd-event" aria-live="polite"></p>
           </div>
         </div>
 
@@ -238,6 +247,11 @@
             </div>
             <div class="cards" id="flock-cards"></div>
 
+            <!-- BC-11: nothing answered, so nothing is known — a stopped
+                 daemon is not an empty fleet. `flock.js` fills this with
+                 `FLEET_UNKNOWN` and shows it *instead of* the panel below. -->
+            <p id="fleet-unknown" class="fleet-unknown" role="status" hidden></p>
+
             <!-- F16: a fresh install with no database and no sessions sees
                  this, not a blank area and not an error. It names what
                  discovery can see. -->
@@ -312,8 +326,8 @@
 
               <div id="session-terminal" class="session-terminal"></div>
 
-              <!-- Principle 5: the keystroke path is not built (T19-c), and the
-                   page says so rather than swallowing what a human types. -->
+              <!-- Principle 5: what the terminal cannot do is said here
+                   (D6's fit limitation) rather than left for a human to find. -->
               <p id="session-input-note" class="session-input-note"></p>
             </section>
           </div>

@@ -1047,7 +1047,49 @@ def test_the_module_is_within_its_line_budget() -> None:
     next line added to it has to come back here and say why. Thirty-two of the
     forty are the docstring for the rule and for the residual it does not close;
     the rule itself is three lines and a message.
+
+    **And from 500 to 508 when `write` learned tmux's message ceiling** (qa6
+    P12 REM-FIX 1 #1, a router decision): one `send-keys -H` per
+    `WRITE_CHUNK_BYTES`, because a single argv over ~5.4 KB is `command too
+    long`. Four lines are the constant and its reason, two the loop, two the
+    docstring; `tests/runner/test_local_write_chunks.py` holds the proof.
     """
     source = Path(local_module.__file__).read_text(encoding="utf-8").splitlines()
     assert len(source) <= 600
-    assert 350 < len(source) <= 500, len(source)
+    assert 350 < len(source) <= 508, len(source)
+
+
+# ----- REMFIX-1 #5: a hung multiplexer call is bounded -------------------------
+
+
+def test_a_hung_tmux_call_is_a_refusal_not_a_held_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reviewer #2: `DELIVERY_LOCK` is held across runner calls, and the exec
+    site's `subprocess.run` had no timeout — one wedged tmux held every delivery.
+
+    The binary on `PATH` is a stand-in that sleeps; it is not tmux and talks to
+    no socket. The call must come back as a `RunnerRefusal` naming the bound,
+    well inside the stand-in's sleep.
+    """
+    import time
+
+    fake = tmp_path / TMUX
+    fake.write_text("#!/bin/sh\nexec sleep 5\n", encoding="utf-8")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:/usr/bin:/bin")
+    monkeypatch.setattr(local_module, "TMUX_CALL_TIMEOUT_S", 0.3)
+    driver = LocalRunner(
+        socket=DEFAULT_SOCKET,
+        run_argv=make_run_argv(PERMITTED, COMMANDS),
+        launch=NO_PREFIX,
+        now=lambda: NOW,
+        spawn_argv=lambda spec, *, frame_bytes: ["claude-stub"],
+        record_anomaly=lambda anomaly: None,
+        sink_dir=SINK_DIR,
+    )
+    started = time.monotonic()
+    with pytest.raises(RunnerRefusal) as raised:
+        driver.interrupt(HANDLE)
+    assert time.monotonic() - started < 3.0
+    assert "0.3" in raised.value.reason and "timed out" in raised.value.reason, raised.value.reason

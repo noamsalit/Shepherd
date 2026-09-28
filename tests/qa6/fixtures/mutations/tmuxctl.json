@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "tmuxctl.py",
+ "old": "    return re.fullmatch(paths.runner_socket_pattern(run_pid).pattern, socket) is not None",
+ "new": "    return True",
+ "proof": "test_proof_tmuxctl",
+ "expect": "proof_tmuxctl.refuses_the_user_socket",
+ "why": "the socket guard accepts any socket, including the user's `shepherd` (proved by predicate: the proof builds argv and never runs tmux)"
+}

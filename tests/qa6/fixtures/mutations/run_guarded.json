@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "run.py",
+ "old": "    code = finish(crash)\n    if interrupted",
+ "new": "    if crash is not None:\n        raise RuntimeError(crash)\n    code = finish(crash)\n    if interrupted",
+ "proof": "test_proof_runner_always_finishes",
+ "expect": "proof_runner.finish_runs_with_the_crash",
+ "why": "hunter H6: a crash in the waves skips teardown and publication (proved with a pure raise; nothing is started)"
+}

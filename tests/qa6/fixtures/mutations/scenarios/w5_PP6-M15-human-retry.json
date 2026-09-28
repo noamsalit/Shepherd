@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE — read as data by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1). The scenario reads active(<name>) at one input it controls; no signal, kill or teardown verb is planted anywhere.",
+ "name": "w5_PP6-M15-human-retry",
+ "prop": "PP-6",
+ "scenario": "M15",
+ "node": "tests/qa6/unit/test_wave5_retry_cap.py::test_m15_the_retry_cap_logic_works_at_its_own_seam",
+ "failing_clause": "api.attempt3_refused_retry_cap",
+ "what": "attempt 3 is asked for with initiated_by=user_ui (a human retry, which D31 does not cap); the retry_cap_reached refusal clause must go false"
+}

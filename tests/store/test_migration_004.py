@@ -106,9 +106,10 @@ def test_migration_004_applies_over_a_populated_003_database(tmp_path: Path) -> 
     """Exit criterion (a), plus the shape 004 is supposed to leave behind."""
     db_path = build_003_database(tmp_path)
 
-    assert migrate(db_path) == 4
-    assert read_schema_version(db_path) == 4
-    assert EXPECTED_SCHEMA_VERSION == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
+    assert read_schema_version(db_path) == EXPECTED_SCHEMA_VERSION
+    # what 004 owns is its file, not the head (002's `EXPECTED >= 2` shape)
+    assert EXPECTED_SCHEMA_VERSION >= 4
 
     with connect(db_path) as connection:
         workspace_columns = {
@@ -147,7 +148,7 @@ def test_migration_004_leaves_foreign_key_check_empty(tmp_path: Path) -> None:
     one holds the FK graph.
     """
     db_path = build_003_database(tmp_path)
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as connection:
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
@@ -162,7 +163,7 @@ def test_every_pre_existing_repo_keeps_one_project_row_with_its_added_at(
     happened.
     """
     db_path = build_003_database(tmp_path)
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as connection:
         rows = connection.execute(
             "SELECT workspace_id, repo_id, added_at FROM project_repo ORDER BY repo_id"
@@ -185,7 +186,7 @@ def test_the_unassigned_project_is_seeded_with_the_schema_default_owner(
     and hard-coding it *here* would make this test agree with that mistake.
     """
     db_path = build_003_database(tmp_path)
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as connection:
         default = [
             row["dflt_value"]
@@ -209,10 +210,13 @@ def test_migration_004_is_idempotent_across_two_runs(tmp_path: Path) -> None:
     inferred from "it did not raise".
     """
     db_path = build_003_database(tmp_path)
-    assert migrate(db_path) == 4
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as connection:
-        assert connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 4
+        assert (
+            connection.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0]
+            == EXPECTED_SCHEMA_VERSION
+        )
         assert connection.execute("SELECT COUNT(*) FROM project_repo").fetchone()[0] == 2
         assert (
             connection.execute(
@@ -237,7 +241,7 @@ def test_the_recorded_checksums_of_001_to_003_are_unchanged(tmp_path: Path) -> N
             int(row["version"]): str(row["checksum"])
             for row in connection.execute("SELECT version, checksum FROM schema_migration")
         }
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as connection:
         after = {
             int(row["version"]): str(row["checksum"])

@@ -20,10 +20,11 @@ SOURCE = Path(stops.__file__)
 ENGINE_ENDING_SPELLINGS = frozenset({"end_turn", "tool_use", "max_tokens", "stop_sequence"})
 
 
-def test_stop_reason_has_twenty_members() -> None:
-    """16 mechanical + 4 completeness, spelled as migration 002's CHECK lists them."""
+def test_stop_reason_has_twenty_one_members() -> None:
+    """16 mechanical + 4 completeness + 1 declared (D73), spelled as migrations
+    002 and 005's CHECK lists them."""
     members = list(stops.StopReason)
-    assert len(members) == 20
+    assert len(members) == 21
     assert {member.value for member in members} == {
         "rate_limited",
         "quota_paused",
@@ -45,6 +46,7 @@ def test_stop_reason_has_twenty_members() -> None:
         "incomplete",
         "derailed",
         "blocked_external",
+        "refused",
     }
 
 

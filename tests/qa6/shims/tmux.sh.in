@@ -1,0 +1,138 @@
+#!/usr/bin/perl
+# QA6 logging-and-refusing `tmux` shim (test-plan §6; env-plan §0 item 3 and §1
+# row 42, r3 post-review harness amendment).
+#
+# 1. It works out the socket the real tmux WOULD contact, by tmux 3.6a's own
+#    getopt rules (`2c:CDdf:hlL:NqS:T:uUvV`): flags may be clustered (-2uL x,
+#    -uLx), a valued option takes the rest of its word or else the next word,
+#    parsing stops at the first non-option word or after --, the LAST -L and the
+#    LAST -S win, -S beats -L whatever the order, $TMUX is read only when
+#    neither was given, else `default`; a -S (or $TMUX) path that is not absolute is
+#    never ours. This is the same rule as
+#    tmuxctl.effective_socket; a guard (test_proof_tmux_shim_refuses) runs this
+#    file against a fake binary over a planted battery and proves they agree.
+# 2. It appends the argv it was given, unchanged, to its log: the product log
+#    as one JSON array per line, or - for a call made from INSIDE a pane ($TMUX
+#    set: tmux sets it in every pane, and the product's own env never carries
+#    it) - the pane log as {"argv", "tmux": $TMUX}. The log is written FIRST and
+#    it FAILS CLOSED: a line that cannot be written exits 98 without exec, so
+#    no call can reach tmux unrecorded.
+# 3. It exits 97 WITHOUT exec for any argv that is not exactly `tmux -V` and
+#    whose effective socket is not this run's shepherd-m3-q6<pid>-<k>. The
+#    refused argv is already in the log, so Z2 still fails on it; the user's
+#    `default` and `shepherd` servers are never reached, whatever the product
+#    or the engine emits.
+# 4. Otherwise it execs the real tmux with the argv UNCHANGED. It adds nothing,
+#    removes nothing, and never names a socket itself.
+use strict;
+use warnings;
+use Cwd ();
+use Encode ();
+use JSON::PP ();
+
+my $RUN_PID    = '@RUN_PID@';
+my $SOCKET_DIR = '@SOCKET_DIR@';
+my $REAL       = '@TMUX@';
+my $PRODUCT_LOG = '@TMUX_LOG@';
+my $PANE_LOG    = '@PANE_LOG@';
+
+my %VALUED = map { $_ => 1 } qw(c f L S T);
+my %FLAGS  = map { $_ => 1 } qw(2 C D d h l N q u U v V);
+
+sub same_dir {
+    my ($left, $right) = @_;
+    my $real_left  = Cwd::realpath($left);
+    my $real_right = Cwd::realpath($right);
+    return defined $real_left && defined $real_right && $real_left eq $real_right;
+}
+
+sub socket_name {
+    my ($path) = @_;
+    # A relative path is resolved by tmux from the CLIENT's cwd, which no post-hoc judge sees:
+    # never ours (review N2; tmuxctl._socket_name says the same).
+    return "<invalid: socket path '$path' is not absolute>" if substr($path, 0, 1) ne '/';
+    if ($path =~ m{\A(.*)/([^/]*)\z}s) {
+        my ($dir, $base) = ($1, $2);
+        return $base if $dir ne '' && same_dir($dir, $SOCKET_DIR);
+    }
+    return $path;
+}
+
+sub effective_socket {
+    my ($tmux_env, @words) = @_;
+    my ($label, $path);
+    my $index = 0;
+    WORD: while ($index < @words) {
+        my $word = $words[$index];
+        last WORD if $word eq '--' || substr($word, 0, 1) ne '-' || $word eq '-';
+        my $position = 1;
+        while ($position < length $word) {
+            my $letter = substr($word, $position, 1);
+            if ($VALUED{$letter}) {
+                my $value = substr($word, $position + 1);
+                if ($value eq '') {
+                    $index++;
+                    return "<invalid: -$letter without a value>" if $index >= @words;
+                    $value = $words[$index];
+                }
+                $label = $value if $letter eq 'L';
+                $path  = $value if $letter eq 'S';
+                last;
+            }
+            return undef if $letter eq 'V' || $letter eq 'h';
+            return "<invalid: unknown option -$letter>" unless $FLAGS{$letter};
+            $position++;
+        }
+        $index++;
+    }
+    return socket_name($path) if defined $path;
+    return $label if defined $label;
+    if (defined $tmux_env && $tmux_env ne '' && substr($tmux_env, 0, 1) ne ',') {
+        my ($socket_path) = split /,/, $tmux_env, 2;
+        return socket_name($socket_path);
+    }
+    return 'default';
+}
+
+sub refusal_reason {
+    my ($tmux_env, @words) = @_;
+    return undef if @words == 1 && $words[0] eq '-V';
+    my $socket = effective_socket($tmux_env, @words);
+    return 'contacts no server, but is not exactly `tmux -V`' unless defined $socket;
+    return undef if $socket =~ /\Ashepherd-m3-q6\Q$RUN_PID\E-[0-9]+\z/;
+    return "effective socket '$socket' is not this run's shepherd-m3-q6$RUN_PID-<k>";
+}
+
+sub fail_closed {
+    my ($what) = @_;
+    print STDERR "qa6 tmux shim: $what; refusing (no exec)\n";
+    exit 98;
+}
+
+my $pane = $ENV{TMUX};
+my $in_pane = defined $pane && $pane ne '';
+my @decoded = map { Encode::decode('UTF-8', $_) } @ARGV;
+my ($log, $line);
+if ($in_pane) {
+    $log  = $PANE_LOG;
+    $line = JSON::PP->new->canonical->encode({argv => ['tmux', @decoded], tmux => $pane});
+} else {
+    $log  = $PRODUCT_LOG;
+    $line = JSON::PP->new->encode(['tmux', @decoded]);
+}
+open(my $handle, '>>', $log) or fail_closed("cannot open $log: $!");
+binmode($handle, ':encoding(UTF-8)') or fail_closed("cannot set UTF-8 on $log: $!");
+print {$handle} "$line\n" or fail_closed("cannot write $log: $!");
+close($handle) or fail_closed("cannot close $log: $!");
+
+my $why = refusal_reason($in_pane ? $pane : undef, @ARGV);
+if (defined $why) {
+    print STDERR "qa6 tmux shim refused: $why\n";
+    exit 97;
+}
+# One statement (review N1): `exec` followed by a separate print makes `use warnings` print
+# "Statement unlikely to be reached" on EVERY call, which the product copies into its errors.
+exec { $REAL } $REAL, @ARGV or do {
+    print STDERR "qa6 tmux shim: exec $REAL failed: $!\n";
+    exit 99;
+};

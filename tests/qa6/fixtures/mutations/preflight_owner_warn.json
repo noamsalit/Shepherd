@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "preflight.py",
+ "old": "    if current != owner:\n",
+ "new": "    if current != owner and current == owner:\n",
+ "proof": "test_proof_settings_owner_mismatch_warns",
+ "expect": "proof_settings.owner_mismatch_warns",
+ "why": "INC-3 re-qa-build: a sha other than the owner's passes T1 silently instead of raising the WARN row"
+}

@@ -46,7 +46,7 @@ validator.** A future binding that adds its own is adding a second opinion.
 * a denial's text is §11's own `"you declined this"`, read verbatim by the model
   (§`can_use_tool`, and the `tool_result` it produces).
 
-Nothing here caches: the registry is frozen before the server binds (ADR-7), so
+Nothing here caches: the registry is frozen before the server serves (ADR-7), so
 a cache would be a second copy of an immutable thing. Order is by name, so two
 exporters over the same audience list the same tools in the same order.
 """

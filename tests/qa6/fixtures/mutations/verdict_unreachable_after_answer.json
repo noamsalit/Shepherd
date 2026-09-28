@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "verdict.py",
+ "old": "        if error.after_answer:\n            return \"FAIL\"",
+ "new": "        if error.after_answer and False:\n            return \"FAIL\"",
+ "proof": "test_proof_product_socket_failures",
+ "expect": "proof_product_socket.reset_after_answer_is_fail",
+ "why": "hunter N2: a product that stopped answering after it answered in this scenario is BLOCKED instead of FAIL"
+}

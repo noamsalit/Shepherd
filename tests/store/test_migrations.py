@@ -65,16 +65,16 @@ def insert_minimal_session(
 def test_migrate_creates_four_tables_and_bookkeeping(tmp_path: Path) -> None:
     db_path = tmp_path / "data" / "shepherd.db"
 
-    # M2's 002, M3's 003 and 004 apply on top (ADR-M2-4, DP3, D57); 001's own bookkeeping
-    # row is asserted below and is what this test is about.
-    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION == 4
+    # M2's 002, M3's 003, 004 and 005 apply on top (ADR-M2-4, DP3, D57, D73); 001's own
+    # bookkeeping row is asserted below and is what this test is about.
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
 
     names = table_names(db_path)
     assert M1_TABLES <= names
     assert "schema_migration" in names
     # M5's tables must not exist yet.
     assert {"work_item", "queue"} & names == set()
-    assert read_schema_version(db_path) == 4
+    assert read_schema_version(db_path) == EXPECTED_SCHEMA_VERSION
 
     with connect(db_path) as conn:
         version, name, checksum, applied_at = conn.execute(
@@ -97,10 +97,13 @@ def test_migrate_creates_four_tables_and_bookkeeping(tmp_path: Path) -> None:
 
 def test_migrate_is_idempotent(tmp_path: Path) -> None:
     db_path = tmp_path / "data" / "shepherd.db"
-    assert migrate(db_path) == 4
-    assert migrate(db_path) == 4
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
+    assert migrate(db_path) == EXPECTED_SCHEMA_VERSION
     with connect(db_path) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0] == 4
+        assert (
+            conn.execute("SELECT COUNT(*) FROM schema_migration").fetchone()[0]
+            == EXPECTED_SCHEMA_VERSION
+        )
 
 
 def test_migrate_creates_missing_data_dir(tmp_path: Path) -> None:

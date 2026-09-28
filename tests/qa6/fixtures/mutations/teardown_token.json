@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "teardown.py",
+ "old": "    if token_now != recorded:\n        return f\"pid reused",
+ "new": "    if token_now != recorded and False:\n        return f\"pid reused",
+ "proof": "test_proof_teardown_signals_only_token_matches",
+ "expect": "proof_teardown.reused_pid_not_signalled",
+ "why": "review 4: a reused pid (a different start token) would be signalled (pure decision; no signal is ever sent by the proof)"
+}

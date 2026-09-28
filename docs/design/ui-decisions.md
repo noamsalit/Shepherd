@@ -79,8 +79,14 @@ untouched.
   text line. Deliberately out: model, ownership, session id, confidence,
   workspace path — all real, none of them changes which card you tap.
 - **U8 — relative time is spelled out and scales to years.** `just now`,
-  `2 minutes ago`, `11 days ago`, `1 year ago`, and **`never seen`** when there
-  is no timestamp at all rather than claiming `just now`.
+  `2 minutes ago`, `1 week ago` (for 11 days), `1 year ago`, and **`never seen`**
+  when there is no timestamp at all rather than claiming `just now`.
+  *Corrected 2026-09-27 (qa6 SD-03, owner ruling 16):* this example used to read
+  `11 days ago`, but the scale that shipped (`flock.js` `SCALE`) has **week and
+  month** units between day and year, and the owner kept them: a card is read at
+  a glance, and "1 week ago" / "3 months ago" is the precision that glance needs,
+  where "47 days ago" makes the reader do arithmetic. The units stay; the example
+  was the error.
 - **U9 — the Flock is three panes:** projects → session cards → the session,
   and the session is shaped like the Shepherd conversation. On a phone it is a
   drill-down, one level at a time, with a back chevron.
@@ -114,7 +120,15 @@ untouched.
   through to the default. This decision stands over the prototype's pixels,
   because it is what was asked for in the words that locked the treatment
   (*"legend is like coloured text"*, then *"I like the filled + tet legend,
-  let's lock this"*). `app.css` sets `.legend-key { color: var(--b) }`.
+  let's lock this"*). `app.css` sets `.legend-key { color: var(--b-text) }`, the
+  bucket colour mixed 78% with `--text`, not the raw `var(--b)`.
+  *Corrected 2026-09-27 (qa6 SD-02, owner ruling 15):* this line used to say
+  `var(--b)`. The label is the bucket colour carrying **words**, and the raw
+  palette fails WCAG AA (4.5:1) for small text — `blocked` and `unfinished`
+  against `--ink-850` among others — so the label takes the AA-legible
+  derivation of the same colour. The glyph beside it (`.legend-mark`) keeps the
+  raw `--b`: it is non-text content at the 3:1 threshold and is the undiluted
+  swatch the key names. The owner kept the adjusted tint.
   **The general point: a prototype is evidence of a design, not the design.**
   Where they disagree, say which wins and why, rather than letting whichever was
   read last decide. Chosen on 2026-09-21 by building six treatments
@@ -178,6 +192,26 @@ Nothing is gating the implementation.
 - ~~**U15 — model and engine per spawned session.**~~ **Deferred**, no
   precedence rule adopted. `spawn_session`'s `model` argument is the only lever
   and `engine="claude_code"` stays a literal in `orchestration/spawn.py`.
+
+## U19 — the master chat renders one step per tool (qa6 BC-06, 2026-09-27)
+
+Decided by the owner on 2026-09-27 (rulings 2, 3 and 4 of
+`docs/plans/2026-09-27-qa6-owner-rulings.md`), after qa6 U26 and the live L1 run
+showed one turn rendering as a pile of near-duplicate nodes.
+
+- **A tool call and its result are one expandable step.** The call is the
+  title; the result is inside it. They were two steps, paired only by a
+  `tool_use_id` the reader never sees.
+- **`turn_ended` and non-stopping `rate_limit` are shown in the master chat's
+  status area, on a dedicated event line beside the status slot** (never in the
+  thread, never overwriting the status slot's turn id or approval word). **A
+  rate limit enters the thread only when it stops the turn.** The thread is the
+  conversation; bookkeeping about the turn is status, and a status line that a
+  later event could overwrite would lose the turn id or the approval word a
+  reader is looking at.
+- **The SDK's final `result` text is not rendered when it equals the last
+  assistant text.** It arrived twice — once as the text event and once on
+  `turn_ended` — and a reply shown twice reads as two replies.
 
 ## U17 — the decision card needs a projection that does not exist yet
 

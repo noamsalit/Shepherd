@@ -1,9 +1,10 @@
-"""A fixture, never shipped and never imported: `_terminal` with a read loop.
+"""A fixture, never shipped and never imported: a second socket read loop.
 
-This is `web/server.py` as it would look the day the browser→pane keystroke path
-is built — the thing `test_ws_read_path.py` must go red on. It is written in
-**four different spellings** of the same import, because a rule that sees only
-the spelling its author used is a rule its defeater has never met:
+The browser→pane keystroke path is built (D76), and its one reader is
+`ws.pump_input`. This is a module under `web/` that reads the upgraded socket
+**outside** the pump — the thing `test_ws_read_path.py` must go red on. It is
+written in **four different spellings** of the same import, because a rule that
+sees only the spelling its author used is a rule its defeater has never met:
 
 * `from shepherd.web import ws` … `ws.parse_frame(...)`
 * `from shepherd.web.ws import WebSocketClosed` — a bare name, no dotted chain

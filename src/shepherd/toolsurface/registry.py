@@ -19,7 +19,7 @@ Three properties, each bought by a measured failure:
   validated the payload and the other forwarded one missing a required field
   (spec l.1464-1472), so validation that lives in a binding is validation that
   two bindings disagree about.
-* **The registry is frozen before the server binds** (ADR-7). It is written by
+* **The registry is frozen before the server serves** (ADR-7, D71). It is written by
   exactly one thread at startup and read-only thereafter, which is what makes a
   module-global safe under `ThreadingHTTPServer`.
 
@@ -42,14 +42,16 @@ property of one composition root instead of a property of this function.
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from shepherd.core.clock import utc_now
 
 from shepherd.toolsurface.types import (
+    ActorKind,
     AuditRecord,
     AuditSink,
     Authorizer,
@@ -81,6 +83,14 @@ ALLOW = "allow"
 DENY = "deny"
 DENIED_RESULT = "denied"
 
+#: The tool a failed master turn is recorded under (ADR-QR-3): the turn is what
+#: `master_send` opened, so the record names it and takes its blast class.
+MASTER_TURN_TOOL = "master_send"
+
+#: The master's `actor_id` on that record: the caller id `daemons/plane.py`
+#: binds the master client under (`MASTER_CALLER_ID`), which L4 cannot import.
+MASTER_ACTOR_ID = "master"
+
 #: `Failure` -> the record's `result`. Written out and **total over
 #: `set(Failure) | {None}`**, which `test_the_result_vocabulary_is_total_over_
 #: failure` asserts by enumerating the enum at test time: a fifth `Failure`
@@ -95,23 +105,19 @@ _RESULT_OF: Mapping[Failure | None, str] = {
     Failure.UNAVAILABLE: "unavailable",
 }
 
-#: What the record says about the autonomy level when **this process cannot know
-#: it** (K23, and it is the same shape as `ApprovedBy.CLAIMED_HUMAN`).
+#: What the record says about the autonomy level when **the authorizer did not
+#: report one** (K23, and it is the same shape as `ApprovedBy.CLAIMED_HUMAN`).
 #:
-#: `AuthzOutcome` carries `allowed`, `approved_by`, `approval_id` and `reason`
-#: and **not the level the gate read**; `install_chokepoint(authorizer, sink)` is
-#: pinned at two parameters; and `invoke()` has no other route to a `Store`. So
-#: the level is not available at the one place ADR-M4-1 asks for it. Writing `2`
-#: — the default — would be the overclaim K23 is about, in the artefact the next
-#: incident is reconstructed from: it would say *this ran at level 2* when the
-#: process never asked. `0` is not a member of `AutonomyLevel` ({2, 3}), so a
-#: reader can tell *unreported* from *reported*, and
+#: The level in force arrives on `AuthzOutcome.autonomy_level` — the shipped
+#: authorizer reads `level()` once per call and hands that value on (T6-3,
+#: `docs/plans/m4-blockers/t6.md`, closed by qa6 BC-22). An authorizer that
+#: leaves it `None` gets this value instead. Writing `2` — the default — would
+#: be the overclaim K23 is about, in the artefact the next incident is
+#: reconstructed from: it would say *this ran at level 2* when nothing asked.
+#: `0` is not a member of `AutonomyLevel` ({2, 3}), so a reader can tell
+#: *unreported* from *reported*, and
 #: `test_the_unreported_autonomy_level_is_not_a_real_level` asserts that against
 #: the enum enumerated at test time.
-#:
-#: **The one-line fix is a field on `AuthzOutcome`** (`types.py`, T3's file, not
-#: T6's to change): the authorizer already calls `level()`. Recorded as
-#: `docs/plans/m4-blockers/t6.md` §T6-3, owner: router.
 UNREPORTED_AUTONOMY_LEVEL = 0
 
 SCHEMA_TYPE_KEY = "type"
@@ -204,7 +210,7 @@ def register(tool: ToolDef) -> None:
     with _LOCK:
         if _FROZEN:
             raise RegistryFrozen(
-                f"the registry was frozen before the server bound; {tool.name!r} is too late"
+                f"the registry was frozen before the server served; {tool.name!r} is too late"
             )
         if tool.name in _TOOLS:
             raise RegistryFrozen(f"{tool.name!r} is already registered")
@@ -212,7 +218,7 @@ def register(tool: ToolDef) -> None:
 
 
 def freeze_registry() -> None:
-    """Called by the composition root before it binds anything (ADR-7)."""
+    """Called by the composition root before it serves anything (ADR-7, D71)."""
     global _FROZEN
     with _LOCK:
         _FROZEN = True
@@ -429,7 +435,11 @@ def _audit(
             tool=tool.name,
             blast_class=tool.blast_class,
             args=dict(args),
-            autonomy_level=UNREPORTED_AUTONOMY_LEVEL,
+            autonomy_level=(
+                outcome.autonomy_level
+                if outcome.autonomy_level is not None
+                else UNREPORTED_AUTONOMY_LEVEL
+            ),
             decision=decision,
             approved_by=outcome.approved_by,
             approval_id=outcome.approval_id,
@@ -438,6 +448,73 @@ def _audit(
             duration_ms=max(0, round((time.monotonic() - started) * 1000)),
         )
     )
+
+
+def audit_master_failure(
+    turn_id: str, error_class: str, autonomy_level: int = UNREPORTED_AUTONOMY_LEVEL
+) -> None:
+    """D79 / ADR-QR-3: one record for a master turn that failed, built **here**,
+    beside `_audit`, so the audit log keeps one writer (C-M4-2).
+
+    `error_class` is a class name and never a message — the message can carry
+    prompt text or a credential. A no-op with no chokepoint installed (there is
+    no sink to write to, DP13), and in a process that registered no
+    `master_send`, which has no master turn to fail. `autonomy_level` is the
+    level in force when the turn failed, read by the caller; left out, the record
+    says it was unreported (K23), never a level nobody read.
+    """
+    installed = chokepoint()
+    with _LOCK:
+        tool = _TOOLS.get(MASTER_TURN_TOOL)
+    if installed is None or tool is None:
+        return
+    _, sink = installed
+    sink(
+        AuditRecord(
+            at=utc_now(),
+            correlation_id=turn_id,
+            actor_kind=ActorKind.MASTER,
+            actor_id=MASTER_ACTOR_ID,
+            tool=tool.name,
+            blast_class=tool.blast_class,
+            args={"turn_id": turn_id, "error_class": error_class},
+            autonomy_level=autonomy_level,
+            decision=ALLOW,
+            approved_by=None,
+            approval_id=None,
+            result=_RESULT_OF[Failure.FAILED],
+            failure=Failure.FAILED,
+            duration_ms=0,
+        )
+    )
+
+
+def master_failure_recorder(
+    bump: Callable[[], None], level: Callable[[], int] | None = None
+) -> Callable[[str, str], None]:
+    """`TurnDriver`'s `record_failure` (D79, ADR-QR-3): audit the failed turn,
+    then `bump` its counter — each on its own, so one failing still leaves the
+    other. It never raises: it runs inside the driver's own failure path, and a
+    raise here would replace the error the caller is owed (REM-FIX 1). `level`
+    reads the level in force for the record; a read that fails leaves it
+    unreported (qa6 M16: every row names the level in force).
+    """
+
+    def level_in_force() -> int:
+        if level is None:
+            return UNREPORTED_AUTONOMY_LEVEL
+        try:
+            return level()
+        except Exception:  # noqa: BLE001 - the record still gets written, marked unreported
+            return UNREPORTED_AUTONOMY_LEVEL
+
+    def record_failure(turn_id: str, error_class: str) -> None:
+        with contextlib.suppress(Exception):
+            audit_master_failure(turn_id, error_class, level_in_force())
+        with contextlib.suppress(Exception):
+            bump()
+
+    return record_failure
 
 
 def _run(tool: ToolDef, args: Mapping[str, object], ctx: CallerContext) -> ToolResult:

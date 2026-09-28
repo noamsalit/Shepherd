@@ -56,6 +56,10 @@ OUTCOME_KEY = "outcome"
 #: raised — a turn that ended in a way we do not recognise still ended.
 UNKNOWN_OUTCOME = "unknown"
 
+#: An ending the engine flagged `is_error` whose subtype does not say how it
+#: failed (qa6 BC-07). Ours, like `unknown`: the page needs one word for it.
+ERROR_OUTCOME = "error"
+
 #: The ending this runtime writes itself when the turn was cut short. Not the
 #: engine's word: the engine's own result for an interrupted turn arrives after
 #: we have stopped reading it (P2).
@@ -130,7 +134,7 @@ def _result_text(content: object) -> str | None:
 
 
 def result_ending(
-    subtype: str, terminal_reason: str | None
+    subtype: str, terminal_reason: str | None, is_error: bool = False
 ) -> tuple[MasterEventKind, str, bool]:
     """`(kind, outcome, unmapped)` for one `ResultMessage` (ADR-M4-5, G-M4-5).
 
@@ -138,12 +142,23 @@ def result_ending(
     `outcome="unknown"` and is **counted**. It is deliberately not an exception:
     the turn is over either way, and a runtime that raised here would turn an
     unrecognised ending into a chat page that never sees its turn end.
+
+    **`is_error` makes a known subtype an `error`** (qa6 BC-07): the engine
+    reports an API failure as `subtype="success"`, `terminal_reason="api_error"`,
+    and a page shown `turn_ended` draws that failure as a finished turn. The
+    outcome is `"error"` unless the subtype already names the failure; an
+    unrecognised reason is still counted. An unrecognised *subtype* keeps the
+    `unknown` path, flag or not — G-M4-5's pin.
     """
     if subtype not in RESULT_KINDS:
         return "turn_ended", UNKNOWN_OUTCOME, True
-    if terminal_reason is not None and terminal_reason not in KNOWN_TERMINAL_REASONS:
+    kind = RESULT_KINDS[subtype]
+    unmapped = terminal_reason is not None and terminal_reason not in KNOWN_TERMINAL_REASONS
+    if is_error and (unmapped or kind != "error"):
+        return "error", ERROR_OUTCOME, unmapped
+    if unmapped:
         return "turn_ended", UNKNOWN_OUTCOME, True
-    return RESULT_KINDS[subtype], subtype, False
+    return kind, subtype, False
 
 
 def project_events(
@@ -209,7 +224,7 @@ def project_events(
         return tuple(results)
 
     if isinstance(obj, ResultMessage):
-        kind, outcome, unmapped = result_ending(obj.subtype, obj.terminal_reason)
+        kind, outcome, unmapped = result_ending(obj.subtype, obj.terminal_reason, obj.is_error)
         if unmapped:
             bump(AnomalyKind.MASTER_RESULT_UNMAPPED)
         return (

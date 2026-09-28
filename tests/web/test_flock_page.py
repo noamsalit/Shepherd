@@ -129,7 +129,7 @@ def test_a_session_with_no_timestamp_reads_never_seen() -> None:
 
 
 def test_relative_time_is_spelled_out_and_scales_to_years() -> None:
-    """U8. **Scale half.** `2 minutes ago`, `11 days ago`, `1 year ago`.
+    """U8. **Scale half.** `2 minutes ago`, `1 week ago`, `1 year ago`.
 
     The six units are asserted as a whole rather than sampled: a scale missing
     `week` does not fail on a week-old session, it silently reports `7 days ago`,

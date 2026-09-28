@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "teardown.py",
+ "old": "    for name, action in steps:\n        try:\n            action(report)\n        except Exception as error:  # noqa: BLE001 - recorded as a teardown problem, never swallowed\n            report.problems.append(f\"teardown step {name!r} raised {type(error).__name__}: {error}\")\n    return report\n",
+ "new": "    for name, action in steps:\n        scratch = LeakReport()\n        action(scratch)\n        report.problems.extend(scratch.problems)\n    return report\n",
+ "proof": "test_proof_teardown_keeps_what_it_found",
+ "expect": "proof_teardown.raising_step_keeps_found_problems",
+ "why": "hunter N5: a raising teardown step discards what it found and stops the later steps (pure fake steps; no pid is signalled)"
+}

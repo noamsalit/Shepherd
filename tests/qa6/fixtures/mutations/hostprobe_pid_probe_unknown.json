@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "    if done.returncode == 1 and not done.stdout.strip() and not done.stderr.strip():\n        return None\n    raise ProbeUnknown(f\"{argv!r} exited {done.returncode}: stdout",
+ "new": "    return None\n    raise ProbeUnknown(f\"{argv!r} exited {done.returncode}: stdout",
+ "proof": "test_proof_pid_probes_fail_closed",
+ "expect": "proof_pid_probes.error_is_unknown_not_gone",
+ "why": "hunter N6: a ps/lsof error reads as 'gone' again (the probe runner is replaced; nothing runs)"
+}

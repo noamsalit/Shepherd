@@ -391,9 +391,14 @@ def test_expansion_reads_no_log_and_no_transcript() -> None:
     # no transcript: the route resolves to `get_decision`, which composes a pure
     # parser over one pane observation. The bound is the point, so it moves by
     # somebody editing this number.
-    assert _CODE_ONLY(session_js()).count("fetch(") == 2
+    # **Three since D77** (SD-06, qa6 rulings P11), widened by hand the same
+    # way: the third is the decision card's answer, `POST /api/sessions/{id}/
+    # permission` — a mutation the human clicked, declared in `POST_ROUTES`,
+    # resolving to `answer_permission`. It reads nothing, log or transcript.
+    assert _CODE_ONLY(session_js()).count("fetch(") == 3
     assert "RENAME_PATH" in function_body(session_js(), "commitRename")
     assert "DECISION_PATH" in function_body(session_js(), "renderDecision")
+    assert "PERMISSION_PATH" in function_body(session_js(), "answerChoice")
     # T19: `TERMINAL_WS_PATH` joins the two paths that are deliberately not
     # calls. `routes.py` says it in words — "an upgrade is not a call, exactly
     # as `SSE_PATH` is not one" — and `terminal.js` is the page that opens it.

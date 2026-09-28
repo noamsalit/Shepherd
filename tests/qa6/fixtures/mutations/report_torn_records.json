@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "report.py",
+ "old": "        read = read_objects(path)\n        records.extend(read.rows)\n",
+ "new": "        read = read_objects(path)\n        for line in path.read_text(encoding=\"utf-8\").splitlines():\n            if line.strip():\n                json.loads(line)\n        records.extend(read.rows)\n",
+ "proof": "test_proof_publication_survives_torn_jsonl",
+ "expect": "proof_publication.torn_record_line_is_a_problem",
+ "why": "hunter N1: load_records raises on a torn record line again, so the real _finish publishes nothing (pure: a temp report dir; the host-touching finalizer steps are recorders)"
+}

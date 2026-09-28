@@ -5,6 +5,11 @@ and it imports nothing below L4. The one thing it reads directly is the host
 seam (L2), because `doctor`'s whole job is to report platform facts and a fact
 laundered through a tool would be a fact nobody could check.
 
+A standalone process has an empty registry, so every tool it calls goes to the
+running `controld` first, over the owner-only RPC socket (D68, ADR-QR-1): same
+uid, same trust as the loopback page, and every call there is `HUMAN`. With no
+daemon listening, the call falls back to this process's own `invoke`.
+
 Exit codes are part of the contract — a CLI that always exits 0 cannot be
 scripted:
 
@@ -19,6 +24,7 @@ import sys
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from types import MappingProxyType
 from typing import TextIO
 
@@ -30,9 +36,11 @@ from shepherd.cli.commands import (
     run_uninstall_hooks,
 )
 from shepherd.cli.replay import run_replay
-from shepherd.host.base import HostPlatform
+from shepherd.core.clock import parse_date
+from shepherd.host.base import HostPlatform, SocketPathTooLong
 from shepherd.host.detect import detect_host
 from shepherd.toolsurface.registry import registered_tools
+from shepherd.toolsurface.rpc import RPC_SOCKET_NAME
 from shepherd.toolsurface.tools_engine import register_engine_tools_for
 from shepherd.toolsurface.types import Audience, CallerContext
 
@@ -143,6 +151,36 @@ def parse(argv: Sequence[str]) -> tuple[Options | None, str]:
     )
 
 
+def since_problem(since: str | None) -> str:
+    """The sentence for a `--since` that is not a real `YYYY-MM-DD` date, or `""`.
+
+    Refused here, before any call, by the one date reader (`core.clock`, P22):
+    `2026-13-45` has the shape and no calendar, `２０２６-09-17` is not ASCII."""
+    if since is None or parse_date(since) is not None:
+        return ""
+    return f"{SINCE_FLAG} {since} is an invalid date (expected YYYY-MM-DD)"
+
+
+def absolute_settings(path: str | None) -> tuple[str | None, str]:
+    """`(path, problem)`: `--settings` made absolute once, against this process's
+    cwd and HOME, before any call (qa6 P10 REM-FIX C-1). The tools run in the
+    daemon, whose working directory is not this one."""
+    if path is None:
+        return None, ""
+    try:
+        return str(Path(path).expanduser().absolute()), ""
+    except RuntimeError:  # `~user/…` for a user this host does not have
+        return None, f"{SETTINGS_FLAG} {path} names a home directory this host cannot find"
+
+
+def rpc_socket(host: HostPlatform) -> Path | None:
+    """Where the daemon's RPC socket would be; `None` if the path cannot fit."""
+    try:
+        return host.control_socket(RPC_SOCKET_NAME).path
+    except SocketPathTooLong:
+        return None
+
+
 def main(
     argv: Sequence[str],
     *,
@@ -157,8 +195,16 @@ def main(
         print(f"shepherd: {problem}", file=err)
         print(USAGE, file=err, end="")
         return EXIT_USAGE
+    if problem := since_problem(options.since):  # one sentence, no usage text (C5)
+        err.write(f"shepherd: {problem}\n")
+        return EXIT_USAGE
+    settings_path, problem = absolute_settings(options.settings_path)
+    if problem:
+        err.write(f"shepherd: {problem}\n")
+        return EXIT_USAGE
+    platform = detect_host() if host is None else host
     cli = Cli(
-        host=detect_host() if host is None else host,
+        host=platform,
         out=out,
         err=err,
         ctx=CallerContext(
@@ -167,21 +213,22 @@ def main(
             correlation_id=uuid.uuid4().hex if correlation_id is None else correlation_id,
         ),
         socket_name=SOCKET_NAME,
+        remote=rpc_socket(platform),
     )
     register_local_reads(cli.host)
     if options.command == "status":
         return run_status(cli)
     if options.command == "doctor":
-        return run_doctor(cli, options.settings_path)
+        return run_doctor(cli, settings_path)
     if options.command == "install-hooks":
         return run_install_hooks(
             cli,
-            options.settings_path,
+            settings_path,
             dry_run=options.dry_run,
             assume_yes=options.assume_yes,
         )
     if options.command == "uninstall-hooks":
-        return run_uninstall_hooks(cli, options.settings_path, assume_yes=options.assume_yes)
+        return run_uninstall_hooks(cli, settings_path, assume_yes=options.assume_yes)
     return run_replay(cli, options.since, options.apply)
 
 

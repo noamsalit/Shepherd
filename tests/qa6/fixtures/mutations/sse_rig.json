@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sse_rig.py",
+ "old": "            if line.startswith(\":\"):\n                with self._lock:\n                    self.comments.append(Comment(line, time.monotonic()))",
+ "new": "            if line.startswith(\"::\"):\n                with self._lock:\n                    self.comments.append(Comment(line, time.monotonic()))",
+ "proof": "test_proof_sse_rig",
+ "expect": "proof_sse_rig.comments_recorded",
+ "why": "comment lines stop being recognised: ': keep-alive' is parsed as a field and never recorded (qa5 rig's comment/frame separation)"
+}

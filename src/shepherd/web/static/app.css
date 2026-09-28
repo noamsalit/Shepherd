@@ -1538,8 +1538,8 @@ button, input, textarea { font: inherit; color: inherit; }
   overflow-wrap: anywhere;
 }
 
-/* §9's banner and T19-c's note: both are refusals in words, and both are the
-   only thing standing between a human and a control that would do nothing. */
+/* §9's banner and the terminal's note (D6's fit limitation): both say in words
+   what the terminal cannot do, rather than leaving a human to find out. */
 .session-banner,
 .session-input-note {
   flex: none;
@@ -1575,11 +1575,22 @@ button, input, textarea { font: inherit; color: inherit; }
    opened, which `[hidden]`'s reset (U18) enforces over any display here. */
 .session-decision { flex: none; }
 
-/* The choices are **inert in this build**: nothing on any page posts to
-   `/api/sessions/{id}/permission`, so the pointer cursor `.choice` carries for
-   the answerable case would be a promise this build does not keep. */
+/* An inert choice — every trust-dialog row, and a permission choice with no
+   answer word (D77) — is a `div`, not a button: nothing posts from it, so the
+   pointer cursor `.choice` carries for the answerable case would be a promise
+   the row does not keep. */
 .choice-inert { cursor: default; }
 .choice-inert:hover { border-color: var(--line); background: var(--ink-800); color: var(--text-soft); }
+
+/* An answerable choice while its answer is out, or once the dialog it answered
+   is gone: shown and greyed (the `.dlg-choice[disabled]` rule), with a hover
+   that offers nothing. */
+.choice[disabled] { opacity: 0.55; cursor: not-allowed; }
+.choice[disabled]:hover { border-color: var(--line); background: var(--ink-800); color: var(--text-soft); }
+
+/* The answer's outcome note, in the tree from the card's first paint so a
+   screen reader hears it fill. Empty, it draws nothing of its own. */
+.decision-status { margin: 0; }
 
 
 
@@ -2056,11 +2067,20 @@ dialog::backdrop { background: rgba(4, 5, 8, 0.66); }
     width: var(--rail-w);
     z-index: 10;
     translate: -100% 0;
-    transition: translate 200ms ease;
+    /* BC-19: the closed drawer leaves the Tab order. `translate` only moved it
+       off-screen, and every nav item in it stayed a tab stop. `visibility`
+       flips after the 200ms slide-out, so closing still animates; opening
+       flips it at once, so the slide-in is seen. */
+    visibility: hidden;
+    transition: translate 200ms ease, visibility 0s linear 200ms;
     border-right: 1px solid var(--line);
   }
 
-  .shell[data-drawer="open"] .pane { translate: 0 0; }
+  .shell[data-drawer="open"] .pane {
+    translate: 0 0;
+    visibility: visible;
+    transition: translate 200ms ease, visibility 0s;
+  }
 
   .shell[data-rail="collapsed"] .wordmark,
   .shell[data-rail="collapsed"] .nav-text,

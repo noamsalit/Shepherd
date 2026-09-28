@@ -18,6 +18,8 @@ interpreted — a blind Enter there answers *"No, exit"*).
 
 from __future__ import annotations
 
+import dataclasses
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -83,10 +85,15 @@ def pane(request: pytest.FixtureRequest) -> PaneState:
 
 
 @pytest.fixture()
-def scripted_runner(pane: PaneState) -> ScriptedRunner:
-    """`tests/web/conftest.py`'s runner, with this module's pane in it."""
+def scripted_runner(request: pytest.FixtureRequest, pane: PaneState) -> ScriptedRunner:
+    """`tests/web/conftest.py`'s runner, with this module's pane in it.
+
+    `request.param`, when a test gives one (`indirect=True`), is the panes for the
+    reads after the first — "the card read this, the answer read that".
+    """
+    after: tuple[PaneState, ...] = getattr(request, "param", ())
     return ScriptedRunner(
-        panes=(pane,),
+        panes=(pane, *after),
         proc=ProcState(
             alive=True, pid=4041880, exit_code=None, exit_signal=None, observed_at=NOW
         ),
@@ -284,4 +291,98 @@ def test_the_route_is_a_read_and_writes_no_key(
     """
     session = owned(store, scripted_runner)
     decision(client, session.id)
+    assert scripted_runner.writes == []
+
+
+# ----- P11 REM-FIX 1: the answer is bound to the dialog the card was built from
+
+
+def _other_command() -> PaneState:
+    """The same captured dialog asking about a different command.
+
+    Same kind, same option set, so every pre-fix gate passes it: the one thing
+    that differs is what the human would be approving.
+    """
+    shown = pane_of("06-permission-dialog.ansi")
+    assert shown.dialog_text is not None and "touch perm-probe.txt" in shown.dialog_text
+    return dataclasses.replace(
+        shown, dialog_text=shown.dialog_text.replace("touch perm-probe.txt", "rm -rf ~/precious")
+    )
+
+
+def test_the_decision_carries_the_digest_of_the_dialog_it_read(
+    client: Client, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """sha256 hex over the exact dialog text the card is built from (UTF-8)."""
+    shown = pane_of("06-permission-dialog.ansi")
+    assert shown.dialog_text is not None
+    session = owned(store, scripted_runner)
+    data = decision(client, session.id)
+    assert data["dialog_sha256"] == hashlib.sha256(shown.dialog_text.encode("utf-8")).hexdigest()
+
+
+@pytest.mark.parametrize("pane", ["03-after-stop.ansi"], indirect=True)
+def test_a_pane_asking_nothing_carries_no_digest(
+    client: Client, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    session = owned(store, scripted_runner)
+    assert decision(client, session.id)["dialog_sha256"] is None
+
+
+@pytest.mark.parametrize("scripted_runner", [(_other_command(),)], indirect=True)
+def test_an_answer_bound_to_a_dialog_no_longer_on_the_pane_is_refused(
+    client: Client, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """The stale card: read A, the pane now asks B, the click was meant for A."""
+    session = owned(store, scripted_runner)
+    digest = decision(client, session.id)["dialog_sha256"]
+    answer = client.post(
+        f"/api/sessions/{session.id}/permission",
+        {"choice": "approve", "dialog_sha256": digest},
+    )
+    assert answer.status == 200, answer.body
+    data = answer.json()["data"]
+    assert data["answered"] is False, data
+    assert data["reason"] == (
+        f"{session.id}: the dialog changed since it was shown — nothing was sent;"
+        " read it again before answering"
+    )
+    assert data["keys_sent"] == 0
+    assert scripted_runner.writes == []
+
+
+def test_an_answer_bound_to_the_dialog_on_the_pane_is_sent(
+    client: Client, store: Store, scripted_runner: ScriptedRunner
+) -> None:
+    """Arrival: the same POST against the dialog it was read from sends its key."""
+    session = owned(store, scripted_runner)
+    digest = decision(client, session.id)["dialog_sha256"]
+    answer = client.post(
+        f"/api/sessions/{session.id}/permission",
+        {"choice": "approve_always", "dialog_sha256": digest},
+    )
+    data = answer.json()["data"]
+    assert data["answered"] is True, data
+    assert scripted_runner.writes == [b"2"]
+
+
+# ----- P13b (P11 follow-up): the web route requires the digest ------------------
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"choice": "approve"}, {"choice": "approve", "dialog_sha256": None}],
+    ids=["omitted", "null"],
+)
+def test_a_web_answer_without_the_dialog_digest_is_a_400_and_sends_nothing(
+    client: Client, store: Store, scripted_runner: ScriptedRunner, body: dict[str, object]
+) -> None:
+    """The page always sends the digest of the card it drew, so a web answer with
+    none is not the page's: it is refused before `invoke()`, and no key is sent.
+    The tool keeps the digest optional for its one other caller, the owner-only
+    RPC socket (D68)."""
+    session = owned(store, scripted_runner)
+    answer = client.post(f"/api/sessions/{session.id}/permission", body)
+    assert answer.status == 400, answer.body
+    assert answer.json()["ok"] is False
     assert scripted_runner.writes == []

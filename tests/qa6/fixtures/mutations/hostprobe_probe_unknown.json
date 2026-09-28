@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "hostprobe.py",
+ "old": "        return \"\"\n    raise ProbeUnknown(f\"{argv!r} exited {done.returncode}",
+ "new": "        return \"\"\n    return \"\"\n    raise ProbeUnknown(f\"{argv!r} exited {done.returncode}",
+ "proof": "test_proof_probes_fail_closed",
+ "expect": "proof_probes.error_is_unknown_not_clean",
+ "why": "hunter M3: a pgrep/lsof error reads as 'nothing found', i.e. clean"
+}

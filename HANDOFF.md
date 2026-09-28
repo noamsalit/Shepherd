@@ -14,7 +14,7 @@ is **still open**.
 | boundary rules | **105 passed** |
 | `mypy --strict src` | clean over **131** files, `disallow_any_explicit` on |
 | composition root | `daemons/controld.py` still **140** lines, guard constants unedited |
-| decisions | **68** (D1–D67, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
+| decisions | **80** (D1–D79, plus D38.1) in `docs/specs/orchestrator-platform.md` §3 |
 | your settings file | `~/.claude/settings.json` sha256 `375e5322…d6ac` — **never written, checked on both sides of every live test**. Shepherd's hooks are **not installed**. |
 | your tmux | socket `shepherd` never named in a write. The **socket** is the invariant; session *names* are not, and any check written against them goes red the next time you open a terminal. |
 
@@ -174,8 +174,8 @@ render* is proved, and so is a good deal of their behaviour. What no automated r
 whether the result is **usable**, and that is what this list is for. On the Mac:
 
 1. the conversation streams line by line when you send the master a message;
-2. an approval card appears **and both buttons resolve it** — and it leaves both the sidebar and its
-   inline position;
+2. an approval card appears **and both buttons resolve it** — and, once decided, it leaves the
+   sidebar and **stays inline with its outcome label** (qa6 SD-04, owner ruling 17, 2026-09-27);
 3. **Settings** shows the current autonomy level and changes it. It lives there and nowhere else now
    (**D65**); if you find that control on any other page, that is a defect;
 4. the wake summary opens a turn after a session stopped while you were away;

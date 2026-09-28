@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "sandbox.py",
+ "old": "        if xdg:\n            problems.append(f\"the env carries the real HOME and {xdg}\")",
+ "new": "        if xdg:\n            pass",
+ "proof": "test_proof_host_safe_envs",
+ "expect": "proof_host_safe_envs.checker_flags_planted_xdg",
+ "why": "the checker stops flagging XDG_* in a real-HOME env; the builders stay correct, so only the planted-input check can see it"
+}

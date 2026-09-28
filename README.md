@@ -49,7 +49,8 @@ seven-item manual checklist that does.
 2. **Signals** — when a session stopped, *why* it stopped, and what to do about
    it. Mechanical stop reasons at confidence 1.0; heuristics above that;
    `unknown` is counted and displayed rather than hidden.
-3. **Coordination** — sessions message and spawn each other through one mailbox.
+3. **Coordination** — sessions message and spawn each other through one mailbox
+   *(not yet — sessions have no channel to Shepherd's tool surface in this build; see [the backlog note](docs/backlog/2026-09-27-sd09-session-tool-channel.md))*.
 4. **Queues** — prioritized work from Jira and Notion, drained by workers *(M5)*.
 5. **Control** — a chat-first orchestrator that sees and drives all of it,
    reaching the system only through the tool surface every other caller uses.
@@ -115,7 +116,7 @@ conversation that produced it.
 
 | File | What it is |
 |---|---|
-| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 68 decisions (D1–D67 plus D38.1) **with their reasoning** — the most important section |
+| [`docs/specs/orchestrator-platform.md`](docs/specs/orchestrator-platform.md) | the spec. §3 is 80 decisions (D1–D79 plus D38.1) **with their reasoning** — the most important section |
 | [`docs/specs/logical-architecture.md`](docs/specs/logical-architecture.md) | what may import what. Enforced as AST properties, not spellings |
 | [`docs/specs/data-schemas.md`](docs/specs/data-schemas.md) | every external shape, with a **real captured example**. Check one here before building on it |
 | [`docs/specs/implementation-constraints.md`](docs/specs/implementation-constraints.md) | 24 facts that change *how* a thing is built |

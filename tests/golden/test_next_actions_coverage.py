@@ -2,7 +2,7 @@
 
 **This table is the deliverable.** A lane that reports "174 fixtures pass"
 while five reasons have no fixture at all is a lane that lies, so every one of
-the twenty `StopReason` values is either produced by a fixture built from real
+the `StopReason` values is either produced by a fixture built from real
 captures, or excused by a **named** evidence gap — and a gap id nobody wrote
 down in the plan is not an excuse.
 
@@ -43,6 +43,8 @@ ACCEPTED_GAPS: Mapping[str, str] = {
     "G-M2-5": "five `StopFailure.error` values were never observed",
     "G-M2-6": "`derailed` has no mechanical detector",
     "G-M2-7": "`blocked_external`'s two buildable sources are M4's and M5's",
+    #: Named in the qa6 rulings plan (`docs/plans/2026-09-27-qa6-rulings-plan.md`, P4).
+    "G-QR-1": "a spawn-side verdict; no stop capture can produce it (§3 D73)",
 }
 
 REAL = "real"
@@ -79,6 +81,9 @@ COVERAGE: Mapping[StopReason, tuple[str, str]] = {
     #: Recorded as the gap the plan already names for this reason, and written
     #: up in `docs/plans/2026-09-17-m2-BLOCKERS.md` (T17-2).
     StopReason.BLOCKED_EXTERNAL: (GAP, "G-M2-7"),
+    #: `refused` is declared by the spawn when the runner refuses a start, so
+    #: the classifier never sees it: `test_spawn_refused_row.py` proves it.
+    StopReason.REFUSED: (GAP, "G-QR-1"),
 }
 
 
@@ -88,7 +93,7 @@ def fixtures() -> list[StopFixture]:
 
 
 def test_the_coverage_table_is_total_over_the_vocabulary() -> None:
-    """Twenty reasons, twenty rows. Totality by iteration, never by `else`."""
+    """Every reason, one row each. Totality by iteration, never by `else`."""
     assert sorted(COVERAGE, key=str) == sorted(StopReason, key=str)
     assert len(COVERAGE) == len(StopReason)
 
@@ -144,7 +149,7 @@ def test_a_real_row_is_backed_by_an_uncomposed_fixture(fixtures: list[StopFixtur
 def test_every_stop_reason_in_the_table_has_a_non_empty_action_list_unless_completed(
     fixtures: list[StopFixture],
 ) -> None:
-    """§14's literal sentence, over the checked-in table **and** over all twenty.
+    """§14's literal sentence, over the checked-in table **and** over every reason.
 
     The table alone would leave the four gap reasons untested, and D21's whole
     argument is that a stop nobody can act on is not a product — so the default

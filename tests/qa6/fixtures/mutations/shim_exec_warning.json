@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "shims/tmux.sh.in",
+ "old": "exec { $REAL } $REAL, @ARGV or do {\n    print STDERR \"qa6 tmux shim: exec $REAL failed: $!\\n\";\n    exit 99;\n};",
+ "new": "exec { $REAL } $REAL, @ARGV;\nprint STDERR \"qa6 tmux shim: exec $REAL failed: $!\\n\";\nexit 99;",
+ "proof": "test_proof_tmux_shim_refuses",
+ "expect": "proof_tmux_shim.allowed_calls_add_no_stderr",
+ "why": "review N1: the ed4312c shape - perl warns 'Statement unlikely to be reached' on stderr of EVERY call (proved against a FAKE tmux binary only)"
+}

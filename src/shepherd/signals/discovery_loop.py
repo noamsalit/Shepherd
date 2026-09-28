@@ -88,6 +88,10 @@ HOOKS_ABSENT = "absent"
 STATE_EVENT_KIND = "session.state"
 REGISTRY_SOURCE = "registry"
 
+#: §12's envelope key. `web/sse.envelope` promotes it out of the payload; this
+#: lane cannot import `web/`, so the spelling is restated rather than shared.
+PROJECT_ID_KEY = "project_id"
+
 #: D29's ratchet: a user-chosen name outranks an engine-derived one, and an
 #: engine-derived one never overwrites it. The rank itself is `core/`'s
 #: (`TITLE_SOURCE_RANK`); this map is the engine's spelling of it.
@@ -220,11 +224,13 @@ def registry_delta(
     observed_at = iso_from_epoch_ms(entry.status_updated_at_ms)
     session_id = prior.session_id if prior is not None else None
 
-    # RD8: recency decides. An equal stamp ties to the hook path, which is precise.
+    # RD8: recency decides. An equal stamp ties to the hook path, which is precise,
+    # except for the one write it cannot make: an unchanged stamp still ages (BC-04).
     if (
         prior is not None
         and prior.observed_at is not None
         and _seconds(prior.observed_at) >= _seconds(observed_at)
+        and not _idle_crossed(entry, liveness, prior, observed_at, now)
     ):
         return FoldResult(delta=FoldDelta(), events=(), anomalies=())
 
@@ -283,6 +289,30 @@ def registry_delta(
         delta=delta,
         events=(_state_event(state, session_id, observed_at),),
         anomalies=anomalies,
+    )
+
+
+def _idle_crossed(
+    entry: RegistryEntry,
+    liveness: Liveness,
+    prior: SessionSnapshot,
+    observed_at: str,
+    now: str,
+) -> bool:
+    """Did an idle session this lane last saw `running` cross §8's 60 s line?
+
+    The idle split depends on `now`, not on the stamp, so a session first read
+    younger than the threshold would never cross it while the engine left the
+    stamp alone — RD8's tie returned before the age was looked at (qa6 BC-04).
+    Only the **equal** stamp is re-evaluated: a strictly newer prior still wins.
+    """
+    return (
+        prior.observed_at is not None
+        and _seconds(prior.observed_at) == _seconds(observed_at)
+        and entry.status == IDLE_STATUS
+        and liveness_verdict(entry, liveness)
+        and prior.state is SessionState.RUNNING
+        and _seconds(now) - _seconds(observed_at) >= IDLE_TO_NEEDS_YOU_S
     )
 
 
@@ -382,16 +412,25 @@ def discovery_pass(
     on_result: Callable[[FoldResult], None],
     now: str,
     engine_config_dir: Path | None = None,
+    *,
+    consult_agents_fallback: bool = True,
+    reported_problems: set[str] | None = None,
 ) -> DiscoveryStatus:
     """One scan: register what is new, apply what changed, count what is unknown.
 
     `engine_config_dir` defaults to the **engine's** config dir — never
     `host.dirs().config_dir`, which is Shepherd's own (ADR-2). It is a parameter
     so a test can point the scan at a throwaway directory instead of the user's.
+
+    `consult_agents_fallback` and `reported_problems` are the loop's memory across
+    passes (qa6 BC-17, BC-27): one pass cannot know it is not the first, or that a
+    bad file was already counted. Their defaults are a lone pass's answer.
     """
     config_dir = engine_config_dir if engine_config_dir is not None else claude_config_dir()
-    entries, anomalies = scan_registry(config_dir)
-    for anomaly in anomalies:
+    entries, anomalies = scan_registry(
+        config_dir, consult_agents_fallback=consult_agents_fallback
+    )
+    for anomaly in _unreported(anomalies, reported_problems):
         store.bump_anomaly(anomaly.kind.value)
 
     registry_sessions = 0
@@ -438,7 +477,12 @@ def discovery_pass(
             replace(
                 result,
                 events=tuple(
-                    replace(event, session_id=session.id) for event in result.events
+                    replace(
+                        event,
+                        session_id=session.id,
+                        payload={**event.payload, PROJECT_ID_KEY: session.workspace_id},
+                    )
+                    for event in result.events
                 ),
             )
         )
@@ -477,10 +521,24 @@ def run_discovery_loop(
     and `sessions_with_pending()` is one indexed query, so an empty mailbox costs
     nothing. `None` means a composition that wired no mailbox — an answer, not an
     absence: `daemons/` may not decide it, so it arrives as a value.
+
+    It also owns what one pass cannot know: whether it is the first (the agents
+    fallback forks once per lifetime, BC-17) and which problems were counted (BC-27).
     """
+    reported_problems: set[str] = set()
+    first_pass = True
     while not shutdown.is_set():
         now = _now()
-        discovery_pass(store, host, on_result, now, engine_config_dir)
+        discovery_pass(
+            store,
+            host,
+            on_result,
+            now,
+            engine_config_dir,
+            consult_agents_fallback=first_pass,
+            reported_problems=reported_problems,
+        )
+        first_pass = False
         for result in liveness_sweep(store, host, now):
             on_result(result)
         if sweep is not None:
@@ -491,6 +549,23 @@ def run_discovery_loop(
 
 def _now() -> str:
     return utc_now()
+
+
+def _unreported(
+    anomalies: tuple[Anomaly, ...], reported: set[str] | None
+) -> tuple[Anomaly, ...]:
+    """The scan problems not already counted on the previous pass (BC-27).
+
+    A steady state stops counting, as `reconcile_sdk_cli` does. The set is
+    **replaced** by this pass's details, not grown, so a file healed and broken
+    again is counted again (E9). `None` is a lone pass: every problem counts.
+    """
+    if reported is None:
+        return anomalies
+    fresh = tuple(anomaly for anomaly in anomalies if anomaly.detail not in reported)
+    reported.clear()
+    reported.update(anomaly.detail for anomaly in anomalies)
+    return fresh
 
 
 def _writes_anything(delta: FoldDelta) -> bool:

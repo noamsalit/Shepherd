@@ -59,6 +59,7 @@ def create_project(
     overwrote the first's path. Identity is `workspace.id` and a name is a
     label (D57).
     """
+    _refuse_blank(name)
     workspace_id = new_ulid()
     connection.execute(
         "INSERT INTO workspace (id, name, description, created_at) VALUES (?, ?, ?, ?)",
@@ -68,6 +69,13 @@ def create_project(
         "SELECT * FROM workspace WHERE id = ?", (workspace_id,)
     ).fetchone()
     return workspace(fresh)
+
+
+def _refuse_blank(name: str) -> None:
+    """A label a person cannot see is not a label (qa6 BC-31). Refused, never
+    stripped: normalising a stored name is a different decision."""
+    if not name.strip():
+        raise StoreError("a project name cannot be blank")
 
 
 def _refuse_reserved(workspace_id: str, verb: str) -> None:
@@ -90,6 +98,7 @@ def rename_project(
     a caller that deleting the row first would have worked.
     """
     _refuse_reserved(workspace_id, "renamed")
+    _refuse_blank(name)
     changed = connection.execute(
         "UPDATE workspace SET name = ? WHERE id = ?", (name, workspace_id)
     ).rowcount

@@ -565,6 +565,7 @@ def test_the_next_turn_opens_with_the_wake_summary(
         publish=lambda event: 0,
         withdraw_turn_approvals=lambda turn_id: 0,
         now=lambda: LATER,
+        record_failure=lambda _turn_id, _error_class: None,
     )
     started = driver.send_turn("what happened?")
     assert isinstance(started, TurnStarted), started

@@ -452,6 +452,10 @@ def fleet(connection: sqlite3.Connection) -> list[FleetRow]:
 #: SQL so the clause and the enum can be compared by a test.
 WAKE_OUTCOMES = (Bucket.UNFINISHED.value, Bucket.ERROR.value)
 
+#: §3 D73: a `refused` start is an ended `error` row and still wakes nothing —
+#: the master that asked for it already holds the refusal as its tool result.
+WAKE_EXCLUDED_REASONS = (StopReason.REFUSED.value,)
+
 #: The origin the master spawns under. `needs_you` is excluded by the outcome
 #: clause above and not by a second rule — that is the human's rail (D31), and
 #: it is asserted with a row rather than left to the enum.
@@ -461,6 +465,8 @@ _WAKE_SQL = (
     f"SELECT {SESSION_COLUMNS} FROM session"
     " WHERE origin = ? AND ended_at IS NOT NULL"
     f" AND outcome IN ({', '.join('?' for _ in WAKE_OUTCOMES)})"
+    " AND (stop_reason IS NULL OR stop_reason NOT IN"
+    f" ({', '.join('?' for _ in WAKE_EXCLUDED_REASONS)}))"
 )
 
 
@@ -468,7 +474,7 @@ def wake_candidates(
     connection: sqlite3.Connection, since: str | None
 ) -> tuple[Session, ...]:
     """D31's wake set: the master-owned sessions that stopped `unfinished` or
-    `error` since the master last looked.
+    `error` since the master last looked, less D73's `refused` rows.
 
     `since` is the master's own last turn, so a row it has already drained
     stays drained; `None` asks for the lineage-wide set, which is what a first
@@ -481,7 +487,7 @@ def wake_candidates(
     and a test that asserted this ordering would be asserting the `ORDER BY`
     against itself.
     """
-    parameters: list[object] = [WAKE_ORIGIN, *WAKE_OUTCOMES]
+    parameters: list[object] = [WAKE_ORIGIN, *WAKE_OUTCOMES, *WAKE_EXCLUDED_REASONS]
     clause = ""
     if since is not None:
         clause = " AND ended_at > ?"
@@ -514,6 +520,20 @@ def retry_chain_depth(connection: sqlite3.Connection, session_id: str) -> int:
         seen.add(current)
         current = None if rows[0]["retry_of"] is None else str(rows[0]["retry_of"])
     return len(seen)
+
+
+def retried_by(connection: sqlite3.Connection, session_id: str) -> str | None:
+    """The session that declared itself a retry of this one, or `None` (RD-2).
+
+    The downward read `retry_chain_depth` cannot make: two retries both "of X"
+    each walk up to the same depth, so D31 alone never refuses the sibling.
+    """
+    rows = _rows(
+        connection,
+        "SELECT id FROM session WHERE retry_of = ? ORDER BY started_at, id LIMIT 1",
+        (session_id,),
+    )
+    return str(rows[0]["id"]) if rows else None
 
 
 # ----- the stop group (M2, T2) ----------------------------------------------

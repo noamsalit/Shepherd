@@ -1,0 +1,370 @@
+{
+ "name": "qa6-live-harness",
+ "workdir": ".",
+ "_note": "Built from templates/live-harness.template.json. `observations` is the additive per-scenario key; tools/live_harness_runner.py carries it but does not evaluate it — every observation is asserted inside the pytest scenario the command runs.",
+ "required_env": [],
+ "environment": {
+  "PYTHONUNBUFFERED": "1",
+  "LANG": "en_US.UTF-8",
+  "LC_ALL": "en_US.UTF-8"
+ },
+ "setup": [
+  {
+   "name": "Preflight T1 -> T4 (no service booted)",
+   "command": ".venv/bin/python tests/qa6/run.py --preflight-only",
+   "expected": "exit 0: every check green",
+   "timeout_seconds": 600
+  }
+ ],
+ "reset": [
+  {
+   "name": "Sweep dead qa6 runs (only roots/sockets whose owning pid is dead)",
+   "command": ".venv/bin/python -c \"import sys; sys.path.insert(0, 'tests'); from qa6 import teardown; r = teardown.sweep_dead_runs(); sys.stdout.write(str(r) + chr(10)); sys.exit(1 if r.live_owners else 0)\"",
+   "expected": "exit 0; a live owner is BLOCKED, never touched"
+  }
+ ],
+ "seed": [
+  {
+   "name": "Seeds are minted per run by the runner (bootstrap.mint: shims, git fixtures) and per instance (seed_db)",
+   "command": "true",
+   "expected": "no global seed exists: ephemeral everything (env-plan §5)"
+  }
+ ],
+ "healthcheck": {
+  "name": "Harness guards (env-plan §4 step 1a)",
+  "command": ".venv/bin/pytest -q -p no:randomly -p no:cacheprovider -m qa6 tests/qa6/test_harness_guards.py",
+  "expected": "exit 0: wait helpers, publish gate, catalog, hygiene, and the five qa5-copy mutation proofs"
+ },
+ "scenarios": [
+  {
+   "name": "wave 1: S0, W1, W2, W3, W4, W5 (6 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 1's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 1",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "S0",
+    "W1",
+    "W2",
+    "W3",
+    "W4",
+    "W5"
+   ],
+   "observations": [
+    "W1 stdout start line while Popen alive; socket 0600/0700 under TMPDIR; /api/fleet ok; app_state.discovery_status.last_scan_at advances >=2.0s; runner_socket; schema 4; SSE ': open'",
+    "W2 ps eww env under run root, no TMUX/CLAUDE*; lsof open files never under real ~/.claude or real Shepherd data; real dirs == baseline",
+    "W3 one root visible; #stream-status 'live' (FAIL(bound) only with /api/events 200); 0 console errors; one EventSource",
+    "W4 'controld stopped: 4 threads exited · store closed'; exit 0; socket gone; PRAGMA integrity_check ok",
+    "W5 product read_pane: shim PROMPT_READY, bare cat UNREADABLE, dialog mode recorded",
+    "S0 LIVE_AUTH_MODE bound by the 3x3 table; real settings sha unchanged after every sub-probe"
+   ]
+  },
+  {
+   "name": "wave 2: C1, C2, C3, C5, C7, C8, C9, C10 … (27 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 2's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 2",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "C1",
+    "C2",
+    "C3",
+    "C5",
+    "C7",
+    "C8",
+    "C9",
+    "C10",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ],
+   "observations": [
+    "H1-H5 sandbox settings bytes/JSON, backups, InstallResult; real sha unchanged",
+    "C1-C3/C5 CLI rc/stdout/stderr (C-1 predicted FAILs)",
+    "C7-C10 refusal exit 2 + line; DB absent/sha unchanged; socket inode",
+    "A1-A8 envelope keys, GENERIC_ERROR, audit JSONL rows by correlation_id, no frames/rows from 403s (SSE control), lsof LISTEN",
+    "E1-E6 SSE framing/keys, keep-alive bracket, two-client order, Last-Event-ID replay, ring gap, restart FAIL(bound), project_id on frames"
+   ]
+  },
+  {
+   "name": "wave 3: C4, C6, H6, D1, D2, D3, D4, D5 … (23 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 3's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 3",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "C4",
+    "C6",
+    "H6",
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8",
+    "D9",
+    "D10",
+    "D11",
+    "D12",
+    "D13",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P9"
+   ],
+   "observations": [
+    "D1-D11/D13 session rows (state, reason, pid, proc_start, ephemeral, workspace_id), fleet counts/discovery/anomalies, session.state frames",
+    "D12 per-case stop_reason/bucket/confidence/decided_by via API and DB, stop-log JSONL per session, SD-D12 delivered-1 == 19",
+    "P1-P6/P9 200 + negative records, audit result ok per call, project.* frames only for changes, DB rows",
+    "H6/C6/C4 dispatch rc/elapsed/SIGALRM, sessiond stop lines (delivered - probe), target last_event_at, CLI replay/uninstall"
+   ]
+  },
+  {
+   "name": "wave 4: T1, T2, T3, T4, O1, O2, O3, O4 … (18 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 4's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 4",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "O1",
+    "O2",
+    "O3",
+    "O4",
+    "O5",
+    "O6",
+    "O7",
+    "O8",
+    "O9",
+    "O10",
+    "O11",
+    "O12",
+    "P7",
+    "P8"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for T1, T2, T3, T4, O1, O2, O3, O4, O5, O6, O7, O8, O9, O10, O11, O12, P7, P8; asserted in tests/qa6/<lane>/test_wave4_*.py"
+   ]
+  },
+  {
+   "name": "wave 5: M1, M2, M3, M4, M5, M6, M7, M8 … (20 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 5's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 5",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 3600,
+   "scenario_ids": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9",
+    "M10",
+    "M11",
+    "M12",
+    "M13",
+    "M14",
+    "M15",
+    "M16",
+    "M17",
+    "M18",
+    "M19",
+    "P10"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18, M19, P10; asserted in tests/qa6/<lane>/test_wave5_*.py"
+   ]
+  },
+  {
+   "name": "wave 6: U1, U2, U3, U4, U5, U6, U7, U8 … (34 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 6's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 6",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "U1",
+    "U2",
+    "U3",
+    "U4",
+    "U5",
+    "U6",
+    "U7",
+    "U8",
+    "U9",
+    "U10",
+    "U11",
+    "U12",
+    "U13",
+    "U14",
+    "U15",
+    "U16",
+    "U17",
+    "U18",
+    "U19",
+    "U20",
+    "U21",
+    "U22",
+    "U23",
+    "U24",
+    "U33",
+    "U34",
+    "U35",
+    "U36",
+    "U37",
+    "U41",
+    "U42",
+    "U43",
+    "U44",
+    "U45"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, U17, U18, U19, U20, U21, U22, U23, U24, U33, U34, U35, U36, U37, U41, U42, U43, U44, U45; asserted in tests/qa6/<lane>/test_wave6_*.py"
+   ]
+  },
+  {
+   "name": "wave 7: U25, U26, U27, U28, U29, U30, U31, U32 … (19 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 7's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 7",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "U25",
+    "U26",
+    "U27",
+    "U28",
+    "U29",
+    "U30",
+    "U31",
+    "U32",
+    "U38",
+    "U39",
+    "U40",
+    "U46",
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for U25, U26, U27, U28, U29, U30, U31, U32, U38, U39, U40, U46, R1, R2, R3, R4, R5, R6, R7; asserted in tests/qa6/<lane>/test_wave7_*.py"
+   ]
+  },
+  {
+   "name": "wave 8: L1, L2, L3, L4, L5, L6, L7, L8 … (11 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 8's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 8",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 3600,
+   "scenario_ids": [
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5",
+    "L6",
+    "L7",
+    "L8",
+    "L9",
+    "L10",
+    "L11"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11; asserted in tests/qa6/<lane>/test_wave8_*.py"
+   ]
+  },
+  {
+   "name": "wave 9: Z1, Z2, Z3 (3 scenarios)",
+   "mode": "proof",
+   "given": "preflight T1-T4 green, harness guards green, a fresh pid-scoped run root",
+   "when": "the runner runs wave 9's lanes in stopifs.WAVE_LANES order (one pytest process per lane, -p no:randomly)",
+   "then": "one record per scenario (PASS/FAIL/BLOCKED) with clauses and evidence; the report gate publishes GREEN only on 161 PASS",
+   "command": ".venv/bin/python tests/qa6/run.py --wave 9",
+   "expected": "a report under .cc10x/qa/<wf>/runs/; exit 0 only if GREEN (a correct run of this build is RED: the plan predicts FAILs)",
+   "timeout_seconds": 1800,
+   "scenario_ids": [
+    "Z1",
+    "Z2",
+    "Z3"
+   ],
+   "observations": [
+    "see test-plan §4 Observation rows for Z1, Z2, Z3; asserted in tests/qa6/<lane>/test_wave9_*.py"
+   ]
+  },
+  {
+   "name": "full run: all nine waves in order, then teardown and the publish gate",
+   "mode": "proof",
+   "given": "the host baseline matches setup.md (settings sha measured at run start and unchanged at every check; a run-start sha other than the owner-named f99112b6…c52b is a published non-stopping WARN, INC-3, accepted by the owner 2026-09-27; 8787 owned by WatchTower, no shq6 state)",
+   "when": "the runner runs every wave with its stop-ifs, then removes the run roots and leak-checks",
+   "then": "an immutable runs/<run_id>.json, report.md, and qa6-latest.json carrying the history",
+   "command": ".venv/bin/python tests/qa6/run.py",
+   "expected": "GREEN only on 161 PASS + every lane exit 0 + clean teardown; RED on any FAIL; INCOMPLETE otherwise",
+   "timeout_seconds": 7200,
+   "observations": [
+    "runs/<run_id>.json status/reasons/counts",
+    "teardown-problems.jsonl empty",
+    "ledgers/tmux-argv.log Z2 shape"
+   ]
+  }
+ ],
+ "cleanup": [
+  {
+   "name": "Verify no qa6 state survives (roots, q6 tmux sockets, daemons)",
+   "command": "bash -c 'shopt -s nullglob; a=(/private/tmp/shq6-*); b=(/private/tmp/tmux-$(id -u)/shepherd-m3-q6*); echo roots=${#a[@]} sockets=${#b[@]}; test ${#a[@]} -eq 0 -a ${#b[@]} -eq 0'",
+   "expected": "roots=0 sockets=0 (the runner's own teardown removed them)"
+  }
+ ]
+}

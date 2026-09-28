@@ -65,13 +65,22 @@ mypy_path = "src"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-q -m 'not live'"
+addopts = "-q -m 'not live and not qa6 and not qa6live'"
 # T18's lane starts real `claude` processes on this host, so it is excluded from
 # the default run. The exclusion is in `addopts`, not only in this comment:
 # declaring a marker does NOT deselect it, and for three milestones it did not.
 # A plain `pytest` was starting real `claude` subprocesses and reading the user's
 # real `~/.claude.json` (T10 review finding 8; T10-R1 is what that cost).
 # Run the live lane deliberately with `pytest -m live`.
+#
+# QA round 6 (`tests/qa6/`) is a separate, ordered harness driven by
+# `tests/qa6/run.py`. Its two markers are excluded from the default run in
+# `addopts` above for the same reason `live` is: `qa6` starts sandboxed daemons,
+# tmux servers and a browser, and `qa6live` starts real `claude` processes.
+# Run them only through the runner (`-p no:randomly` is mandatory there).
 markers = [
     "live: starts or reads real processes on this host (excluded from the default run)",
+    "qa6: QA round 6 harness scenario (sandboxed daemons; run via tests/qa6/run.py)",
+    "qa6live: QA round 6 live scenario (real claude; run via tests/qa6/run.py)",
+    "qa6_scenario(id): the test-plan scenario id a qa6 test implements",
 ]

@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "httpclient.py",
+ "old": "            answered = self.last_answer is not None and self.last_answer[0] == scenario_epoch()\n",
+ "new": "            answered = self.last_answer is not None\n",
+ "proof": "test_proof_product_socket_failures",
+ "expect": "proof_product_socket.answer_in_an_earlier_scenario_does_not_count",
+ "why": "hunter N2: an answer in an EARLIER scenario is taken as this scenario's control"
+}

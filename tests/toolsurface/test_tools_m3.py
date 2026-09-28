@@ -523,27 +523,50 @@ def test_send_to_session_reports_the_decision(
     assert mailbox["last_refusal"] == "refuse_dialog"
 
 
-def test_send_to_a_row_with_no_pane_is_queued_not_lost(
+def test_send_to_a_row_with_no_pane_is_refused_with_no_row(
     make_world: Callable[..., World], store: Store
 ) -> None:
-    """D45: a message that cannot be delivered **now** is still a message.
+    """D74 (ruling 20, RD-5, PP13): a send to a pane-less row is refused **at send
+    time** and leaves **no** `mailbox_message` row.
 
-    A row with no handle of ours — an attached session, or T12's orphan — keeps
-    the message queued and names the policy's own member. A session id that
-    matches no row at all is a different fact and is **not** queued: the mailbox
-    is keyed on a row, and a queue verb that invented one would make a typo
-    durable. Both are values a page renders (principle 5), never a raise.
+    Pane-less is `runner_handle IS NULL`: an attached session **and** T12's
+    handle-less owned orphan. Neither has a pane of ours, so a queued row would
+    wait for a delivery trigger that never comes — and an orphan re-adopted later
+    is sent to again by its caller, never by a stale row. The refusal names the
+    policy's own member. A session id that matches no row at all is a different
+    fact, also not queued. Both are values a page renders (principle 5), never a
+    raise.
+
+    Goes red if the row is written before the pane is looked at (the pre-D74
+    order), or if the refusal stops naming `refuse_no_pty`.
     """
     world = make_world()
     owned_row(store, world, ownership_is_owned=False)
-
-    queued = payload(
-        "send_to_session",
-        {"session_id": OWNED_ID, "body": "ping", "idempotency_key": "k2"},
+    attached = store.register_session(
+        engine_session_id="attached-engine-1",
+        workspace_id=store.create_project(name="attached", description=None).id,
+        repo_id=None,
+        cwd="/tmp",
+        started_at=NOW,
+        origin=Origin.EXTERNAL,
+        ownership=Ownership.ATTACHED,
     )
-    assert queued["queued"] is True
-    assert queued["decision"] == "refuse_no_pty"
-    assert queued["delivered"] == 0
+    assert attached.runner_handle is None
+
+    for session_id, key in ((OWNED_ID, "k2"), (attached.id, "k4")):
+        refused = payload(
+            "send_to_session", {"session_id": session_id, "body": "ping", "idempotency_key": key}
+        )
+        assert refused["queued"] is False, refused
+        assert refused["message_id"] is None
+        assert refused["decision"] == "refuse_no_pty"
+        assert isinstance(refused["decision_text"], str) and refused["decision_text"] != ""
+        assert refused["reason"] == f"{session_id}: no pane of ours — refused, nothing queued"
+        assert (refused["delivered"], refused["deferred"]) == (0, 0)
+        assert store.pending_for(session_id) == []
+    counts = store.mailbox_counts()
+    assert (counts.pending, counts.delivered, counts.deferred) == (0, 0, 0), counts
+    assert world.runner.writes == []
 
     unknown = payload(
         "send_to_session",

@@ -248,7 +248,14 @@ REQUIRED_ASSIGNMENTS = {
     # rename. The engine write-back stays behind `can_set_title`, server-side.
     'input.className = "session-rename-input"',
     'input.type = "text"',
-    'input.value = row.title === null || row.title === undefined ? "" : String(row.title)',
+    # BC-25 (qa6 plan rev 4): the editor starts from the title the header last
+    # painted, not the row it was opened from — a completed rename would
+    # otherwise pre-fill the old title and Enter would rename it back.
+    'shownTitle = title',
+    'input.value = shownTitle === null || shownTitle === undefined ? "" : String(shownTitle)',
+    # BC-36 / B10 (qa6 plan rev 4): a session Shepherd killed says so and
+    # opens no terminal.
+    "banner.textContent = KILLED_BANNER",
     'status.textContent = ""',
     "status.textContent = `${RENAME_FAILED}: ${body.error} (${body.correlation_id})`",
     "status.textContent = `${RENAME_FAILED}: ${body.data.reason}`",
@@ -270,15 +277,15 @@ REQUIRED_ASSIGNMENTS = {
     "banner.hidden = false",
     "terminal.hidden = true",
     'note.textContent = ""',
-    # …and an owned one gets the terminal, with T19-c's reason for the keys.
+    # …and an owned one gets the terminal, which since D76 takes keystrokes.
     'banner.textContent = ""',
     "banner.hidden = true",
     "terminal.hidden = false",
-    # …and D6's second limitation beside T19-c's first, in the one slot the
-    # page has for them. QA run 4: the absent keystroke path was declared on
-    # the page in words and the absent fit said nothing at all, which is what
-    # made the fit a defect rather than a shortfall.
-    "note.textContent = `${INPUT_UNAVAILABLE} · ${FIT_LIMITATION}`",
+    # …and D6's limitation, alone in the one slot the page has for what it is
+    # not doing. P12 (D76): T19-c's "input is not wired yet" left this slot the
+    # day it became false — a declared limitation that is no longer true is the
+    # same defect as the silent one QA run 4 found beside it.
+    "note.textContent = FIT_LIMITATION",
     # The rename affordance `index.html` has always shipped and nothing wired.
     "rename.onclick = () => beginRename(row)",
     # One terminal at a time: a second open with the first socket still live
@@ -299,6 +306,26 @@ REQUIRED_ASSIGNMENTS = {
     "showing = row.session_id",
     "host.hidden = true",
     "host.hidden = false",
+    # D77 (SD-06, qa6 rulings P11): the permission dialog's choices answer
+    # through `answer_permission`. An answerable row is a real button (never a
+    # submit); a choice with no word in the table, and every trust-dialog row,
+    # stays inert and the card says why (RD6).
+    'row.type = "button"',
+    "inert = true",
+    # PP12: every choice on the card is disabled while its answer is out, and
+    # stays disabled once the dialog is answered.
+    "pick.disabled = busy",
+    # The outcome, painted into the card's own note (`role="status"`). P11
+    # REM-FIX 1: the note is in the tree from the first paint and is never
+    # `hidden`-toggled (a live region that appears with its text may go
+    # unheard), so painting it is a class and the server's own words —
+    # answered, the refusal's `reason`, the envelope's error, or unreachable.
+    'outcome.className = done ? "decision-status decision-done" : "decision-status decision-readonly"',
+    "outcome.textContent = text",
+    "done = body.data.answered === true",
+    "text = `${ANSWER_FAILED}: ${body.error} (${body.correlation_id})`",
+    "text = done ? `${ANSWERED}: ${answer}` : `${ANSWER_REFUSED}: ${body.data.reason}`",
+    "text = ANSWER_UNREACHABLE",
 }
 
 

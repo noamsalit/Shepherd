@@ -53,6 +53,13 @@ class InstallResult:
 
     `backup_path` equals `settings_path` when **nothing was written** — a
     refusal or a dry run — so "no backup exists" is a value rather than a lie.
+    Otherwise it names `<file>.shepherd-backup`, which holds the **first**
+    pre-install image and is never overwritten by a later install or uninstall
+    (BC-20). A backup already there, the user's own included, is kept, and a
+    warning says when it is not this run's pre-image or holds our entries. Only
+    a regular file counts: a directory or symlink at that path is reported as a
+    warning and `backup_path` falls back to `settings_path`. Uninstall never
+    writes a backup.
     For `uninstall_hooks`, `events_installed` counts the events our entries were
     removed from.
     """
@@ -101,6 +108,8 @@ def _load(path: Path) -> tuple[dict[str, object] | None, str | None]:
         raw = path.read_bytes()
     except (FileNotFoundError, NotADirectoryError):
         return {}, None
+    except PermissionError as error:
+        return None, f"settings file cannot be read ({error.strerror}), so it is left untouched"
     if raw.strip() == b"":
         return {}, None
     try:
@@ -275,6 +284,69 @@ def _pre_image(path: Path) -> bytes | None:
         return None
 
 
+def _backup_path(settings_path: Path) -> Path:
+    return settings_path.with_name(settings_path.name + BACKUP_SUFFIX)
+
+
+@dataclass(frozen=True)
+class _Backup:
+    """The backup a write can point at (`None`: none) and what to say about it."""
+
+    path: Path | None
+    warnings: tuple[str, ...]
+
+
+def _regular_backup(backup_path: Path) -> _Backup:
+    """Only a regular file is a backup; a directory or any symlink is not ours to name."""
+    if backup_path.is_symlink() or not backup_path.is_file():
+        return _Backup(None, (f"{backup_path} is not a regular file, so it is not a backup",))
+    return _Backup(backup_path, ())
+
+
+def _existing_backup(backup_path: Path) -> _Backup:
+    if not backup_path.exists() and not backup_path.is_symlink():
+        return _Backup(None, ())
+    return _regular_backup(backup_path)
+
+
+def _kept_backup(backup_path: Path, pre_image: bytes) -> _Backup:
+    """An existing backup is kept; say so when it is not this run's pre-image."""
+    backup = _regular_backup(backup_path)
+    if backup.path is None:
+        return backup
+    try:
+        kept = backup.path.read_bytes()
+    except OSError as error:
+        return _Backup(backup.path, (f"backup at {backup.path} could not be read: {error}",))
+    warnings: list[str] = []
+    if kept != pre_image:
+        warnings.append(f"backup at {backup.path} is the first pre-install image, not this run's")
+    if MANAGED_MARKER.encode() in kept:
+        warnings.append(f"backup at {backup.path} holds Shepherd entries")
+    return _Backup(backup.path, tuple(warnings))
+
+
+def _keep_first_backup(backup_path: Path, pre_image: bytes) -> _Backup:
+    """Write the backup only if none exists (BC-20, ruling 7).
+
+    The first pre-install image is the one worth keeping: every later image
+    already holds our entries. `"xb"` makes "never overwritten" atomic, and a
+    backup the user made themselves is kept for the same reason. A write that
+    fails part-way removes what it created, so a truncated file is never kept.
+    """
+    try:
+        handle = backup_path.open("xb")
+    except FileExistsError:
+        return _kept_backup(backup_path, pre_image)
+    try:
+        with handle:
+            handle.write(pre_image)
+    except OSError:
+        backup_path.unlink(missing_ok=True)
+        raise
+    return _Backup(backup_path, ())
+
+
 def _refusal(settings_path: Path, reason: str, warnings: tuple[str, ...] = ()) -> InstallResult:
     return InstallResult(
         settings_path=settings_path,
@@ -294,9 +366,9 @@ def _commit(
 ) -> InstallResult:
     """Back up, write, validate, restore on failure (C6)."""
     pre_image = _pre_image(settings_path)
-    backup_path = settings_path.with_name(settings_path.name + BACKUP_SUFFIX)
+    backup = _Backup(None, ())
     if pre_image is not None:
-        backup_path.write_bytes(pre_image)
+        backup = _keep_first_backup(_backup_path(settings_path), pre_image)
     try:
         write_bytes(settings_path, _serialise(merged))
         problems = _written_problems(settings_path, entry, installed)
@@ -312,9 +384,9 @@ def _commit(
         )
     return InstallResult(
         settings_path=settings_path,
-        backup_path=backup_path if pre_image is not None else settings_path,
+        backup_path=backup.path or settings_path,
         events_installed=installed,
-        warnings=warnings,
+        warnings=(*warnings, *backup.warnings),
         refused_reason=None,
     )
 
@@ -347,7 +419,11 @@ def install_hooks(settings_path: Path, entry: HookEntry, dry_run: bool = False) 
 
 
 def uninstall_hooks(settings_path: Path) -> InstallResult:
-    """Remove exactly our entries. A file with none of ours is left byte-identical."""
+    """Remove exactly our entries. A file with none of ours is left byte-identical.
+
+    Uninstall never writes the backup: its pre-image always holds our entries.
+    It reports the backup an install kept, if one is there.
+    """
     settings, refusal = _load(settings_path)
     if settings is None:
         return _refusal(settings_path, refusal or "settings file is unreadable")
@@ -364,9 +440,6 @@ def uninstall_hooks(settings_path: Path) -> InstallResult:
     else:
         merged.pop(HOOKS_KEY, None)
     pre_image = _pre_image(settings_path)
-    backup_path = settings_path.with_name(settings_path.name + BACKUP_SUFFIX)
-    if pre_image is not None:
-        backup_path.write_bytes(pre_image)
     try:
         write_bytes(settings_path, _serialise(merged))
         settings_after, refusal_after = _load(settings_path)
@@ -378,11 +451,12 @@ def uninstall_hooks(settings_path: Path) -> InstallResult:
             settings_path,
             f"the settings file did not validate after removal and was rolled back: {refusal_after}",
         )
+    backup = _existing_backup(_backup_path(settings_path))
     return InstallResult(
         settings_path=settings_path,
-        backup_path=backup_path if pre_image is not None else settings_path,
+        backup_path=backup.path or settings_path,
         events_installed=removed,
-        warnings=_breakage(settings_after),
+        warnings=(*_breakage(settings_after), *backup.warnings),
         refused_reason=None,
     )
 

@@ -1,10 +1,12 @@
 // §12's page 3: the pane's real bytes, in a real terminal emulator.
 //
-// One socket, one emulator, and nothing in between that looks at the bytes.
+// One socket, one emulator, and nothing in between that re-renders the bytes.
 // The first frame the server sends is the snapshot `capture-pane -e -p -S -2000`
 // returned and every frame after it is `pipe-pane`'s output in order, so this
-// file's whole job is to hand each frame to `term.write` unchanged. §9: "the
-// real terminal bytes — not a re-render of a transcript".
+// file's whole job is to hand each frame to `term.write` — every live frame
+// unchanged, and the snapshot with its line endings made ones an emulator reads
+// (`snapshotForEmulator`, BC-10). §9: "the real terminal bytes — not a
+// re-render of a transcript".
 //
 // §13, and it is the reason there is not a single HTML sink below: terminal
 // output is untrusted text. It reaches `term.write` or a `textContent` slot and
@@ -45,14 +47,25 @@
 // build must not spend: `runner/local.py::resize` forces tmux's
 // `window-size=manual`, so a later human attach is clipped (E-M3-22), and a
 // viewport is then a **mutation of the work** — a glance from a phone would
-// shrink a running agent's pane to 39 columns. This page declares itself as
-// having no path from the browser to the pane (T19-c); a resize that travelled
-// that way would be the first, arriving by accident of window size.
+// shrink a running agent's pane to 39 columns. Since D76 the one path from the
+// browser to the pane carries a human's keystrokes and nothing else; a resize
+// travelling it would change the work by accident of window size.
 //
 // So one residual survives the fit and is **said on the page** rather than left
 // silent, which is the whole of what made the absent fit a defect: a pane wider
 // than the window is re-wrapped here, at the window's width. `FIT_LIMITATION`
-// below is that sentence, and `session.js` puts it beside `INPUT_UNAVAILABLE`.
+// below is that sentence, and `session.js` puts it in the page's note slot.
+//
+// **Input (D76, owner ruling 18 — reversing T19-c's read-only terminal).** The
+// emulator takes keystrokes, and `term.onData` sends each one as a text frame on
+// the socket the snapshot arrived on. `web/server.py` reads that socket and hands
+// the bytes to the pane this socket was opened for, through the handle the
+// audited `terminal_stream` open returned — so no key is a tool call and there is
+// no POST route for one. Typed text is sent, never rendered: it reaches
+// `socket.send` and no DOM sink (`test_session_page.py`'s pty scan inspects the
+// `onData` line). Once the socket closes the emulator refuses keys again and
+// `INPUT_CLOSED` says why, because a terminal that silently swallowed keystrokes
+// would be a lie about what happened to them.
 //
 // What this file still does NOT claim: that the *bytes* draw identically to a
 // real terminal. Every byte up to `term.write` is asserted, and now the box
@@ -70,15 +83,30 @@ const VENDOR_MODULE = "./vendor/xterm.js";
 // be the silent failure this project's principle 5 exists to prevent.
 const DEGRADE_MESSAGE = "live terminal unavailable: xterm.js is not vendored";
 
-// Principle 5, on the half of page 3 that is not built yet. `POST_ROUTES` has no
-// path for `terminal_write` and the server never reads the upgraded socket, so
-// there is no browser-to-pane path in this build at all (blocker T19-c). A
-// terminal that quietly swallowed keystrokes would be a lie about what happened
-// to them, so input is disabled in the emulator and the reason is on the page.
-export const INPUT_UNAVAILABLE =
-  "input is not wired yet: no route carries a keystroke to the pane (T19-c)";
+// Principle 5, where input is impossible: the socket that carried keys to the
+// pane has closed, so the emulator refuses them and the page says so — and,
+// where the server's close code says why, says that (`inputClosedReason`).
+export const INPUT_CLOSED =
+  "input is off: the terminal stream closed, so nothing typed here reaches the pane";
+export const INPUT_CLOSED_TOO_LARGE =
+  "input is off: a paste was larger than one terminal frame (1 MiB), so the stream closed";
+export const INPUT_CLOSED_PROTOCOL =
+  "input is off: the server refused a malformed terminal frame, so the stream closed";
+export const INPUT_CLOSED_KEY_REFUSED =
+  "input is off: the pane refused a key, so nothing more typed here reaches it";
+export const INPUT_CLOSED_READER_FAILED =
+  "input is off: the server stopped reading this terminal, so nothing more typed here reaches it";
 
-// D6's residual, declared for the same reason T19-c is. The emulator is fitted
+// The server's close codes (`web/ws.py`, `web/server.py`): 1009 a frame over
+// its cap, 1002 a protocol error, 1011 input that failed. 1011 has two causes,
+// told apart by the close reason: a key the pane refused, or the server's
+// reader itself dying (`READER_FAILED_REASON`, `web/server.py`'s literal).
+const CLOSE_TOO_BIG = 1009;
+const CLOSE_PROTOCOL_ERROR = 1002;
+const CLOSE_INPUT_FAILED = 1011;
+const READER_FAILED_REASON = "the input reader failed";
+
+// D6's residual, declared because a reader is owed it. The emulator is fitted
 // to this window; the pane keeps its own geometry, because nothing here may
 // resize it (see the head of this file). When the window is narrower than the
 // pane the lines are re-wrapped at the window's width — visible and inside the
@@ -162,8 +190,8 @@ export async function openTerminal(sessionId, el) {
     const initial = fitGeometry(el, top, EMPTY);
     term = new vendor.Terminal({
       convertEol: false,
-      // T19-c: no route carries a keystroke, so the emulator refuses them
-      // rather than accepting bytes that go nowhere.
+      // D76: keystrokes go to the pane over the socket below (`sendKeys`) — from
+      // `onopen` on. Until then a key would be dropped without a word.
       disableStdin: true,
       scrollback: 2000,
       // D6. The four constructor arguments QA swept for and found absent; the
@@ -199,16 +227,23 @@ export async function openTerminal(sessionId, el) {
   socket.onmessage = (event) => {
     const payload = new Uint8Array(event.data);
     frames += 1;
-    term.write(payload);
+    // Frame 1 is the snapshot and only it is re-terminated (BC-10); every later
+    // frame is `pipe-pane`'s bytes and reaches the emulator unchanged.
+    term.write(frames === 1 ? snapshotForEmulator(payload) : payload);
   };
-  socket.onerror = () => {
-    notice(el, STREAM_LOST);
+  term.onData((keys) => sendKeys(socket, keys));
+  socket.onopen = () => {
+    term.options.disableStdin = false;
   };
-  socket.onclose = () => {
+  // A browser follows every `error` with a `close`, and the close handler is the
+  // one that says what happened: a notice here too said it twice.
+  socket.onerror = () => {};
+  socket.onclose = (event) => {
     // Never a frame is a different fact from stopped after some: the first is
     // T12's orphan (a 404 upgrade), the second is a pane that ended.
     if (!closing) {
       notice(el, frames === 0 ? STREAM_NEVER_ARRIVED : STREAM_LOST);
+      stopInput(term, el, event.code, event.reason);
     }
   };
 
@@ -323,6 +358,83 @@ function applyFit(term, el, top) {
   }
   el.dataset.terminalCols = String(term.cols);
   el.dataset.terminalRows = String(term.rows);
+}
+
+// ---------------------------------------------------------------------------
+// BC-10 (QA run 6, U10): the snapshot opened as a blank screen.
+//
+// `capture-pane -p` ends every line with a bare LF, and pads a mostly empty
+// pane with a run of empty lines — the macOS prompt-ready capture is 14 lines
+// of text and 31 empty ones. The emulator is built with `convertEol: false`
+// (live chunks come from a pty and already carry CR LF), so a bare LF moved
+// down without returning to column 0, and the run of LFs scrolled every line
+// of text off an emulator shorter than the pane: the visible rows were the
+// blank tail, and the first live line landed at the column the last text line
+// ended on. So the snapshot, and only the snapshot, gets CR LF line endings,
+// loses its trailing run of LF / CR / space, and ends on one CR LF, which puts
+// the next live chunk at column 0 of the row below the pane's last text.
+// ---------------------------------------------------------------------------
+
+const LF = 0x0a;
+const CR = 0x0d;
+const SPACE = 0x20;
+
+// The parameter is `capture`, not `bytes`, so `test_session_page.py`'s pty scan
+// does not read this body; its one caller, which hands the result to
+// `term.write`, is on that scan. The body has its own:
+// `test_the_snapshot_transform_has_no_sink_and_returns_bytes` refuses any DOM
+// reach or HTML parser in it and any return that is not a new `Uint8Array`.
+export function snapshotForEmulator(capture) {
+  let end = capture.length;
+  while (end > 0 && (capture[end - 1] === LF || capture[end - 1] === CR || capture[end - 1] === SPACE)) {
+    end -= 1;
+  }
+  if (end === 0) {
+    return new Uint8Array(0);
+  }
+  const out = [];
+  for (let i = 0; i < end; i += 1) {
+    if (capture[i] === LF && (i === 0 || capture[i - 1] !== CR)) {
+      out.push(CR);
+    }
+    out.push(capture[i]);
+  }
+  out.push(CR, LF);
+  return Uint8Array.from(out);
+}
+
+// D76: one keystroke (or a paste) out on the terminal socket, as a text frame.
+// Only while the socket is open: a key typed into a closing socket would be
+// dropped by the browser without a word, which is the silence `stopInput` ends.
+function sendKeys(socket, keys) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(keys);
+  }
+}
+
+// The stream is gone, so input is too: the emulator stops taking keys and the
+// page says why, beside the stream's own notice.
+function stopInput(term, el, code, reason) {
+  term.options.disableStdin = true;
+  notice(el, inputClosedReason(code, reason));
+}
+
+// The sentence for the code (and, for 1011, the reason) the socket closed with.
+// A code the server does not send for input is the plain closed stream.
+function inputClosedReason(code, reason) {
+  if (code === CLOSE_TOO_BIG) {
+    return INPUT_CLOSED_TOO_LARGE;
+  }
+  if (code === CLOSE_PROTOCOL_ERROR) {
+    return INPUT_CLOSED_PROTOCOL;
+  }
+  if (code === CLOSE_INPUT_FAILED && reason === READER_FAILED_REASON) {
+    return INPUT_CLOSED_READER_FAILED;
+  }
+  if (code === CLOSE_INPUT_FAILED) {
+    return INPUT_CLOSED_KEY_REFUSED;
+  }
+  return INPUT_CLOSED;
 }
 
 // The degrade's own three outcomes (review finding 5). The old code had one —

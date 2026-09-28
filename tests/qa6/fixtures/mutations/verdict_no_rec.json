@@ -1,0 +1,9 @@
+{
+ "_note": "INERT MUTATION FIXTURE \u2014 read as text by tests/qa6/mutations.py, never imported (CLAUDE.md mutation rule 1).",
+ "file": "verdict.py",
+ "old": "        if is_scenario and recorder is None:\n",
+ "new": "        if is_scenario and recorder is None and False:\n",
+ "proof": "test_proof_outcome_classification",
+ "expect": "proof_outcome.no_rec_is_blocked",
+ "why": "review 6: a scenario that never took `rec` is recorded PASS again"
+}

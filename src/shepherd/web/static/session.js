@@ -28,7 +28,7 @@
 // code no browser ever loaded (`test_session_wiring.py`).
 
 import { element, showLevel } from "./flock.js";
-import { openTerminal, FIT_LIMITATION, INPUT_UNAVAILABLE } from "./terminal.js";
+import { openTerminal, FIT_LIMITATION } from "./terminal.js";
 
 // §9, verbatim. An `attached` session has no pty of ours: it was started in the
 // user's own terminal, on the user's own tmux socket. Rendering a live terminal
@@ -36,6 +36,16 @@ import { openTerminal, FIT_LIMITATION, INPUT_UNAVAILABLE } from "./terminal.js";
 // so the banner is a refusal, not a decoration.
 const READ_ONLY_BANNER =
   "read-only — this session wasn't started here. Open it in the platform to get a terminal.";
+
+// BC-36. `stop_reason === "killed"` is the one projection field that means
+// Shepherd removed the tmux session (`lifecycle.py`'s kill), so its terminal
+// socket can only 404. **Not `ended_at`:** every turn end stamps it on a live
+// pane, and keying on it would hide the terminal of every session that has
+// answered once. A session whose process exited on its own keeps its pane
+// (`remain-on-exit on`) and still opens. A session killed after a turn is
+// `killed` too (ruling 10, BC-37 residual): the kill's verdict replaces the
+// turn's, so it takes this branch rather than opening a socket that 404s.
+export const KILLED_BANNER = "this session was killed — its terminal is gone";
 
 // D29/RD9: exactly §12's words. "local only" is the difference between a
 // degrade and a lie, and the string is what a reviewer greps for when DP1 is
@@ -76,6 +86,16 @@ export function localOnly(row) {
 // socket still open would hold a `pipe-pane` alive for the life of the tab,
 // which is the thing `close()` exists to prevent.
 let attached = null;
+
+// The title the header last painted for the session on screen (BC-25). The
+// rename input's Escape repaints *this*, not the row `renderSession` was
+// handed — after a completed rename that row is the pre-rename one.
+let shownTitle = null;
+
+// Sessions whose rename POST has not answered yet (BC-25): a second Enter
+// while one is in flight posts nothing. Keyed by session id, so a rename in
+// flight for one session never blocks another's.
+const renaming = new Set();
 
 function slot(id) {
   return document.getElementById(id);
@@ -231,17 +251,52 @@ function whyNote(row) {
   return note;
 }
 
+// REMFIX-1 (BC-13's refresh): the actions slot is redrawn only when what it
+// was drawn from changed — the session, its `next_actions[]` and the two
+// fields `whyNote` reads. Every refresh used to rebuild it, so any event, for
+// any session, closed an open `why?` and dropped the focus of a reader on an
+// action. Keyed by the slot, compared by signature, as `projects.js`'s `drawn`
+// does for its rows. Opening a session (`force`) always draws afresh.
+const actionsDrawn = new WeakMap();
+
+function paintActions(row, force) {
+  const host = slot("session-actions");
+  const signature = JSON.stringify([
+    row.session_id,
+    row.next_actions,
+    row.decided_by,
+    row.confidence,
+  ]);
+  if (!force && actionsDrawn.get(host) === signature) {
+    return;
+  }
+  actionsDrawn.set(host, signature);
+  host.replaceChildren(actionList(row), whyNote(row));
+}
+
 // D29's marker, after a rename that has been answered. `local_only` is the
 // server's own verdict (`toolsurface/tools_rename.py::project_rename`), not a
 // re-derivation: the page renders the answer it was given.
+function paintTitle(title) {
+  shownTitle = title;
+  fill("session-title", title);
+}
+
 function applyRename(data) {
-  fill("session-title", data.title);
+  paintTitle(data.title);
   const marker = slot("session-local-only");
   marker.textContent = data.local_only ? LOCAL_ONLY_MARKER : "";
   marker.hidden = !data.local_only;
 }
 
+// BC-12 R3: every reply paints only if the pane still shows the session it
+// renamed. A slow reply for A that lands while B is open is A's news, and B's
+// header is not where it goes — the fleet's next read carries A's new title.
 async function commitRename(row, title) {
+  if (renaming.has(row.session_id)) {
+    return;
+  }
+  renaming.add(row.session_id);
   const status = slot("session-rename-status");
   status.textContent = "";
   try {
@@ -251,6 +306,9 @@ async function commitRename(row, title) {
       body: JSON.stringify({ title: title }),
     });
     const body = await response.json();
+    if (showing !== row.session_id) {
+      return;
+    }
     if (!body.ok) {
       status.textContent = `${RENAME_FAILED}: ${body.error} (${body.correlation_id})`;
       return;
@@ -263,7 +321,11 @@ async function commitRename(row, title) {
     }
     applyRename(body.data);
   } catch (unreachable) {
-    status.textContent = RENAME_UNREACHABLE;
+    if (showing === row.session_id) {
+      status.textContent = RENAME_UNREACHABLE;
+    }
+  } finally {
+    renaming.delete(row.session_id);
   }
 }
 
@@ -274,17 +336,57 @@ function beginRename(row) {
   const input = document.createElement("input");
   input.className = "session-rename-input";
   input.type = "text";
-  input.value = row.title === null || row.title === undefined ? "" : String(row.title);
+  input.value = shownTitle === null || shownTitle === undefined ? "" : String(shownTitle);
   slot("session-title").replaceChildren(input);
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       commitRename(row, input.value);
     }
     if (event.key === "Escape") {
-      fill("session-title", row.title);
+      fill("session-title", shownTitle);
     }
   });
   input.focus();
+}
+
+function editingTitle() {
+  return slot("session-title").querySelector(".session-rename-input") !== null;
+}
+
+// The line the stopped band reads as `why`: the ask, the way the Flock's card
+// reads it (`flock.js::askOf`). A waiting session's ask is `needs_you_reason`;
+// a stopped one's is the classifier's `why`. U45's oracle is the ask on this
+// line, and a waiting session carries no `why` at all.
+function askOf(row) {
+  const reason = row.needs_you_reason;
+  if (typeof reason === "string" && reason.trim() !== "") {
+    return reason;
+  }
+  return row.why;
+}
+
+// BC-36's discriminator, stated once (see `KILLED_BANNER`).
+function killedByShepherd(row) {
+  return row.ownership === "owned" && row.stop_reason === "killed";
+}
+
+// BC-13: the header's derived fields for a fresh read of the session on
+// screen — title, chip, state, `why` and the actions — and nothing else. It
+// never touches the terminal, the decision card or the rename wiring, and a
+// row for any other session paints nothing: the read that produced it may
+// have been started before the pane moved on. A title a person is editing is
+// left alone; the next refresh after the edit repaints it.
+export function refreshSessionHeader(row) {
+  if (showing !== row.session_id) {
+    return;
+  }
+  if (!editingTitle()) {
+    paintTitle(row.title);
+  }
+  fill("session-chip", row.bucket);
+  fill("session-state", row.state);
+  fill("session-why", askOf(row));
+  paintActions(row, false);
 }
 
 function closeAttached() {
@@ -315,7 +417,7 @@ export function renderSession(row) {
 
   showing = row.session_id;
 
-  fill("session-title", row.title);
+  paintTitle(row.title);
   fill("session-chip", row.bucket);
   fill("session-state", row.state);
   fill("session-ownership", row.ownership);
@@ -329,8 +431,8 @@ export function renderSession(row) {
   // ordered list. `why` is null on a session nobody classified, which renders as
   // the em dash `fill` uses everywhere — an unknown shown, not hidden
   // (principle 5) — with the honest `[why?]` disclosure beside it.
-  fill("session-why", row.why);
-  slot("session-actions").replaceChildren(actionList(row), whyNote(row));
+  fill("session-why", askOf(row));
+  paintActions(row, true);
 
   // U17's card. Not awaited: the terminal below is what this function returns,
   // and a card that waited on the network would hold the pane's whole render
@@ -344,8 +446,15 @@ export function renderSession(row) {
   const banner = slot("session-banner");
   const terminal = slot("session-terminal");
   const note = slot("session-input-note");
-  if (row.ownership === "attached") {
-    banner.textContent = READ_ONLY_BANNER;
+  // Two panes with no terminal of ours, one refusal shape: an attached
+  // session (K6/§9 — never a pty of ours) and an owned one Shepherd killed
+  // (BC-36 — the tmux session is gone, so the socket could only 404).
+  if (row.ownership === "attached" || killedByShepherd(row)) {
+    if (row.ownership === "attached") {
+      banner.textContent = READ_ONLY_BANNER;
+    } else {
+      banner.textContent = KILLED_BANNER;
+    }
     banner.hidden = false;
     terminal.replaceChildren();
     terminal.hidden = true;
@@ -356,13 +465,12 @@ export function renderSession(row) {
   banner.textContent = "";
   banner.hidden = true;
   terminal.hidden = false;
-  // Two limitations, one line, both of them the page saying what it is not
-  // doing. `INPUT_UNAVAILABLE` is T19-c — no route carries a keystroke — and
-  // `FIT_LIMITATION` is D6: the emulator is fitted to this window and the pane
-  // keeps its own geometry, so a pane wider than the window is re-wrapped here.
-  // QA run 4's finding was that the second of those was true and silent, while
-  // the first had been said on the page since T19.
-  note.textContent = `${INPUT_UNAVAILABLE} · ${FIT_LIMITATION}`;
+  // The page saying what it is not doing. `FIT_LIMITATION` is D6: the emulator
+  // is fitted to this window and the pane keeps its own geometry, so a pane
+  // wider than the window is re-wrapped here. T19-c's read-only sentence
+  // shared this line until D76 wired the keys (P12) and made it false; where
+  // input is impossible, `terminal.js` says so itself (`INPUT_CLOSED`).
+  note.textContent = FIT_LIMITATION;
   attached = openTerminal(row.session_id, terminal);
   return attached;
 }
@@ -410,12 +518,37 @@ const DECISION_UNREADABLE =
 const TRUST_WARNING =
   'workspace trust — Enter on this screen answers "No, exit" and ends the session. The cursor is reported, never interpreted.';
 
-// RD6's shape, for a capability that is not built: labelled and inert, with the
-// reason in words. `POST /api/sessions/{id}/permission` exists in the route
-// table and nothing on any page calls it; a card that pretended otherwise would
-// be the silent dead button one file over already refuses to ship.
+// RD6's shape, kept by D77 for what the card still cannot answer: the trust
+// dialog — answering it changes what a folder may do from then on, which is
+// not a one-click decision — and any choice the table below has no word for.
+// Labelled and inert, with the reason in words, never a silent dead button.
 const DECISION_INERT =
-  "answering from Shepherd is not built in this build — press the option in the session's own terminal.";
+  "answering this screen from Shepherd is not built in this build — press the option in the session's own terminal.";
+
+// D77 (SD-06): the permission dialog's choices answer through
+// `answer_permission` (C-18), which re-reads the pane and refuses any screen
+// that is not the option set it captured. The engine's numbers map to the
+// server's words in `orchestration/dialog_keys.py::PERMISSION_KEYS` order —
+// Enter (`1. Yes`), then `2`, then `3` — and `test_decision_answer_table.py`
+// compares the two tables whole, because a swap here sends a standing grant as
+// a refusal or the other way round.
+const PERMISSION_PATH = "/api/sessions/{session_id}/permission";
+const PERMISSION_DIALOG = "permission_dialog";
+const PERMISSION_ANSWERS = { 1: "approve", 2: "approve_always", 3: "deny" };
+
+// The unreadable screen's two unnumbered options answer by **word**, never by
+// position: the server decides whether the screen is one it may key into.
+const UNIVERSAL_ANSWERS = { approve: "approve", reject: "deny" };
+
+const ANSWERED = "answered";
+const ANSWER_REFUSED = "not answered";
+const ANSWER_FAILED = "could not answer";
+const ANSWER_UNREACHABLE = "could not answer: the request did not reach the server";
+const ANSWER_PENDING = "an answer for this session is still out";
+
+// Sessions whose answer POST has not replied yet (PP12): a second click while
+// one is in flight posts nothing. Keyed by session id, as `renaming` is.
+const answering = new Set();
 
 // The two options every dialog has whatever else is on it. They are rendered
 // **without numbers**, because a number is a key the engine drew and these are
@@ -437,8 +570,13 @@ const DECISION_UNREACHABLE = "could not read the decision: the request did not r
 // worst kind of wrong this page can be.
 let showing = null;
 
-function choiceRow(choice) {
-  const row = element("li", "choice choice-inert");
+// One row per choice, the engine's own number and label. `answer` is the word
+// the server is sent, or `null` for a row that stays inert: an answerable row is
+// a real `<button>`, so a keyboard reaches it too. The rows sit in a `div`
+// rather than a list because a `<button>` is not a list item, and `.choices`
+// already lays either out as a column.
+function choiceRow(choice, answer) {
+  const row = answer === null ? element("div", "choice choice-inert") : element("button", "choice");
   if (choice.selected) {
     row.classList.add("choice-1");
   }
@@ -449,14 +587,104 @@ function choiceRow(choice) {
     label.appendChild(element("span", "choice-note", CURSOR_NOTE));
   }
   row.appendChild(label);
+  if (answer !== null) {
+    row.type = "button";
+  }
   return row;
+}
+
+// The word a choice answers with, or `null`. Only the permission dialog is
+// answerable (D77); its numbered choices are keyed by number and the two
+// universal options by label. `Object.hasOwn`, so a label that happens to spell
+// an `Object.prototype` member is not an answer.
+function answerFor(kind, universal, choice) {
+  if (kind !== PERMISSION_DIALOG) {
+    return null;
+  }
+  const table = universal ? UNIVERSAL_ANSWERS : PERMISSION_ANSWERS;
+  const key = universal ? choice.label : choice.number;
+  return Object.hasOwn(table, key) ? table[key] : null;
+}
+
+function setChoicesBusy(card, busy) {
+  for (const pick of card.querySelectorAll("button.choice")) {
+    pick.disabled = busy;
+  }
+}
+
+// The note is in the tree from the card's first paint — a live region that
+// appears in the same step as its text is one a screen reader may never hear —
+// so painting it is a class and a text, never a `hidden` toggle.
+function paintOutcome(outcome, text, done) {
+  outcome.className = done ? "decision-status decision-done" : "decision-status decision-readonly";
+  outcome.textContent = text;
+}
+
+// BC-12 R3, the `commitRename` rule: a reply paints only while its session is
+// the one on screen, and into the card that is up **now** — re-opening the
+// session replaced the card that was clicked, and the news belongs on the one
+// the human is looking at. A session showing no card gets the line on its own.
+function paintCurrent(sessionId, text, done) {
+  if (showing !== sessionId) {
+    return;
+  }
+  const host = slot("session-decision");
+  const card = host.querySelector(".decision");
+  const outcome = card === null ? null : card.querySelector('[role="status"]');
+  if (outcome === null) {
+    host.appendChild(decisionNote(text));
+    return;
+  }
+  paintOutcome(outcome, text, done);
+  setChoicesBusy(card, done);
+}
+
+// PP12 and REM-FIX 1. One POST per click, bound by `dialog_sha256` to the
+// dialog this card was built from: the server re-reads the pane and refuses,
+// before any key, a dialog that is not that one. Every choice is disabled
+// until the reply. An answered dialog keeps them disabled. **Anything else
+// never re-enables the card that was clicked** — what it offered is exactly
+// what the server could not confirm — so the card is repainted from a fresh
+// read, and the reason goes on the new one.
+async function answerChoice(row, card, outcome, answer, digest) {
+  const sessionId = row.session_id;
+  if (answering.has(sessionId)) {
+    paintOutcome(outcome, ANSWER_PENDING, false);
+    return;
+  }
+  answering.add(sessionId);
+  setChoicesBusy(card, true);
+  let text = "";
+  let done = false;
+  try {
+    const response = await fetch(path(PERMISSION_PATH, sessionId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ choice: answer, dialog_sha256: digest }),
+    });
+    const body = await response.json();
+    if (!body.ok) {
+      text = `${ANSWER_FAILED}: ${body.error} (${body.correlation_id})`;
+    } else {
+      done = body.data.answered === true;
+      text = done ? `${ANSWERED}: ${answer}` : `${ANSWER_REFUSED}: ${body.data.reason}`;
+    }
+  } catch (unreachable) {
+    text = ANSWER_UNREACHABLE;
+  } finally {
+    answering.delete(sessionId);
+  }
+  if (!done && showing === sessionId) {
+    await renderDecision(row);
+  }
+  paintCurrent(sessionId, text, done);
 }
 
 function decisionNote(text) {
   return element("p", "decision-readonly", text);
 }
 
-function decisionCard(data) {
+function decisionCard(data, row) {
   const card = element("section", "decision");
   const head = element("div", "decision-head", "needs you");
   head.appendChild(element("span", "decision-src", data.pane_kind || UNKNOWN));
@@ -470,14 +698,40 @@ function decisionCard(data) {
     card.appendChild(decisionNote(TRUST_WARNING));
   }
 
-  const list = element("ul", "choices");
-  const choices = data.readable && Array.isArray(data.choices) ? data.choices : UNIVERSAL_CHOICES;
-  choices.forEach((choice) => list.appendChild(choiceRow(choice)));
+  const list = element("div", "choices");
+  const universal = !(data.readable && Array.isArray(data.choices));
+  const choices = universal ? UNIVERSAL_CHOICES : data.choices;
+  // The answer's outcome, announced as it lands (`role="status"`). Empty, and
+  // without `.decision-readonly`'s rule, until there is something to say.
+  const outcome = element("p", "decision-status", "");
+  outcome.setAttribute("role", "status");
+  let inert = false;
+  choices.forEach((choice) => {
+    const answer = answerFor(data.pane_kind, universal, choice);
+    const pick = choiceRow(choice, answer);
+    if (answer === null) {
+      inert = true;
+    } else {
+      pick.addEventListener("click", () =>
+        answerChoice(row, card, outcome, answer, data.dialog_sha256),
+      );
+    }
+    list.appendChild(pick);
+  });
   card.appendChild(list);
   if (!data.readable) {
     card.appendChild(decisionNote(DECISION_UNREADABLE));
   }
-  card.appendChild(decisionNote(DECISION_INERT));
+  if (inert) {
+    card.appendChild(decisionNote(DECISION_INERT));
+  }
+  card.appendChild(outcome);
+  // Re-opened while this session's answer is still out: say so, and offer
+  // nothing until the reply — which `paintCurrent` then paints here.
+  if (answering.has(row.session_id)) {
+    paintOutcome(outcome, ANSWER_PENDING, false);
+    setChoicesBusy(card, true);
+  }
   return card;
 }
 
@@ -527,7 +781,7 @@ async function renderDecision(row) {
       host.replaceChildren(decisionNote(NO_DIALOG));
       return null;
     }
-    host.replaceChildren(decisionCard(body.data));
+    host.replaceChildren(decisionCard(body.data, row));
   } catch (unreachable) {
     if (showing === row.session_id) {
       host.replaceChildren(decisionNote(DECISION_UNREACHABLE));
